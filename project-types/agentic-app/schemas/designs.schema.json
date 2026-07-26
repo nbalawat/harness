@@ -9,7 +9,7 @@
         "type": "object",
         "properties": {
           "addresses": { "type": "array", "items": { "type": "string" } },
-          "id": { "type": "string" },
+          "id": { "type": "string", "pattern": "^option-[1-4]$" },
           "name": { "type": "string" },
           "screens": { "type": "array", "minItems": 2, "items": { "type": "string" } },
           "tokens_file": { "type": "string" },

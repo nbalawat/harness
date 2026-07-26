@@ -1,0 +1,21 @@
+{
+  "architecture": {
+    "path": "/Users/nbalawat/development/harness/.real-aa/artifacts/architecture/architecture.json",
+    "data": {
+      "modules": [
+        "persistence-core",
+        "chat-shell",
+        "agent-runtime"
+      ],
+      "deploy_target": "local",
+      "build_budget_plan": {
+        "nodes": {
+          "build-backend": 2.5,
+          "build-agents": 1.75,
+          "build-frontend": 1.75
+        },
+        "total_usd": 6
+      }
+    }
+  }
+}

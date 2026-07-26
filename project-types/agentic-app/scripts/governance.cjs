@@ -5,7 +5,8 @@ const inputs = JSON.parse(fs.readFileSync("inputs.json", "utf8"));
 const security = inputs.security_report.data;
 const integration = inputs.integration_report.data;
 const roster = inputs.agent_roster.data;
-const rtm = inputs.rtm.data;
+// rtm is absent on pre-0.2.0 runs still in flight — tolerate it.
+const rtm = inputs.rtm?.data ?? null;
 
 fs.writeFileSync(
   "governance.json",
@@ -24,13 +25,15 @@ fs.writeFileSync(
         compose_config: integration.compose_config,
         evidence: "integration_report.json",
       },
-      requirements: {
-        total: rtm.requirements_total,
-        covered: rtm.covered_count,
-        uncovered: rtm.uncovered.length,
-        assumptions: rtm.assumptions.length,
-        evidence: "rtm.json",
-      },
+      requirements: rtm
+        ? {
+            total: rtm.requirements_total,
+            covered: rtm.covered_count,
+            uncovered: rtm.uncovered.length,
+            assumptions: rtm.assumptions.length,
+            evidence: "rtm.json",
+          }
+        : { total: 0, covered: 0, uncovered: 0, assumptions: 0, evidence: "n/a (pre-0.2.0 run)" },
       agents: {
         count: roster.agents.length,
         names: roster.agents.map((a) => a.name),

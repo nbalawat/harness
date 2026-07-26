@@ -23,8 +23,8 @@ function runCli(args) {
 }
 
 async function withServer(workspace, fn) {
-  const port = 4500 + Math.floor(Math.random() * 400);
-  const server = await startUiServer(workspace, port);
+  const server = await startUiServer(workspace, 0); // ephemeral port — no collisions
+  const port = server.address().port;
   try {
     await fn(`http://127.0.0.1:${port}`);
   } finally {
