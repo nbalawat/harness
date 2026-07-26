@@ -118,6 +118,8 @@ module/
 | 6 | design-options | agent → gate | **3–4 distinct clickable HTML prototypes**, identical screen coverage (contract-enforced); human picks; chosen design tokens feed scaffold |
 | 7 | data-design | agent | Schema + seed data validate |
 | 8 | agent-design | agent → gate | Agent roster: tools, prompts, HITL points, eval criteria |
+| 8b | traceability | deterministic | **RTM**: every non-unknown requirement joined to the design elements addressing it (`addresses` declarations on modules/tables/agents/design options); unaddressed requirement -> pipeline blocks |
+| 8c | design-review | gate | **User confirms the requirements->design mapping + all assumptions (defaulted answers, inferences) before any build spend** |
 | 9 | scaffold | deterministic | Skeleton render + module composition + **test harness first**; builds & boots empty |
 | 10 | build-backend | agent + verifier | FastAPI tests pass, boots |
 | 11 | build-agents | agent + verifier | Eval suite passes thresholds |
@@ -133,7 +135,7 @@ module/
 | Challenge | Design answer |
 |---|---|
 | **(a) Heterogeneous requirements input** | Nodes 1–3: drop zone → deterministic converters + agent semantic extraction → evidence corpus with provenance index. Contract: no requirement without provenance or an explicit assumption flag. |
-| **(b) No superfluous questions** | Node 4: questions only for gaps that materially branch the build. **Question budgets in the spec, enforced by the runner like cost budgets** (max N per gate, max M gates). Every question has a default + "why we ask"; one-click accept-defaults. Questions-per-run and gate dwell are certified fleet metrics — nagging is a regression. **Mid-node questions are structurally impossible**: the runner's `canUseTool` interceptor denies the Agent SDK's AskUserQuestion tool with "state an assumption" guidance (journaled as `agent.question_denied` for telemetry) — the gap-questions gate is the only question channel. |
+| **(b) No superfluous questions** | Node 4: questions only for gaps that materially branch the build. **Question budgets in the spec, enforced by the runner like cost budgets** (max N per gate, max M gates). Every question has a default + "why we ask"; one-click accept-defaults. Consolidated confirmation happens ONCE at design-review (RTM + assumptions), not scattered across stages. Questions-per-run and gate dwell are certified fleet metrics — nagging is a regression. **Mid-node questions are structurally impossible**: the runner's `canUseTool` interceptor denies the Agent SDK's AskUserQuestion tool with "state an assumption" guidance (journaled as `agent.question_denied` for telemetry) — the gap-questions gate is the only question channel. |
 | **(c) 3–4 approvable UI designs** | Node 6: clickable prototypes, same screen set per option (comparable by contract), side-by-side in dashboard, chosen tokens deterministically configure `app-shell-ui` in scaffold. |
 | **(d) Module mapping + small build budgets** | Node 5: BOM restricted to certified catalog + build-budget plan validated against the envelope. Modules carry glue-cost priors from fleet telemetry. Compose-ratio is the structural budget lever. |
 | **(e) Build & validate** | Validation pyramid: contract → unit → module verify-in-situ → integration smoke → eval thresholds → UAT. Test harness generated before agents build. Machine-readable verification reports per build node. |

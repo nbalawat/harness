@@ -5,6 +5,7 @@ const inputs = JSON.parse(fs.readFileSync("inputs.json", "utf8"));
 const security = inputs.security_report.data;
 const integration = inputs.integration_report.data;
 const roster = inputs.agent_roster.data;
+const rtm = inputs.rtm.data;
 
 fs.writeFileSync(
   "governance.json",
@@ -22,6 +23,13 @@ fs.writeFileSync(
         agent_evals: integration.evals.status,
         compose_config: integration.compose_config,
         evidence: "integration_report.json",
+      },
+      requirements: {
+        total: rtm.requirements_total,
+        covered: rtm.covered_count,
+        uncovered: rtm.uncovered.length,
+        assumptions: rtm.assumptions.length,
+        evidence: "rtm.json",
       },
       agents: {
         count: roster.agents.length,

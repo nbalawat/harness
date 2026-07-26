@@ -7,6 +7,18 @@
       "items": { "enum": ["persistence-core", "chat-shell", "agent-runtime"] }
     },
     "deploy_target": { "enum": ["local", "cloud-run"] },
+    "module_coverage": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "properties": {
+          "module": { "type": "string" },
+          "addresses": { "type": "array", "items": { "type": "string" } }
+        },
+        "required": ["module", "addresses"]
+      }
+    },
     "build_budget_plan": {
       "type": "object",
       "properties": {
@@ -16,5 +28,5 @@
       "required": ["nodes", "total_usd"]
     }
   },
-  "required": ["modules", "deploy_target", "build_budget_plan"]
+  "required": ["modules", "deploy_target", "build_budget_plan", "module_coverage"]
 }

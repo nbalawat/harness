@@ -1,0 +1,24 @@
+/* Nocturne Console — dark operator terminal for high-volume support triage.
+   Feel: dense, monospaced, keyboard-first, phosphor accents on near-black. */
+:root {
+  --primary: #4ade80;
+  --on-primary: #05140b;
+  --bg: #0b0f0d;
+  --fg: #d7e2da;
+  --surface: #121815;
+  --border: #223028;
+  --font: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+
+  /* extended */
+  --font-ui: var(--font);
+  --muted: #6f8578;
+  --surface-2: #0e1411;
+  --accent: #f0b429;      /* pending / needs attention */
+  --danger: #ff6b6b;
+  --info: #5eead4;
+  --radius: 2px;
+  --shadow: none;
+  --space: 8px;
+  --tracking: 0.08em;
+  --line: 1.55;
+}

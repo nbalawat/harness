@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Support Copilot — Pulse</title>
+<link rel="stylesheet" href="tokens.css" />
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--fg);
+    font-family: var(--font); font-size: 14.5px; line-height: var(--line);
+    letter-spacing: var(--tracking); -webkit-font-smoothing: antialiased;
+  }
+  .app { display: grid; grid-template-columns: 84px 1fr; min-height: 100vh; }
+
+  /* ---------- icon rail ---------- */
+  .rail {
+    background: var(--surface); border-right: 1px solid var(--border);
+    display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 18px 0;
+  }
+  .logo {
+    width: 44px; height: 44px; border-radius: 14px; background: var(--gradient); color: #fff;
+    display: grid; place-items: center; font-weight: 700; font-size: 18px; margin-bottom: 16px;
+    box-shadow: var(--shadow);
+  }
+  .rail button {
+    all: unset; cursor: pointer; width: 52px; padding: 10px 0; border-radius: var(--radius-sm);
+    display: flex; flex-direction: column; align-items: center; gap: 5px; color: var(--muted);
+    font-size: 9.5px; font-weight: 600; text-align: center; letter-spacing: 0;
+  }
+  .rail button svg { width: 20px; height: 20px; stroke: currentColor; fill: none; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+  .rail button:hover { background: var(--surface-2); color: var(--fg); }
+  .rail button[aria-current="true"] { background: var(--surface-2); color: var(--primary); }
+  .rail .spacer { margin-top: auto; }
+  .avatar { width: 34px; height: 34px; border-radius: 50%; background: linear-gradient(140deg,#f2617a,#5b4bf5); color:#fff;
+            display: grid; place-items: center; font-size: 12px; font-weight: 700; }
+
+  /* ---------- layout ---------- */
+  main { min-width: 0; padding: 26px 34px 60px; }
+  .screen { display: none; }
+  .screen.on { display: block; animation: rise .28s cubic-bezier(.2,.8,.2,1); }
+  @keyframes rise { from { opacity: 0; transform: translateY(8px); } }
+
+  .hero {
+    background: var(--gradient); color: #fff; border-radius: var(--radius); padding: 26px 30px;
+    display: flex; justify-content: space-between; align-items: center; gap: 24px; box-shadow: var(--shadow); margin-bottom: 22px;
+  }
+  .hero h1 { margin: 0 0 6px; font-size: 24px; font-weight: 700; letter-spacing: -0.02em; }
+  .hero p { margin: 0; opacity: .85; font-size: 14px; max-width: 60ch; }
+  .hero .stats { display: flex; gap: 26px; }
+  .hero .stat b { display: block; font-size: 22px; font-weight: 700; }
+  .hero .stat span { font-size: 11px; opacity: .8; text-transform: uppercase; letter-spacing: .08em; }
+
+  .grid { display: grid; grid-template-columns: 1fr 320px; gap: 20px; align-items: start; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); }
+  .card > header { padding: 16px 20px 0; display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+  .card > header h2 { margin: 0; font-size: 15px; font-weight: 700; }
+  .card .body { padding: 16px 20px 20px; }
+  .card .foot { padding: 14px 20px; border-top: 1px solid var(--border); display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+
+  /* ---------- chat bubbles ---------- */
+  .thread { display: flex; flex-direction: column; gap: 16px; }
+  .bubble { display: flex; gap: 12px; max-width: 84%; }
+  .bubble .pic { width: 32px; height: 32px; border-radius: 50%; flex: none; display: grid; place-items: center;
+                 font-size: 11px; font-weight: 700; color: #fff; }
+  .bubble.user { align-self: flex-end; flex-direction: row-reverse; }
+  .bubble.user .pic { background: linear-gradient(140deg,#f2617a,#c0398f); }
+  .bubble.ai .pic { background: var(--gradient); }
+  .bubble .text { padding: 12px 16px; border-radius: 18px; }
+  .bubble.user .text { background: var(--primary); color: var(--on-primary); border-bottom-right-radius: 6px; }
+  .bubble.ai .text { background: var(--surface-2); border-bottom-left-radius: 6px; }
+  .bubble .text p { margin: 0 0 8px; }
+  .bubble .text p:last-child { margin: 0; }
+  .chips { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+  .chip-src {
+    background: #fff; border: 1px solid var(--border); color: var(--primary); font-size: 11.5px; font-weight: 600;
+    padding: 4px 10px; border-radius: 999px; display: inline-flex; gap: 5px; align-items: center;
+  }
+  .typing span { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--muted); margin-right: 4px; animation: bounce 1.2s infinite; }
+  .typing span:nth-child(2){ animation-delay:.15s } .typing span:nth-child(3){ animation-delay:.3s }
+  @keyframes bounce { 0%,60%,100%{ transform: none; opacity:.5 } 30%{ transform: translateY(-4px); opacity:1 } }
+
+  /* ---------- forms ---------- */
+  input[type=text], textarea {
+    width: 100%; font-family: var(--font); font-size: 14.5px; color: var(--fg); background: var(--surface-2);
+    border: 1px solid transparent; border-radius: 14px; padding: 12px 16px; outline: none;
+  }
+  input:focus, textarea:focus { background: #fff; border-color: var(--primary); box-shadow: 0 0 0 4px rgba(91,75,245,.14); }
+  textarea { resize: vertical; line-height: 1.65; border-color: var(--border); background: #fff; }
+  .inline { display: flex; gap: 10px; align-items: center; }
+
+  .btn {
+    all: unset; cursor: pointer; padding: 11px 20px; border-radius: 999px; font-size: 13.5px; font-weight: 600;
+    background: var(--surface-2); color: var(--fg);
+  }
+  .btn:hover { background: #e6e3ff; }
+  .btn.primary { background: var(--primary); color: var(--on-primary); box-shadow: 0 8px 18px -8px rgba(91,75,245,.7); }
+  .btn.primary:hover { filter: brightness(1.08); }
+  .btn.ghost { background: transparent; color: var(--muted); }
+  .btn.ghost:hover { color: var(--fg); background: var(--surface-2); }
+  .btn.danger { background: #fdeaee; color: var(--danger); }
+  .btn.sm { padding: 7px 14px; font-size: 12.5px; }
+
+  /* ---------- bits ---------- */
+  .pill { font-size: 11px; font-weight: 700; padding: 4px 11px; border-radius: 999px; letter-spacing: 0; }
+  .pill.ai { background: #ede9ff; color: var(--primary); }
+  .pill.pending { background: #ffeef1; color: var(--accent); }
+  .pill.ok { background: #e2f7f4; color: var(--info); }
+  .meter { height: 8px; border-radius: 999px; background: var(--surface-2); overflow: hidden; }
+  .meter i { display: block; height: 100%; background: var(--gradient); border-radius: 999px; }
+  .kv { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px dashed var(--border); font-size: 13.5px; }
+  .kv:last-child { border-bottom: 0; }
+  .kv span { color: var(--muted); }
+  .muted { color: var(--muted); }
+  .sm { font-size: 12.5px; }
+
+  .searchbar { display: flex; gap: 12px; margin-bottom: 14px; }
+  .filters { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 18px; }
+  .chip { all: unset; cursor: pointer; padding: 7px 15px; border-radius: 999px; background: var(--surface); border: 1px solid var(--border);
+          font-size: 12.5px; font-weight: 600; color: var(--muted); }
+  .chip[aria-pressed="true"] { background: var(--primary); border-color: var(--primary); color: #fff; }
+
+  .list { display: grid; gap: 12px; }
+  .item { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 20px;
+          display: flex; justify-content: space-between; gap: 18px; align-items: center; box-shadow: var(--shadow); }
+  .item:hover { border-color: var(--primary); }
+  .item h3 { margin: 0 0 4px; font-size: 14.5px; font-weight: 700; }
+  .docs { display: grid; gap: 10px; }
+  .doc { display: grid; grid-template-columns: 1fr 90px 130px 90px; gap: 14px; align-items: center;
+         background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 13px 18px; font-size: 13.5px; }
+  .doc b { font-weight: 600; }
+
+  .toast {
+    position: fixed; right: 26px; bottom: 26px; background: var(--fg); color: #fff; padding: 13px 20px;
+    border-radius: 14px; font-size: 13.5px; font-weight: 600; opacity: 0; transform: translateY(10px);
+    transition: .2s cubic-bezier(.2,.8,.2,1); pointer-events: none; box-shadow: 0 18px 40px -18px rgba(20,18,43,.6);
+  }
+  .toast.on { opacity: 1; transform: none; }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="rail">
+    <div class="logo">S</div>
+    <button data-screen="conversation" aria-current="true">
+      <svg viewBox="0 0 24 24"><path d="M21 12a8 8 0 0 1-11.6 7.1L3 21l1.9-6.4A8 8 0 1 1 21 12z"/></svg>Chat
+    </button>
+    <button data-screen="draft-approval">
+      <svg viewBox="0 0 24 24"><path d="M9 12l2 2 4-4"/><path d="M21 12a9 9 0 1 1-9-9"/></svg>Approve
+    </button>
+    <button data-screen="history">
+      <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>History
+    </button>
+    <button data-screen="knowledge-base">
+      <svg viewBox="0 0 24 24"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H19v15H6.5A2.5 2.5 0 0 0 4 20.5z"/><path d="M9 8h6"/></svg>Docs
+    </button>
+    <div class="spacer"></div>
+    <div class="avatar">RO</div>
+  </aside>
+
+  <main>
+    <!-- ============ CONVERSATION ============ -->
+    <section class="screen on" id="conversation">
+      <div class="hero">
+        <div>
+          <h1>Ask the copilot</h1>
+          <p>Every answer is grounded in your indexed product docs — with the passages it used shown right alongside.</p>
+        </div>
+        <div class="stats">
+          <div class="stat"><b>42</b><span>Passages</span></div>
+          <div class="stat"><b>4</b><span>Turns</span></div>
+        </div>
+      </div>
+
+      <div class="grid">
+        <div class="card">
+          <header><h2>Annual plan refund window</h2><span class="pill ai">Grounded</span></header>
+          <div class="body">
+            <div class="thread">
+              <div class="bubble user"><div class="pic">RO</div><div class="text"><p>Customer on an annual plan wants a refund 45 days in. What's our policy?</p></div></div>
+              <div class="bubble ai">
+                <div class="pic">AI</div>
+                <div class="text">
+                  <p>Annual plans have a <b>30-day full-refund window</b>. After day 30 the plan is non-refundable, but you can issue a pro-rated account credit for the unused remainder.</p>
+                  <p>At day 45, this customer is outside the window — credit is the available remedy.</p>
+                  <div class="chips"><span class="chip-src">refund-policy.md §2</span><span class="chip-src">billing-faq.md §4</span></div>
+                </div>
+              </div>
+              <div class="bubble user"><div class="pic">RO</div><div class="text"><p>Does that change if they downgrade instead?</p></div></div>
+              <div class="bubble ai">
+                <div class="pic">AI</div>
+                <div class="text">
+                  <p>A mid-term downgrade rolls the unused balance into credit on the next invoice — there's no documented cash-out path.</p>
+                  <div class="chips"><span class="chip-src">plan-changes.md §1</span></div>
+                  <div class="typing" style="margin-top:8px"><span></span><span></span><span></span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="foot">
+            <input type="text" placeholder="Ask a follow-up…" />
+            <button class="btn primary" data-toast="Sent to the copilot">Send</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <header><h2>Sources used</h2></header>
+          <div class="body">
+            <p class="sm muted" style="margin:0 0 6px">refund-policy.md</p>
+            <div class="meter"><i style="width:91%"></i></div>
+            <p class="sm muted" style="margin:14px 0 6px">billing-faq.md</p>
+            <div class="meter"><i style="width:74%"></i></div>
+            <p class="sm muted" style="margin:14px 0 6px">plan-changes.md</p>
+            <div class="meter"><i style="width:68%"></i></div>
+            <div style="margin-top:20px" class="sm muted">No supporting passage? The copilot says <b>“I don't know”</b> instead of guessing.</div>
+            <button class="btn sm" style="margin-top:16px" data-screen="draft-approval">Open pending draft →</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ DRAFT APPROVAL ============ -->
+    <section class="screen" id="draft-approval">
+      <div class="hero">
+        <div>
+          <h1>Draft ready for review</h1>
+          <p>The copilot drafts, you decide. Nothing sends until you approve it — edits welcome.</p>
+        </div>
+        <div class="stats"><div class="stat"><b>3</b><span>In queue</span></div><div class="stat"><b>09:14</b><span>Drafted</span></div></div>
+      </div>
+
+      <div class="grid">
+        <div>
+          <div class="card" style="margin-bottom:18px">
+            <header><h2>Ticket #4821 · Maria Alvarez</h2><span class="pill pending">Awaiting approval</span></header>
+            <div class="body">
+              <p style="margin:0">“I signed up for the annual plan 45 days ago and barely used it. Can I get my money back?”</p>
+              <p class="sm muted" style="margin:10px 0 0">m.alvarez@northwind.example · annual plan · 45 days tenure</p>
+            </div>
+          </div>
+
+          <div class="card">
+            <header><h2>Suggested reply</h2><span class="pill ai">Auto-generated</span></header>
+            <div class="body">
+              <textarea rows="9">Hi Maria,
+
+Thanks for reaching out! Annual plans include a full-refund window of 30 days from purchase. Since your subscription started 45 days ago, it falls just outside that window, so a cash refund isn't available.
+
+What I can do is apply a pro-rated credit for the unused portion of your term to your next renewal. Just reply and I'll set that up today.</textarea>
+              <div class="chips" style="margin-top:12px">
+                <span class="chip-src">refund-policy.md §2</span><span class="chip-src">billing-faq.md §4</span><span class="chip-src">credits.md §3</span>
+              </div>
+              <p class="sm muted" style="margin:14px 0 0">The sent reply carries an “automated reply” label so the customer knows it was machine-drafted.</p>
+            </div>
+            <div class="foot" style="justify-content:space-between">
+              <div class="inline">
+                <button class="btn primary" data-toast="Approved — logged as R. Okafor at 09:21">Approve &amp; send</button>
+                <button class="btn ghost" data-toast="Edits saved">Save edits</button>
+              </div>
+              <button class="btn danger" data-toast="Rejected — sent for hand-authoring">Reject</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <header><h2>Audit trail</h2></header>
+          <div class="body">
+            <div class="kv"><span>Ticket</span><b>#4821</b></div>
+            <div class="kv"><span>Drafted</span><b>09:14 · agent</b></div>
+            <div class="kv"><span>Approver</span><b>R. Okafor</b></div>
+            <div class="kv"><span>Decision</span><span class="pill pending">Pending</span></div>
+            <div class="kv"><span>Revisions</span><b>2</b></div>
+            <div class="kv"><span>Retained</span><b>Q + draft + final</b></div>
+            <p class="sm muted" style="margin:16px 0 0">The agent can draft, never send. Approval is a hard gate.</p>
+            <button class="btn sm" style="margin-top:14px" data-screen="history">Find similar answers →</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ HISTORY ============ -->
+    <section class="screen" id="history">
+      <div class="hero">
+        <div>
+          <h1>Conversation history</h1>
+          <p>Search 1,284 saved conversations and drop a proven answer straight into your draft.</p>
+        </div>
+        <div class="stats"><div class="stat"><b>1,284</b><span>Saved</span></div><div class="stat"><b>4</b><span>Matches</span></div></div>
+      </div>
+
+      <div class="searchbar">
+        <input type="text" value="refund annual" placeholder="Search questions, answers, sources…" />
+        <button class="btn primary" data-toast="4 of 1,284 conversations match">Search</button>
+      </div>
+      <div class="filters">
+        <button class="chip" aria-pressed="true">Approved</button>
+        <button class="chip" aria-pressed="false">Pending</button>
+        <button class="chip" aria-pressed="false">Rejected</button>
+        <button class="chip" aria-pressed="true">Last 90 days</button>
+        <button class="chip" aria-pressed="false">Mine only</button>
+      </div>
+
+      <div class="list">
+        <div class="item">
+          <div>
+            <h3>Refund after annual renewal</h3>
+            <p class="sm muted" style="margin:0">“30-day window runs from the renewal date; after that, credit only.”</p>
+            <p class="sm muted" style="margin:6px 0 0">#4102 · R. Okafor · 12 May 2026 · <span class="pill ok">Approved</span></p>
+          </div>
+          <button class="btn sm" data-toast="Inserted into draft #4821">Insert</button>
+        </div>
+        <div class="item">
+          <div>
+            <h3>Pro-rated credit on downgrade</h3>
+            <p class="sm muted" style="margin:0">“Unused balance rolls to the next invoice as credit, not cash.”</p>
+            <p class="sm muted" style="margin:6px 0 0">#3987 · J. Mbeki · 28 Apr 2026 · <span class="pill ok">Approved</span></p>
+          </div>
+          <button class="btn sm" data-toast="Inserted into draft #4821">Insert</button>
+        </div>
+        <div class="item">
+          <div>
+            <h3>Annual plan cancellation fee</h3>
+            <p class="sm muted" style="margin:0">“No cancellation fee — the term runs to the paid-through date.”</p>
+            <p class="sm muted" style="margin:6px 0 0">#3820 · R. Okafor · 2 Apr 2026 · <span class="pill ok">Approved</span></p>
+          </div>
+          <button class="btn sm" data-toast="Inserted into draft #4821">Insert</button>
+        </div>
+        <div class="item">
+          <div>
+            <h3>Refund for duplicate charge</h3>
+            <p class="sm muted" style="margin:0">“Duplicate charges are refunded in full, outside normal policy.”</p>
+            <p class="sm muted" style="margin:6px 0 0">#3644 · A. Lindqvist · 19 Mar 2026 · <span class="pill ok">Approved</span></p>
+          </div>
+          <button class="btn sm" data-toast="Inserted into draft #4821">Insert</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ KNOWLEDGE BASE ============ -->
+    <section class="screen" id="knowledge-base">
+      <div class="hero">
+        <div>
+          <h1>Knowledge base</h1>
+          <p>Six documents from <b>fixtures/sample-docs</b>, indexed locally into 42 retrievable passages.</p>
+        </div>
+        <div class="stats"><div class="stat"><b>6</b><span>Docs</span></div><div class="stat"><b>2</b><span>Stale</span></div></div>
+      </div>
+
+      <div class="grid">
+        <div>
+          <div class="docs">
+            <div class="doc"><b>refund-policy.md</b><span class="muted">9 passages</span><span class="muted">24 Jul 08:02</span><span class="pill ok">Fresh</span></div>
+            <div class="doc"><b>billing-faq.md</b><span class="muted">12 passages</span><span class="muted">24 Jul 08:02</span><span class="pill ok">Fresh</span></div>
+            <div class="doc"><b>plan-changes.md</b><span class="muted">7 passages</span><span class="muted">24 Jul 08:02</span><span class="pill ok">Fresh</span></div>
+            <div class="doc"><b>credits.md</b><span class="muted">5 passages</span><span class="muted">24 Jul 08:02</span><span class="pill ok">Fresh</span></div>
+            <div class="doc"><b>onboarding.html</b><span class="muted">6 passages</span><span class="muted">18 Jul 11:40</span><span class="pill pending">Stale</span></div>
+            <div class="doc"><b>sso-setup.md</b><span class="muted">3 passages</span><span class="muted">18 Jul 11:40</span><span class="pill pending">Stale</span></div>
+          </div>
+          <div class="inline" style="margin-top:20px">
+            <button class="btn primary" data-toast="Re-ingest started over 6 documents">Re-ingest corpus</button>
+            <button class="btn ghost" data-toast="Dry run: 2 documents would be reindexed">Dry run</button>
+          </div>
+        </div>
+        <div class="card">
+          <header><h2>Ingest settings</h2></header>
+          <div class="body">
+            <div class="kv"><span>Directory</span><b>fixtures/sample-docs</b></div>
+            <div class="kv"><span>Formats</span><b>.md, .html</b></div>
+            <div class="kv"><span>Store</span><b>Local disk</b></div>
+            <div class="kv"><span>Last run</span><b>24 Jul 08:02</b></div>
+            <div class="kv"><span>Drift</span><b>2 files changed</b></div>
+            <p class="sm muted" style="margin:16px 0 0">Credentials and the docs path come from local config — never committed to the repo.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+  const show = (id) => {
+    document.querySelectorAll('.screen').forEach(s => s.classList.toggle('on', s.id === id));
+    document.querySelectorAll('.rail button').forEach(b => b.setAttribute('aria-current', String(b.dataset.screen === id)));
+    window.scrollTo(0, 0);
+  };
+  document.querySelectorAll('[data-screen]').forEach(el => el.addEventListener('click', () => show(el.dataset.screen)));
+  const toast = document.getElementById('toast');
+  let t;
+  document.querySelectorAll('[data-toast]').forEach(el => el.addEventListener('click', () => {
+    toast.textContent = el.dataset.toast; toast.classList.add('on');
+    clearTimeout(t); t = setTimeout(() => toast.classList.remove('on'), 2000);
+  }));
+  document.querySelectorAll('.chip').forEach(c => c.addEventListener('click', () => {
+    c.setAttribute('aria-pressed', c.getAttribute('aria-pressed') === 'true' ? 'false' : 'true');
+  }));
+</script>
+</body>
+</html>

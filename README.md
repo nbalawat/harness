@@ -48,6 +48,17 @@ node packages/cli/dist/index.js resume my-interactive-run
 node packages/cli/dist/index.js status my-interactive-run
 ```
 
+### 2b. Watch it in the browser
+
+```sh
+node packages/cli/dist/index.js ui my-run --port 4400
+# open http://localhost:4400
+```
+
+Live DAG progress with per-node cost, event feed, artifact browser, the design
+gallery rendered inline, and gate forms — a parked run can be answered and
+resumed from the browser.
+
 ### 3. Explore what it produced
 
 ```sh

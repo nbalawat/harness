@@ -130,6 +130,15 @@ async function main(): Promise<void> {
     case "status":
       code = cmdStatus(rest);
       break;
+    case "ui": {
+      const { positional, flags } = parseFlags(rest);
+      const workspace = path.resolve(positional[0] ?? ".harness-run");
+      const port = Number(flags.port ?? 4400);
+      const { startUiServer } = await import("./ui.js");
+      await startUiServer(workspace, port);
+      console.log(`dashboard: http://localhost:${port}  (workspace: ${workspace})`);
+      return; // keep serving
+    }
     default:
       console.log("usage: harness <run|resume|status>");
       console.log("  harness run <project-type-dir> [--workspace dir] [--answers file] [--mock-agents]");

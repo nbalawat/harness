@@ -1,0 +1,44 @@
+{
+  "options": [
+    {
+      "id": "nocturne-console",
+      "name": "Nocturne Console",
+      "summary": "Dark, monospaced operator console for high-volume triage: phosphor-green accents on near-black, square edges, keyboard shortcuts (1-4), dense rows and retrieval-score readouts. Optimized for an analyst who lives in the queue all day.",
+      "palette": ["#0b0f0d", "#4ade80", "#f0b429", "#d7e2da"],
+      "typography": "System monospace throughout (SF Mono / Menlo / Consolas), uppercase micro-labels",
+      "screens": ["conversation", "draft-approval", "history", "knowledge-base"],
+      "tokens_file": "designs/nocturne-console/tokens.css",
+      "preview_file": "designs/nocturne-console/index.html"
+    },
+    {
+      "id": "atrium",
+      "name": "Atrium",
+      "summary": "Editorial reading room in ink-on-cream: serif display type, centered single column, hairline rules and generous air. Frames each draft as a letter to be read carefully before it is signed — leans into the approval gate as an act of judgement.",
+      "palette": ["#faf6ee", "#1f4d3d", "#b4622a", "#23201b"],
+      "typography": "Iowan Old Style / Palatino serif for display, Optima / Avenir humanist sans for body",
+      "screens": ["conversation", "draft-approval", "history", "knowledge-base"],
+      "tokens_file": "designs/atrium/tokens.css",
+      "preview_file": "designs/atrium/index.html"
+    },
+    {
+      "id": "pulse",
+      "name": "Pulse",
+      "summary": "Bright modern product UI: electric indigo gradient headers, geometric sans, 16px rounded cards with soft depth, chat bubbles and pill buttons. Icon rail navigation, friendly voice — the most familiar-feeling SaaS direction.",
+      "palette": ["#f6f5ff", "#5b4bf5", "#f2617a", "#17b0a8"],
+      "typography": "Inter / SF Pro geometric sans, tight tracking, bold weights for hierarchy",
+      "screens": ["conversation", "draft-approval", "history", "knowledge-base"],
+      "tokens_file": "designs/pulse/tokens.css",
+      "preview_file": "designs/pulse/index.html"
+    },
+    {
+      "id": "ledger",
+      "name": "Ledger",
+      "summary": "Institutional record-keeping surface: navy chrome, zero-radius flat panels, small-caps section legends, faceted filters and tabular data with monospaced timestamps. Treats every conversation as an auditable record for later quality review.",
+      "palette": ["#eef0f3", "#14304f", "#a8620b", "#1c6b4a"],
+      "typography": "Helvetica Neue / Arial grotesque with letterspaced uppercase labels, monospace for numerics",
+      "screens": ["conversation", "draft-approval", "history", "knowledge-base"],
+      "tokens_file": "designs/ledger/tokens.css",
+      "preview_file": "designs/ledger/index.html"
+    }
+  ]
+}

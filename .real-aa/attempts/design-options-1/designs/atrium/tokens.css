@@ -1,0 +1,24 @@
+/* Atrium — editorial, paper-warm reading room for careful review.
+   Feel: serif display, generous air, hairline rules, ink-on-cream calm. */
+:root {
+  --primary: #1f4d3d;
+  --on-primary: #fdfaf4;
+  --bg: #faf6ee;
+  --fg: #23201b;
+  --surface: #fffdf8;
+  --border: #e0d8c8;
+  --font: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, "Times New Roman", serif;
+
+  /* extended */
+  --font-body: "Optima", "Avenir Next", "Segoe UI", system-ui, sans-serif;
+  --muted: #7c7364;
+  --surface-2: #f3ecdf;
+  --accent: #b4622a;      /* pending / needs attention */
+  --danger: #97331f;
+  --info: #3d6b7d;
+  --radius: 3px;
+  --shadow: none;
+  --space: 12px;
+  --tracking: 0.02em;
+  --line: 1.7;
+}

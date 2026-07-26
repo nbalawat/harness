@@ -7,6 +7,7 @@
       "items": {
         "type": "object",
         "properties": {
+          "addresses": { "type": "array", "items": { "type": "string" } },
           "name": { "type": "string", "pattern": "^[a-z_]+$" },
           "columns": {
             "type": "array",
@@ -18,7 +19,7 @@
             }
           }
         },
-        "required": ["name", "columns"]
+        "required": ["name", "columns", "addresses"]
       }
     }
   },

@@ -1,0 +1,86 @@
+{
+  "corpus": {
+    "path": "/Users/nbalawat/development/harness/.real-aa/artifacts/ingest/corpus"
+  },
+  "corpus_index": {
+    "path": "/Users/nbalawat/development/harness/.real-aa/artifacts/ingest/corpus_index.json",
+    "data": {
+      "sources": [
+        {
+          "id": "src-001",
+          "original": "/Users/nbalawat/development/harness/.real-aa/artifacts/intake/intake.json",
+          "extracted": "corpus/src-001-problem-statement.md",
+          "type": "problem_statement"
+        },
+        {
+          "id": "src-002",
+          "original": "/Users/nbalawat/development/harness/project-types/agentic-app/fixtures/sample-docs/brief.md",
+          "extracted": "corpus/src-002-brief.md",
+          "type": "markdown"
+        },
+        {
+          "id": "src-003",
+          "original": "/Users/nbalawat/development/harness/project-types/agentic-app/fixtures/sample-docs/process.html",
+          "extracted": "corpus/src-003-process.md",
+          "type": "html"
+        }
+      ],
+      "claims": [
+        {
+          "id": "clm-001",
+          "text": "Support analysts need an assistant that answers product questions from our knowledge.",
+          "source": "src-001"
+        },
+        {
+          "id": "clm-002",
+          "text": "The assistant keeps reviewable conversation history.",
+          "source": "src-001"
+        },
+        {
+          "id": "clm-003",
+          "text": "The deploy target is local.",
+          "source": "src-001"
+        },
+        {
+          "id": "clm-004",
+          "text": "The application must let a support analyst chat with an assistant that answers from our product knowledge.",
+          "source": "src-002"
+        },
+        {
+          "id": "clm-005",
+          "text": "Analysts should be able to review past conversations to reuse good answers.",
+          "source": "src-002"
+        },
+        {
+          "id": "clm-006",
+          "text": "The assistant must identify itself clearly so customers know it is automated.",
+          "source": "src-002"
+        },
+        {
+          "id": "clm-007",
+          "text": "Conversation records need to be stored for quality review.",
+          "source": "src-002"
+        },
+        {
+          "id": "clm-008",
+          "text": "The future process should route each question to the assistant first.",
+          "source": "src-003"
+        },
+        {
+          "id": "clm-009",
+          "text": "The analyst must approve the reply before it is sent.",
+          "source": "src-003"
+        }
+      ]
+    }
+  },
+  "intake": {
+    "path": "/Users/nbalawat/development/harness/.real-aa/artifacts/intake/intake.json",
+    "data": {
+      "project_name": "Support Copilot",
+      "problem_statement": "Support analysts need an assistant that answers product questions from our knowledge and keeps reviewable conversation history.",
+      "documents_dir": "fixtures/sample-docs",
+      "deploy_target": "local"
+    }
+  }
+}

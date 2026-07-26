@@ -1,0 +1,34 @@
+{
+  "questions": [
+    {
+      "id": "auth_model",
+      "prompt": "Is this a single shared local operator (no login), or multiple named analysts who each sign in and have their own conversations? (shared / named-analysts)",
+      "default": "shared",
+      "why": "Resolves REQ-017. Decides whether an auth/identity module and per-analyst access control are composed now or deferred, and whether the approval record (REQ-015) stores a real authenticated user or a single local operator label."
+    },
+    {
+      "id": "reply_delivery",
+      "prompt": "How does an approved reply reach the customer: the app sends it via an email/ticketing integration, or the analyst copies the approved text into the existing tool by hand? (manual-copy / integration)",
+      "default": "manual-copy",
+      "why": "Resolves REQ-023. Decides whether the backend needs an outbound email/ticketing connector plus its credentials and delivery-status persistence, or the approval screen only needs a copy/export affordance."
+    },
+    {
+      "id": "model_provider",
+      "prompt": "Which model provider should the assistant use, supplied via local config? (e.g. anthropic / openai / local-ollama)",
+      "default": "anthropic",
+      "why": "REQ-016 and REQ-022 assume a 'configured model provider' but never name one. Sets the backend SDK dependency, the .env.example key names, the embedding model used to build the knowledge index, and the per-node build budget estimate."
+    },
+    {
+      "id": "retention_period",
+      "prompt": "How long should conversation records (question, draft, approved reply, approver) be retained for quality review?",
+      "default": "90 days",
+      "why": "REQ-011/REQ-012 require durable retention but not a duration. Sets the retention field in the data model, the purge job in persistence-core, and the retention entry in the governance report."
+    },
+    {
+      "id": "reingest_mode",
+      "prompt": "How should the knowledge index refresh when documents change: a manual re-index command the operator runs, or automatic watching of the documents directory? (manual / watch)",
+      "default": "manual",
+      "why": "Resolves the assumption in REQ-014. Decides whether the backend ships only a re-index endpoint/CLI or additionally a filesystem watcher plus background job runner, which changes the ingest module and the build-backend budget."
+    }
+  ]
+}

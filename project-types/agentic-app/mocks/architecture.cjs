@@ -1,8 +1,15 @@
 const { inputs, writeJson, simulateCost } = require("./_lib.cjs");
 
-const { intake } = inputs();
+const { intake, requirements } = inputs();
+const reqs = requirements.data.requirements.filter((r) => r.confidence !== "unknown");
+const byCat = (...cats) => reqs.filter((r) => cats.includes(r.category)).map((r) => r.id);
 writeJson("architecture.json", {
   modules: ["persistence-core", "chat-shell", "agent-runtime"],
+  module_coverage: [
+    { module: "persistence-core", addresses: byCat("data") },
+    { module: "chat-shell", addresses: byCat("ux", "functional") },
+    { module: "agent-runtime", addresses: byCat("agent") },
+  ],
   deploy_target: intake.data.deploy_target,
   build_budget_plan: {
     nodes: { "build-backend": 3.5, "build-agents": 2.5, "build-frontend": 2.0 },

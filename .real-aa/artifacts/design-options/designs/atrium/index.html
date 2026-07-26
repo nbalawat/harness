@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Support Copilot — Atrium</title>
+<link rel="stylesheet" href="tokens.css" />
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--fg);
+    font-family: var(--font-body); font-size: 15px; line-height: var(--line);
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 940px; margin: 0 auto; padding: 0 32px 96px; }
+
+  /* ---------- masthead ---------- */
+  header.mast { border-bottom: 2px solid var(--fg); margin-bottom: 0; padding: 40px 0 14px; text-align: center; }
+  .wordmark { font-family: var(--font); font-size: 34px; letter-spacing: 0.01em; margin: 0; font-weight: 400; }
+  .wordmark em { font-style: italic; color: var(--primary); }
+  .tagline { font-size: 12px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--muted); margin-top: 8px; }
+  nav { display: flex; justify-content: center; gap: 34px; border-bottom: 1px solid var(--border); padding: 0; margin-bottom: 40px; }
+  nav button {
+    all: unset; cursor: pointer; padding: 14px 2px; font-size: 12px; letter-spacing: 0.18em;
+    text-transform: uppercase; color: var(--muted); border-bottom: 2px solid transparent; margin-bottom: -1px;
+  }
+  nav button:hover { color: var(--fg); }
+  nav button[aria-current="true"] { color: var(--primary); border-bottom-color: var(--primary); }
+
+  /* ---------- typography ---------- */
+  .screen { display: none; }
+  .screen.on { display: block; animation: fade .25s ease; }
+  @keyframes fade { from { opacity: 0; transform: translateY(4px); } }
+  h1 { font-family: var(--font); font-weight: 400; font-size: 34px; line-height: 1.2; margin: 0 0 10px; }
+  h2 { font-family: var(--font); font-weight: 400; font-size: 21px; margin: 40px 0 14px; }
+  h2 .num { color: var(--muted); font-size: 13px; letter-spacing: 0.2em; display: block; text-transform: uppercase; margin-bottom: 4px; }
+  .standfirst { font-size: 17px; color: var(--muted); font-style: italic; font-family: var(--font); margin: 0 0 34px; max-width: 62ch; }
+  p { margin: 0 0 14px; }
+  .rule { border: 0; border-top: 1px solid var(--border); margin: 34px 0; }
+  .small { font-size: 13px; color: var(--muted); }
+  .label { font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted); }
+
+  /* ---------- letters (chat) ---------- */
+  .letter { border-top: 1px solid var(--border); padding: 22px 0; display: grid; grid-template-columns: 132px 1fr; gap: 26px; }
+  .letter:last-of-type { border-bottom: 1px solid var(--border); }
+  .letter .from { font-size: 12px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted); }
+  .letter.assistant .from { color: var(--primary); }
+  .letter.assistant .prose { font-family: var(--font); font-size: 16.5px; }
+  .prose p:last-child { margin-bottom: 0; }
+  .sources { margin-top: 14px; font-size: 13px; color: var(--muted); }
+  .sources a { color: var(--primary); text-decoration: none; border-bottom: 1px solid var(--border); }
+  .sources a:hover { border-bottom-color: var(--primary); }
+
+  /* ---------- form ---------- */
+  .ask { display: flex; gap: 12px; margin-top: 26px; align-items: flex-end; }
+  input[type=text], textarea {
+    flex: 1; font-family: var(--font-body); font-size: 15px; color: var(--fg);
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 12px 14px; outline: none;
+  }
+  textarea { width: 100%; font-family: var(--font); font-size: 16px; line-height: 1.65; resize: vertical; }
+  input:focus, textarea:focus { border-color: var(--primary); }
+
+  .btn {
+    all: unset; cursor: pointer; padding: 11px 22px; font-size: 12px; letter-spacing: 0.16em;
+    text-transform: uppercase; border: 1px solid var(--primary); color: var(--primary); border-radius: var(--radius);
+  }
+  .btn:hover { background: var(--surface-2); }
+  .btn.primary { background: var(--primary); color: var(--on-primary); }
+  .btn.primary:hover { filter: brightness(1.15); }
+  .btn.quiet { border-color: var(--border); color: var(--muted); }
+  .btn.quiet:hover { color: var(--fg); border-color: var(--fg); }
+  .btn.warn { border-color: var(--danger); color: var(--danger); }
+  .row { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+
+  /* ---------- pieces ---------- */
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px 26px; }
+  .aside { background: var(--surface-2); border-left: 3px solid var(--primary); padding: 18px 22px; font-size: 14px; }
+  .two { display: grid; grid-template-columns: 1fr 250px; gap: 34px; align-items: start; }
+  .stamp {
+    display: inline-block; font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase;
+    border: 1px solid var(--border); padding: 4px 9px; border-radius: 999px; color: var(--muted);
+  }
+  .stamp.ai { color: var(--primary); border-color: var(--primary); }
+  .stamp.pending { color: var(--accent); border-color: var(--accent); }
+  dl.meta { margin: 0; font-size: 13px; }
+  dl.meta dt { font-size: 10.5px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--muted); margin-top: 14px; }
+  dl.meta dt:first-child { margin-top: 0; }
+  dl.meta dd { margin: 2px 0 0; }
+
+  .entry { border-top: 1px solid var(--border); padding: 20px 0; display: grid; grid-template-columns: 1fr 130px; gap: 20px; align-items: start; }
+  .entry:last-child { border-bottom: 1px solid var(--border); }
+  .entry h3 { font-family: var(--font); font-weight: 400; font-size: 19px; margin: 0 0 6px; }
+  .entry blockquote { margin: 8px 0 0; padding-left: 16px; border-left: 1px solid var(--border); color: var(--muted); font-style: italic; font-family: var(--font); }
+  .byline { font-size: 12px; color: var(--muted); letter-spacing: 0.06em; }
+  .filters { display: flex; gap: 10px; flex-wrap: wrap; margin: 18px 0 8px; }
+  .chip { all: unset; cursor: pointer; font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase;
+          border: 1px solid var(--border); border-radius: 999px; padding: 6px 14px; color: var(--muted); }
+  .chip[aria-pressed="true"] { border-color: var(--primary); color: var(--primary); background: var(--surface); }
+
+  .doclist { width: 100%; border-collapse: collapse; font-size: 14px; }
+  .doclist th { text-align: left; font-weight: 400; font-size: 10.5px; letter-spacing: 0.18em;
+                text-transform: uppercase; color: var(--muted); padding: 0 0 10px; border-bottom: 1px solid var(--fg); }
+  .doclist td { padding: 13px 0; border-bottom: 1px solid var(--border); }
+  .doclist td:first-child { font-family: var(--font); }
+  .doclist td + td, .doclist th + th { padding-left: 18px; }
+
+  .toast {
+    position: fixed; left: 50%; bottom: 34px; transform: translate(-50%, 8px); background: var(--fg); color: var(--bg);
+    padding: 12px 22px; border-radius: 999px; font-size: 13px; opacity: 0; transition: .2s; pointer-events: none;
+  }
+  .toast.on { opacity: 1; transform: translate(-50%, 0); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="mast">
+    <h1 class="wordmark">Support <em>Copilot</em></h1>
+    <div class="tagline">Answers drawn from our own knowledge</div>
+  </header>
+  <nav>
+    <button data-screen="conversation" aria-current="true">Conversation</button>
+    <button data-screen="draft-approval">Draft Approval</button>
+    <button data-screen="history">History</button>
+    <button data-screen="knowledge-base">Knowledge Base</button>
+  </nav>
+
+  <!-- ============ CONVERSATION ============ -->
+  <section class="screen on" id="conversation">
+    <h1>The annual plan refund window</h1>
+    <p class="standfirst">A conversation between R. Okafor and the assistant, grounded in six indexed product documents. Follow-ups resolve against everything said above.</p>
+
+    <div class="letter">
+      <div class="from">R. Okafor<div class="small" style="letter-spacing:0">09:12</div></div>
+      <div class="prose"><p>Customer on an annual plan wants a refund 45 days in. What is our policy?</p></div>
+    </div>
+    <div class="letter assistant">
+      <div class="from">Assistant<div class="small" style="letter-spacing:0">09:12</div></div>
+      <div class="prose">
+        <p>Annual plans carry a full-refund window of thirty days from purchase. Past that date the plan is non-refundable, though a pro-rated account credit may be issued for the unused remainder at the analyst's discretion.</p>
+        <p>At forty-five days, this customer sits outside the window; credit is the remedy available.</p>
+        <div class="sources">Drawn from <a href="#">refund-policy.md §2</a> and <a href="#">billing-faq.md §4</a></div>
+      </div>
+    </div>
+    <div class="letter">
+      <div class="from">R. Okafor<div class="small" style="letter-spacing:0">09:14</div></div>
+      <div class="prose"><p>Does that change if they downgrade instead?</p></div>
+    </div>
+    <div class="letter assistant">
+      <div class="from">Assistant<div class="small" style="letter-spacing:0">09:14</div></div>
+      <div class="prose">
+        <p>A mid-term downgrade converts the unused balance into credit against the next invoice rather than a refund. The documented policy describes no cash-out path.</p>
+        <div class="sources">Drawn from <a href="#">plan-changes.md §1</a></div>
+      </div>
+    </div>
+
+    <div class="ask">
+      <input type="text" placeholder="Ask a follow-up question…" />
+      <button class="btn primary" data-toast="Question sent to the assistant">Ask</button>
+    </div>
+
+    <div class="aside" style="margin-top:34px">
+      <span class="label">A note on grounding</span>
+      <p style="margin:8px 0 0">When no indexed passage supports an answer, the assistant says so plainly rather than improvising — an unsupported draft is the one thing an approval gate cannot catch.</p>
+    </div>
+    <div class="row" style="margin-top:26px"><button class="btn quiet" data-screen="draft-approval">Read the pending draft →</button></div>
+  </section>
+
+  <!-- ============ DRAFT APPROVAL ============ -->
+  <section class="screen" id="draft-approval">
+    <h1>A draft awaiting your signature</h1>
+    <p class="standfirst">Ticket #4821. The assistant has prepared a reply; it cannot send. Read it, change what you like, and approve when it reads true.</p>
+
+    <div class="two">
+      <div>
+        <h2><span class="num">The question</span>Maria Alvarez, Northwind</h2>
+        <div class="card">
+          <p style="font-family:var(--font); font-size:17px; margin:0">“I signed up for the annual plan 45 days ago and barely used it. Can I get my money back?”</p>
+          <p class="small" style="margin:12px 0 0">Received 09:14 · annual plan · 45 days tenure</p>
+        </div>
+
+        <h2><span class="num">The draft</span>Editable before approval</h2>
+        <textarea rows="10">Hi Maria,
+
+Thanks for reaching out. Annual plans include a full-refund window of thirty days from purchase, and since your subscription began forty-five days ago it falls outside that window — so a cash refund isn't something I can arrange.
+
+What I can offer is a pro-rated credit for the unused portion of your term, applied automatically to your next renewal. Say the word and I'll put it through today.</textarea>
+        <div class="sources" style="margin-top:12px">Grounded in <a href="#">refund-policy.md §2</a>, <a href="#">billing-faq.md §4</a>, <a href="#">credits.md §3</a></div>
+        <p class="small" style="margin-top:14px">The reply carries an <span class="stamp ai">automated reply</span> stamp so the customer knows it was machine-drafted.</p>
+
+        <hr class="rule" />
+        <div class="row">
+          <button class="btn primary" data-toast="Approved — recorded as R. Okafor, 09:21">Approve &amp; send</button>
+          <button class="btn quiet" data-toast="Edits saved to the draft">Save edits</button>
+          <button class="btn warn" data-toast="Rejected — escalated for hand-authoring">Reject</button>
+        </div>
+      </div>
+
+      <div>
+        <span class="label">Record</span>
+        <hr class="rule" style="margin:10px 0 18px" />
+        <dl class="meta">
+          <dt>Ticket</dt><dd>#4821</dd>
+          <dt>Drafted</dt><dd>09:14 by assistant</dd>
+          <dt>Approver</dt><dd>R. Okafor</dd>
+          <dt>Status</dt><dd><span class="stamp pending">Pending</span></dd>
+          <dt>Revisions</dt><dd>Two</dd>
+          <dt>Retained</dt><dd>Question, draft, and final reply</dd>
+        </dl>
+        <hr class="rule" style="margin:22px 0" />
+        <p class="small">The assistant's terminal action is a draft. There is no path by which it reaches a customer unsigned.</p>
+        <button class="btn quiet" style="margin-top:10px" data-screen="history">Look for precedent →</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ HISTORY ============ -->
+  <section class="screen" id="history">
+    <h1>Twelve hundred conversations, kept</h1>
+    <p class="standfirst">Search what has already been answered well, then lift the wording straight into the draft you are holding.</p>
+
+    <div class="ask" style="margin-top:0">
+      <input type="text" value="refund annual" placeholder="Search questions, answers, and sources…" />
+      <button class="btn primary" data-toast="Four of 1,284 conversations match">Search</button>
+    </div>
+    <div class="filters">
+      <button class="chip" aria-pressed="true">Approved</button>
+      <button class="chip" aria-pressed="false">Pending</button>
+      <button class="chip" aria-pressed="false">Rejected</button>
+      <button class="chip" aria-pressed="true">Last 90 days</button>
+      <button class="chip" aria-pressed="false">Mine only</button>
+    </div>
+    <p class="small" style="margin:16px 0 20px">Four results, most relevant first.</p>
+
+    <div class="entry">
+      <div>
+        <h3>Refund after an annual renewal</h3>
+        <div class="byline">#4102 · approved by R. Okafor · 12 May 2026</div>
+        <blockquote>“The thirty-day window runs from the renewal date; after that we offer credit rather than a refund.”</blockquote>
+      </div>
+      <div><button class="btn quiet" data-toast="Passage inserted into draft #4821">Insert</button></div>
+    </div>
+    <div class="entry">
+      <div>
+        <h3>Pro-rated credit on downgrade</h3>
+        <div class="byline">#3987 · approved by J. Mbeki · 28 April 2026</div>
+        <blockquote>“The unused balance rolls onto the next invoice as credit, not as cash.”</blockquote>
+      </div>
+      <div><button class="btn quiet" data-toast="Passage inserted into draft #4821">Insert</button></div>
+    </div>
+    <div class="entry">
+      <div>
+        <h3>Is there a cancellation fee on annual plans?</h3>
+        <div class="byline">#3820 · approved by R. Okafor · 2 April 2026</div>
+        <blockquote>“No fee — the term simply runs to the paid-through date.”</blockquote>
+      </div>
+      <div><button class="btn quiet" data-toast="Passage inserted into draft #4821">Insert</button></div>
+    </div>
+    <div class="entry">
+      <div>
+        <h3>Duplicate charge on the same card</h3>
+        <div class="byline">#3644 · approved by A. Lindqvist · 19 March 2026</div>
+        <blockquote>“Duplicate charges are refunded in full, whatever the plan window says.”</blockquote>
+      </div>
+      <div><button class="btn quiet" data-toast="Passage inserted into draft #4821">Insert</button></div>
+    </div>
+  </section>
+
+  <!-- ============ KNOWLEDGE BASE ============ -->
+  <section class="screen" id="knowledge-base">
+    <h1>The corpus behind every answer</h1>
+    <p class="standfirst">Six documents from <code>fixtures/sample-docs</code>, indexed locally into forty-two passages. Nothing here leaves the machine but the model call itself.</p>
+
+    <div class="two">
+      <div>
+        <table class="doclist">
+          <thead><tr><th>Document</th><th>Passages</th><th>Last indexed</th><th>State</th></tr></thead>
+          <tbody>
+            <tr><td>refund-policy.md</td><td>9</td><td>24 Jul, 08:02</td><td>Fresh</td></tr>
+            <tr><td>billing-faq.md</td><td>12</td><td>24 Jul, 08:02</td><td>Fresh</td></tr>
+            <tr><td>plan-changes.md</td><td>7</td><td>24 Jul, 08:02</td><td>Fresh</td></tr>
+            <tr><td>credits.md</td><td>5</td><td>24 Jul, 08:02</td><td>Fresh</td></tr>
+            <tr><td>onboarding.html</td><td>6</td><td>18 Jul, 11:40</td><td><span class="stamp pending">Stale</span></td></tr>
+            <tr><td>sso-setup.md</td><td>3</td><td>18 Jul, 11:40</td><td><span class="stamp pending">Stale</span></td></tr>
+          </tbody>
+        </table>
+        <div class="aside" style="margin-top:30px">
+          <span class="label">Two files have changed on disk</span>
+          <p style="margin:8px 0 0">Re-ingest rebuilds the index from the directory as it stands now. It is an act you take, not a sync that happens behind you.</p>
+        </div>
+        <div class="row" style="margin-top:24px">
+          <button class="btn primary" data-toast="Re-ingest running over six documents">Re-ingest corpus</button>
+          <button class="btn quiet" data-toast="Dry run: two documents would be reindexed">Dry run</button>
+        </div>
+      </div>
+      <div>
+        <span class="label">Configuration</span>
+        <hr class="rule" style="margin:10px 0 18px" />
+        <dl class="meta">
+          <dt>Directory</dt><dd>fixtures/sample-docs</dd>
+          <dt>Formats</dt><dd>Markdown, HTML</dd>
+          <dt>Store</dt><dd>Local, on disk</dd>
+          <dt>Last run</dt><dd>24 July, 08:02</dd>
+        </dl>
+        <hr class="rule" style="margin:22px 0" />
+        <p class="small">Model credentials and the documents path are read from local configuration and never committed.</p>
+      </div>
+    </div>
+  </section>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+  const show = (id) => {
+    document.querySelectorAll('.screen').forEach(s => s.classList.toggle('on', s.id === id));
+    document.querySelectorAll('nav button').forEach(b => b.setAttribute('aria-current', String(b.dataset.screen === id)));
+    window.scrollTo(0, 0);
+  };
+  document.querySelectorAll('[data-screen]').forEach(el => el.addEventListener('click', () => show(el.dataset.screen)));
+  const toast = document.getElementById('toast');
+  let t;
+  document.querySelectorAll('[data-toast]').forEach(el => el.addEventListener('click', () => {
+    toast.textContent = el.dataset.toast; toast.classList.add('on');
+    clearTimeout(t); t = setTimeout(() => toast.classList.remove('on'), 2000);
+  }));
+  document.querySelectorAll('.chip').forEach(c => c.addEventListener('click', () => {
+    c.setAttribute('aria-pressed', c.getAttribute('aria-pressed') === 'true' ? 'false' : 'true');
+  }));
+</script>
+</body>
+</html>

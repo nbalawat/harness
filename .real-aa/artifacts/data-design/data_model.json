@@ -1,0 +1,105 @@
+{
+  "tables": [
+    {
+      "name": "conversations",
+      "description": "A support thread an analyst holds with the assistant; the unit that is browsed, re-opened, searched and retained for quality review.",
+      "requirements": ["REQ-001", "REQ-005", "REQ-006", "REQ-011", "REQ-012", "REQ-020"],
+      "columns": [
+        { "name": "id", "type": "integer" },
+        { "name": "title", "type": "text" },
+        { "name": "customer_question", "type": "text" },
+        { "name": "status", "type": "text" },
+        { "name": "analyst", "type": "text" },
+        { "name": "created_at", "type": "timestamp" },
+        { "name": "updated_at", "type": "timestamp" }
+      ]
+    },
+    {
+      "name": "messages",
+      "description": "Ordered turns within a conversation. Provides the multi-turn context the agent resolves follow-up questions against, and the transcript retained for review.",
+      "requirements": ["REQ-001", "REQ-011", "REQ-020"],
+      "columns": [
+        { "name": "id", "type": "integer" },
+        { "name": "conversation_id", "type": "integer" },
+        { "name": "seq", "type": "integer" },
+        { "name": "role", "type": "text" },
+        { "name": "content", "type": "text" },
+        { "name": "created_at", "type": "timestamp" }
+      ]
+    },
+    {
+      "name": "replies",
+      "description": "One record per customer question carrying the assistant draft, the analyst-edited final text, and the approval decision. Approval is a required gate: the agent never sends, so a reply leaves status 'draft' only by explicit analyst action.",
+      "requirements": ["REQ-003", "REQ-004", "REQ-007", "REQ-008", "REQ-009", "REQ-011", "REQ-015", "REQ-018", "REQ-019"],
+      "columns": [
+        { "name": "id", "type": "integer" },
+        { "name": "conversation_id", "type": "integer" },
+        { "name": "message_id", "type": "integer" },
+        { "name": "question", "type": "text" },
+        { "name": "draft_text", "type": "text" },
+        { "name": "final_text", "type": "text" },
+        { "name": "status", "type": "text" },
+        { "name": "is_automated", "type": "boolean" },
+        { "name": "grounded", "type": "boolean" },
+        { "name": "reused_from_reply_id", "type": "integer" },
+        { "name": "approved_by", "type": "text" },
+        { "name": "approved_at", "type": "timestamp" },
+        { "name": "created_at", "type": "timestamp" }
+      ]
+    },
+    {
+      "name": "reply_citations",
+      "description": "Knowledge sources a draft drew on, shown beside the answer so the analyst can verify it fast enough for the approval gate to be worthwhile.",
+      "requirements": ["REQ-010", "REQ-018"],
+      "columns": [
+        { "name": "id", "type": "integer" },
+        { "name": "reply_id", "type": "integer" },
+        { "name": "document_id", "type": "integer" },
+        { "name": "chunk_id", "type": "integer" },
+        { "name": "document_title", "type": "text" },
+        { "name": "snippet", "type": "text" },
+        { "name": "score", "type": "float" }
+      ]
+    },
+    {
+      "name": "documents",
+      "description": "Product knowledge files ingested from the configured documents directory. content_hash lets a re-ingest detect which sources changed.",
+      "requirements": ["REQ-002", "REQ-013", "REQ-014"],
+      "columns": [
+        { "name": "id", "type": "integer" },
+        { "name": "source_path", "type": "text" },
+        { "name": "title", "type": "text" },
+        { "name": "format", "type": "text" },
+        { "name": "content_hash", "type": "text" },
+        { "name": "ingested_at", "type": "timestamp" }
+      ]
+    },
+    {
+      "name": "document_chunks",
+      "description": "Retrievable units of a document with their embedding vector; this is the index the assistant grounds answers in.",
+      "requirements": ["REQ-002", "REQ-013", "REQ-018"],
+      "columns": [
+        { "name": "id", "type": "integer" },
+        { "name": "document_id", "type": "integer" },
+        { "name": "chunk_index", "type": "integer" },
+        { "name": "text", "type": "text" },
+        { "name": "embedding", "type": "json" }
+      ]
+    },
+    {
+      "name": "ingestion_runs",
+      "description": "One record per explicit re-ingest operation, so the analyst can see when the knowledge index was last rebuilt and whether it succeeded.",
+      "requirements": ["REQ-013", "REQ-014"],
+      "columns": [
+        { "name": "id", "type": "integer" },
+        { "name": "documents_dir", "type": "text" },
+        { "name": "status", "type": "text" },
+        { "name": "document_count", "type": "integer" },
+        { "name": "chunk_count", "type": "integer" },
+        { "name": "error", "type": "text" },
+        { "name": "started_at", "type": "timestamp" },
+        { "name": "completed_at", "type": "timestamp" }
+      ]
+    }
+  ]
+}

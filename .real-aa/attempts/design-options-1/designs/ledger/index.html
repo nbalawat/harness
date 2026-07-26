@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Support Copilot — Ledger</title>
+<link rel="stylesheet" href="tokens.css" />
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--fg);
+    font-family: var(--font); font-size: 13.5px; line-height: var(--line);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ---------- top chrome ---------- */
+  .topbar {
+    background: var(--primary); color: var(--on-primary);
+    display: flex; align-items: center; gap: 20px; padding: 0 20px; height: 46px;
+  }
+  .topbar .mark { font-weight: 700; font-size: 14px; letter-spacing: 0.14em; text-transform: uppercase; }
+  .topbar .env {
+    font-size: 10px; letter-spacing: var(--tracking); text-transform: uppercase;
+    border: 1px solid rgba(255,255,255,.35); padding: 2px 7px;
+  }
+  .topbar .right { margin-left: auto; display: flex; gap: 18px; font-size: 11.5px; opacity: .85; }
+  .tabs { display: flex; background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 20px; }
+  .tabs button {
+    all: unset; cursor: pointer; padding: 11px 18px; font-size: 11px; letter-spacing: var(--tracking);
+    text-transform: uppercase; color: var(--muted); border-bottom: 3px solid transparent;
+  }
+  .tabs button:hover { color: var(--fg); background: var(--surface-2); }
+  .tabs button[aria-current="true"] { color: var(--primary); border-bottom-color: var(--primary); font-weight: 700; }
+  .crumbs {
+    padding: 8px 20px; font-size: 11px; color: var(--muted); background: var(--surface-2);
+    border-bottom: 1px solid var(--border); letter-spacing: 0.03em;
+  }
+
+  /* ---------- layout ---------- */
+  .screen { display: none; padding: 18px 20px 48px; }
+  .screen.on { display: block; }
+  .split { display: grid; grid-template-columns: 260px 1fr; gap: 18px; align-items: start; }
+  .split.rev { grid-template-columns: 1fr 300px; }
+
+  .panel { background: var(--surface); border: 1px solid var(--border); }
+  .panel > .head {
+    background: var(--surface-2); border-bottom: 1px solid var(--border); padding: 8px 14px;
+    font-size: 10.5px; letter-spacing: var(--tracking); text-transform: uppercase; color: var(--muted); font-weight: 700;
+    display: flex; justify-content: space-between; align-items: center; gap: 10px;
+  }
+  .panel > .body { padding: 14px; }
+  .panel + .panel { margin-top: 16px; }
+
+  h1 { font-size: 17px; margin: 0 0 3px; letter-spacing: 0.01em; }
+  .sub { color: var(--muted); font-size: 12px; margin: 0 0 16px; }
+  .legend { font-size: 10.5px; letter-spacing: var(--tracking); text-transform: uppercase; color: var(--muted); font-weight: 700;
+            border-bottom: 1px solid var(--fg); padding-bottom: 5px; margin: 0 0 10px; }
+
+  /* ---------- transcript ---------- */
+  .entry { border-bottom: 1px solid var(--border); padding: 12px 0; }
+  .entry:last-child { border-bottom: 0; }
+  .entry .hdr { display: flex; gap: 10px; align-items: baseline; margin-bottom: 5px; }
+  .entry .actor { font-size: 10.5px; letter-spacing: var(--tracking); text-transform: uppercase; font-weight: 700; }
+  .entry.agent .actor { color: var(--primary); }
+  .entry .ts { font-family: var(--font-num); font-size: 11px; color: var(--muted); }
+  .entry p { margin: 0 0 7px; }
+  .entry p:last-child { margin: 0; }
+  .refs { margin-top: 8px; font-size: 11.5px; color: var(--muted); font-family: var(--font-num); }
+  .refs b { color: var(--info); font-weight: 400; border-bottom: 1px dotted var(--info); }
+  .refs b + b { margin-left: 12px; }
+
+  /* ---------- forms ---------- */
+  input[type=text], textarea, select {
+    width: 100%; font-family: var(--font); font-size: 13.5px; color: var(--fg); background: #fff;
+    border: 1px solid var(--border); border-radius: var(--radius); padding: 8px 10px; outline: none;
+  }
+  input:focus, textarea:focus { border-color: var(--primary); box-shadow: inset 0 0 0 1px var(--primary); }
+  textarea { resize: vertical; line-height: 1.6; font-family: var(--font-num); font-size: 13px; }
+  .field { margin-bottom: 12px; }
+  .field label { display: block; font-size: 10.5px; letter-spacing: var(--tracking); text-transform: uppercase; color: var(--muted); margin-bottom: 4px; font-weight: 700; }
+
+  .btn {
+    all: unset; cursor: pointer; padding: 8px 16px; border: 1px solid var(--primary); color: var(--primary);
+    background: #fff; font-size: 11px; letter-spacing: var(--tracking); text-transform: uppercase; font-weight: 700;
+  }
+  .btn:hover { background: var(--surface-2); }
+  .btn.primary { background: var(--primary); color: var(--on-primary); }
+  .btn.primary:hover { filter: brightness(1.25); }
+  .btn.quiet { border-color: var(--border); color: var(--muted); }
+  .btn.quiet:hover { color: var(--fg); border-color: var(--fg); }
+  .btn.danger { border-color: var(--danger); color: var(--danger); }
+  .btn.sm { padding: 5px 11px; font-size: 10px; }
+  .actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+
+  /* ---------- tables ---------- */
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  thead th {
+    text-align: left; font-size: 10.5px; letter-spacing: var(--tracking); text-transform: uppercase; color: var(--muted);
+    padding: 8px 12px; border-bottom: 2px solid var(--primary); background: var(--surface-2);
+  }
+  tbody td { padding: 9px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  tbody tr:nth-child(even) { background: var(--surface-2); }
+  tbody tr:hover { background: #eaeef4; }
+  td.num, .num { font-family: var(--font-num); font-size: 12.5px; white-space: nowrap; }
+  .quote { color: var(--muted); font-size: 12.5px; display: block; margin-top: 3px; }
+
+  /* ---------- status ---------- */
+  .status { font-size: 10.5px; letter-spacing: var(--tracking); text-transform: uppercase; font-weight: 700; display: inline-flex; gap: 6px; align-items: center; }
+  .status::before { content: ""; width: 7px; height: 7px; background: currentColor; }
+  .status.ok { color: var(--ok); }
+  .status.pending { color: var(--accent); }
+  .status.auto { color: var(--primary); }
+  .status.stale { color: var(--danger); }
+  dl.rec { margin: 0; display: grid; grid-template-columns: 108px 1fr; gap: 7px 12px; font-size: 12.5px; }
+  dl.rec dt { color: var(--muted); font-size: 10.5px; letter-spacing: var(--tracking); text-transform: uppercase; font-weight: 700; }
+  dl.rec dd { margin: 0; }
+  .note { font-size: 11.5px; color: var(--muted); }
+  .banner { border-left: 4px solid var(--accent); background: #fdf6ec; padding: 10px 14px; font-size: 12.5px; margin-bottom: 16px; }
+  .banner.info { border-left-color: var(--info); background: #eef5f8; }
+  .facet { margin-bottom: 16px; }
+  .facet label { display: flex; gap: 8px; align-items: center; font-size: 12.5px; padding: 3px 0; cursor: pointer; }
+  .toast {
+    position: fixed; left: 20px; bottom: 20px; background: var(--primary); color: #fff; padding: 10px 16px;
+    font-size: 11.5px; letter-spacing: 0.04em; opacity: 0; transform: translateY(6px); transition: .15s; pointer-events: none;
+  }
+  .toast.on { opacity: 1; transform: none; }
+</style>
+</head>
+<body>
+<div class="topbar">
+  <span class="mark">Support Copilot</span>
+  <span class="env">Local deployment</span>
+  <div class="right">
+    <span>Analyst: R. Okafor</span>
+    <span>Queue: 3 pending</span>
+    <span>Index: 42 chunks</span>
+  </div>
+</div>
+<div class="tabs">
+  <button data-screen="conversation" aria-current="true">Conversation</button>
+  <button data-screen="draft-approval">Draft Approval</button>
+  <button data-screen="history">History</button>
+  <button data-screen="knowledge-base">Knowledge Base</button>
+</div>
+<div class="crumbs" id="crumbs">Home / Conversation / Thread #4821</div>
+
+<!-- ============ CONVERSATION ============ -->
+<section class="screen on" id="conversation">
+  <h1>Thread #4821 — Annual plan refund window</h1>
+  <p class="sub">Grounded assistant session. All turns are retained for quality review.</p>
+
+  <div class="split">
+    <div>
+      <div class="panel">
+        <div class="head">Session record</div>
+        <div class="body">
+          <dl class="rec">
+            <dt>Thread</dt><dd class="num">#4821</dd>
+            <dt>Opened</dt><dd class="num">2026-07-26 09:12</dd>
+            <dt>Analyst</dt><dd>R. Okafor</dd>
+            <dt>Turns</dt><dd class="num">4</dd>
+            <dt>Sources</dt><dd class="num">3 documents</dd>
+            <dt>Status</dt><dd><span class="status pending">Draft pending</span></dd>
+          </dl>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="head">Retrieval scores</div>
+        <div class="body">
+          <table>
+            <tbody>
+              <tr><td>refund-policy.md</td><td class="num" style="text-align:right">0.91</td></tr>
+              <tr><td>billing-faq.md</td><td class="num" style="text-align:right">0.74</td></tr>
+              <tr><td>plan-changes.md</td><td class="num" style="text-align:right">0.68</td></tr>
+            </tbody>
+          </table>
+          <p class="note" style="margin:12px 0 0">Below threshold on all chunks, the assistant returns an explicit “no supporting knowledge” response.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="head"><span>Transcript</span><span class="status auto">Retained</span></div>
+      <div class="body">
+        <div class="entry">
+          <div class="hdr"><span class="actor">Analyst · R. Okafor</span><span class="ts">09:12:41</span></div>
+          <p>Customer on an annual plan wants a refund 45 days in. What is our policy?</p>
+        </div>
+        <div class="entry agent">
+          <div class="hdr"><span class="actor">Assistant</span><span class="ts">09:12:44</span></div>
+          <p>Annual plans carry a 30-day full-refund window from purchase. After day 30 the plan is non-refundable; a pro-rated account credit may be issued for the unused remainder at analyst discretion.</p>
+          <p>At day 45 this customer falls outside the refund window. Credit is the available remedy.</p>
+          <div class="refs">Cited: <b>refund-policy.md §2</b><b>billing-faq.md §4</b></div>
+        </div>
+        <div class="entry">
+          <div class="hdr"><span class="actor">Analyst · R. Okafor</span><span class="ts">09:14:02</span></div>
+          <p>Does that change if they downgrade instead?</p>
+        </div>
+        <div class="entry agent">
+          <div class="hdr"><span class="actor">Assistant</span><span class="ts">09:14:05</span></div>
+          <p>A mid-term downgrade converts the unused balance to credit against the next invoice rather than a refund. No cash-out path is documented.</p>
+          <div class="refs">Cited: <b>plan-changes.md §1</b></div>
+        </div>
+
+        <div class="field" style="margin:16px 0 10px">
+          <label for="q">Follow-up question</label>
+          <input id="q" type="text" placeholder="Context from all four turns above is retained…" />
+        </div>
+        <div class="actions">
+          <button class="btn primary" data-toast="Question submitted to assistant">Submit</button>
+          <button class="btn quiet" data-screen="draft-approval">Go to pending draft</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ DRAFT APPROVAL ============ -->
+<section class="screen" id="draft-approval">
+  <h1>Approval — Ticket #4821</h1>
+  <p class="sub">Assistant output is a draft only. An analyst decision is required before any reply is released.</p>
+  <div class="banner">Pending approval since 09:14. The agent has no autonomous send capability.</div>
+
+  <div class="split rev">
+    <div>
+      <div class="panel">
+        <div class="head"><span>Inbound question</span><span class="num">Received 09:14:00</span></div>
+        <div class="body">
+          <p style="margin:0">“I signed up for the annual plan 45 days ago and barely used it. Can I get my money back?”</p>
+          <p class="note" style="margin:8px 0 0">m.alvarez@northwind.example · Plan: Annual · Tenure: 45 days</p>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="head"><span>Drafted reply — editable</span><span class="status pending">Awaiting decision</span></div>
+        <div class="body">
+          <div class="field">
+            <label for="draft">Reply body (revision 2)</label>
+            <textarea id="draft" rows="10">Hi Maria,
+
+Thanks for reaching out. Annual plans include a full-refund window of 30 days from purchase. Since your subscription started 45 days ago, it falls outside that window, so a cash refund is not available.
+
+What I can offer is a pro-rated account credit for the unused portion of the term, applied automatically to your next renewal. Reply here and I will apply it today.</textarea>
+          </div>
+          <div class="refs" style="margin-bottom:12px">Grounded in: <b>refund-policy.md §2</b><b>billing-faq.md §4</b><b>credits.md §3</b></div>
+          <div class="banner info" style="margin:0 0 14px">Outgoing replies are labelled <span class="status auto">Automated reply</span> so the recipient knows the response was machine-generated.</div>
+          <div class="actions">
+            <button class="btn primary" data-toast="Approved — R. Okafor, 2026-07-26 09:21:07">Approve and send</button>
+            <button class="btn" data-toast="Revision 3 saved">Save edits</button>
+            <button class="btn danger" data-toast="Rejected — routed for hand-authoring">Reject</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="panel">
+        <div class="head">Approval record</div>
+        <div class="body">
+          <dl class="rec">
+            <dt>Ticket</dt><dd class="num">#4821</dd>
+            <dt>Drafted</dt><dd class="num">09:14:02 agent</dd>
+            <dt>Approver</dt><dd>R. Okafor</dd>
+            <dt>Decision</dt><dd><span class="status pending">Pending</span></dd>
+            <dt>Revisions</dt><dd class="num">2</dd>
+            <dt>Retained</dt><dd>Question, draft, final</dd>
+          </dl>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="head">Decision log</div>
+        <div class="body">
+          <table>
+            <tbody>
+              <tr><td class="num">09:14:02</td><td>Draft generated</td></tr>
+              <tr><td class="num">09:17:44</td><td>Edited by R. Okafor</td></tr>
+              <tr><td class="num">09:19:10</td><td>Edited by R. Okafor</td></tr>
+            </tbody>
+          </table>
+          <button class="btn quiet sm" style="margin-top:12px" data-screen="history">Search precedent</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ HISTORY ============ -->
+<section class="screen" id="history">
+  <h1>Conversation history</h1>
+  <p class="sub">1,284 records retained locally and durable across restarts.</p>
+
+  <div class="split">
+    <div class="panel">
+      <div class="head">Filters</div>
+      <div class="body">
+        <div class="field">
+          <label for="s">Full-text search</label>
+          <input id="s" type="text" value="refund annual" />
+        </div>
+        <div class="facet">
+          <p class="legend">Decision</p>
+          <label><input type="checkbox" checked /> Approved (1,140)</label>
+          <label><input type="checkbox" /> Pending (3)</label>
+          <label><input type="checkbox" /> Rejected (141)</label>
+        </div>
+        <div class="facet">
+          <p class="legend">Period</p>
+          <label><input type="radio" name="p" checked /> Last 90 days</label>
+          <label><input type="radio" name="p" /> Last 12 months</label>
+          <label><input type="radio" name="p" /> All time</label>
+        </div>
+        <div class="facet">
+          <p class="legend">Approver</p>
+          <label><input type="checkbox" /> Mine only</label>
+        </div>
+        <button class="btn primary" data-toast="4 of 1,284 records match">Apply filters</button>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="head"><span>Results — 4 records</span><span class="num">Sorted by relevance</span></div>
+      <table>
+        <thead>
+          <tr><th style="width:74px">Record</th><th>Question / excerpt</th><th style="width:132px">Approved by</th><th style="width:104px">Decision</th><th style="width:86px">Action</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="num">#4102</td>
+            <td>Refund after annual renewal<span class="quote">“30-day window runs from the renewal date; after that, credit only.”</span></td>
+            <td>R. Okafor<span class="quote num">2026-05-12</span></td>
+            <td><span class="status ok">Approved</span></td>
+            <td><button class="btn sm" data-toast="Excerpt inserted into draft #4821">Insert</button></td>
+          </tr>
+          <tr>
+            <td class="num">#3987</td>
+            <td>Pro-rated credit on downgrade<span class="quote">“Unused balance rolls to the next invoice as credit, not cash.”</span></td>
+            <td>J. Mbeki<span class="quote num">2026-04-28</span></td>
+            <td><span class="status ok">Approved</span></td>
+            <td><button class="btn sm" data-toast="Excerpt inserted into draft #4821">Insert</button></td>
+          </tr>
+          <tr>
+            <td class="num">#3820</td>
+            <td>Annual plan cancellation fee<span class="quote">“No cancellation fee; the term runs to the paid-through date.”</span></td>
+            <td>R. Okafor<span class="quote num">2026-04-02</span></td>
+            <td><span class="status ok">Approved</span></td>
+            <td><button class="btn sm" data-toast="Excerpt inserted into draft #4821">Insert</button></td>
+          </tr>
+          <tr>
+            <td class="num">#3644</td>
+            <td>Refund for duplicate charge<span class="quote">“Duplicate charges are refunded in full, outside normal policy.”</span></td>
+            <td>A. Lindqvist<span class="quote num">2026-03-19</span></td>
+            <td><span class="status ok">Approved</span></td>
+            <td><button class="btn sm" data-toast="Excerpt inserted into draft #4821">Insert</button></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ============ KNOWLEDGE BASE ============ -->
+<section class="screen" id="knowledge-base">
+  <h1>Knowledge base index</h1>
+  <p class="sub">Corpus: fixtures/sample-docs · 6 documents · 42 indexed chunks · local store.</p>
+  <div class="banner">2 documents have changed on disk since the last ingest run. Re-ingest to rebuild the index.</div>
+
+  <div class="split rev">
+    <div class="panel">
+      <div class="head"><span>Indexed documents</span><span class="num">Last run 2026-07-24 08:02</span></div>
+      <table>
+        <thead><tr><th>Document</th><th style="width:90px">Chunks</th><th style="width:150px">Indexed at</th><th style="width:100px">State</th></tr></thead>
+        <tbody>
+          <tr><td>refund-policy.md</td><td class="num">9</td><td class="num">2026-07-24 08:02</td><td><span class="status ok">Fresh</span></td></tr>
+          <tr><td>billing-faq.md</td><td class="num">12</td><td class="num">2026-07-24 08:02</td><td><span class="status ok">Fresh</span></td></tr>
+          <tr><td>plan-changes.md</td><td class="num">7</td><td class="num">2026-07-24 08:02</td><td><span class="status ok">Fresh</span></td></tr>
+          <tr><td>credits.md</td><td class="num">5</td><td class="num">2026-07-24 08:02</td><td><span class="status ok">Fresh</span></td></tr>
+          <tr><td>onboarding.html</td><td class="num">6</td><td class="num">2026-07-18 11:40</td><td><span class="status stale">Stale</span></td></tr>
+          <tr><td>sso-setup.md</td><td class="num">3</td><td class="num">2026-07-18 11:40</td><td><span class="status stale">Stale</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div>
+      <div class="panel">
+        <div class="head">Ingest configuration</div>
+        <div class="body">
+          <dl class="rec">
+            <dt>Directory</dt><dd class="num">fixtures/sample-docs</dd>
+            <dt>Formats</dt><dd>.md, .html</dd>
+            <dt>Store</dt><dd>Local disk</dd>
+            <dt>Last run</dt><dd class="num">2026-07-24 08:02</dd>
+            <dt>Drift</dt><dd class="num">2 files</dd>
+          </dl>
+          <div class="actions" style="margin-top:14px">
+            <button class="btn primary" data-toast="Re-ingest started over 6 documents">Re-ingest</button>
+            <button class="btn quiet" data-toast="Dry run: 2 documents would be reindexed">Dry run</button>
+          </div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="head">Handling</div>
+        <div class="body">
+          <p class="note" style="margin:0">Conversation records and product knowledge stay on this machine; the configured model provider is the only external recipient. Credentials and the documents path load from local configuration and are not committed.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="toast" id="toast"></div>
+<script>
+  const CRUMB = {
+    'conversation': 'Home / Conversation / Thread #4821',
+    'draft-approval': 'Home / Approvals / Ticket #4821',
+    'history': 'Home / History / Search',
+    'knowledge-base': 'Home / Knowledge Base / Index'
+  };
+  const show = (id) => {
+    document.querySelectorAll('.screen').forEach(s => s.classList.toggle('on', s.id === id));
+    document.querySelectorAll('.tabs button').forEach(b => b.setAttribute('aria-current', String(b.dataset.screen === id)));
+    document.getElementById('crumbs').textContent = CRUMB[id];
+    window.scrollTo(0, 0);
+  };
+  document.querySelectorAll('[data-screen]').forEach(el => el.addEventListener('click', () => show(el.dataset.screen)));
+  const toast = document.getElementById('toast');
+  let t;
+  document.querySelectorAll('[data-toast]').forEach(el => el.addEventListener('click', () => {
+    toast.textContent = el.dataset.toast; toast.classList.add('on');
+    clearTimeout(t); t = setTimeout(() => toast.classList.remove('on'), 2000);
+  }));
+</script>
+</body>
+</html>

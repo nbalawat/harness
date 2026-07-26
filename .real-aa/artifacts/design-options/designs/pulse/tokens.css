@@ -1,0 +1,25 @@
+/* Pulse — bright modern product UI, friendly and fast.
+   Feel: electric indigo, geometric sans, rounded cards, soft depth. */
+:root {
+  --primary: #5b4bf5;
+  --on-primary: #ffffff;
+  --bg: #f6f5ff;
+  --fg: #14122b;
+  --surface: #ffffff;
+  --border: #e4e1f7;
+  --font: "Inter", "SF Pro Text", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+
+  /* extended */
+  --muted: #6e6a92;
+  --surface-2: #efedff;
+  --accent: #f2617a;      /* pending / needs attention */
+  --danger: #e0435f;
+  --info: #17b0a8;
+  --radius: 16px;
+  --radius-sm: 10px;
+  --shadow: 0 1px 2px rgba(20, 18, 43, .05), 0 12px 28px -14px rgba(91, 75, 245, .35);
+  --space: 12px;
+  --tracking: -0.01em;
+  --line: 1.6;
+  --gradient: linear-gradient(120deg, #5b4bf5 0%, #8b5cf6 55%, #17b0a8 100%);
+}

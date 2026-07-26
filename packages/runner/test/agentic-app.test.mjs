@@ -282,3 +282,63 @@ test("budget-check: inconsistent plan (nodes vs total) is rejected", () => {
   assert.equal(result.status, 1);
   assert.match(result.stderr, /inconsistent/);
 });
+
+// ---------------------------------------------------------------------------
+// Requirements traceability: requirements FLOW into design; user confirms
+// ---------------------------------------------------------------------------
+
+test("golden run: RTM covers every non-unknown requirement with named design elements", () => {
+  const rtm = readJson(artifact(golden, "traceability", "rtm.json"));
+  assert.equal(rtm.uncovered.length, 0, "no requirement may be left unaddressed");
+  assert.equal(rtm.covered_count, rtm.requirements_total);
+
+  const { requirements } = readJson(artifact(golden, "requirements-synthesis", "requirements.json"));
+  const covered = new Set(rtm.coverage.map((c) => c.id));
+  for (const req of requirements.filter((r) => r.confidence !== "unknown")) {
+    assert.ok(covered.has(req.id), `${req.id} missing from RTM`);
+  }
+  for (const entry of rtm.coverage) {
+    assert.ok(entry.addressed_by.length >= 1, `${entry.id} has no addressing design element`);
+  }
+});
+
+test("golden run: assumptions are surfaced and the user confirmed at design-review", () => {
+  const rtm = readJson(artifact(golden, "traceability", "rtm.json"));
+  assert.ok(rtm.assumptions.some((a) => a.source === "default"), "defaulted answers surfaced as assumptions");
+  assert.ok(rtm.assumptions.some((a) => a.source === "inferred"), "inferred requirements surfaced as assumptions");
+
+  const review = events(golden, "gate.answered").find((e) => e.nodeId === "design-review");
+  assert.ok(review, "design-review gate was answered");
+  assert.equal(review.answers.approve_design, "yes");
+
+  // Build only starts after confirmation: scaffold must run after design-review.
+  const order = golden.journal.read().filter((e) => e.type === "node.committed").map((e) => e.nodeId);
+  assert.ok(order.indexOf("design-review") < order.indexOf("scaffold"), "no build spend before user confirmation");
+
+  const governance = readJson(artifact(golden, "governance-report", "governance.json"));
+  assert.equal(governance.requirements.uncovered, 0);
+  assert.equal(governance.requirements.covered, governance.requirements.total);
+});
+
+test("traceability: an unaddressed requirement blocks the pipeline", () => {
+  const dir = tmpDir("rtm-neg");
+  const mkInputs = {
+    requirements: { data: { requirements: [
+      { id: "REQ-001", text: "must chat", category: "agent", confidence: "stated" },
+      { id: "REQ-002", text: "must export reports weekly", category: "functional", confidence: "stated" },
+    ] } },
+    architecture: { data: { module_coverage: [{ module: "agent-runtime", addresses: ["REQ-001"] }] } },
+    data_model: { data: { tables: [] } },
+    agent_roster: { data: { agents: [] } },
+    designs: { data: { options: [] } },
+    gaps: { data: { questions: [] } },
+    clarifications: { data: {} },
+  };
+  fs.writeFileSync(path.join(dir, "inputs.json"), JSON.stringify(mkInputs));
+  const result = runScript("traceability.cjs", dir);
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /TRACEABILITY GAP/);
+  assert.match(result.stderr, /REQ-002/);
+  const rtm = readJson(path.join(dir, "rtm.json"));
+  assert.deepEqual(rtm.uncovered, ["REQ-002"]);
+});

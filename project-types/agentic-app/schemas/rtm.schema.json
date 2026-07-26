@@ -1,0 +1,22 @@
+{
+  "type": "object",
+  "properties": {
+    "requirements_total": { "type": "integer", "minimum": 1 },
+    "covered_count": { "type": "integer" },
+    "uncovered": { "type": "array", "maxItems": 0 },
+    "coverage": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "addressed_by": { "type": "array", "minItems": 1 }
+        },
+        "required": ["id", "addressed_by"]
+      }
+    },
+    "assumptions": { "type": "array" }
+  },
+  "required": ["requirements_total", "covered_count", "uncovered", "coverage", "assumptions"]
+}

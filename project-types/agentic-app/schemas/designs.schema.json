@@ -8,13 +8,14 @@
       "items": {
         "type": "object",
         "properties": {
+          "addresses": { "type": "array", "items": { "type": "string" } },
           "id": { "type": "string" },
           "name": { "type": "string" },
           "screens": { "type": "array", "minItems": 2, "items": { "type": "string" } },
           "tokens_file": { "type": "string" },
           "preview_file": { "type": "string" }
         },
-        "required": ["id", "name", "screens", "tokens_file", "preview_file"]
+        "required": ["id", "name", "screens", "tokens_file", "preview_file", "addresses"]
       }
     }
   },

@@ -5,6 +5,13 @@
     "documents_dir": "fixtures/sample-docs",
     "deploy_target": "cloud-run"
   },
-  "design-select": { "chosen_option": "option-1" },
-  "uat": { "approved": "yes" }
+  "design-select": {
+    "chosen_option": "option-1"
+  },
+  "uat": {
+    "approved": "yes"
+  },
+  "design-review": {
+    "approve_design": "yes"
+  }
 }

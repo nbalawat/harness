@@ -1,0 +1,25 @@
+/* Ledger — institutional record-keeping surface built for audit trails.
+   Feel: navy chrome, flat squared panels, tabular density, small-caps labels. */
+:root {
+  --primary: #14304f;
+  --on-primary: #ffffff;
+  --bg: #eef0f3;
+  --fg: #1b2129;
+  --surface: #ffffff;
+  --border: #c3c9d2;
+  --font: "Helvetica Neue", Helvetica, Arial, "Segoe UI", system-ui, sans-serif;
+
+  /* extended */
+  --font-num: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --muted: #5d6772;
+  --surface-2: #f7f8fa;
+  --accent: #a8620b;      /* pending / needs attention */
+  --danger: #9b1c1c;
+  --info: #1f6f8b;
+  --ok: #1c6b4a;
+  --radius: 0px;
+  --shadow: none;
+  --space: 10px;
+  --tracking: 0.06em;
+  --line: 1.5;
+}

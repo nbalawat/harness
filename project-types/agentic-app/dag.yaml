@@ -1,7 +1,7 @@
 # agentic-app v1.1 — problem statement + documents -> working agentic application.
 # See docs/DESIGN.md §7/§7b for the design rationale per node.
 name: agentic-app
-version: 0.1.0
+version: 0.2.0
 
 cost:
   run_budget_usd: 25.00
@@ -120,10 +120,26 @@ nodes:
     outputs:
       - { name: agent_roster, file: agent_roster.json, schema: schemas/agent_roster.schema.json }
 
+  # -- Traceability + confirmation (requirements FLOW into design; user confirms) --
+  - id: traceability
+    kind: deterministic
+    deps: [requirements-synthesis, architecture, data-design, agent-design, design-options, gap-questions, clarify]
+    command: node "$HARNESS_PROJECT_DIR/scripts/traceability.cjs"
+    outputs:
+      - { name: rtm, file: rtm.json, schema: schemas/rtm.schema.json }
+
+  - id: design-review
+    kind: gate
+    deps: [traceability, design-select, budget-check]
+    questions:
+      - { id: approve_design, prompt: "Review rtm.json (requirements -> design mapping + assumptions). Approve the design and start the build? (yes/no)", why: "Last checkpoint before build spend; confirms every requirement is addressed." }
+    outputs:
+      - { name: design_review, file: design_review.json, schema: schemas/design_review.schema.json }
+
   # -- Compose + build (challenge e) ----------------------------------------
   - id: scaffold
     kind: deterministic
-    deps: [architecture, budget-check, design-select, design-options, data-design, agent-design, intake]
+    deps: [architecture, design-review, design-select, design-options, data-design, agent-design, intake]
     command: node "$HARNESS_PROJECT_DIR/scripts/scaffold.cjs"
     outputs:
       - { name: app, file: app, dir: true }
@@ -172,7 +188,7 @@ nodes:
 
   - id: governance-report
     kind: deterministic
-    deps: [security-scan, integrate, agent-design]
+    deps: [security-scan, integrate, agent-design, traceability]
     command: node "$HARNESS_PROJECT_DIR/scripts/governance.cjs"
     outputs:
       - { name: governance, file: governance.json, schema: schemas/governance.schema.json }

@@ -1,0 +1,16 @@
+{
+  "modules": [
+    "persistence-core",
+    "chat-shell",
+    "agent-runtime"
+  ],
+  "deploy_target": "local",
+  "build_budget_plan": {
+    "nodes": {
+      "build-backend": 2.5,
+      "build-agents": 1.75,
+      "build-frontend": 1.75
+    },
+    "total_usd": 6.0
+  }
+}

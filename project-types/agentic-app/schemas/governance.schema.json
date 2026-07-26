@@ -4,7 +4,8 @@
     "standards_profile": { "type": "string" },
     "security": { "type": "object" },
     "validation": { "type": "object" },
-    "agents": { "type": "object" }
+    "agents": { "type": "object" },
+    "requirements": { "type": "object" }
   },
-  "required": ["standards_profile", "security", "validation", "agents"]
+  "required": ["standards_profile", "security", "validation", "agents", "requirements"]
 }

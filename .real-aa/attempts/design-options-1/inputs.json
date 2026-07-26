@@ -1,0 +1,229 @@
+{
+  "requirements": {
+    "path": "/Users/nbalawat/development/harness/.real-aa/artifacts/requirements-synthesis/requirements.json",
+    "data": {
+      "requirements": [
+        {
+          "id": "REQ-001",
+          "text": "A support analyst can hold a chat conversation with an assistant inside the application.",
+          "category": "functional",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src-002",
+            "claim": "clm-004"
+          }
+        },
+        {
+          "id": "REQ-002",
+          "text": "The assistant answers product questions from the organization's own product knowledge rather than from general model knowledge alone.",
+          "category": "functional",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src-001",
+            "claim": "clm-001"
+          }
+        },
+        {
+          "id": "REQ-003",
+          "text": "Each incoming support question is routed to the assistant first to produce a draft reply, before any analyst hand-authoring.",
+          "category": "functional",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src-003",
+            "claim": "clm-008"
+          }
+        },
+        {
+          "id": "REQ-004",
+          "text": "An analyst must explicitly approve the assistant's reply before it is sent; approval is a required gate, not an optional step.",
+          "category": "functional",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src-003",
+            "claim": "clm-009"
+          }
+        },
+        {
+          "id": "REQ-005",
+          "text": "Analysts can browse and re-open past conversations.",
+          "category": "functional",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src-002",
+            "claim": "clm-005"
+          }
+        },
+        {
+          "id": "REQ-006",
+          "text": "Analysts can search or filter conversation history to locate a relevant past answer, since manual scanning of old threads is the pain being replaced.",
+          "category": "functional",
+          "confidence": "inferred",
+          "provenance": {
+            "source": "src-003"
+          }
+        },
+        {
+          "id": "REQ-007",
+          "text": "Analysts can reuse the content of a past answer in the current draft reply (copy or insert), which is the stated purpose of reviewing history.",
+          "category": "functional",
+          "confidence": "inferred",
+          "provenance": {
+            "source": "src-002"
+          }
+        },
+        {
+          "id": "REQ-008",
+          "text": "Replies produced by the assistant clearly identify themselves as automated so the customer knows the response is machine-generated.",
+          "category": "ux",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src-002",
+            "claim": "clm-006"
+          }
+        },
+        {
+          "id": "REQ-009",
+          "text": "The approval surface lets the analyst edit the drafted reply before approving, since an all-or-nothing gate would force rejection for minor wording fixes.",
+          "category": "ux",
+          "confidence": "inferred",
+          "provenance": {
+            "source": "src-003"
+          }
+        },
+        {
+          "id": "REQ-010",
+          "text": "The assistant's answer displays which knowledge sources it drew on, so the analyst can verify the draft quickly enough for approval to be worthwhile.",
+          "category": "ux",
+          "confidence": "inferred",
+          "provenance": {
+            "source": "src-002"
+          }
+        },
+        {
+          "id": "REQ-011",
+          "text": "Conversation records are persisted for later quality review, including the question, the assistant's draft, and the final approved reply.",
+          "category": "data",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src-002",
+            "claim": "clm-007"
+          }
+        },
+        {
+          "id": "REQ-012",
+          "text": "Conversation history is durable across application restarts and remains reviewable over time.",
+          "category": "data",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src-001",
+            "claim": "clm-002"
+          }
+        },
+        {
+          "id": "REQ-013",
+          "text": "Product knowledge documents are ingested from a configured documents directory and indexed into a retrievable store; the corpus format is a local document set (assumed markdown/HTML files as in fixtures/sample-docs), not a live external system.",
+          "category": "data",
+          "confidence": "inferred",
+          "provenance": {
+            "source": "src-001"
+          }
+        },
+        {
+          "id": "REQ-014",
+          "text": "The knowledge index can be rebuilt when source documents change, via an explicit re-ingest operation (assumed on-demand rather than continuous sync).",
+          "category": "data",
+          "confidence": "inferred",
+          "provenance": {
+            "source": "src-001"
+          }
+        },
+        {
+          "id": "REQ-015",
+          "text": "Each approval decision is recorded with the approving analyst and timestamp, so stored conversations support the quality review they are retained for.",
+          "category": "security",
+          "confidence": "inferred",
+          "provenance": {
+            "source": "src-003"
+          }
+        },
+        {
+          "id": "REQ-016",
+          "text": "Conversation records and product knowledge may contain customer and proprietary content; they are stored locally and are not transmitted to third parties other than the configured model provider.",
+          "category": "security",
+          "confidence": "inferred",
+          "provenance": {
+            "source": "src-001"
+          }
+        },
+        {
+          "id": "REQ-017",
+          "text": "Whether the deployment serves multiple named analysts requiring separate identities and access control over each other's conversations, or a single shared local operator with no authentication.",
+          "category": "security",
+          "confidence": "unknown"
+        },
+        {
+          "id": "REQ-018",
+          "text": "The assistant grounds its answers in retrieved product knowledge and states that it does not know when the knowledge base contains no supporting content, rather than improvising an answer that an analyst may approve.",
+          "category": "agent",
+          "confidence": "inferred",
+          "provenance": {
+            "source": "src-002"
+          }
+        },
+        {
+          "id": "REQ-019",
+          "text": "The agent has no autonomous send capability; its terminal action is producing a draft that is handed to a human for approval.",
+          "category": "agent",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src-003",
+            "claim": "clm-009"
+          }
+        },
+        {
+          "id": "REQ-020",
+          "text": "The agent maintains multi-turn context within a conversation so follow-up questions resolve against earlier turns.",
+          "category": "agent",
+          "confidence": "inferred",
+          "provenance": {
+            "source": "src-002"
+          }
+        },
+        {
+          "id": "REQ-021",
+          "text": "The application runs locally, with no dependency on hosted infrastructure for storage or serving.",
+          "category": "ops",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src-001",
+            "claim": "clm-003"
+          }
+        },
+        {
+          "id": "REQ-022",
+          "text": "Model provider credentials and the documents directory are supplied through local configuration (environment or config file) and are not committed to the repository.",
+          "category": "ops",
+          "confidence": "inferred",
+          "provenance": {
+            "source": "src-001"
+          }
+        },
+        {
+          "id": "REQ-023",
+          "text": "How an approved reply reaches the customer: whether the application integrates with the inbound email or ticketing system to send it directly, or the analyst copies the approved text into the existing email tool by hand.",
+          "category": "functional",
+          "confidence": "unknown"
+        }
+      ]
+    }
+  },
+  "intake": {
+    "path": "/Users/nbalawat/development/harness/.real-aa/artifacts/intake/intake.json",
+    "data": {
+      "project_name": "Support Copilot",
+      "problem_statement": "Support analysts need an assistant that answers product questions from our knowledge and keeps reviewable conversation history.",
+      "documents_dir": "fixtures/sample-docs",
+      "deploy_target": "local"
+    }
+  }
+}
