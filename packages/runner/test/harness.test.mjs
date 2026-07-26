@@ -457,3 +457,198 @@ test("budgets absent or generous: runs complete and record spend normally", asyn
   assert.equal(events(ctx, "budget.exceeded").length, 0);
   assert.equal(foldState(ctx.journal.read()).totalCostUsd, 1.2);
 });
+
+// ---------------------------------------------------------------------------
+// Phase 1 runner features: dir artifacts, gate defaults, dynamic questions,
+// question budgets, conditional skipping
+// ---------------------------------------------------------------------------
+
+test("directory artifacts: validated and committed recursively", async () => {
+  const dir = writeFixture(
+    tmpDir("dir-pt"),
+    [
+      "name: dirs",
+      "version: 0.0.1",
+      "nodes:",
+      "  - id: make",
+      "    kind: deterministic",
+      '    command: node "$HARNESS_PROJECT_DIR/make.cjs"',
+      "    outputs: [{name: tree, file: out, dir: true}]",
+      "  - id: use",
+      "    kind: verifier",
+      "    deps: [make]",
+      '    command: node "$HARNESS_PROJECT_DIR/use.cjs"',
+    ].join("\n"),
+    {
+      "make.cjs": [
+        'const fs = require("node:fs");',
+        'fs.mkdirSync("out/nested", { recursive: true });',
+        'fs.writeFileSync("out/a.txt", "alpha");',
+        'fs.writeFileSync("out/nested/b.txt", "beta");',
+      ].join("\n"),
+      "use.cjs": [
+        'const fs = require("node:fs");',
+        'const inputs = JSON.parse(fs.readFileSync("inputs.json", "utf8"));',
+        'const base = inputs.tree.path;',
+        'if (fs.readFileSync(base + "/nested/b.txt", "utf8") !== "beta") process.exit(1);',
+      ].join("\n"),
+    },
+  );
+  const ctx = makeCtx(tmpDir("dir-ws"), dir, {});
+  assert.equal((await runLoop(ctx)).status, "completed");
+  assert.equal(
+    fs.readFileSync(path.join(ctx.workspace, "artifacts/make/out/nested/b.txt"), "utf8"),
+    "beta",
+  );
+});
+
+test("dir artifact contract: file where directory expected is rejected", async () => {
+  const dir = writeFixture(
+    tmpDir("dirbad-pt"),
+    [
+      "name: dirbad",
+      "version: 0.0.1",
+      "nodes:",
+      "  - id: make",
+      "    kind: deterministic",
+      "    retries: 0",
+      '    command: node "$HARNESS_PROJECT_DIR/make.cjs"',
+      "    outputs: [{name: tree, file: out, dir: true}]",
+    ].join("\n"),
+    { "make.cjs": 'require("node:fs").writeFileSync("out", "just a file");' },
+  );
+  const ctx = makeCtx(tmpDir("dirbad-ws"), dir, {});
+  assert.equal((await runLoop(ctx)).status, "failed");
+  assert.match(String(events(ctx, "node.attempt_failed")[0].error), /expected a directory/);
+});
+
+test("gate defaults: unanswered questions with defaults auto-answer (accept-defaults path)", async () => {
+  const dir = writeFixture(
+    tmpDir("def-pt"),
+    [
+      "name: defaults",
+      "version: 0.0.1",
+      "nodes:",
+      "  - id: ask",
+      "    kind: gate",
+      "    questions:",
+      "      - {id: name, prompt: 'name?'}",
+      "      - {id: mode, prompt: 'mode?', default: local, why: 'decides deploy path'}",
+      "    outputs: [{name: ans, file: ans.json}]",
+    ].join("\n"),
+  );
+  const ctx = makeCtx(tmpDir("def-ws"), dir, { answers: { ask: { name: "X" } } });
+  assert.equal((await runLoop(ctx)).status, "completed");
+  const ans = JSON.parse(fs.readFileSync(path.join(ctx.workspace, "artifacts/ask/ans.json"), "utf8"));
+  assert.equal(ans.mode, "local", "default filled in");
+  assert.equal(events(ctx, "gate.answered")[0].source, "mixed");
+
+  // No recorded answers at all -> defaults alone answer what they can; the
+  // defaultless question parks the run.
+  const ctx2 = makeCtx(tmpDir("def-ws2"), dir, {});
+  assert.equal((await runLoop(ctx2)).status, "parked");
+});
+
+test("questionsFrom: gate reads dynamic questions from an upstream artifact", async () => {
+  const dir = writeFixture(
+    tmpDir("qf-pt"),
+    [
+      "name: qf",
+      "version: 0.0.1",
+      "nodes:",
+      "  - id: gaps",
+      "    kind: deterministic",
+      '    command: node "$HARNESS_PROJECT_DIR/gaps.cjs"',
+      "    outputs: [{name: gaps, file: gaps.json}]",
+      "  - id: clarify",
+      "    kind: gate",
+      "    deps: [gaps]",
+      "    questionsFrom: {artifact: gaps}",
+      "    outputs: [{name: answers, file: answers.json}]",
+    ].join("\n"),
+    {
+      "gaps.cjs":
+        'require("node:fs").writeFileSync("gaps.json", JSON.stringify({ questions: [' +
+        '{id: "auth", prompt: "Need auth?", default: "yes", why: "decides auth module"},' +
+        '{id: "region", prompt: "Which region?", default: "us-central1", why: "decides deploy config"}' +
+        "] }));",
+    },
+  );
+  const ctx = makeCtx(tmpDir("qf-ws"), dir, { answers: { clarify: { auth: "no" } } });
+  assert.equal((await runLoop(ctx)).status, "completed");
+  const ans = JSON.parse(
+    fs.readFileSync(path.join(ctx.workspace, "artifacts/clarify/answers.json"), "utf8"),
+  );
+  assert.equal(ans.auth, "no", "recorded answer wins over default");
+  assert.equal(ans.region, "us-central1", "default fills the rest");
+});
+
+test("question budget: an over-asking gate fails certification-style, never nags", async () => {
+  const dir = writeFixture(
+    tmpDir("qb-pt"),
+    [
+      "name: qb",
+      "version: 0.0.1",
+      "interaction: {max_questions_per_gate: 2}",
+      "nodes:",
+      "  - id: gaps",
+      "    kind: deterministic",
+      '    command: node "$HARNESS_PROJECT_DIR/gaps.cjs"',
+      "    outputs: [{name: gaps, file: gaps.json}]",
+      "  - id: clarify",
+      "    kind: gate",
+      "    retries: 0",
+      "    deps: [gaps]",
+      "    questionsFrom: {artifact: gaps}",
+      "    outputs: [{name: answers, file: answers.json}]",
+    ].join("\n"),
+    {
+      "gaps.cjs":
+        'require("node:fs").writeFileSync("gaps.json", JSON.stringify({ questions: ' +
+        'Array.from({length: 5}, (_, i) => ({id: "q" + i, prompt: "?" + i, default: "d"})) }));',
+    },
+  );
+  const ctx = makeCtx(tmpDir("qb-ws"), dir, {});
+  const result = await runLoop(ctx);
+  assert.equal(result.status, "failed");
+  const breach = events(ctx, "budget.exceeded")[0];
+  assert.equal(breach.scope, "questions");
+  assert.equal(breach.budget, 2);
+  assert.equal(breach.asked, 5);
+});
+
+test("when: unmet condition skips the node; met condition runs it", async () => {
+  const dag = (target) =>
+    [
+      "name: cond",
+      "version: 0.0.1",
+      "nodes:",
+      "  - id: config",
+      "    kind: deterministic",
+      `    command: node "$HARNESS_PROJECT_DIR/config.cjs" ${target}`,
+      "    outputs: [{name: config, file: config.json}]",
+      "  - id: deploy",
+      "    kind: deterministic",
+      "    deps: [config]",
+      "    when: {artifact: config, path: deploy_target, equals: cloud-run}",
+      '    command: node "$HARNESS_PROJECT_DIR/deploy.cjs"',
+      "    outputs: [{name: deployed, file: deployed.json}]",
+    ].join("\n");
+  const files = {
+    "config.cjs":
+      'require("node:fs").writeFileSync("config.json", JSON.stringify({ deploy_target: process.argv[2] }));',
+    "deploy.cjs": 'require("node:fs").writeFileSync("deployed.json", "{}");',
+  };
+
+  const skipDir = writeFixture(tmpDir("when-skip-pt"), dag("local"), files);
+  const skipCtx = makeCtx(tmpDir("when-skip-ws"), skipDir, {});
+  assert.equal((await runLoop(skipCtx)).status, "completed");
+  assert.equal(events(skipCtx, "node.skipped")[0].nodeId, "deploy");
+  assert.ok(!fs.existsSync(path.join(skipCtx.workspace, "artifacts/deploy")));
+
+  const runDir = writeFixture(tmpDir("when-run-pt"), dag("cloud-run"), files);
+  const runCtx = makeCtx(tmpDir("when-run-ws"), runDir, {});
+  assert.equal((await runLoop(runCtx)).status, "completed");
+  assert.equal(events(runCtx, "node.skipped").length, 0);
+  assert.ok(fs.existsSync(path.join(runCtx.workspace, "artifacts/deploy/deployed.json")));
+});

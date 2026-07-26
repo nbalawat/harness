@@ -8,7 +8,7 @@ import AjvNS from "ajv";
 const Ajv: typeof AjvNS.default =
   (AjvNS as unknown as { default?: typeof AjvNS.default }).default ??
   (AjvNS as unknown as typeof AjvNS.default);
-import type { CostRecord, NodeDef } from "@harness/spec";
+import type { CostRecord, GateQuestion, NodeDef } from "@harness/spec";
 import type { RunContext } from "./context.js";
 import type { RunState } from "./scheduler.js";
 
@@ -106,7 +106,7 @@ function buildInputs(
     for (const [name, rel] of Object.entries(state.artifacts[dep] ?? {})) {
       const abs = path.join(ctx.workspace, rel);
       const entry: { path: string; data?: unknown } = { path: abs };
-      if (abs.endsWith(".json") && fs.existsSync(abs)) {
+      if (abs.endsWith(".json") && fs.existsSync(abs) && fs.statSync(abs).isFile()) {
         entry.data = JSON.parse(fs.readFileSync(abs, "utf8"));
       }
       inputs[name] = entry;
@@ -135,17 +135,63 @@ function runCommand(ctx: RunContext, command: string, attemptDir: string): void 
   }
 }
 
+/** Resolve a gate's question list: static from the DAG, or dynamic from an upstream artifact. */
+function resolveQuestions(node: NodeDef, attemptDir: string): GateQuestion[] {
+  if (node.questions) return node.questions;
+  const { artifact, path: qPath = "questions" } = node.questionsFrom!;
+  const inputs = JSON.parse(fs.readFileSync(path.join(attemptDir, "inputs.json"), "utf8")) as Record<
+    string,
+    { data?: unknown }
+  >;
+  let value: unknown = inputs[artifact]?.data;
+  for (const seg of qPath.split(".")) {
+    if (value === null || typeof value !== "object") {
+      throw new Error(`gate '${node.id}': questionsFrom path '${qPath}' not found in artifact '${artifact}'`);
+    }
+    value = (value as Record<string, unknown>)[seg];
+  }
+  if (!Array.isArray(value)) {
+    throw new Error(`gate '${node.id}': questionsFrom '${artifact}.${qPath}' is not an array`);
+  }
+  return value as GateQuestion[];
+}
+
 async function runGate(
   ctx: RunContext,
   node: NodeDef,
   attemptDir: string,
 ): Promise<"answered" | "parked"> {
+  const questions = resolveQuestions(node, attemptDir);
+
+  // Interaction budget: user attention is enforced exactly like dollars.
+  // A gate that would over-ask fails loudly rather than nagging the user.
+  const maxQuestions = ctx.def.interaction?.max_questions_per_gate;
+  if (maxQuestions !== undefined && questions.length > maxQuestions) {
+    ctx.journal.append({
+      type: "budget.exceeded",
+      scope: "questions",
+      nodeId: node.id,
+      budget: maxQuestions,
+      asked: questions.length,
+    });
+    throw new Error(
+      `gate '${node.id}' asks ${questions.length} questions, exceeding the certified budget of ${maxQuestions}`,
+    );
+  }
+
   const recorded = ctx.answers?.[node.id] ?? {};
   const answers: Record<string, string> = {};
+  const sources = new Set<string>();
 
-  for (const q of node.questions!) {
+  for (const q of questions) {
     if (recorded[q.id] !== undefined) {
       answers[q.id] = recorded[q.id];
+      sources.add("recorded");
+      continue;
+    }
+    if (q.default !== undefined) {
+      answers[q.id] = q.default; // the accept-defaults path: zero user friction
+      sources.add("default");
       continue;
     }
     if (!ctx.interactive) return "parked"; // durable park; resume answers later
@@ -153,6 +199,7 @@ async function runGate(
     const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
     answers[q.id] = await rl.question(`[gate:${node.id}] ${q.prompt} `);
     rl.close();
+    sources.add("human");
   }
 
   const out = node.outputs![0];
@@ -161,7 +208,8 @@ async function runGate(
     type: "gate.answered",
     nodeId: node.id,
     answers,
-    source: Object.keys(recorded).length > 0 ? "recorded" : "human",
+    source: sources.size === 1 ? [...sources][0] : "mixed",
+    questionCount: questions.length,
   });
   return "answered";
 }
@@ -256,6 +304,10 @@ function validateOutputs(ctx: RunContext, node: NodeDef, attemptDir: string): st
       problems.push(`missing declared artifact: ${out.file}`);
       continue;
     }
+    if (out.dir) {
+      if (!fs.statSync(file).isDirectory()) problems.push(`${out.file}: expected a directory`);
+      continue;
+    }
     if (out.schema) {
       const schema = JSON.parse(
         fs.readFileSync(path.join(ctx.projectTypeDir, out.schema), "utf8"),
@@ -281,7 +333,12 @@ function commit(ctx: RunContext, node: NodeDef, attemptDir: string): void {
   for (const out of node.outputs ?? []) {
     const dest = path.join(destDir, out.file);
     fs.mkdirSync(path.dirname(dest), { recursive: true });
-    fs.copyFileSync(path.join(attemptDir, out.file), dest);
+    if (out.dir) {
+      fs.rmSync(dest, { recursive: true, force: true });
+      fs.cpSync(path.join(attemptDir, out.file), dest, { recursive: true });
+    } else {
+      fs.copyFileSync(path.join(attemptDir, out.file), dest);
+    }
     artifacts[out.name] = path.relative(ctx.workspace, dest);
   }
   ctx.journal.append({ type: "node.committed", nodeId: node.id, artifacts });

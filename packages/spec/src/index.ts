@@ -12,7 +12,8 @@ export type NodeState =
   | "running"
   | "committed"
   | "failed"
-  | "parked";
+  | "parked"
+  | "skipped";
 
 /** An artifact a node declares it will produce (relative to its attempt dir). */
 export interface ArtifactDecl {
@@ -20,11 +21,36 @@ export interface ArtifactDecl {
   file: string;
   /** Path to a JSON Schema (relative to the project-type dir). JSON artifacts only. */
   schema?: string;
+  /** True if the artifact is a directory tree (committed recursively). */
+  dir?: boolean;
 }
 
 export interface GateQuestion {
   id: string;
   prompt: string;
+  /** Pre-filled answer used when no recorded/human answer exists (the accept-defaults path). */
+  default?: string;
+  /** Why we ask — which downstream decision this answer changes. */
+  why?: string;
+}
+
+/** Gate questions sourced dynamically from an upstream JSON artifact. */
+export interface QuestionsFrom {
+  artifact: string;
+  /** Dot path to the question array inside the artifact (default: "questions"). */
+  path?: string;
+}
+
+/** Conditional enablement: a pure predicate over a committed artifact field. */
+export interface WhenClause {
+  artifact: string;
+  path: string;
+  equals: unknown;
+}
+
+/** Interaction budgets — user attention is enforced like dollars. */
+export interface InteractionSpec {
+  max_questions_per_gate?: number;
 }
 
 export interface NodeDef {
@@ -50,6 +76,10 @@ export interface NodeDef {
 
   // gate nodes
   questions?: GateQuestion[];
+  questionsFrom?: QuestionsFrom;
+
+  /** Conditional enablement; unmet condition -> node is skipped, not failed. */
+  when?: WhenClause;
 }
 
 export interface NodeCostSpec {
@@ -66,6 +96,7 @@ export interface ProjectTypeDef {
   name: string;
   version: string;
   cost?: CostSpec;
+  interaction?: InteractionSpec;
   nodes: NodeDef[];
 }
 
@@ -94,6 +125,7 @@ export interface LedgerEvent {
     | "node.committed"
     | "node.failed"
     | "node.parked"
+    | "node.skipped"
     | "gate.answered"
     | "agent.message"
     | "cost.recorded"

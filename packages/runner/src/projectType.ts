@@ -47,7 +47,10 @@ function requireKindFields(node: NodeDef): void {
       need(node.command, "a command");
       break;
     case "gate":
-      need(node.questions && node.questions.length > 0, "questions");
+      need(
+        (node.questions && node.questions.length > 0) || node.questionsFrom,
+        "questions or questionsFrom",
+      );
       need(node.outputs && node.outputs.length === 1, "exactly one output artifact");
       break;
     default:
