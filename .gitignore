@@ -3,3 +3,4 @@ dist/
 *.tsbuildinfo
 .demo-run/
 .DS_Store
+.real-run/
