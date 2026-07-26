@@ -106,24 +106,38 @@ module/
 - **Phase B**: contribution funnel; tiers `experimental → community → certified`; only certified modules in certified menus; named owners
 - **Phase C**: automated module certification (same golden-run machinery + security scan); platform team approves reports, not code. Curation over accumulation: one blessed default per category.
 
-## 7. First project type: agentic-app v1 (14 nodes)
+## 7. First project type: agentic-app v1.1
 
 | # | Node | Kind | Exit criteria |
 |---|---|---|---|
-| 1 | intake | gate | Problem statement + constraints match input schema |
-| 2 | process-analysis | agent → gate | Current/future-state process maps; human approves |
-| 3 | requirements | agent → gate | PRD passes contract; human approves |
-| 4 | architecture | agent → gate | Module bill-of-materials from certified catalog (constrained menu) |
-| 5 | data-design | agent | Schema + seed data validate |
-| 6 | agent-design | agent → gate | Agent roster: tools, prompts, HITL points, eval criteria |
-| 7 | scaffold | deterministic | Skeleton render + module composition; builds & boots empty |
-| 8 | build-backend | agent + verifier | FastAPI tests pass, boots |
-| 9 | build-agents | agent + verifier | Eval suite passes thresholds |
-| 10 | build-frontend | agent + verifier | Build + Playwright smoke green |
-| 11 | integrate | verifier | docker compose up + e2e smoke green |
-| 12 | governance-report | deterministic | Eval report, guardrail config, audit summary |
-| 13 | uat | gate | User exercises app, approves |
-| 14 | deploy (optional) | deterministic + verifier | Containerize → Terraform → Cloud Run → smoke |
+| 1 | intake | gate | Problem statement + **dropped files** (PDF/docx/HTML/images/spreadsheets) captured |
+| 2 | ingest | agent | **Evidence corpus**: normalized extraction per source (vision for diagrams) + provenance index |
+| 3 | requirements-synthesis | agent | Draft requirements; every item carries provenance + confidence (`stated`/`inferred`/`unknown`) |
+| 4 | gap-questions | agent → gate | Only materially-branching gaps become questions; **question budget enforced**; defaults pre-filled |
+| 5 | architecture | agent → gate | Module bill-of-materials from certified catalog + **build-budget plan** vs cost envelope |
+| 6 | design-options | agent → gate | **3–4 distinct clickable HTML prototypes**, identical screen coverage (contract-enforced); human picks; chosen design tokens feed scaffold |
+| 7 | data-design | agent | Schema + seed data validate |
+| 8 | agent-design | agent → gate | Agent roster: tools, prompts, HITL points, eval criteria |
+| 9 | scaffold | deterministic | Skeleton render + module composition + **test harness first**; builds & boots empty |
+| 10 | build-backend | agent + verifier | FastAPI tests pass, boots |
+| 11 | build-agents | agent + verifier | Eval suite passes thresholds |
+| 12 | build-frontend | agent + verifier | Build + Playwright smoke green (approved design tokens applied) |
+| 13 | integrate | verifier | docker compose up + e2e smoke green |
+| 14 | security-scan | verifier | Deterministic scanners: semgrep, osv/dep audit, gitleaks, trivy — findings above pinned severity block |
+| 15 | governance-report | deterministic | Eval report, guardrail config, **security evidence pack vs pinned standards profile** (e.g. OWASP ASVS L2) |
+| 16 | uat | gate | User exercises app, approves |
+| 17 | deploy (optional) | deterministic + verifier | Containerize → Terraform → Cloud Run → smoke |
+
+### 7b. The six hard problems (named 2026-07-26) and where they're solved
+
+| Challenge | Design answer |
+|---|---|
+| **(a) Heterogeneous requirements input** | Nodes 1–3: drop zone → deterministic converters + agent semantic extraction → evidence corpus with provenance index. Contract: no requirement without provenance or an explicit assumption flag. |
+| **(b) No superfluous questions** | Node 4: questions only for gaps that materially branch the build. **Question budgets in the spec, enforced by the runner like cost budgets** (max N per gate, max M gates). Every question has a default + "why we ask"; one-click accept-defaults. Questions-per-run and gate dwell are certified fleet metrics — nagging is a regression. |
+| **(c) 3–4 approvable UI designs** | Node 6: clickable prototypes, same screen set per option (comparable by contract), side-by-side in dashboard, chosen tokens deterministically configure `app-shell-ui` in scaffold. |
+| **(d) Module mapping + small build budgets** | Node 5: BOM restricted to certified catalog + build-budget plan validated against the envelope. Modules carry glue-cost priors from fleet telemetry. Compose-ratio is the structural budget lever. |
+| **(e) Build & validate** | Validation pyramid: contract → unit → module verify-in-situ → integration smoke → eval thresholds → UAT. Test harness generated before agents build. Machine-readable verification reports per build node. |
+| **(f) Security to robust standards** | Security-critical code composed from certified modules (never hand-rolled); secure defaults baked into scaffold; node 14 deterministic scanner gate (zero LLM cost); pinned standards profile → auto-generated evidence pack in node 15. Scanners also run against golden outputs in certification. |
 
 ## 8. Cost & observability (first-class, enforced)
 
