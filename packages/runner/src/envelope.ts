@@ -232,8 +232,11 @@ async function runAgent(
     .join("\n");
   const prompt = [
     fs.readFileSync(promptFile, "utf8"),
-    "\nYour inputs are listed in ./inputs.json (paths + parsed data).",
+    "\nYour inputs are listed in ./inputs.json (absolute paths + parsed data for JSON artifacts).",
+    `The project-type package directory is: ${ctx.projectTypeDir}`,
+    "Relative paths appearing inside input data (e.g. a documents_dir answer) resolve against that package directory.",
     declared ? `\nYou MUST produce these files in the current directory:\n${declared}` : "",
+    "Work only inside the current directory. When an input provides an app directory, copy it here first (cp -R <input path> ./app) and modify the copy.",
     fs.existsSync(path.join(attemptDir, "feedback.md"))
       ? `\nA previous attempt failed. Read ./feedback.md and correct the problems.`
       : "",
@@ -271,6 +274,25 @@ async function runAgent(
       allowedTools: node.allowedTools ?? ["Read", "Write", "Edit", "Bash", "Glob", "Grep"],
       permissionMode: "acceptEdits",
       settingSources: [], // hermetic: no user/global settings leak into certified runs
+      // Agents never get a free channel to interrupt users mid-node: questions
+      // are denied with assumption guidance (and journaled for telemetry).
+      // Everything else is allowed — the workspace itself is the sandbox.
+      canUseTool: async (toolName: string, input: Record<string, unknown>) => {
+        if (toolName === "AskUserQuestion") {
+          ctx.journal.append({
+            type: "agent.question_denied",
+            nodeId: node.id,
+            attempt,
+            question: JSON.stringify(input).slice(0, 400),
+          });
+          return {
+            behavior: "deny" as const,
+            message:
+              "This run is autonomous — no human is available mid-node. Make a reasonable assumption, record it in your output artifact, and continue. Materially-branching questions belong to the gap-questions stage.",
+          };
+        }
+        return { behavior: "allow" as const, updatedInput: input };
+      },
     },
   });
 

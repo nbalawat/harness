@@ -128,6 +128,7 @@ export interface LedgerEvent {
     | "node.skipped"
     | "gate.answered"
     | "agent.message"
+    | "agent.question_denied"
     | "cost.recorded"
     | "budget.exceeded";
   ts?: string;
