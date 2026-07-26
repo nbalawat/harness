@@ -1,0 +1,42 @@
+# Demo project type — proves the four node kinds end to end:
+# gate (typed Q&A) → agent (contract-validated) → deterministic (template) → verifier (exit code).
+name: demo-pipeline
+version: 0.1.0
+cost:
+  run_budget_usd: 5.00
+  nodes:
+    plan: { budget_usd: 2.00 }
+nodes:
+  - id: intake
+    kind: gate
+    questions:
+      - id: project_name
+        prompt: "What is the project name?"
+    outputs:
+      - name: intake
+        file: intake.json
+        schema: schemas/intake.schema.json
+
+  - id: plan
+    kind: agent
+    deps: [intake]
+    prompt: nodes/plan/prompt.md
+    mock: node "$HARNESS_PROJECT_DIR/nodes/plan/mock.js"
+    retries: 2
+    outputs:
+      - name: plan
+        file: plan.json
+        schema: schemas/plan.schema.json
+
+  - id: render
+    kind: deterministic
+    deps: [plan]
+    command: node "$HARNESS_PROJECT_DIR/nodes/render/render.js"
+    outputs:
+      - name: readme
+        file: README.md
+
+  - id: verify
+    kind: verifier
+    deps: [plan, render]
+    command: node "$HARNESS_PROJECT_DIR/nodes/verify/verify.js"

@@ -1,0 +1,12 @@
+{
+  "name": "@harness/cli",
+  "version": "0.1.0",
+  "type": "module",
+  "bin": {
+    "harness": "dist/index.js"
+  },
+  "dependencies": {
+    "@harness/runner": "0.1.0",
+    "@harness/spec": "0.1.0"
+  }
+}

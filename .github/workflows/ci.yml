@@ -1,0 +1,17 @@
+# Regression gate: every change to the runner must pass the full suite.
+# This same job will later grow the certification stages (golden runs,
+# artifact diffs, cost-envelope checks) as separate steps.
+name: ci
+on:
+  push:
+  pull_request:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+      - run: npm test
