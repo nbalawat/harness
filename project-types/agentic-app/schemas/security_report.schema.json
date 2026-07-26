@@ -1,0 +1,21 @@
+{
+  "type": "object",
+  "properties": {
+    "files_scanned": { "type": "integer", "minimum": 1 },
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "severity": { "enum": ["high", "medium", "low"] },
+          "rule": { "type": "string" },
+          "file": { "type": "string" },
+          "detail": { "type": "string" }
+        },
+        "required": ["severity", "rule", "file"]
+      }
+    },
+    "high_count": { "type": "integer", "maximum": 0 }
+  },
+  "required": ["files_scanned", "findings", "high_count"]
+}

@@ -54,9 +54,11 @@ function report(ctx: RunContext, status: string, extra?: string): void {
   for (const node of ctx.def.nodes) {
     const s = state.committed.has(node.id)
       ? "committed"
-      : state.failed.has(node.id)
-        ? "FAILED"
-        : "pending";
+      : state.skipped.has(node.id)
+        ? "skipped"
+        : state.failed.has(node.id)
+          ? "FAILED"
+          : "pending";
     console.log(`  ${node.id.padEnd(20)} ${node.kind.padEnd(14)} ${s}`);
   }
   console.log(`  total cost: $${state.totalCostUsd.toFixed(4)}`);

@@ -4,3 +4,7 @@ dist/
 .demo-run/
 .DS_Store
 .real-run/
+.aa-run/
+.aa-cr/
+.exp-run/
+my-*run*/

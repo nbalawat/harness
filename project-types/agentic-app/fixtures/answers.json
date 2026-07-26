@@ -1,0 +1,9 @@
+{
+  "intake": {
+    "project_name": "Support Copilot",
+    "problem_statement": "Support analysts need an assistant that answers product questions from our knowledge and keeps reviewable conversation history.",
+    "documents_dir": "fixtures/sample-docs"
+  },
+  "design-select": { "chosen_option": "option-2" },
+  "uat": { "approved": "yes" }
+}

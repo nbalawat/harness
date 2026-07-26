@@ -1,0 +1,19 @@
+{
+  "type": "object",
+  "properties": {
+    "python_compile": { "enum": ["pass"] },
+    "js_check": { "enum": ["pass"] },
+    "compose_config": { "enum": ["pass", "skipped"] },
+    "backend_tests": {
+      "type": "object",
+      "properties": { "status": { "enum": ["pass"] } },
+      "required": ["status"]
+    },
+    "evals": {
+      "type": "object",
+      "properties": { "status": { "enum": ["pass"] } },
+      "required": ["status"]
+    }
+  },
+  "required": ["python_compile", "js_check", "compose_config", "backend_tests", "evals"]
+}

@@ -1,0 +1,26 @@
+{
+  "type": "object",
+  "properties": {
+    "tables": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string", "pattern": "^[a-z_]+$" },
+          "columns": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "properties": { "name": { "type": "string" }, "type": { "type": "string" } },
+              "required": ["name", "type"]
+            }
+          }
+        },
+        "required": ["name", "columns"]
+      }
+    }
+  },
+  "required": ["tables"]
+}

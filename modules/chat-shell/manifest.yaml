@@ -1,0 +1,10 @@
+name: chat-shell
+version: 0.1.0
+description: Chat UI with streaming-ready message list, wired to POST /chat. Design tokens injected via frontend/tokens.css by scaffold.
+provides:
+  - frontend: index.html, app.js, style.css
+requires:
+  - backend endpoint POST /chat {message} -> {reply}
+  - frontend/tokens.css (from the approved design option)
+compose:
+  overlay: compose/
