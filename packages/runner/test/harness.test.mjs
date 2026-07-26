@@ -30,7 +30,7 @@ function writeFixture(dir, dag, files = {}) {
   return dir;
 }
 
-function makeCtx(workspace, projectTypeDir, { answers, mockAgents = true } = {}) {
+function makeCtx(workspace, projectTypeDir, { answers, mockAgents = true, acceptDefaults = true } = {}) {
   fs.mkdirSync(workspace, { recursive: true });
   return {
     workspace,
@@ -39,6 +39,7 @@ function makeCtx(workspace, projectTypeDir, { answers, mockAgents = true } = {})
     journal: new Journal(workspace),
     answers,
     mockAgents,
+    acceptDefaults,
     interactive: false,
   };
 }
@@ -651,4 +652,29 @@ test("when: unmet condition skips the node; met condition runs it", async () => 
   assert.equal((await runLoop(runCtx)).status, "completed");
   assert.equal(events(runCtx, "node.skipped").length, 0);
   assert.ok(fs.existsSync(path.join(runCtx.workspace, "artifacts/deploy/deployed.json")));
+});
+
+test("defaults require confirmation: without acceptDefaults a defaulted gate parks for the human", async () => {
+  const dir = writeFixture(
+    tmpDir("confirm-pt"),
+    [
+      "name: confirm",
+      "version: 0.0.1",
+      "nodes:",
+      "  - id: ask",
+      "    kind: gate",
+      "    questions:",
+      "      - {id: mode, prompt: 'mode?', default: local}",
+      "    outputs: [{name: ans, file: ans.json}]",
+    ].join("\n"),
+  );
+  // Unattended replay: default applies silently.
+  const replay = makeCtx(tmpDir("confirm-ws1"), dir, { acceptDefaults: true });
+  assert.equal((await runLoop(replay)).status, "completed");
+  assert.equal(events(replay, "gate.answered")[0].source, "default");
+
+  // Human-in-the-loop (non-TTY, e.g. dashboard): parks so the form can show
+  // the default for confirmation instead of silently assuming it.
+  const hitl = makeCtx(tmpDir("confirm-ws2"), dir, { acceptDefaults: false });
+  assert.equal((await runLoop(hitl)).status, "parked");
 });

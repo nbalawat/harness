@@ -22,7 +22,7 @@ Requires: Node 22+, python3, [uv](https://docs.astral.sh/uv/). Optional: Docker
 node packages/cli/dist/index.js run project-types/agentic-app \
   --workspace my-run \
   --answers project-types/agentic-app/fixtures/answers.json \
-  --mock-agents
+  --accept-defaults --mock-agents
 ```
 
 21 nodes: documents → evidence corpus → requirements with provenance → budgeted
@@ -38,10 +38,11 @@ node packages/cli/dist/index.js run project-types/agentic-app \
   --workspace my-interactive-run --mock-agents
 ```
 
-You'll be prompted for the intake questions in the terminal (point
-`documents_dir` at `project-types/agentic-app/fixtures/sample-docs`, or your own
-folder of .md/.html docs). Gap questions auto-answer from defaults — that's the
-no-nagging policy. Kill it mid-run and `resume` to see durable parking:
+You'll be prompted for every gate question in the terminal — each shows its
+default pre-filled (`Enter` accepts, typing overrides) and why it's being asked.
+Point `documents_dir` at `project-types/agentic-app/fixtures/sample-docs` or your
+own folder of .md/.html docs. `--accept-defaults` skips confirmations for
+unattended runs; the dashboard shows the same questions as forms. Kill it mid-run and `resume` to see durable parking:
 
 ```sh
 node packages/cli/dist/index.js resume my-interactive-run
@@ -99,7 +100,8 @@ cost is captured per node in the journal and enforced against the envelope in
 ```sh
 node packages/cli/dist/index.js run project-types/agentic-app \
   --workspace my-cr-run \
-  --answers project-types/agentic-app/fixtures/answers-cloudrun.json --mock-agents
+  --answers project-types/agentic-app/fixtures/answers-cloudrun.json \
+  --accept-defaults --mock-agents
 cat my-cr-run/artifacts/deploy/deploy/plan.md
 ```
 

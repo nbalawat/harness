@@ -1,0 +1,20 @@
+/* Option 4 — "Swiss Ledger"
+   High-contrast grotesque brutalism. Hard 2px rules, zero radius,
+   uppercase micro-labels, one hot magenta for state. An audit ledger. */
+:root {
+  --primary: #e5006d;
+  --on-primary: #ffffff;
+  --bg: #ffffff;
+  --fg: #0a0a0a;
+  --surface: #f2f2f2;
+  --border: #0a0a0a;
+  --font: "Helvetica Neue", Helvetica, "Arial Narrow", Arial, system-ui, sans-serif;
+
+  /* direction-specific extensions */
+  --muted: #6b6b6b;
+  --surface-2: #e6e6e6;
+  --accent-warn: #7a5c00;
+  --accent-danger: #0a0a0a;
+  --radius: 0px;
+  --shadow: none;
+}

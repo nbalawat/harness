@@ -7,6 +7,7 @@ interface RunConfig {
   projectTypeDir: string;
   answersFile?: string;
   mockAgents: boolean;
+  acceptDefaults?: boolean;
 }
 
 function parseFlags(args: string[]): { positional: string[]; flags: Record<string, string | boolean> } {
@@ -44,6 +45,7 @@ function buildContext(workspace: string, config: RunConfig): RunContext {
     journal: new Journal(workspace),
     answers: loadAnswers(config.answersFile),
     mockAgents: config.mockAgents,
+    acceptDefaults: config.acceptDefaults === true,
     interactive: process.stdin.isTTY === true,
   };
 }
@@ -73,6 +75,7 @@ async function cmdRun(args: string[]): Promise<number> {
     projectTypeDir,
     answersFile: flags.answers ? path.resolve(flags.answers as string) : undefined,
     mockAgents: flags["mock-agents"] === true,
+    acceptDefaults: flags["accept-defaults"] === true,
   };
 
   fs.mkdirSync(workspace, { recursive: true });
@@ -98,6 +101,7 @@ async function cmdResume(args: string[]): Promise<number> {
     fs.readFileSync(path.join(workspace, "run.json"), "utf8"),
   ) as RunConfig;
   if (flags.answers) config.answersFile = path.resolve(flags.answers as string);
+  if (flags["accept-defaults"] === true) config.acceptDefaults = true;
 
   const ctx = buildContext(workspace, config);
   console.log(`resuming ${ctx.def.name}@${ctx.def.version}`);

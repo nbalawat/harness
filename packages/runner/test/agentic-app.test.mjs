@@ -28,6 +28,7 @@ function makeCtx(workspace, answers) {
     journal: new Journal(workspace),
     answers,
     mockAgents: true,
+    acceptDefaults: true,
     interactive: false,
   };
 }

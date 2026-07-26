@@ -14,4 +14,10 @@ export interface RunContext {
   mockAgents: boolean;
   /** Whether we may prompt a human on stdin for unanswered gates. */
   interactive: boolean;
+  /**
+   * Auto-apply question defaults without showing them (unattended replay /
+   * certification). When false, defaults are shown pre-filled for the human
+   * to confirm or edit — in the terminal or the dashboard gate form.
+   */
+  acceptDefaults?: boolean;
 }

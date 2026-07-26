@@ -1,0 +1,20 @@
+/* Option 1 — "Console Graphite"
+   Dark operator console. Dense, keyboard-first, monospaced data.
+   Mint signal on graphite; the analyst is a controller watching a queue. */
+:root {
+  --primary: #2ee6a8;
+  --on-primary: #04231a;
+  --bg: #0d1117;
+  --fg: #e6edf3;
+  --surface: #161b22;
+  --border: #2a313b;
+  --font: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+
+  /* direction-specific extensions */
+  --muted: #8b949e;
+  --surface-2: #1c232c;
+  --accent-warn: #e3b341;
+  --accent-danger: #f85149;
+  --radius: 4px;
+  --shadow: none;
+}

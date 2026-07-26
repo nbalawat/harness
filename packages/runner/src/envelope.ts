@@ -189,17 +189,27 @@ async function runGate(
       sources.add("recorded");
       continue;
     }
-    if (q.default !== undefined) {
-      answers[q.id] = q.default; // the accept-defaults path: zero user friction
+    if (ctx.acceptDefaults && q.default !== undefined) {
+      answers[q.id] = q.default; // unattended replay: defaults apply silently
       sources.add("default");
       continue;
     }
-    if (!ctx.interactive) return "parked"; // durable park; resume answers later
+    if (!ctx.interactive) return "parked"; // durable park; dashboard/resume answers later
+    // Interactive: the human sees the question WITH its default pre-filled —
+    // Enter accepts, typing overrides. Defaults are confirmed, never hidden.
     const readline = await import("node:readline/promises");
     const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
-    answers[q.id] = await rl.question(`[gate:${node.id}] ${q.prompt} `);
+    const hint = q.default !== undefined ? ` [default: ${q.default}]` : "";
+    const why = q.why ? `\n  (why: ${q.why})` : "";
+    const raw = await rl.question(`[gate:${node.id}] ${q.prompt}${why}${hint} `);
     rl.close();
-    sources.add("human");
+    if (raw.trim() === "" && q.default !== undefined) {
+      answers[q.id] = q.default;
+      sources.add("default");
+    } else {
+      answers[q.id] = raw;
+      sources.add("human");
+    }
   }
 
   const out = node.outputs![0];
