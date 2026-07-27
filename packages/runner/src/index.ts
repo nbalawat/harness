@@ -1,5 +1,5 @@
 export { Journal } from "./journal.js";
-export { loadProjectType } from "./projectType.js";
+export { loadProjectType, loadProjectTypeFile } from "./projectType.js";
 export { runLoop, foldState, reopenFailed } from "./scheduler.js";
 export { modelForAttempt } from "./envelope.js";
 export type { RunState } from "./scheduler.js";

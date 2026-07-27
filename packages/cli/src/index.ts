@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { Journal, foldState, loadProjectType, reopenFailed, runLoop, type RunContext } from "@harness/runner";
+import { Journal, foldState, loadProjectType, loadProjectTypeFile, reopenFailed, runLoop, type RunContext } from "@harness/runner";
 
 interface RunConfig {
   projectTypeDir: string;
@@ -37,7 +37,11 @@ function loadAnswers(file?: string): Record<string, Record<string, string>> | un
 }
 
 function buildContext(workspace: string, config: RunConfig): RunContext {
-  const def = loadProjectType(config.projectTypeDir);
+  // A run is pinned to the DAG it started with — the immutability guarantee.
+  const snapshot = path.join(workspace, "dag.snapshot.yaml");
+  const def = fs.existsSync(snapshot)
+    ? loadProjectTypeFile(snapshot)
+    : loadProjectType(config.projectTypeDir);
   return {
     workspace,
     projectTypeDir: config.projectTypeDir,
@@ -80,6 +84,7 @@ async function cmdRun(args: string[]): Promise<number> {
 
   fs.mkdirSync(workspace, { recursive: true });
   fs.writeFileSync(path.join(workspace, "run.json"), JSON.stringify(config, null, 2));
+  fs.copyFileSync(path.join(projectTypeDir, "dag.yaml"), path.join(workspace, "dag.snapshot.yaml"));
 
   const ctx = buildContext(workspace, config);
   ctx.journal.append({

@@ -11,7 +11,7 @@ import * as net from "node:net";
 import * as path from "node:path";
 import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import { Journal, foldState, loadProjectType } from "@harness/runner";
+import { Journal, foldState, loadProjectType, loadProjectTypeFile } from "@harness/runner";
 import type { GateQuestion, NodeDef } from "@harness/spec";
 
 interface UiRunConfig {
@@ -64,9 +64,14 @@ function parkedGateQuestions(
   return undefined;
 }
 
+function loadDef(workspace: string, projectTypeDir: string) {
+  const snapshot = path.join(workspace, "dag.snapshot.yaml");
+  return fs.existsSync(snapshot) ? loadProjectTypeFile(snapshot) : loadProjectType(projectTypeDir);
+}
+
 export function buildState(workspace: string): Record<string, unknown> {
   const config = readConfig(workspace);
-  const def = loadProjectType(config.projectTypeDir);
+  const def = loadDef(workspace, config.projectTypeDir);
   const events = new Journal(workspace).read();
   const state = foldState(events);
 
@@ -202,7 +207,7 @@ export function startUiServer(workspace: string, port: number): Promise<http.Ser
   /** Latest committed app artifact, in DAG order (the freshest build stage wins). */
   function latestAppArtifact(): { node: string; dir: string } | null {
     const config = readConfig(workspace);
-    const def = loadProjectType(config.projectTypeDir);
+    const def = loadDef(workspace, config.projectTypeDir);
     const artifactName = def.preview?.artifact ?? "app";
     const state = foldState(new Journal(workspace).read());
     let found: { node: string; dir: string } | null = null;
@@ -227,7 +232,7 @@ export function startUiServer(workspace: string, port: number): Promise<http.Ser
   async function startApp(): Promise<void> {
     stopApp();
     const config = readConfig(workspace);
-    const def = loadProjectType(config.projectTypeDir);
+    const def = loadDef(workspace, config.projectTypeDir);
     const preview = def.preview;
     const latest = latestAppArtifact();
     if (!preview || !latest) {
@@ -471,6 +476,15 @@ button.primary:hover { filter:brightness(1.08); }
 </div>
 <script>
 const STATUS_COLOR = { completed:'var(--good)', running:'var(--accent)', parked:'var(--warn)', failed:'var(--crit)' };
+// Re-render a section ONLY when its content actually changed — otherwise
+// iframes reload (flicker) and open <details> collapse under the user.
+const prevHtml = {};
+function setHTML(id, html) {
+  if (prevHtml[id] === html) return false;
+  prevHtml[id] = html;
+  document.getElementById(id).innerHTML = html;
+  return true;
+}
 const STATE_ICON = { committed:'✓', failed:'✕', parked:'⏸', started:'●', skipped:'↷', pending:'○' };
 function fmtDur(ms) {
   if (!ms) return '0s';
@@ -480,7 +494,7 @@ function fmtDur(ms) {
 async function tick() {
   const s = await (await fetch('/api/state')).json();
   document.getElementById('title').textContent = s.projectType;
-  document.getElementById('status').textContent = s.workspace;
+  document.getElementById('status').textContent = s.workspace + '  ·  live, updated ' + new Date().toLocaleTimeString();
   const st = s.resuming ? 'running' : s.status;
   document.getElementById('statusText').textContent = s.resuming ? 'resuming…' : s.status;
   document.getElementById('statusDot').style.background = STATUS_COLOR[st] || 'var(--muted)';
@@ -503,30 +517,33 @@ async function tick() {
   document.getElementById('attnV').textContent = s.parkedGate ? 'Answer ' + s.parkedGate.questions.length + ' question' + (s.parkedGate.questions.length===1?'':'s') : 'Nothing';
   document.getElementById('attnSub').textContent = s.parkedGate ? 'gate: ' + s.parkedGate.nodeId : 'the run does not need you right now';
 
-  document.getElementById('nodes').innerHTML = s.nodes.map(n =>
+  setHTML('nodes', s.nodes.map(n =>
     '<div class="node ' + n.state + '"><span class="icon">' + (STATE_ICON[n.state]||'') + '</span>' +
     '<span class="id mono">' + n.id + '</span><span class="chip">' + n.kind + '</span>' +
     (n.retries ? '<span class="chip retry">retry ×' + n.retries + '</span>' : '') +
     '<span class="cost mono">' + (n.cost && (n.cost.costUsd || n.cost.wallClockMs) ? ('$' + n.cost.costUsd.toFixed(2) + ' · ' + fmtDur(n.cost.wallClockMs)) : '') + '</span></div>'
-  ).join('');
+  ).join(''));
 
-  document.getElementById('events').innerHTML = s.events.slice().reverse().map(e => {
+  setHTML('events', s.events.slice().reverse().map(e => {
     const cls = e.type.includes('committed') ? 'good' : (e.type.includes('failed')||e.type.includes('exceeded')) ? 'bad' : e.type.includes('gate')||e.type.includes('parked') ? 'warn' : e.type.includes('agent')||e.type.includes('cost') ? 'info' : '';
     return '<div class="event ' + cls + '"><span class="t mono">' + (e.ts||'').slice(11,19) + '</span><span class="d"></span><span>' + e.type + (e.nodeId ? ' · ' + e.nodeId : '') + (e.detail ? ' · ' + e.detail : '') + '</span></div>';
-  }).join('');
+  }).join(''));
 
   const groups = {};
   for (const a of s.artifacts) { const g = a.split('/')[0]; (groups[g] ??= []).push(a); }
-  document.getElementById('artifacts').innerHTML = Object.keys(groups).length ? Object.entries(groups).map(([g, files]) =>
-    '<details><summary>' + g + '<span class="chip">' + files.length + '</span></summary>' +
+  const artEl = document.getElementById('artifacts');
+  const openGroups = new Set([...artEl.querySelectorAll('details[open]')].map(d => d.dataset.group));
+  const artHtml = Object.keys(groups).length ? Object.entries(groups).map(([g, files]) =>
+    '<details data-group="' + g + '"' + (openGroups.has(g) ? ' open' : '') + '><summary>' + g + '<span class="chip">' + files.length + '</span></summary>' +
     files.map(f => '<a class="mono" href="/artifact/' + f + '" target="_blank">' + f.slice(g.length+1) + '</a>').join('') + '</details>'
   ).join('') : '<div class="empty">No artifacts yet.</div>';
+  setHTML('artifacts', artHtml);
 
   const meta = {};
   for (const o of (s.designOptions || [])) meta[o.id] = o;
   const previews = s.artifacts.filter(a => a.startsWith('design-options/') && /\\/index\\.html$/.test(a));
   document.getElementById('designPanel').style.display = previews.length ? '' : 'none';
-  document.getElementById('designs').innerHTML = previews.map(p => {
+  const designsChanged = setHTML('designs', previews.map(p => {
     const id = p.split('/').slice(-2)[0];
     const name = meta[id] ? meta[id].name : id;
     return '<div class="design"><div class="thumb"><iframe src="/artifact/' + p + '" loading="lazy" tabindex="-1"></iframe>' +
@@ -534,8 +551,8 @@ async function tick() {
       '<div class="bar"><b>' + name + '</b><span class="chip mono">' + id + '</span>' +
       '<a href="/artifact/' + p + '" target="_blank">open</a>' +
       '<button data-id="' + id + '">Choose</button></div></div>';
-  }).join('');
-  document.querySelectorAll('.design button').forEach(b => b.onclick = () => {
+  }).join(''));
+  if (designsChanged) document.querySelectorAll('.design button').forEach(b => b.onclick = () => {
     const input = document.querySelector('#gateForm input[name="chosen_option"]');
     if (input) { input.value = b.dataset.id; input.scrollIntoView({behavior:'smooth'}); input.focus(); }
     else alert('The design-select gate is not waiting right now.');

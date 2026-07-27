@@ -9,7 +9,12 @@ export function loadProjectType(dir: string): ProjectTypeDef {
   if (!fs.existsSync(dagFile)) {
     throw new Error(`Not a project-type package (missing dag.yaml): ${dir}`);
   }
-  const def = parse(fs.readFileSync(dagFile, "utf8")) as ProjectTypeDef;
+  return loadProjectTypeFile(dagFile);
+}
+
+/** Load a specific DAG file — used for per-run immutable snapshots. */
+export function loadProjectTypeFile(file: string): ProjectTypeDef {
+  const def = parse(fs.readFileSync(file, "utf8")) as ProjectTypeDef;
   validate(def);
   return def;
 }

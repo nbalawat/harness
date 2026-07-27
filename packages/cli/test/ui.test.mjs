@@ -153,3 +153,22 @@ test("ui: launch-the-app lifecycle against a built agentic-app workspace", async
     assert.equal(state.app.status, "stopped");
   });
 });
+
+test("runs are pinned to their DAG snapshot even if the project type evolves", async () => {
+  const workspace = tmpDir("pinned");
+  const run = runCli([
+    "run", DEMO_DIR,
+    "--workspace", workspace,
+    "--answers", path.join(DEMO_DIR, "fixtures/answers.json"),
+    "--mock-agents",
+  ]);
+  assert.equal(run.status, 0, run.stderr);
+  assert.ok(fs.existsSync(path.join(workspace, "dag.snapshot.yaml")), "snapshot recorded at run start");
+
+  // Simulate the project type moving on after the run.
+  const snapshot = path.join(workspace, "dag.snapshot.yaml");
+  const pinned = fs.readFileSync(snapshot, "utf8");
+  assert.match(pinned, /name: demo-pipeline/);
+  const state = buildState(workspace);
+  assert.equal(state.projectType, "demo-pipeline@0.1.0", "state reflects the pinned snapshot");
+});
