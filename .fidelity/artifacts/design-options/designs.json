@@ -1,0 +1,40 @@
+{
+  "options": [
+    {
+      "id": "option-1",
+      "name": "Calm Slate",
+      "screens": [
+        "chat",
+        "history",
+        "agents"
+      ],
+      "addresses": [],
+      "tokens_file": "designs/option-1/tokens.css",
+      "preview_file": "designs/option-1/index.html"
+    },
+    {
+      "id": "option-2",
+      "name": "Forest",
+      "screens": [
+        "chat",
+        "history",
+        "agents"
+      ],
+      "addresses": [],
+      "tokens_file": "designs/option-2/tokens.css",
+      "preview_file": "designs/option-2/index.html"
+    },
+    {
+      "id": "option-3",
+      "name": "Ink",
+      "screens": [
+        "chat",
+        "history",
+        "agents"
+      ],
+      "addresses": [],
+      "tokens_file": "designs/option-3/tokens.css",
+      "preview_file": "designs/option-3/index.html"
+    }
+  ]
+}

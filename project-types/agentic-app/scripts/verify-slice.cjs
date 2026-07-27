@@ -29,9 +29,18 @@ function freePort() {
 
 async function main() {
   // Fast static checks first.
-  if (fs.readFileSync(path.join(app, "frontend/index.html"), "utf8").includes("__APP_NAME__")) {
+  const indexHtml = fs.readFileSync(path.join(app, "frontend/index.html"), "utf8");
+  if (indexHtml.includes("__APP_NAME__")) {
     fail("branding placeholder __APP_NAME__ present");
   }
+  // Design-fidelity guard: the frontend IS the chosen design. A slice may
+  // extend it but must never replace its shell or break its mount points.
+  for (const id of ["agent-mode", "screen-chat", "messages", "composer", "input"]) {
+    if (!indexHtml.includes('id="' + id + '"')) {
+      fail(`design fidelity broken: frontend/index.html lost canonical mount point id="${id}" — restore the chosen design's shell`);
+    }
+  }
+  if (!indexHtml.includes("app.js")) fail("design fidelity broken: frontend/index.html no longer loads app.js");
   const port = await freePort();
   const log = fs.openSync("slice-app.log", "w");
   const child = spawn(

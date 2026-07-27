@@ -1,0 +1,13 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Support Copilot — Forest</title><link rel="stylesheet" href="tokens.css"><style>body{margin:0;font-family:var(--font);background:var(--bg);color:var(--fg)}.screen{background:var(--surface);border:1px solid var(--border);border-radius:.5rem;padding:1rem}.messages{list-style:none;margin:0 0 1rem;padding:0;min-height:8rem;display:flex;flex-direction:column;gap:.5rem}.message{padding:.5rem .75rem;border-radius:.5rem;max-width:80%}.message.user{background:var(--primary);color:var(--on-primary);align-self:flex-end}.message.assistant{background:var(--bg);border:1px solid var(--border)}.composer{display:flex;gap:.5rem}.composer input{flex:1;padding:.6rem;border:1px solid var(--border);border-radius:.4rem;background:var(--bg);color:var(--fg)}.composer button{padding:.6rem 1.1rem;border:0;border-radius:.4rem;background:var(--primary);color:var(--on-primary);cursor:pointer}.agent-mode{font-size:.75rem;opacity:.8}.agent-card{border:1px solid var(--border);border-radius:.5rem;padding:.75rem;margin-bottom:.5rem;background:var(--bg)}.masthead{border-bottom:3px double var(--border);padding:2rem 1rem 1rem;text-align:center}.masthead h1{font-size:2rem;letter-spacing:.02em}.dek{color:var(--primary);font-style:italic}.column{max-width:46rem;margin:0 auto;padding:1.5rem 1rem;display:flex;flex-direction:column;gap:1.25rem}</style></head><body>
+<header class="masthead"><h1>Support Copilot</h1><p class="dek">An editorial reading of every conversation.</p><span id="agent-mode" class="agent-mode"></span></header><main class="column"><section id="screen-chat" class="screen">
+    <ul id="messages" class="messages"></ul>
+    <form id="composer" class="composer">
+      <input id="input" type="text" placeholder="Ask Support Copilot..." autocomplete="off" />
+      <button type="submit">Send</button>
+    </form>
+  </section>
+  <section id="screen-history" class="screen"><h2>History</h2><div id="history-list"></div></section>
+  <section id="screen-agents" class="screen"><h2>Agents</h2><div id="agents-list"></div></section>  <footer class="history"><a href="/api/conversations" target="_blank">Conversation history</a></footer>
+  </main>
+<script src="app.js" defer></script>
+</body></html>

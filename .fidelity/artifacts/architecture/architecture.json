@@ -1,0 +1,39 @@
+{
+  "modules": [
+    "persistence-core",
+    "chat-shell",
+    "agent-runtime"
+  ],
+  "module_coverage": [
+    {
+      "module": "persistence-core",
+      "addresses": [
+        "REQ-004",
+        "REQ-006",
+        "REQ-007"
+      ]
+    },
+    {
+      "module": "chat-shell",
+      "addresses": []
+    },
+    {
+      "module": "agent-runtime",
+      "addresses": [
+        "REQ-001",
+        "REQ-002",
+        "REQ-003",
+        "REQ-005"
+      ]
+    }
+  ],
+  "deploy_target": "local",
+  "build_budget_plan": {
+    "nodes": {
+      "build-backend": 3.5,
+      "build-agents": 2.5,
+      "build-frontend": 2
+    },
+    "total_usd": 8
+  }
+}

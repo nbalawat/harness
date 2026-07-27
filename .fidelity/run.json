@@ -1,0 +1,6 @@
+{
+  "projectTypeDir": "/Users/nbalawat/development/harness/project-types/agentic-app",
+  "answersFile": "/Users/nbalawat/development/harness/project-types/agentic-app/fixtures/answers.json",
+  "mockAgents": true,
+  "acceptDefaults": true
+}

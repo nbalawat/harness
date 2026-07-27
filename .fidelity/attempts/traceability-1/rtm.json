@@ -1,0 +1,151 @@
+{
+  "requirements_total": 7,
+  "covered_count": 7,
+  "uncovered": [],
+  "coverage": [
+    {
+      "id": "REQ-001",
+      "text": "The application must let a support analyst chat with an assistant that answers from our product knowledge.",
+      "category": "agent",
+      "confidence": "stated",
+      "addressed_by": [
+        {
+          "via": "module",
+          "item": "agent-runtime"
+        },
+        {
+          "via": "agent",
+          "item": "assistant"
+        }
+      ]
+    },
+    {
+      "id": "REQ-002",
+      "text": "Analysts should be able to review past conversations to reuse good answers.",
+      "category": "agent",
+      "confidence": "stated",
+      "addressed_by": [
+        {
+          "via": "module",
+          "item": "agent-runtime"
+        },
+        {
+          "via": "agent",
+          "item": "assistant"
+        }
+      ]
+    },
+    {
+      "id": "REQ-003",
+      "text": "The assistant must identify itself clearly so customers know it is automated.",
+      "category": "agent",
+      "confidence": "stated",
+      "addressed_by": [
+        {
+          "via": "module",
+          "item": "agent-runtime"
+        },
+        {
+          "via": "agent",
+          "item": "assistant"
+        }
+      ]
+    },
+    {
+      "id": "REQ-004",
+      "text": "Conversation records need to be stored for quality review.",
+      "category": "data",
+      "confidence": "stated",
+      "addressed_by": [
+        {
+          "via": "module",
+          "item": "persistence-core"
+        },
+        {
+          "via": "table",
+          "item": "conversations"
+        },
+        {
+          "via": "table",
+          "item": "messages"
+        }
+      ]
+    },
+    {
+      "id": "REQ-005",
+      "text": "Current support process Tickets arrive by email. An analyst reads the ticket and searches old threads manually. The future process should route each question to the assistant first, and the analyst must approve the reply before it is sent.",
+      "category": "agent",
+      "confidence": "stated",
+      "addressed_by": [
+        {
+          "via": "module",
+          "item": "agent-runtime"
+        },
+        {
+          "via": "agent",
+          "item": "assistant"
+        }
+      ]
+    },
+    {
+      "id": "REQ-006",
+      "text": "Support analysts need an assistant that answers product questions from our knowledge and keeps reviewable conversation history.",
+      "category": "data",
+      "confidence": "stated",
+      "addressed_by": [
+        {
+          "via": "module",
+          "item": "persistence-core"
+        },
+        {
+          "via": "table",
+          "item": "conversations"
+        },
+        {
+          "via": "table",
+          "item": "messages"
+        }
+      ]
+    },
+    {
+      "id": "REQ-007",
+      "text": "Conversations and messages must be persisted for later review.",
+      "category": "data",
+      "confidence": "inferred",
+      "addressed_by": [
+        {
+          "via": "module",
+          "item": "persistence-core"
+        },
+        {
+          "via": "table",
+          "item": "conversations"
+        },
+        {
+          "via": "table",
+          "item": "messages"
+        }
+      ]
+    }
+  ],
+  "assumptions": [
+    {
+      "question": "Does the app need user authentication for the pilot?",
+      "answer": "no",
+      "source": "default",
+      "why": "Decides whether the auth module is composed now or deferred."
+    },
+    {
+      "question": "How long should conversation data be retained?",
+      "answer": "90 days",
+      "source": "default",
+      "why": "Sets the retention config in the data layer and governance report."
+    },
+    {
+      "question": "Inferred requirement: Conversations and messages must be persisted for later review.",
+      "answer": "assumed true",
+      "source": "inferred",
+      "why": "REQ-007"
+    }
+  ]
+}

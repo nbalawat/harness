@@ -299,6 +299,7 @@ export function buildState(workspace: string): Record<string, unknown> {
 
   const intakeDoc = readArtifactJson(workspace, state.artifacts, "intake");
   const designChoiceDoc = readArtifactJson(workspace, state.artifacts, "design_choice");
+  const rosterDoc = readArtifactJson(workspace, state.artifacts, "agent_roster");
   const pendingQuestion = readJsonSafe(path.join(workspace, "pending-question.json"));
 
   // Slice progress screenshots (shipped inside the app artifact by verify-slice).
@@ -335,6 +336,7 @@ export function buildState(workspace: string): Record<string, unknown> {
     problemStatement: (intakeDoc?.problem_statement as string | undefined) ?? null,
     quality,
     designChoice: (designChoiceDoc?.chosen_option as string | undefined) ?? null,
+    appAgents: Array.isArray(rosterDoc?.agents) ? rosterDoc!.agents : null,
     pendingQuestion,
     sliceShots,
     workspace,
@@ -414,6 +416,35 @@ export function buildNodeDetail(workspace: string, nodeId: string): Record<strin
     .filter((e) => e.type === "agent.question_asked" || e.type === "agent.question_answered" || e.type === "agent.question_denied")
     .map((e) => ({ type: e.type, ts: e.ts }));
 
+  // What the step actually ran and what it produced — without this, verifier
+  // and deterministic steps read as black boxes in the dashboard.
+  const results: { name: string; file: string; href: string; entries: { k: string; v: string }[] }[] = [];
+  for (const out of node.outputs ?? []) {
+    if (!out.file || !out.file.endsWith(".json")) continue;
+    const abs = path.join(workspace, "artifacts", nodeId, out.file);
+    if (!fs.existsSync(abs)) continue;
+    try {
+      const data = JSON.parse(fs.readFileSync(abs, "utf8")) as Record<string, unknown>;
+      if (typeof data !== "object" || data === null || Array.isArray(data)) continue;
+      const entries = Object.entries(data)
+        .slice(0, 24)
+        .map(([k, v]) => ({
+          k,
+          v:
+            v === null
+              ? "—"
+              : Array.isArray(v)
+                ? `${v.length} item${v.length === 1 ? "" : "s"}`
+                : typeof v === "object"
+                  ? JSON.stringify(v).slice(0, 160)
+                  : String(v),
+        }));
+      results.push({ name: out.name, file: out.file, href: `/artifact/${nodeId}/${out.file}`, entries });
+    } catch {
+      /* live write */
+    }
+  }
+
   const describe = (id: string) => def.nodes.find((n) => n.id === id)?.description ?? null;
   let promptText: string | null = null;
   if (node.prompt) {
@@ -433,6 +464,9 @@ export function buildNodeDetail(workspace: string, nodeId: string): Record<strin
     model: node.model ?? null,
     escalateModel: node.escalateModel ?? null,
     hasVerify: Boolean(node.verify),
+    command: node.command ?? null,
+    verifyCommand: node.verify ?? null,
+    results,
     attempts: Object.entries(attempts).map(([n, a]) => ({ attempt: Number(n), ...a })),
     transcript,
     toolCounts,
@@ -912,6 +946,15 @@ button.ghost { background:transparent; border:1px solid var(--border); color:var
 .event { display:flex; gap:.6rem; align-items:baseline; padding:.14rem 0; color:var(--ink2); font-size:.8rem; }
 .event .t { color:var(--muted); font-size:.7rem; flex:none; width:56px; }
 .event.bad { color:var(--crit); }
+/* app agents */
+.agrid { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:.8rem; }
+.agcard { border:1px solid var(--grid); border-radius:10px; padding:.8rem .9rem; background:var(--page); }
+.agcard .agname { font-weight:700; font-size:.92rem; }
+.agcard .agrole { color:var(--muted); font-size:.8rem; margin:.25rem 0 .45rem; }
+.agcard .agrow { font-size:.76rem; margin:.25rem 0; display:flex; flex-wrap:wrap; gap:.25rem; align-items:center; }
+.agcard .agrow .k { color:var(--muted); text-transform:uppercase; font-size:.64rem; letter-spacing:.06em; margin-right:.2rem; }
+.agcard .badgechip.deny { border-color:var(--crit); color:var(--crit); }
+.agcard .agevals { font-size:.74rem; color:var(--muted); margin-top:.4rem; border-top:1px dashed var(--grid); padding-top:.4rem; }
 /* drawer + modal */
 #drawer { position:fixed; top:0; right:-580px; width:min(560px,94vw); height:100vh; background:var(--surface); border-left:1px solid var(--border); box-shadow:-12px 0 40px rgba(0,0,0,.18); transition:right .25s ease; z-index:60; display:flex; flex-direction:column; }
 #drawer.open { right:0; }
@@ -975,6 +1018,7 @@ button.ghost { background:transparent; border:1px solid var(--border); color:var
     <div class="card"><h2>About this build</h2><div id="about"></div></div>
     <div class="card"><h2>Quality &amp; test results</h2><div id="quality"></div></div>
   </div>
+  <div class="card" id="agentsPanel" style="display:none"><h2>Your app&#39;s agents <span class="hint">— who does the work inside the built application, with their tools and guardrails</span></h2><div class="agrid" id="appAgents"></div></div>
   <div class="card" id="shotsPanel" style="display:none"><h2>Watch it grow — one screenshot per slice</h2><div class="shots" id="shots"></div></div>
   <div class="card" id="appPanel" style="display:none">
     <div style="display:flex;align-items:center;gap:.8rem;flex-wrap:wrap">
@@ -1106,12 +1150,21 @@ async function refreshDrawer() {
     if (m.type === 'result') return '<div class="tr"><span class="lbl">result</span> <span class="prev">' + esc(m.preview) + '</span></div>';
     return '';
   }).join('');
+  const cmdStyle = 'font-size:.72rem;white-space:pre-wrap;word-break:break-all';
+  const ran =
+    (d.command ? '<h3>' + (d.kind === 'verifier' ? 'The check this step runs' : 'What this step runs') + '</h3><div class="depitem mono" style="' + cmdStyle + '">' + esc(d.command) + '</div>' : '') +
+    (d.verifyCommand ? '<h3>Exit criteria — verified by running, not assumed</h3><div class="depitem mono" style="' + cmdStyle + '">' + esc(d.verifyCommand) + '</div>' : '');
+  const results = (d.results || []).map(r =>
+    '<div class="attempt"><b>' + title(r.name) + '</b> · <a href="' + r.href + '" target="_blank" class="mono" style="color:var(--accent);font-size:.72rem">open ' + esc(r.file) + '</a>' +
+    r.entries.map(e => '<div class="depitem"><span class="d">' + esc(title(e.k)) + ':</span> <span class="mono" style="font-size:.74rem">' + esc(e.v) + '</span></div>').join('') +
+    '</div>').join('');
   setHTML('dBody',
     (d.description ? '<p style="font-size:.9rem">' + esc(d.description) + '</p>' : '') +
     (d.model ? '<h3>Model</h3><div class="depitem mono">' + esc(d.model) + (d.escalateModel ? ' <span class="d">(retries escalate to ' + esc(d.escalateModel) + ')</span>' : '') + '</div>' : '') +
-    caps + toolUse +
+    ran + caps + toolUse +
     '<h3>Waits for</h3>' + (d.deps.map(dep).join('') || '<div class="empty">Nothing — a starting step.</div>') +
     '<h3>Feeds into</h3>' + (d.feeds.map(dep).join('') || '<div class="empty">Nothing — a final step.</div>') +
+    (results ? '<h3>What it produced &amp; found</h3>' + results : '') +
     '<h3>Attempts</h3>' + attempts +
     (d.prompt ? '<details style="margin-top:.6rem"><summary class="hint" style="cursor:pointer">Prompt used for this step</summary><pre style="background:var(--page);border:1px solid var(--grid);border-radius:8px;padding:.7rem .9rem;font:11.5px/1.5 ui-monospace,Menlo,monospace;white-space:pre-wrap;margin-top:.4rem">' + esc(d.prompt) + '</pre></details>' : '') +
     (tr ? '<h3>What the agent did</h3>' + tr : '')
@@ -1272,6 +1325,21 @@ async function tick() {
     '<div class="qrow">' + mark(q.requirementsCovered ? q.requirementsCovered.covered === q.requirementsCovered.total : null) + '<span>Requirements covered</span><span class="stat">' + (q.requirementsCovered ? q.requirementsCovered.covered + '/' + q.requirementsCovered.total : 'traceability pending') + '</span></div>' +
     '<div class="qrow">' + mark(q.slicesPlanned ? q.slicesDelivered >= q.slicesPlanned : null) + '<span>Feature slices</span><span class="stat">' + (q.slicesPlanned ? q.slicesDelivered + ' delivered of ' + q.slicesPlanned + ' planned' : '—') + '</span></div>'
   );
+
+  // your app's agents — the roster the built application actually runs
+  const agentsPanel = document.getElementById('agentsPanel');
+  if (Array.isArray(s.appAgents) && s.appAgents.length) {
+    agentsPanel.style.display = '';
+    setHTML('appAgents', s.appAgents.map(a =>
+      '<div class="agcard"><div class="agname">' + esc(a.name) + '</div>' +
+      (a.role ? '<div class="agrole">' + esc(a.role) + '</div>' : '') +
+      ((a.tools || []).length ? '<div class="agrow"><span class="k">tools</span>' + a.tools.map(t => '<span class="badgechip">' + esc(t) + '</span>').join('') + '</div>' : '') +
+      ((a.denied_tools || []).length ? '<div class="agrow"><span class="k">never</span>' + a.denied_tools.map(t => '<span class="badgechip deny">' + esc(t) + '</span>').join('') + '</div>' : '') +
+      ((a.addresses || []).length ? '<div class="agrow"><span class="k">covers</span>' + a.addresses.map(t => '<span class="badgechip">' + esc(t) + '</span>').join('') + '</div>' : '') +
+      (a.system_prompt ? '<details><summary class="hint" style="cursor:pointer;font-size:.72rem">Instructions it runs under</summary><div class="agevals" style="border:0;padding-top:.2rem">' + esc(String(a.system_prompt).slice(0, 600)) + '</div></details>' : '') +
+      ((a.eval_criteria || []).length ? '<div class="agevals">held to: ' + esc(a.eval_criteria.join('; ')) + '</div>' : '') +
+      '</div>').join(''));
+  } else agentsPanel.style.display = 'none';
 
   // slice screenshots
   document.getElementById('shotsPanel').style.display = s.sliceShots.length ? '' : 'none';

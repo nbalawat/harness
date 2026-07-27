@@ -1,0 +1,10 @@
+{
+  "chosen_option": "option-2",
+  "name": "Forest",
+  "screens": [
+    "chat",
+    "history",
+    "agents"
+  ],
+  "addresses": []
+}

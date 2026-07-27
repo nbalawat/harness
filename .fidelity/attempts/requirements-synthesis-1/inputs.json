@@ -1,0 +1,71 @@
+{
+  "corpus": {
+    "path": "/Users/nbalawat/development/harness/.fidelity/artifacts/ingest/corpus"
+  },
+  "corpus_index": {
+    "path": "/Users/nbalawat/development/harness/.fidelity/artifacts/ingest/corpus_index.json",
+    "data": {
+      "sources": [
+        {
+          "id": "src-1",
+          "original": "brief.md",
+          "extracted": "corpus/src-1.md",
+          "type": "md"
+        },
+        {
+          "id": "src-2",
+          "original": "process.html",
+          "extracted": "corpus/src-2.md",
+          "type": "html"
+        },
+        {
+          "id": "src-3",
+          "original": "problem_statement",
+          "extracted": "corpus/src-3.md",
+          "type": "statement"
+        }
+      ],
+      "claims": [
+        {
+          "id": "claim-1",
+          "text": "The application must let a support analyst chat with an assistant that answers from our product knowledge.",
+          "source": "src-1"
+        },
+        {
+          "id": "claim-2",
+          "text": "Analysts should be able to review past conversations to reuse good answers.",
+          "source": "src-1"
+        },
+        {
+          "id": "claim-3",
+          "text": "The assistant must identify itself clearly so customers know it is automated.",
+          "source": "src-1"
+        },
+        {
+          "id": "claim-4",
+          "text": "Conversation records need to be stored for quality review.",
+          "source": "src-1"
+        },
+        {
+          "id": "claim-5",
+          "text": "Current support process Tickets arrive by email. An analyst reads the ticket and searches old threads manually. The future process should route each question to the assistant first, and the analyst must approve the reply before it is sent.",
+          "source": "src-2"
+        },
+        {
+          "id": "claim-6",
+          "text": "Support analysts need an assistant that answers product questions from our knowledge and keeps reviewable conversation history.",
+          "source": "src-3"
+        }
+      ]
+    }
+  },
+  "intake": {
+    "path": "/Users/nbalawat/development/harness/.fidelity/artifacts/intake/intake.json",
+    "data": {
+      "project_name": "Support Copilot",
+      "problem_statement": "Support analysts need an assistant that answers product questions from our knowledge and keeps reviewable conversation history.",
+      "documents_dir": "fixtures/sample-docs",
+      "deploy_target": "local"
+    }
+  }
+}

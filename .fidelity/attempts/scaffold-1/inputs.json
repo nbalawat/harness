@@ -1,0 +1,190 @@
+{
+  "architecture": {
+    "path": "/Users/nbalawat/development/harness/.fidelity/artifacts/architecture/architecture.json",
+    "data": {
+      "modules": [
+        "persistence-core",
+        "chat-shell",
+        "agent-runtime"
+      ],
+      "module_coverage": [
+        {
+          "module": "persistence-core",
+          "addresses": [
+            "REQ-004",
+            "REQ-006",
+            "REQ-007"
+          ]
+        },
+        {
+          "module": "chat-shell",
+          "addresses": []
+        },
+        {
+          "module": "agent-runtime",
+          "addresses": [
+            "REQ-001",
+            "REQ-002",
+            "REQ-003",
+            "REQ-005"
+          ]
+        }
+      ],
+      "deploy_target": "local",
+      "build_budget_plan": {
+        "nodes": {
+          "build-backend": 3.5,
+          "build-agents": 2.5,
+          "build-frontend": 2
+        },
+        "total_usd": 8
+      }
+    }
+  },
+  "design_review": {
+    "path": "/Users/nbalawat/development/harness/.fidelity/artifacts/design-review/design_review.json",
+    "data": {
+      "approve_design": "yes"
+    }
+  },
+  "design_choice": {
+    "path": "/Users/nbalawat/development/harness/.fidelity/artifacts/design-select/design_choice.json",
+    "data": {
+      "chosen_option": "option-2"
+    }
+  },
+  "designs_dir": {
+    "path": "/Users/nbalawat/development/harness/.fidelity/artifacts/design-options/designs"
+  },
+  "designs": {
+    "path": "/Users/nbalawat/development/harness/.fidelity/artifacts/design-options/designs.json",
+    "data": {
+      "options": [
+        {
+          "id": "option-1",
+          "name": "Calm Slate",
+          "screens": [
+            "chat",
+            "history",
+            "agents"
+          ],
+          "addresses": [],
+          "tokens_file": "designs/option-1/tokens.css",
+          "preview_file": "designs/option-1/index.html"
+        },
+        {
+          "id": "option-2",
+          "name": "Forest",
+          "screens": [
+            "chat",
+            "history",
+            "agents"
+          ],
+          "addresses": [],
+          "tokens_file": "designs/option-2/tokens.css",
+          "preview_file": "designs/option-2/index.html"
+        },
+        {
+          "id": "option-3",
+          "name": "Ink",
+          "screens": [
+            "chat",
+            "history",
+            "agents"
+          ],
+          "addresses": [],
+          "tokens_file": "designs/option-3/tokens.css",
+          "preview_file": "designs/option-3/index.html"
+        }
+      ]
+    }
+  },
+  "data_model": {
+    "path": "/Users/nbalawat/development/harness/.fidelity/artifacts/data-design/data_model.json",
+    "data": {
+      "tables": [
+        {
+          "name": "conversations",
+          "addresses": [
+            "REQ-004",
+            "REQ-006",
+            "REQ-007"
+          ],
+          "columns": [
+            {
+              "name": "user",
+              "type": "str"
+            },
+            {
+              "name": "created_at",
+              "type": "str"
+            }
+          ]
+        },
+        {
+          "name": "messages",
+          "addresses": [
+            "REQ-004",
+            "REQ-006",
+            "REQ-007"
+          ],
+          "columns": [
+            {
+              "name": "conversation_id",
+              "type": "int"
+            },
+            {
+              "name": "role",
+              "type": "str"
+            },
+            {
+              "name": "content",
+              "type": "str"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "agent_roster": {
+    "path": "/Users/nbalawat/development/harness/.fidelity/artifacts/agent-design/agent_roster.json",
+    "data": {
+      "agents": [
+        {
+          "name": "assistant",
+          "addresses": [
+            "REQ-001",
+            "REQ-002",
+            "REQ-003",
+            "REQ-005"
+          ],
+          "role": "Answers user questions over the app's data and takes chat actions.",
+          "tools": [
+            "conversation_lookup"
+          ],
+          "denied_tools": [
+            "outbound_email",
+            "data_deletion"
+          ],
+          "system_prompt": "Answer only from the app's own documents and data. If the answer is not grounded there, say so plainly instead of guessing. Keep replies short and professional.",
+          "eval_criteria": [
+            "responds helpfully to a greeting",
+            "identifies itself by name"
+          ],
+          "config": {
+            "retention": "90 days"
+          }
+        }
+      ]
+    }
+  },
+  "intake": {
+    "path": "/Users/nbalawat/development/harness/.fidelity/artifacts/intake/intake.json",
+    "data": {
+      "project_name": "Support Copilot",
+      "problem_statement": "Support analysts need an assistant that answers product questions from our knowledge and keeps reviewable conversation history.",
+      "documents_dir": "fixtures/sample-docs",
+      "deploy_target": "local"
+    }
+  }
+}

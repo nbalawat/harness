@@ -27,6 +27,20 @@ def agent_mode():
     return mode()
 
 
+@app.get("/agents")
+def agents():
+    """The app's configured agent roster — roles, tools, guardrails, evals.
+
+    Transparency contract: users can always see which agents an app runs.
+    """
+    import json
+    import os
+
+    roster_path = os.path.join(os.path.dirname(__file__), "..", "agents", "roster.json")
+    with open(roster_path, encoding="utf-8") as f:
+        return json.load(f)
+
+
 @app.post("/chat")
 def chat(req: ChatRequest):
     return {"reply": respond(req.message)}

@@ -105,7 +105,7 @@ test("golden run: architecture stays inside the certified catalog and envelope",
   assert.ok(arch.build_budget_plan.total_usd <= def.cost.run_budget_usd);
 });
 
-test("golden run: design options are comparable; chosen tokens reach the app", () => {
+test("golden run: design options are comparable; the CHOSEN DESIGN IS the app frontend", () => {
   const { options } = readJson(artifact(golden, "design-options", "designs.json"));
   assert.equal(options.length, 3);
   const screens = JSON.stringify(options[0].screens);
@@ -117,6 +117,23 @@ test("golden run: design options are comparable; chosen tokens reach the app", (
     "utf8",
   );
   assert.match(tokens, /#2b8a3e/, "Forest primary token composed into the app");
+
+  // Design SANCTITY: not just tokens — the chosen option's full shell ships.
+  const appIndex = fs.readFileSync(path.join(golden.workspace, "artifacts/slice-3/app/frontend/index.html"), "utf8");
+  const chosenPreview = fs.readFileSync(
+    path.join(golden.workspace, "artifacts/design-options/designs/option-2/index.html"),
+    "utf8",
+  );
+  assert.match(appIndex, /masthead/, "Forest's editorial masthead layout survives into the built app");
+  assert.match(chosenPreview, /masthead/, "the marker genuinely comes from the chosen preview");
+  for (const id of ["agent-mode", "screen-chat", "messages", "composer", "input", "screen-agents", "agents-list"]) {
+    assert.ok(appIndex.includes(`id="${id}"`), `canonical mount point ${id} present in shipped frontend`);
+  }
+  assert.match(appIndex, /app\.js/, "behavior module wired onto the design shell");
+  // Provenance is recorded so any later stage can assert fidelity.
+  const provenance = readJson(path.join(golden.workspace, "artifacts/slice-3/app/design.json"));
+  assert.equal(provenance.chosen_option, "option-2");
+  assert.equal(provenance.name, "Forest");
 });
 
 test("golden run: composed app matches the bill of materials and is branded", () => {
@@ -299,6 +316,33 @@ test("design-check: options with different screen sets are rejected", () => {
   const result = runScript("design-check.cjs", dir);
   assert.equal(result.status, 1);
   assert.match(result.stderr, /not comparable/);
+});
+
+test("design-check: option that is not a buildable shell is rejected", () => {
+  const dir = tmpDir("design2");
+  const designsDir = path.join(dir, "designs");
+  const options = [];
+  for (let i = 1; i <= 3; i++) {
+    const optDir = path.join(designsDir, `option-${i}`);
+    fs.mkdirSync(optDir, { recursive: true });
+    fs.writeFileSync(path.join(optDir, "tokens.css"), ":root {}");
+    // Pretty mockup, but no canonical mount points → cannot ship as the app.
+    fs.writeFileSync(path.join(optDir, "index.html"), "<html><body><h1>Lovely</h1></body></html>");
+    options.push({
+      id: `option-${i}`,
+      name: `Option ${i}`,
+      screens: ["chat"],
+      tokens_file: `designs/option-${i}/tokens.css`,
+      preview_file: `designs/option-${i}/index.html`,
+    });
+  }
+  fs.writeFileSync(
+    path.join(dir, "inputs.json"),
+    JSON.stringify({ designs: { data: { options } }, designs_dir: { path: designsDir } }),
+  );
+  const result = runScript("design-check.cjs", dir);
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /not a buildable shell/);
 });
 
 test("budget-check: plan exceeding the envelope is rejected", () => {

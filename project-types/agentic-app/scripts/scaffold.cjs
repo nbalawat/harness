@@ -27,15 +27,34 @@ fs.writeFileSync(
   JSON.stringify({ modules: architecture.modules }, null, 2),
 );
 
-// 3. Apply the approved design option's tokens.
+// 3. The approved design IS the frontend. Copy the chosen option's entire
+// shell (index.html + tokens.css + any assets) over the composed frontend so
+// the app the user gets is the app they chose — full layout, not just colors.
+// chat-shell's app.js survives the overlay and wires behavior onto the
+// design's canonical mount points (enforced upstream by design-check).
 const chosen = inputs.design_choice.data.chosen_option;
 const option = inputs.designs.data.options.find((o) => o.id === chosen);
 if (!option) {
   console.error(`design choice '${chosen}' is not one of the generated options`);
   process.exit(1);
 }
-const tokensAbs = path.join(inputs.designs_dir.path, option.tokens_file.replace(/^designs\//, ""));
-fs.copyFileSync(tokensAbs, "app/frontend/tokens.css");
+const designDir = path.join(inputs.designs_dir.path, chosen);
+for (const entry of fs.readdirSync(designDir)) {
+  fs.cpSync(path.join(designDir, entry), path.join("app/frontend", entry), { recursive: true });
+}
+// Guarantee the behavior module loads even if the design omitted the tag.
+const indexPath = "app/frontend/index.html";
+let indexHtml = fs.readFileSync(indexPath, "utf8");
+if (!indexHtml.includes("app.js")) {
+  indexHtml = indexHtml.replace("</body>", '<script src="app.js" defer></script>\n</body>');
+  fs.writeFileSync(indexPath, indexHtml);
+}
+// Provenance: which design shipped, so every later stage (and the dashboard)
+// can assert fidelity against the choice.
+fs.writeFileSync(
+  "app/design.json",
+  JSON.stringify({ chosen_option: chosen, name: option.name, screens: option.screens, addresses: option.addresses }, null, 2),
+);
 
 // 4a. models.py is approved deterministic content (data-design artifact).
 const tables = inputs.data_model.data.tables;
