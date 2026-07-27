@@ -1,0 +1,20 @@
+{
+  "app": {
+    "path": "/Users/nbalawat/development/harness/.real-aa2/artifacts/build-agents/app"
+  },
+  "design_choice": {
+    "path": "/Users/nbalawat/development/harness/.real-aa2/artifacts/design-select/design_choice.json",
+    "data": {
+      "chosen_option": "option-2"
+    }
+  },
+  "intake": {
+    "path": "/Users/nbalawat/development/harness/.real-aa2/artifacts/intake/intake.json",
+    "data": {
+      "project_name": "Support Copilot",
+      "problem_statement": "Support analysts need an assistant that answers product questions from our knowledge and keeps reviewable conversation history.",
+      "documents_dir": "fixtures/sample-docs",
+      "deploy_target": "local"
+    }
+  }
+}

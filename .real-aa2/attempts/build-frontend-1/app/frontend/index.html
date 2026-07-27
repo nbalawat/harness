@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Support Copilot</title>
+  <link rel="stylesheet" href="tokens.css" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="masthead">
+    <div class="mast">
+      <div>
+        <h1>Support Copilot</h1>
+        <div class="sub">Drafted by machine · approved by a person · kept on the record</div>
+      </div>
+      <div class="sub" id="desk-line">Support analyst · local install</div>
+    </div>
+    <nav id="nav">
+      <a href="#assist" data-screen="assist" class="is-on">Assist</a>
+      <a href="#approvals" data-screen="approvals">Approvals <b id="pending-count"></b></a>
+      <a href="#record" data-screen="record">Record</a>
+      <a href="#knowledge" data-screen="knowledge">Knowledge</a>
+    </nav>
+  </header>
+
+  <p id="banner" class="banner" hidden></p>
+
+  <!-- ============ ASSIST ============ -->
+  <section id="assist" class="screen active">
+    <div class="lede">
+      <h2 id="assist-title">New correspondence</h2>
+      <p id="assist-sub">A correspondence between the analyst and the assistant.</p>
+    </div>
+    <div class="layout">
+      <div class="measure">
+        <ol id="thread" class="thread"></ol>
+        <p id="thread-empty" class="empty">
+          Nothing asked yet. Put the customer’s question below; the assistant searches
+          the ingested knowledge and drafts an answer for your review.
+        </p>
+
+        <form class="compose" id="composer">
+          <textarea id="input" rows="3" placeholder="Ask a product question…" autocomplete="off"></textarea>
+          <div class="row">
+            <span id="compose-note">Answers are drawn only from the ingested product knowledge.</span>
+            <button class="btn-p" type="submit" id="ask">Ask</button>
+          </div>
+        </form>
+      </div>
+
+      <aside>
+        <h4>Sources cited</h4>
+        <div id="sources-margin"></div>
+        <h4>Standing rules</h4>
+        <div class="fnote">
+          Every answer carries the sources it drew on, so you can verify before approving.
+          Nothing is sent to a customer without your approval — the assistant has no
+          outbound channel.
+        </div>
+      </aside>
+    </div>
+  </section>
+
+  <!-- ============ APPROVALS ============ -->
+  <section id="approvals" class="screen">
+    <div class="lede">
+      <h2>Approvals</h2>
+      <p id="approvals-sub">Nothing leaves this desk unapproved.</p>
+    </div>
+    <div class="layout">
+      <div id="approval-list"></div>
+      <aside>
+        <h4>Before you approve</h4>
+        <div class="fnote">
+          Check each cited source actually supports the wording. An edit is recorded as
+          an edit — the record keeps both the drafted and the final text.
+        </div>
+        <h4>Disclosure</h4>
+        <div class="fnote">
+          The closing line identifying the reply as machine-drafted is fixed in the
+          template and cannot be edited away.
+        </div>
+      </aside>
+    </div>
+  </section>
+
+  <!-- ============ RECORD ============ -->
+  <section id="record" class="screen">
+    <div class="lede">
+      <h2>The record</h2>
+      <p>Past correspondence, kept for quality review and for reuse.</p>
+    </div>
+    <input class="search" id="record-search" type="search" placeholder="Search the record…" autocomplete="off" />
+    <div id="record-list"></div>
+    <p class="ledger" id="record-note">
+      <i>Open</i> takes an awaiting draft to Approvals; <i>Reuse</i> lifts approved wording into a fresh draft.
+    </p>
+  </section>
+
+  <!-- ============ KNOWLEDGE ============ -->
+  <section id="knowledge" class="screen">
+    <div class="lede">
+      <h2>Knowledge</h2>
+      <p id="knowledge-sub">Everything the assistant is allowed to know.</p>
+    </div>
+    <div class="layout">
+      <div id="knowledge-list"></div>
+      <aside>
+        <h4>Known gaps</h4>
+        <div class="fnote" id="gaps-note"></div>
+        <h4>Ingest</h4>
+        <div class="fnote">
+          The corpus is fixed at ingest time from the configured documents directory.
+          To widen what the assistant may answer, add the document there and re-ingest —
+          it cannot be taught from this screen.
+        </div>
+      </aside>
+    </div>
+  </section>
+
+  <script src="app.js"></script>
+</body>
+</html>

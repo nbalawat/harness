@@ -1,0 +1,71 @@
+{
+  "description": "Stored conversation records available to precedent_finder. The runtime filters to approval_status == 'approved' AND created_at within the 90-day retention window before anything is surfaced.",
+  "today": "2026-07-26",
+  "retention_days": 90,
+  "conversations": [
+    {
+      "conversation_id": "conv-2026-0514-a7",
+      "created_at": "2026-05-14",
+      "approval_status": "approved",
+      "keywords": [
+        "password",
+        "passwords",
+        "reset",
+        "resets",
+        "resetting",
+        "sign-in",
+        "login",
+        "credential",
+        "credentials",
+        "lockout"
+      ],
+      "answer": "Ask the customer to use \"Forgot password\" on the sign-in page. The reset link is valid for 60 minutes; if it has expired they can request a fresh one. Customers with 2FA enabled complete the 2FA challenge after choosing the new password."
+    },
+    {
+      "conversation_id": "conv-2026-0602-b2",
+      "created_at": "2026-06-02",
+      "approval_status": "approved",
+      "keywords": [
+        "invoice",
+        "invoices",
+        "billing",
+        "charge",
+        "charges",
+        "receipt"
+      ],
+      "answer": "Invoices are available under Billing > Invoices and can be re-sent to the account email from that screen."
+    },
+    {
+      "conversation_id": "conv-2026-0620-c9",
+      "created_at": "2026-06-20",
+      "approval_status": "pending",
+      "keywords": [
+        "password",
+        "reset",
+        "sso"
+      ],
+      "answer": "WITHHELD - this draft is still pending analyst approval and must never be surfaced as precedent."
+    },
+    {
+      "conversation_id": "conv-2026-0611-d4",
+      "created_at": "2026-06-11",
+      "approval_status": "rejected",
+      "keywords": [
+        "password",
+        "reset"
+      ],
+      "answer": "WITHHELD - this draft was rejected and must never be surfaced as precedent."
+    },
+    {
+      "conversation_id": "conv-2025-1102-e1",
+      "created_at": "2025-11-02",
+      "approval_status": "approved",
+      "keywords": [
+        "password",
+        "reset",
+        "login"
+      ],
+      "answer": "WITHHELD - outside the 90-day retention window; this record is purged and must never be surfaced."
+    }
+  ]
+}

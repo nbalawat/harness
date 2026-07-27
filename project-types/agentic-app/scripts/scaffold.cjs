@@ -37,7 +37,28 @@ if (!option) {
 const tokensAbs = path.join(inputs.designs_dir.path, option.tokens_file.replace(/^designs\//, ""));
 fs.copyFileSync(tokensAbs, "app/frontend/tokens.css");
 
-// 4. Brand backend + README (frontend branding happens in build-frontend).
+// 4. Agents scaffolding — the roster is approved deterministic content
+// (agent-design artifact), so it composes here; build-agents refines evals
+// and glue. Every stage after scaffold is self-consistent and testable.
+const roster = inputs.agent_roster.data;
+fs.mkdirSync("app/agents/evals", { recursive: true });
+fs.writeFileSync("app/agents/roster.json", JSON.stringify(roster, null, 2));
+const firstAgent = roster.agents[0];
+fs.writeFileSync(
+  "app/agents/evals/cases.json",
+  JSON.stringify(
+    {
+      cases: [
+        { id: "greeting", input: "hello there", expect_contains: ["help"] },
+        { id: "identity", input: "who am I talking to?", expect_contains: [firstAgent.name] },
+      ],
+    },
+    null,
+    2,
+  ),
+);
+
+// 5. Brand backend + README (frontend branding happens in build-frontend).
 for (const rel of ["backend/main.py", "README.md"]) {
   const file = path.join("app", rel);
   fs.writeFileSync(file, fs.readFileSync(file, "utf8").replaceAll("__APP_NAME__", appName));

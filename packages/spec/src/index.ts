@@ -67,12 +67,21 @@ export interface NodeDef {
   /** Command used in --mock-agents mode (certification/deterministic testing). */
   mock?: string;
   model?: string;
+  /** Stronger model used for retry attempts (escalate-on-retry cost pattern). */
+  escalateModel?: string;
   maxTurns?: number;
   allowedTools?: string[];
 
   // deterministic + verifier nodes
   /** Shell command; runs with cwd = attempt dir. $HARNESS_PROJECT_DIR available. */
   command?: string;
+
+  /**
+   * Executable exit criteria run INSIDE the node's envelope, after contract
+   * validation and before commit. Failure feeds back into the retry loop —
+   * a node that fails its own verification never commits.
+   */
+  verify?: string;
 
   // gate nodes
   questions?: GateQuestion[];

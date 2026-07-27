@@ -678,3 +678,70 @@ test("defaults require confirmation: without acceptDefaults a defaulted gate par
   const hitl = makeCtx(tmpDir("confirm-ws2"), dir, { acceptDefaults: false });
   assert.equal((await runLoop(hitl)).status, "parked");
 });
+
+test("model tiering: escalate-on-retry picks the stronger model only for retries", async () => {
+  const { modelForAttempt } = await import("../dist/index.js");
+  const node = { id: "x", kind: "agent", model: "claude-sonnet-5", escalateModel: "claude-opus-5" };
+  assert.equal(modelForAttempt(node, 1), "claude-sonnet-5");
+  assert.equal(modelForAttempt(node, 2), "claude-opus-5");
+  assert.equal(modelForAttempt(node, 3), "claude-opus-5");
+  assert.equal(modelForAttempt({ ...node, escalateModel: undefined }, 2), "claude-sonnet-5");
+  assert.equal(modelForAttempt({ id: "y", kind: "agent" }, 1), undefined);
+});
+
+test("per-node verify: failing exit criteria feed the retry loop and block commit", async () => {
+  const dir = writeFixture(
+    tmpDir("verify-pt"),
+    [
+      "name: nodeverify",
+      "version: 0.0.1",
+      "nodes:",
+      "  - id: work",
+      "    kind: agent",
+      "    prompt: prompt.md",
+      '    mock: node "$HARNESS_PROJECT_DIR/mock.cjs"',
+      '    verify: node "$HARNESS_PROJECT_DIR/check.cjs"',
+      "    retries: 2",
+      "    outputs: [{name: out, file: out.txt}]",
+    ].join("\n"),
+    {
+      "prompt.md": "produce out.txt",
+      // First attempt writes a failing artifact; the retry (seeing feedback) corrects.
+      "mock.cjs": [
+        'const fs = require("node:fs");',
+        'fs.writeFileSync("out.txt", fs.existsSync("feedback.md") ? "VALID" : "BROKEN");',
+      ].join("\n"),
+      "check.cjs": [
+        'const fs = require("node:fs");',
+        'if (fs.readFileSync("out.txt", "utf8") !== "VALID") { console.error("content check failed: not VALID"); process.exit(1); }',
+      ].join("\n"),
+    },
+  );
+  const ctx = makeCtx(tmpDir("verify-ws"), dir, {});
+  assert.equal((await runLoop(ctx)).status, "completed");
+  const fail = events(ctx, "node.attempt_failed")[0];
+  assert.match(String(fail.error), /verification failed/);
+  assert.match(String(fail.error), /not VALID/);
+  assert.equal(fs.readFileSync(path.join(ctx.workspace, "artifacts/work/out.txt"), "utf8"), "VALID");
+
+  // Always-failing verification: node never commits.
+  const badDir = writeFixture(
+    tmpDir("verify-bad-pt"),
+    [
+      "name: nv2",
+      "version: 0.0.1",
+      "nodes:",
+      "  - id: work",
+      "    kind: agent",
+      "    prompt: prompt.md",
+      '    mock: node "$HARNESS_PROJECT_DIR/mock.cjs"',
+      '    verify: node -e "process.exit(1)"',
+      "    retries: 0",
+      "    outputs: [{name: out, file: out.txt}]",
+    ].join("\n"),
+    { "prompt.md": "x", "mock.cjs": 'require("node:fs").writeFileSync("out.txt", "anything");' },
+  );
+  const badCtx = makeCtx(tmpDir("verify-bad-ws"), badDir, {});
+  assert.equal((await runLoop(badCtx)).status, "failed");
+  assert.ok(!fs.existsSync(path.join(badCtx.workspace, "artifacts/work")), "never commits on failed verification");
+});

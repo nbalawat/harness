@@ -1,4 +1,9 @@
 # agentic-app v1.1 — problem statement + documents -> working agentic application.
+# Model tiering (certified pins, sized from real run cost data 2026-07-26):
+#   haiku  — structured, bounded outputs (gap-questions, data-design)
+#   sonnet — mainstream coding/extraction (ingest, agent-design, build-*)
+#   opus   — reasoning + user-facing creative quality (requirements, architecture, design-options)
+# escalateModel: retries run one tier up with the failure feedback.
 # See docs/DESIGN.md §7/§7b for the design rationale per node.
 name: agentic-app
 version: 0.2.0
@@ -41,6 +46,8 @@ nodes:
 
   - id: ingest
     kind: agent
+    model: claude-sonnet-5
+    escalateModel: claude-opus-5
     maxTurns: 40
     deps: [intake]
     prompt: prompts/ingest.md
@@ -52,6 +59,7 @@ nodes:
 
   - id: requirements-synthesis
     kind: agent
+    model: claude-opus-5
     deps: [ingest, intake]
     prompt: prompts/requirements.md
     mock: node "$HARNESS_PROJECT_DIR/mocks/requirements.cjs"
@@ -61,6 +69,8 @@ nodes:
 
   - id: gap-questions
     kind: agent
+    model: claude-haiku-4-5
+    escalateModel: claude-sonnet-5
     deps: [requirements-synthesis]
     prompt: prompts/gap-questions.md
     mock: node "$HARNESS_PROJECT_DIR/mocks/gap-questions.cjs"
@@ -77,6 +87,7 @@ nodes:
   # -- Architecture + budgets (challenge d) ---------------------------------
   - id: architecture
     kind: agent
+    model: claude-opus-5
     deps: [requirements-synthesis, clarify, intake]
     prompt: prompts/architecture.md
     mock: node "$HARNESS_PROJECT_DIR/mocks/architecture.cjs"
@@ -91,6 +102,7 @@ nodes:
   # -- Design options (challenge c) -----------------------------------------
   - id: design-options
     kind: agent
+    model: claude-opus-5
     maxTurns: 60
     deps: [requirements-synthesis, intake]
     prompt: prompts/design-options.md
@@ -115,6 +127,8 @@ nodes:
   # -- Detailed design -------------------------------------------------------
   - id: data-design
     kind: agent
+    model: claude-haiku-4-5
+    escalateModel: claude-sonnet-5
     deps: [requirements-synthesis]
     prompt: prompts/data-design.md
     mock: node "$HARNESS_PROJECT_DIR/mocks/data-design.cjs"
@@ -123,6 +137,8 @@ nodes:
 
   - id: agent-design
     kind: agent
+    model: claude-sonnet-5
+    escalateModel: claude-opus-5
     deps: [requirements-synthesis, clarify]
     prompt: prompts/agent-design.md
     mock: node "$HARNESS_PROJECT_DIR/mocks/agent-design.cjs"
@@ -155,30 +171,39 @@ nodes:
 
   - id: build-backend
     kind: agent
+    model: claude-sonnet-5
+    escalateModel: claude-opus-5
     maxTurns: 60
     deps: [scaffold, data-design]
     prompt: prompts/build-backend.md
     mock: node "$HARNESS_PROJECT_DIR/mocks/build-backend.cjs"
+    verify: node "$HARNESS_PROJECT_DIR/scripts/verify-backend.cjs"
     retries: 2
     outputs:
       - { name: app, file: app, dir: true }
 
   - id: build-agents
     kind: agent
+    model: claude-sonnet-5
+    escalateModel: claude-opus-5
     maxTurns: 60
     deps: [build-backend, agent-design]
     prompt: prompts/build-agents.md
     mock: node "$HARNESS_PROJECT_DIR/mocks/build-agents.cjs"
+    verify: node "$HARNESS_PROJECT_DIR/scripts/verify-agents.cjs"
     retries: 2
     outputs:
       - { name: app, file: app, dir: true }
 
   - id: build-frontend
     kind: agent
+    model: claude-sonnet-5
+    escalateModel: claude-opus-5
     maxTurns: 60
     deps: [build-agents, design-select, intake]
     prompt: prompts/build-frontend.md
     mock: node "$HARNESS_PROJECT_DIR/mocks/build-frontend.cjs"
+    verify: node "$HARNESS_PROJECT_DIR/scripts/verify-frontend.cjs"
     retries: 2
     outputs:
       - { name: app, file: app, dir: true }

@@ -62,6 +62,15 @@ export async function executeNode(
 
     if (!error) error = validateOutputs(ctx, node, attemptDir);
 
+    // Per-node verification: executable exit criteria inside the retry loop.
+    if (!error && node.verify) {
+      try {
+        runCommand(ctx, node.verify, attemptDir);
+      } catch (e) {
+        error = `verification failed:\n${e instanceof Error ? e.message : String(e)}`;
+      }
+    }
+
     recordCost(ctx, node, attempt, Date.now() - started, attemptDir);
 
     // Budget enforcement: a node that breaches its certified budget never
@@ -224,6 +233,15 @@ async function runGate(
   return "answered";
 }
 
+/**
+ * Escalate-on-retry: attempt 1 runs the node's pinned (cheaper) model; retries
+ * run escalateModel when declared — the failure feedback plus a stronger model
+ * is the cost-optimal recovery path.
+ */
+export function modelForAttempt(node: NodeDef, attempt: number): string | undefined {
+  return attempt > 1 && node.escalateModel ? node.escalateModel : node.model;
+}
+
 async function runAgent(
   ctx: RunContext,
   node: NodeDef,
@@ -266,8 +284,9 @@ async function runAgent(
     );
   }
 
+  const model = modelForAttempt(node, attempt);
   const usage = {
-    model: node.model,
+    model,
     inputTokens: 0,
     outputTokens: 0,
     cacheReadTokens: 0,
@@ -279,7 +298,7 @@ async function runAgent(
     prompt,
     options: {
       cwd: attemptDir,
-      model: node.model,
+      model,
       maxTurns: node.maxTurns ?? 30,
       allowedTools: node.allowedTools ?? ["Read", "Write", "Edit", "Bash", "Glob", "Grep"],
       permissionMode: "acceptEdits",
