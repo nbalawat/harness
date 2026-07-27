@@ -10,3 +10,5 @@ DESIGN FIDELITY (non-negotiable): app/frontend/index.html IS the design option t
 - Extend WITHIN the existing shell: add elements inside the design's screen containers (id="screen-<name>"), matching its visual language and using its tokens.css variables.
 - NEVER rewrite or replace index.html's shell, remove its canonical mount points (id="agent-mode", "screen-chat", "messages", "composer", "input"), or drop the app.js script tag — the verifier fails the slice if you do.
 - New styles go in the design's idiom (its existing <style> block or stylesheet), reusing var(--primary), var(--surface), etc.
+
+REVISIONS: if ./feedback.md contains user revision feedback, the user reviewed the running app and wants THIS slice corrected. Apply exactly the requested change, keep every other behavior and all previous slices' acceptance intact, and note the revision in app/SLICES.md.

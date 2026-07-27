@@ -11,6 +11,11 @@ export interface RunState {
   skipped: Set<string>;
   /** nodeId -> artifactName -> path relative to workspace */
   artifacts: Record<string, Record<string, string>>;
+  /**
+   * Last commit per node, surviving reopens — the memoization record: if a
+   * reopened node's inputs hash to the same value, its prior commit is reused.
+   */
+  history: Record<string, { inputsHash?: string; artifacts: Record<string, string> }>;
   totalCostUsd: number;
 }
 
@@ -20,6 +25,7 @@ export function foldState(events: LedgerEvent[]): RunState {
     failed: new Set(),
     skipped: new Set(),
     artifacts: {},
+    history: {},
     totalCostUsd: 0,
   };
   for (const e of events) {
@@ -27,6 +33,10 @@ export function foldState(events: LedgerEvent[]): RunState {
       case "node.committed":
         state.committed.add(e.nodeId!);
         state.artifacts[e.nodeId!] = e.artifacts as Record<string, string>;
+        state.history[e.nodeId!] = {
+          inputsHash: e.inputsHash as string | undefined,
+          artifacts: e.artifacts as Record<string, string>,
+        };
         break;
       case "node.failed":
         state.failed.add(e.nodeId!);
@@ -35,7 +45,12 @@ export function foldState(events: LedgerEvent[]): RunState {
         state.skipped.add(e.nodeId!);
         break;
       case "node.reopened":
+        // Reopening forgets the outcome — committed, failed, or skipped — so
+        // the frontier re-runs the node. History survives for memoization.
         state.failed.delete(e.nodeId!);
+        state.committed.delete(e.nodeId!);
+        state.skipped.delete(e.nodeId!);
+        delete state.artifacts[e.nodeId!];
         break;
       case "cost.recorded": {
         const cost = e.cost as { costUsd?: number } | undefined;

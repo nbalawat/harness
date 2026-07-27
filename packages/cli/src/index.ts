@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { Journal, foldState, loadProjectType, loadProjectTypeFile, reopenFailed, runLoop, type RunContext } from "@harness/runner";
+import { Journal, foldState, loadProjectType, loadProjectTypeFile, reopenFailed, reviseNode, runLoop, type RunContext } from "@harness/runner";
 
 interface RunConfig {
   projectTypeDir: string;
@@ -117,6 +117,29 @@ async function cmdResume(args: string[]): Promise<number> {
   return result.status === "failed" ? 1 : 0;
 }
 
+async function cmdRevise(args: string[]): Promise<number> {
+  const { positional, flags } = parseFlags(args);
+  const workspace = path.resolve(positional[0] ?? ".harness-run");
+  const nodeId = positional[1];
+  const feedback = flags.feedback as string | undefined;
+  if (!nodeId || !feedback) {
+    console.error('usage: harness revise <workspace> <nodeId> --feedback "what to change" [--resume]');
+    return 1;
+  }
+  const config = JSON.parse(fs.readFileSync(path.join(workspace, "run.json"), "utf8")) as RunConfig;
+  const ctx = buildContext(workspace, config);
+  const { reopened } = reviseNode(ctx, nodeId, feedback);
+  console.log(`revising '${nodeId}' — reopened ${reopened.length} step(s): ${reopened.join(", ")}`);
+  console.log("(steps whose inputs are unchanged will re-use their previous result)");
+  if (flags.resume === true) {
+    const result = await runLoop(ctx);
+    report(ctx, result.status, result.failedNodeId ?? result.parkedNodeId);
+    return result.status === "failed" ? 1 : 0;
+  }
+  console.log(`run 'harness resume ${workspace}' to re-derive`);
+  return 0;
+}
+
 function cmdStatus(args: string[]): number {
   const { positional } = parseFlags(args);
   const workspace = path.resolve(positional[0] ?? ".harness-run");
@@ -138,6 +161,9 @@ async function main(): Promise<void> {
     case "resume":
       code = await cmdResume(rest);
       break;
+    case "revise":
+      code = await cmdRevise(rest);
+      break;
     case "status":
       code = cmdStatus(rest);
       break;
@@ -151,9 +177,10 @@ async function main(): Promise<void> {
       return; // keep serving
     }
     default:
-      console.log("usage: harness <run|resume|status>");
+      console.log("usage: harness <run|resume|revise|status|ui>");
       console.log("  harness run <project-type-dir> [--workspace dir] [--answers file] [--mock-agents]");
       console.log("  harness resume <workspace> [--answers file]");
+      console.log('  harness revise <workspace> <nodeId> --feedback "what to change" [--resume]');
       console.log("  harness status <workspace>");
       code = command ? 1 : 0;
   }

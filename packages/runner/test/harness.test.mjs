@@ -9,7 +9,7 @@ import * as path from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
 
-import { Journal, foldState, loadProjectType, runLoop } from "../dist/index.js";
+import { Journal, downstreamClosure, foldState, loadProjectType, reviseNode, runLoop } from "../dist/index.js";
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
 const DEMO_DIR = path.join(REPO_ROOT, "project-types", "demo");
@@ -797,4 +797,91 @@ test("askUserViaWorkspace: resolves when the dashboard writes the matching answe
   // Unattended contexts never wait.
   const none = await askUserViaWorkspace({ ...ctx, acceptDefaults: true }, "x", 1, {}, 500, 50);
   assert.equal(none, null);
+});
+
+// ---------------------------------------------------------------------------
+// User-initiated revision: cascade reopen + feedback delivery + memoization
+// ---------------------------------------------------------------------------
+
+const REVISE_DAG = `name: rev
+version: 0.0.1
+nodes:
+  - id: a
+    kind: deterministic
+    command: "echo run >> \\"$HARNESS_WORKSPACE/a-runs.txt\\" && printf '{\\"v\\":1}' > out.json"
+    outputs: [{name: aout, file: out.json}]
+  - id: b
+    kind: deterministic
+    deps: [a]
+    command: "echo run >> \\"$HARNESS_WORKSPACE/b-runs.txt\\" && if [ -f feedback.md ]; then cp feedback.md \\"$HARNESS_WORKSPACE/b-feedback-seen.md\\"; fi && printf '{\\"w\\":2}' > out.json"
+    outputs: [{name: bout, file: out.json}]
+  - id: c
+    kind: deterministic
+    deps: [b]
+    command: "echo run >> \\"$HARNESS_WORKSPACE/c-runs.txt\\" && printf done > done.txt"
+    outputs: [{name: cout, file: done.txt}]
+`;
+
+function runCount(ws, node) {
+  const f = path.join(ws, `${node}-runs.txt`);
+  return fs.existsSync(f) ? fs.readFileSync(f, "utf8").trim().split("\n").length : 0;
+}
+
+test("revise: cascade reopens the node + downstream, delivers feedback, and re-uses unchanged results", async () => {
+  const dir = writeFixture(tmpDir("revise"), REVISE_DAG);
+  const ws = tmpDir("revise-ws");
+  const ctx = makeCtx(ws, dir);
+  assert.equal((await runLoop(ctx)).status, "completed");
+  assert.deepEqual([runCount(ws, "a"), runCount(ws, "b"), runCount(ws, "c")], [1, 1, 1]);
+
+  // Closure math: revising b touches b and c, never a.
+  assert.deepEqual(downstreamClosure(ctx.def, "b"), ["b", "c"]);
+
+  const { reopened } = reviseNode(ctx, "b", "please tweak the output");
+  assert.deepEqual(reopened, ["b", "c"]);
+  const state = foldState(ctx.journal.read());
+  assert.ok(state.committed.has("a"), "upstream stays committed");
+  assert.ok(!state.committed.has("b") && !state.committed.has("c"), "closure reopened");
+
+  assert.equal((await runLoop(ctx)).status, "completed");
+  // b re-ran WITH the user's feedback; its output was byte-identical, so c
+  // was re-used from cache (memoization) instead of re-running.
+  assert.deepEqual([runCount(ws, "a"), runCount(ws, "b"), runCount(ws, "c")], [1, 2, 1]);
+  const seen = fs.readFileSync(path.join(ws, "b-feedback-seen.md"), "utf8");
+  assert.match(seen, /please tweak the output/);
+  assert.match(seen, /previously committed output/, "prior artifact offered as the starting point");
+  const cached = ctx.journal.read().filter((e) => e.type === "node.committed" && e.cached === true);
+  assert.deepEqual(cached.map((e) => e.nodeId), ["c"], "only the unchanged dependent is cached");
+});
+
+test("revise: guards — unknown node and never-run node are rejected", async () => {
+  const dir = writeFixture(tmpDir("revise-g"), REVISE_DAG);
+  const ws = tmpDir("revise-g-ws");
+  const ctx = makeCtx(ws, dir);
+  assert.throws(() => reviseNode(ctx, "nope", "x"), /unknown node/);
+  assert.throws(() => reviseNode(ctx, "a", "x"), /has not run yet/);
+});
+
+test("revise: a revised gate re-asks — its recorded dashboard answer is dropped", async () => {
+  const dir = writeFixture(
+    tmpDir("revise-gate"),
+    `name: rg
+version: 0.0.1
+nodes:
+  - id: g
+    kind: gate
+    questions: [{id: q, prompt: "Proceed?", default: "yes"}]
+    outputs: [{name: ans, file: answers.json}]
+`,
+  );
+  const ws = tmpDir("revise-gate-ws");
+  fs.mkdirSync(ws, { recursive: true });
+  fs.writeFileSync(path.join(ws, "ui-answers.json"), JSON.stringify({ g: { q: "yes" }, other: { x: "1" } }));
+  const ctx = makeCtx(ws, dir, { answers: { g: { q: "yes" } } });
+  assert.equal((await runLoop(ctx)).status, "completed");
+
+  reviseNode(ctx, "g", "I want to reconsider this decision");
+  const ui = JSON.parse(fs.readFileSync(path.join(ws, "ui-answers.json"), "utf8"));
+  assert.equal(ui.g, undefined, "revised gate's recorded answer dropped");
+  assert.deepEqual(ui.other, { x: "1" }, "other answers untouched");
 });

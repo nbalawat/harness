@@ -14,7 +14,10 @@ version: 0.4.0
 description: Builds a working agentic AI application from your problem statement and documents — requirements with provenance, approvable designs, certified modules, feature-by-feature build with tests, security scan, and governance evidence.
 
 cost:
-  run_budget_usd: 25.00
+  # Envelope includes headroom for revision cycles (user feedback re-derives
+  # downstream steps; memoization re-uses unchanged ones, but changed steps
+  # legitimately spend again).
+  run_budget_usd: 40.00
   nodes:
     ingest: { budget_usd: 2.00 }
     requirements-synthesis: { budget_usd: 3.00 }

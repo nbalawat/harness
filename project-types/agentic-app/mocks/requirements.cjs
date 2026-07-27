@@ -1,4 +1,4 @@
-const { inputs, writeJson, simulateCost } = require("./_lib.cjs");
+const { inputs, writeJson, simulateCost, fs } = require("./_lib.cjs");
 
 const { corpus_index, intake } = inputs();
 const claims = corpus_index.data.claims;
@@ -45,6 +45,22 @@ if (!/retention|delete|purge/.test(corpusText)) {
     category: "data",
     confidence: "unknown",
   });
+}
+
+// User change requests arrive as revision feedback: append as NEW requirements
+// with provenance, never touching existing ones (ids and text stay stable).
+if (fs.existsSync("feedback.md")) {
+  const feedback = fs.readFileSync("feedback.md", "utf8");
+  const cr = feedback.match(/change request (CR-\d+)[^:]*:\s*([^\n]+)/i);
+  if (cr) {
+    requirements.push({
+      id: `REQ-${String(requirements.length + 1).padStart(3, "0")}`,
+      text: cr[2].trim(),
+      category: categorize(cr[2]),
+      confidence: "stated",
+      provenance: { source: "user-feedback", claim: cr[1] },
+    });
+  }
 }
 
 writeJson("requirements.json", { requirements });

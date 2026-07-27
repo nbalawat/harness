@@ -243,3 +243,47 @@ test("agent question bridge: pending question surfaces and the answer reaches th
     assert.equal(written.answers["Which flavor?"], "vanilla");
   });
 });
+
+test("revision API: dry-run previews the closure; a real revise reopens, resumes, and re-derives", async () => {
+  const workspace = tmpDir("revise");
+  const run = runCli([
+    "run", DEMO_DIR,
+    "--workspace", workspace,
+    "--answers", path.join(DEMO_DIR, "fixtures/answers.json"),
+    "--mock-agents",
+  ]);
+  assert.equal(run.status, 0, run.stderr);
+
+  await withServer(workspace, async (base) => {
+    // Dry run: impact preview, no events appended.
+    const preview = await (await fetch(`${base}/api/revise`, {
+      method: "POST",
+      body: JSON.stringify({ nodeId: "plan", feedback: "shorter plan please", dryRun: true }),
+    })).json();
+    assert.ok(preview.reopened.includes("plan"));
+    assert.ok(preview.reopened.includes("render"), "downstream included in impact preview");
+    assert.ok(!preview.reopened.includes("intake"), "upstream excluded");
+    let state = await (await fetch(`${base}/api/state`)).json();
+    assert.equal(state.status, "completed", "dry run changes nothing");
+
+    // Real revise: reopens the closure and spawns a resume.
+    const real = await (await fetch(`${base}/api/revise`, {
+      method: "POST",
+      body: JSON.stringify({ nodeId: "plan", feedback: "shorter plan please" }),
+    })).json();
+    assert.ok(real.ok);
+    for (let i = 0; i < 60; i++) {
+      await new Promise((r) => setTimeout(r, 500));
+      state = await (await fetch(`${base}/api/state`)).json();
+      if (state.status === "completed" && !state.resuming) break;
+    }
+    assert.equal(state.status, "completed", "revision re-derived to green");
+  });
+
+  const journal = fs.readFileSync(path.join(workspace, "journal.jsonl"), "utf8");
+  assert.match(journal, /"reason":"user_revision"/);
+  assert.match(journal, /"nodeId":"plan"[^\n]*"feedback"/);
+  // The plan agent re-ran with the user's feedback in its attempt dir.
+  const consumed = fs.readdirSync(path.join(workspace, "revisions"));
+  assert.ok(consumed.some((f) => f.startsWith("plan-consumed")), "revision feedback was consumed");
+});

@@ -9,7 +9,7 @@ import * as path from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
 
-import { Journal, foldState, loadProjectType, runLoop } from "../dist/index.js";
+import { Journal, foldState, loadProjectType, reviseNode, runLoop } from "../dist/index.js";
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
 const PT_DIR = path.join(REPO_ROOT, "project-types", "agentic-app");
@@ -351,7 +351,7 @@ test("budget-check: plan exceeding the envelope is rejected", () => {
     path.join(dir, "inputs.json"),
     JSON.stringify({
       architecture: {
-        data: { build_budget_plan: { nodes: { "build-backend": 30 }, total_usd: 30 } },
+        data: { build_budget_plan: { nodes: { "build-backend": 45 }, total_usd: 45 } },
       },
     }),
   );
@@ -433,4 +433,62 @@ test("traceability: an unaddressed requirement blocks the pipeline", () => {
   assert.match(result.stderr, /REQ-002/);
   const rtm = readJson(path.join(dir, "rtm.json"));
   assert.deepEqual(rtm.uncovered, ["REQ-002"]);
+});
+
+// ---------------------------------------------------------------------------
+// Revision flows: feedback enters at the right artifact, cascades, and
+// memoization keeps the cost of a revision proportional to its blast radius.
+// ---------------------------------------------------------------------------
+
+test("revision: a change request becomes a requirement with provenance and re-derives to a consistent app", async () => {
+  const ctx = makeCtx(tmpDir("revise-e2e"), readAnswers("answers.json"));
+  assert.equal((await runLoop(ctx)).status, "completed");
+
+  // --- Flow (b): new requirement via user feedback (the /api/feedback path).
+  const feedback =
+    "User change request CR-1 (raised after reviewing the built app): Analysts must see which agent produced each reply.\n\n" +
+    'Add this as a NEW requirement: provenance source "user-feedback" referencing CR-1, confidence "stated".';
+  const { reopened } = reviseNode(ctx, "requirements-synthesis", feedback);
+  assert.ok(reopened.includes("slice-plan"), "plan is downstream of requirements");
+  assert.ok(reopened.includes("traceability"), "traceability re-verifies");
+  assert.ok(!reopened.includes("ingest"), "upstream evidence is untouched");
+
+  assert.equal((await runLoop(ctx)).status, "completed");
+
+  // The CR entered through the front door: a requirement with provenance...
+  const { requirements } = readJson(artifact(ctx, "requirements-synthesis", "requirements.json"));
+  const crReq = requirements.find((r) => r.provenance?.source === "user-feedback");
+  assert.ok(crReq, "change request became a requirement");
+  assert.equal(crReq.provenance.claim, "CR-1");
+  assert.equal(crReq.confidence, "stated");
+
+  // ...covered by the re-verified RTM (consistency is enforced, not hoped for).
+  const rtm = readJson(artifact(ctx, "traceability", "rtm.json"));
+  assert.equal(rtm.uncovered.length, 0);
+  assert.ok(rtm.coverage.some((c) => c.id === crReq.id), "new requirement is traced");
+
+  // Memoization contained the blast radius: at least one downstream step
+  // whose inputs didn't change was re-used rather than re-run.
+  const cached = events(ctx, "node.committed").filter((e) => e.cached === true);
+  assert.ok(cached.length > 0, "unchanged steps re-used previous results");
+
+  // --- Flow (a): fix a slice (build doesn't match what was agreed).
+  const fix = reviseNode(
+    ctx,
+    "slice-2",
+    "The history list should show newest conversations first — it currently shows oldest first.",
+  );
+  assert.ok(fix.reopened.includes("integrate"), "quality gates re-run after a fix");
+  assert.ok(!fix.reopened.includes("slice-1"), "earlier slices untouched");
+  assert.equal((await runLoop(ctx)).status, "completed");
+
+  // The fix is visibly applied and carried through to the final app.
+  const finalIndex = fs.readFileSync(path.join(ctx.workspace, "artifacts/slice-3/app/frontend/index.html"), "utf8");
+  assert.match(finalIndex, /revised per user feedback/);
+  const slicesMd = fs.readFileSync(path.join(ctx.workspace, "artifacts/slice-3/app/SLICES.md"), "utf8");
+  assert.match(slicesMd, /revised per user feedback/);
+
+  // Revisions are auditable history, not silent edits.
+  const revisions = events(ctx, "node.reopened").filter((e) => e.reason === "user_revision");
+  assert.deepEqual(revisions.map((e) => e.nodeId), ["requirements-synthesis", "slice-2"]);
 });

@@ -13,7 +13,7 @@ import * as net from "node:net";
 import * as path from "node:path";
 import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import { Journal, foldState, loadProjectType, loadProjectTypeFile } from "@harness/runner";
+import { Journal, downstreamClosure, foldState, loadProjectType, loadProjectTypeFile, reviseNode, type RunContext } from "@harness/runner";
 import type { GateQuestion, LedgerEvent, NodeDef, ProjectTypeDef } from "@harness/spec";
 
 interface UiRunConfig {
@@ -125,6 +125,7 @@ function narrate(e: LedgerEvent, costs: Map<string, { costUsd: number }>): strin
     case "node.running":
       return (e.attempt as number) > 1 ? `Retrying ${id} (attempt ${e.attempt})` : `Started ${id}`;
     case "node.committed": {
+      if (e.cached === true) return `Re-used ${id} — inputs unchanged, previous result still valid`;
       const c = costs.get(`${id}`);
       const money = c && c.costUsd > 0 ? ` — $${c.costUsd.toFixed(2)}` : "";
       return `Finished ${id}${money}`;
@@ -136,6 +137,8 @@ function narrate(e: LedgerEvent, costs: Map<string, { costUsd: number }>): strin
     case "node.skipped":
       return `Skipped ${id} (not needed for this run)`;
     case "node.reopened":
+      if (e.reason === "user_revision") return `You requested changes to ${id} — it will re-run with your feedback`;
+      if (e.reason === "upstream_revised") return `Reopened ${id} — it depends on ${e.revisionOf}, which you revised`;
       return `Reopened ${id} for another try`;
     case "gate.answered":
       return `You answered ${id} (${e.source})`;
@@ -553,6 +556,34 @@ export function startUiServer(target: string, port: number): Promise<http.Server
   const artifactsRoot = () => path.join(workspace ?? target, "artifacts");
   const app: AppPreview = { status: "stopped", port: null, node: null, pid: null };
 
+  /** Minimal RunContext for revision bookkeeping (never dispatches nodes itself). */
+  function revisionCtx(ws: string): RunContext {
+    const config = readConfig(ws);
+    return {
+      workspace: ws,
+      projectTypeDir: config.projectTypeDir,
+      def: loadDef(ws, config.projectTypeDir),
+      journal: new Journal(ws),
+      answers: undefined,
+      mockAgents: config.mockAgents,
+      acceptDefaults: false,
+      interactive: false,
+    };
+  }
+
+  /** Continue the run in a child CLI process; ui-answers ride along when present. */
+  function spawnResume(extraArgs: string[] = []): void {
+    const cliEntry = fileURLToPath(new URL("./index.js", import.meta.url));
+    const uiAnswers = path.join(workspace!, "ui-answers.json");
+    const args =
+      extraArgs.length > 0
+        ? [cliEntry, "resume", workspace!, ...extraArgs]
+        : [cliEntry, "resume", workspace!, ...(fs.existsSync(uiAnswers) ? ["--answers", uiAnswers] : [])];
+    resuming = true;
+    const child = spawn(process.execPath, args, { stdio: "ignore", detached: false });
+    child.on("exit", () => (resuming = false));
+  }
+
   function latestAppArtifact(): { node: string; dir: string } | null {
     if (workspace === null) return null;
     const config = readConfig(workspace);
@@ -740,15 +771,69 @@ export function startUiServer(target: string, port: number): Promise<http.Server
         req.on("end", () => {
           const { nodeId, answers } = JSON.parse(body) as { nodeId: string; answers: Record<string, string> };
           const answersFile = mergeAnswers(workspace!, nodeId, answers);
-          const cliEntry = fileURLToPath(new URL("./index.js", import.meta.url));
-          resuming = true;
-          const child = spawn(process.execPath, [cliEntry, "resume", workspace!, "--answers", answersFile], {
-            stdio: "ignore",
-            detached: false,
-          });
-          child.on("exit", () => (resuming = false));
+          spawnResume(["--answers", answersFile]);
           res.writeHead(200, { "content-type": "application/json" });
           res.end(JSON.stringify({ ok: true }));
+        });
+      } else if (url.pathname === "/api/revise" && req.method === "POST") {
+        let body = "";
+        req.on("data", (chunk) => (body += chunk));
+        req.on("end", () => {
+          const { nodeId, feedback, dryRun } = JSON.parse(body) as { nodeId: string; feedback: string; dryRun?: boolean };
+          const ctx = revisionCtx(workspace!);
+          if (dryRun) {
+            const state = foldState(ctx.journal.read());
+            const ran = (id: string) => state.committed.has(id) || state.failed.has(id) || state.skipped.has(id);
+            const reopened = downstreamClosure(ctx.def, nodeId).filter(ran);
+            res.writeHead(200, { "content-type": "application/json" });
+            res.end(JSON.stringify({ ok: true, reopened, dryRun: true }));
+            return;
+          }
+          const { reopened } = reviseNode(ctx, nodeId, feedback);
+          spawnResume();
+          res.writeHead(200, { "content-type": "application/json" });
+          res.end(JSON.stringify({ ok: true, reopened }));
+        });
+      } else if (url.pathname === "/api/feedback" && req.method === "POST") {
+        let body = "";
+        req.on("data", (chunk) => (body += chunk));
+        req.on("end", () => {
+          const { kind, slice, text } = JSON.parse(body) as { kind: string; slice?: string; text: string };
+          const ctx = revisionCtx(workspace!);
+          let target: string | undefined;
+          let feedback: string;
+          if (kind === "fix-slice") {
+            // The build doesn't match what was agreed — requirements unchanged,
+            // the slice re-runs with the user's correction.
+            target = slice;
+            feedback =
+              "The user reviewed this slice in the running app and it does not match what was agreed. " +
+              "Fix the implementation according to this feedback (requirements are unchanged):\n\n" + text;
+          } else {
+            // A new/changed requirement — it enters through the front door:
+            // recorded as a change request, appended to requirements with
+            // provenance, and re-derived through traceability and the plan.
+            const crDir = path.join(workspace!, "change-requests");
+            fs.mkdirSync(crDir, { recursive: true });
+            const n = fs.readdirSync(crDir).filter((f) => f.endsWith(".json")).length + 1;
+            const cr = { id: `CR-${n}`, text, ts: new Date().toISOString() };
+            fs.writeFileSync(path.join(crDir, `cr-${n}.json`), JSON.stringify(cr, null, 2));
+            target = ctx.def.nodes.find((nd) => (nd.outputs ?? []).some((o) => o.name === "requirements"))?.id;
+            feedback =
+              `User change request ${cr.id} (raised after reviewing the built app): ${text}\n\n` +
+              "Add this as a NEW requirement: provenance source \"user-feedback\" referencing " + cr.id +
+              ", confidence \"stated\", and an appropriate category. Keep every existing requirement " +
+              "unchanged — same ids, same text, no renumbering.";
+          }
+          if (!target) {
+            res.writeHead(400, { "content-type": "application/json" });
+            res.end(JSON.stringify({ ok: false, error: "no target step for this feedback" }));
+            return;
+          }
+          const { reopened } = reviseNode(ctx, target, feedback);
+          spawnResume();
+          res.writeHead(200, { "content-type": "application/json" });
+          res.end(JSON.stringify({ ok: true, target, reopened }));
         });
       } else if (url.pathname === "/api/app/start" && req.method === "POST") {
         void startApp();
@@ -1019,7 +1104,17 @@ button.ghost { background:transparent; border:1px solid var(--border); color:var
     <div class="card"><h2>Quality &amp; test results</h2><div id="quality"></div></div>
   </div>
   <div class="card" id="agentsPanel" style="display:none"><h2>Your app&#39;s agents <span class="hint">— who does the work inside the built application, with their tools and guardrails</span></h2><div class="agrid" id="appAgents"></div></div>
-  <div class="card" id="shotsPanel" style="display:none"><h2>Watch it grow — one screenshot per slice</h2><div class="shots" id="shots"></div></div>
+  <div class="card" id="shotsPanel" style="display:none"><h2>Watch it grow — one screenshot per slice</h2><div class="shots" id="shots"></div>
+    <details style="margin-top:.9rem"><summary style="cursor:pointer;font-weight:600;font-size:.88rem">Request a change to the app</summary>
+      <form id="feedbackForm" style="margin-top:.7rem;max-width:640px">
+        <label class="opt"><input type="radio" name="fbKind" value="fix-slice" checked><span><b>Fix a slice</b><div class="od">The build doesn&#39;t match what was agreed — the slice re-runs with your correction; requirements stay unchanged.</div></span></label>
+        <label class="opt"><input type="radio" name="fbKind" value="new-requirement"><span><b>New or changed requirement</b><div class="od">Recorded as a change request, added to requirements with provenance, then re-planned and rebuilt with full traceability.</div></span></label>
+        <div id="fbSliceRow" style="margin:.5rem 0"><label class="hint">Which slice? </label><select id="fbSlice" style="padding:.35rem .5rem;border:1px solid var(--grid);border-radius:6px;background:var(--surface);color:inherit"></select></div>
+        <textarea id="fbText" rows="3" style="width:100%;box-sizing:border-box;border:1px solid var(--grid);border-radius:8px;padding:.5rem .7rem;font:inherit;background:var(--page);color:inherit" placeholder="Describe the change you want…"></textarea>
+        <button type="submit" class="primary" style="margin-top:.5rem">Send feedback &amp; rebuild</button>
+      </form>
+    </details>
+  </div>
   <div class="card" id="appPanel" style="display:none">
     <div style="display:flex;align-items:center;gap:.8rem;flex-wrap:wrap">
       <h2 style="margin:0">Your application</h2>
@@ -1167,8 +1262,25 @@ async function refreshDrawer() {
     (results ? '<h3>What it produced &amp; found</h3>' + results : '') +
     '<h3>Attempts</h3>' + attempts +
     (d.prompt ? '<details style="margin-top:.6rem"><summary class="hint" style="cursor:pointer">Prompt used for this step</summary><pre style="background:var(--page);border:1px solid var(--grid);border-radius:8px;padding:.7rem .9rem;font:11.5px/1.5 ui-monospace,Menlo,monospace;white-space:pre-wrap;margin-top:.4rem">' + esc(d.prompt) + '</pre></details>' : '') +
-    (tr ? '<h3>What the agent did</h3>' + tr : '')
+    (tr ? '<h3>What the agent did</h3>' + tr : '') +
+    (listNode && ['committed','failed','skipped'].includes(listNode.state)
+      ? '<h3>Request changes</h3>' +
+        '<textarea id="reviseText" rows="3" style="width:100%;box-sizing:border-box;border:1px solid var(--grid);border-radius:8px;padding:.5rem .7rem;font:inherit;background:var(--page);color:inherit" placeholder="What should be different about this step’s output?"></textarea>' +
+        '<button class="primary" style="margin-top:.45rem" onclick="reviseNodeUI()">Revise this step</button>' +
+        '<div class="hint" style="margin-top:.35rem">Everything downstream re-runs; steps whose inputs are unchanged re-use their previous result automatically.</div>'
+      : '')
   );
+}
+
+async function reviseNodeUI() {
+  const text = (document.getElementById('reviseText')?.value || '').trim();
+  if (!text || !openNode) return;
+  const preview = await (await fetch('/api/revise', { method:'POST', body: JSON.stringify({ nodeId: openNode, feedback: text, dryRun: true }) })).json();
+  const msg = 'Your feedback will reopen ' + preview.reopened.length + ' step(s):\n\n' + preview.reopened.join(', ') +
+    '\n\nSteps with unchanged inputs are re-used automatically (no cost). Continue?';
+  if (!confirm(msg)) return;
+  await fetch('/api/revise', { method:'POST', body: JSON.stringify({ nodeId: openNode, feedback: text }) });
+  closeDrawer(); showTab('overview'); tick();
 }
 
 // document reader (formatted; raw toggles inside the same modal)
@@ -1352,6 +1464,26 @@ async function tick() {
     document.getElementById('docBody').innerHTML = '<img src="' + b.dataset.href + '" style="width:100%;border-radius:8px;border:1px solid var(--grid)">';
     document.getElementById('docModal').classList.add('open');
   });
+
+  // app feedback form (fix a slice / new requirement)
+  setHTML('fbSlice', s.sliceShots.map(x => '<option value="' + esc(x.slice) + '">' + esc(x.slice) + '</option>').join(''));
+  const fbForm = document.getElementById('feedbackForm');
+  if (fbForm && !fbForm.dataset.wired) {
+    fbForm.dataset.wired = '1';
+    fbForm.addEventListener('change', () => {
+      const kind = new FormData(fbForm).get('fbKind');
+      document.getElementById('fbSliceRow').style.display = kind === 'fix-slice' ? '' : 'none';
+    });
+    fbForm.onsubmit = async (ev) => {
+      ev.preventDefault();
+      const kind = new FormData(fbForm).get('fbKind');
+      const text = document.getElementById('fbText').value.trim();
+      if (!text) return;
+      const r = await (await fetch('/api/feedback', { method:'POST', body: JSON.stringify({ kind, slice: document.getElementById('fbSlice').value, text }) })).json();
+      if (r.ok) { document.getElementById('fbText').value = ''; alert('Feedback accepted — ' + r.reopened.length + ' step(s) reopened. Watch the pipeline re-derive; unchanged steps are re-used.'); }
+      tick();
+    };
+  }
 
   // agent mid-step question
   const aq = document.getElementById('agentQPanel');

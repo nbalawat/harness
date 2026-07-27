@@ -1,3 +1,4 @@
+import * as crypto from "node:crypto";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { spawnSync } from "node:child_process";
@@ -24,6 +25,39 @@ export async function executeNode(
 ): Promise<"committed" | "failed" | "parked"> {
   const maxAttempts = (node.retries ?? 1) + 1;
   let feedback: string | undefined;
+
+  // User revision feedback (harness revise / dashboard "Request changes"):
+  // consumed once, delivered through the same feedback.md channel retries use.
+  const revisionFile = path.join(ctx.workspace, "revisions", `${node.id}.md`);
+  const userRevision = fs.existsSync(revisionFile);
+  if (userRevision) {
+    const requested = fs.readFileSync(revisionFile, "utf8");
+    const prior = path.join(ctx.workspace, "artifacts", node.id);
+    feedback =
+      "The user reviewed this step's previous output and requested changes:\n\n" +
+      requested +
+      (fs.existsSync(prior)
+        ? `\n\nThe previously committed output is at: ${prior}\nStart from it and apply ONLY the requested changes — keep everything else stable.`
+        : "");
+    fs.renameSync(revisionFile, path.join(ctx.workspace, "revisions", `${node.id}-consumed.md`));
+  }
+
+  // Memoization: a node reopened by cascade (not by direct user revision)
+  // whose inputs are byte-identical to its last commit re-commits from cache —
+  // this is what makes revising an upstream artifact affordable.
+  const memo = state.history[node.id];
+  const inputsHash = hashInputs(ctx, node, state);
+  if (!userRevision && memo?.inputsHash === inputsHash && artifactsIntact(ctx, memo.artifacts)) {
+    ctx.journal.append({
+      type: "node.committed",
+      nodeId: node.id,
+      artifacts: memo.artifacts,
+      inputsHash,
+      cached: true,
+    });
+    return "committed";
+  }
+
   // Attempt numbering continues across reopens so attempt dirs never collide
   // and telemetry keeps the full history.
   const priorAttempts = ctx.journal
@@ -98,7 +132,7 @@ export async function executeNode(
     }
 
     if (!error) {
-      commit(ctx, node, attemptDir);
+      commit(ctx, node, attemptDir, inputsHash);
       return "committed";
     }
 
@@ -312,7 +346,7 @@ async function runAgent(
     declared ? `\nYou MUST produce these files in the current directory:\n${declared}` : "",
     "Work only inside the current directory. When an input provides an app directory, copy it here first (cp -R <input path> ./app) and modify the copy.",
     fs.existsSync(path.join(attemptDir, "feedback.md"))
-      ? `\nA previous attempt failed. Read ./feedback.md and correct the problems.`
+      ? `\nIMPORTANT: ./feedback.md contains required changes (a failed attempt's errors, or explicit user revision requests). Read it FIRST and incorporate it.`
       : "",
   ].join("\n");
 
@@ -470,7 +504,7 @@ function validateOutputs(ctx: RunContext, node: NodeDef, attemptDir: string): st
   return problems.length > 0 ? problems.join("\n") : undefined;
 }
 
-function commit(ctx: RunContext, node: NodeDef, attemptDir: string): void {
+function commit(ctx: RunContext, node: NodeDef, attemptDir: string, inputsHash?: string): void {
   const artifacts: Record<string, string> = {};
   const destDir = path.join(ctx.workspace, "artifacts", node.id);
   fs.mkdirSync(destDir, { recursive: true });
@@ -485,7 +519,42 @@ function commit(ctx: RunContext, node: NodeDef, attemptDir: string): void {
     }
     artifacts[out.name] = path.relative(ctx.workspace, dest);
   }
-  ctx.journal.append({ type: "node.committed", nodeId: node.id, artifacts });
+  ctx.journal.append({ type: "node.committed", nodeId: node.id, artifacts, inputsHash });
+}
+
+/**
+ * Content hash of everything that determines a node's output: resolved inputs
+ * (including the bytes of referenced files/directories — a dir artifact's path
+ * alone would miss content changes), the prompt, params, and pinned model.
+ */
+function hashInputs(ctx: RunContext, node: NodeDef, state: RunState): string {
+  const h = crypto.createHash("sha256");
+  const inputs = buildInputs(ctx, node, state);
+  h.update(JSON.stringify(inputs));
+  for (const entry of Object.values(inputs)) {
+    if (entry.path && fs.existsSync(entry.path)) hashPath(h, entry.path);
+  }
+  if (node.prompt) h.update(fs.readFileSync(path.join(ctx.projectTypeDir, node.prompt)));
+  if (node.command) h.update(node.command);
+  if (node.verify) h.update(node.verify);
+  if (node.model) h.update(node.model);
+  return h.digest("hex");
+}
+
+function hashPath(h: crypto.Hash, p: string): void {
+  const stat = fs.statSync(p);
+  if (stat.isDirectory()) {
+    for (const entry of fs.readdirSync(p).sort()) {
+      h.update(entry);
+      hashPath(h, path.join(p, entry));
+    }
+  } else {
+    h.update(fs.readFileSync(p));
+  }
+}
+
+function artifactsIntact(ctx: RunContext, artifacts: Record<string, string>): boolean {
+  return Object.values(artifacts).every((rel) => fs.existsSync(path.join(ctx.workspace, rel)));
 }
 
 function recordCost(
@@ -521,8 +590,16 @@ function recordCost(
 }
 
 function cumulativeNodeCost(ctx: RunContext, nodeId: string): number {
-  return ctx.journal
-    .read()
+  // Per-incarnation: the node budget guards runaway spend within ONE execution
+  // cycle. A reopen (retry-after-fix or user revision) starts a fresh cycle —
+  // otherwise a single legitimate revision would inevitably bust the cap.
+  const events = ctx.journal.read();
+  let lastReopen = -1;
+  events.forEach((e, i) => {
+    if (e.type === "node.reopened" && e.nodeId === nodeId) lastReopen = i;
+  });
+  return events
+    .slice(lastReopen + 1)
     .filter((e) => e.type === "cost.recorded" && e.nodeId === nodeId)
     .reduce((sum, e) => sum + ((e.cost as CostRecord | undefined)?.costUsd ?? 0), 0);
 }

@@ -140,6 +140,15 @@ module/
 | **(e) Build & validate** | Validation pyramid: contract → unit → module verify-in-situ → integration smoke → eval thresholds → UAT. Test harness generated before agents build. Machine-readable verification reports per build node. |
 | **(f) Security to robust standards** | Security-critical code composed from certified modules (never hand-rolled); secure defaults baked into scaffold; node 14 deterministic scanner gate (zero LLM cost); pinned standards profile → auto-generated evidence pack in node 15. Scanners also run against golden outputs in certification. |
 
+### 7c. Revision & feedback loops (2026-07-26)
+
+Artifacts are immutable, but decisions are not final: feedback re-enters the pipeline at the artifact it semantically belongs to, and the dependency closure re-derives everything downstream — never an in-place edit.
+
+- **`harness revise <ws> <node> --feedback "…"`** (or the dashboard drawer's "Request changes"): appends `node.reopened {reason: user_revision}` for the node + its downstream closure; feedback is delivered through the node's `feedback.md` channel with a pointer to the prior committed output ("apply ONLY the requested changes"). A revised gate drops its recorded dashboard answer so it genuinely re-asks.
+- **Slice feedback** (dashboard "Request a change to the app"): triaged by the user into (a) *fix a slice* — requirements unchanged, the slice re-runs with the correction; or (b) *new/changed requirement* — recorded as a change request (`change-requests/cr-N.json`), appended to requirements with provenance `{source: user-feedback, claim: CR-n}`, then traceability re-verifies coverage and the plan/build re-derive. Requirements stay the single source of truth.
+- **Memoization**: every commit records an `inputsHash` (resolved inputs incl. referenced file/dir bytes + prompt + params + model + commands). A cascaded reopen whose inputs are unchanged re-commits from cache (`cached: true`, $0) — the cost of a revision is proportional to its blast radius, not the DAG size. Direct user-revision targets are never memoized.
+- **Budgets under revision**: per-node budgets apply per incarnation (reset at reopen); the run envelope stays the hard total cap and includes revision headroom.
+
 ## 8. Cost & observability (first-class, enforced)
 
 - **CostRecord per SDK session**: run/node/attempt/session/model + tokens (incl. cache) + `costUsd` computed from a pricing table pinned in the runner release + wall clock + turns. Zero-LLM nodes record `costUsd: 0` explicitly.

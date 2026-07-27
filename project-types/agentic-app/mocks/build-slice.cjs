@@ -33,5 +33,16 @@ if (slice.id === "conversation-history") {
     ].join("\n"),
   );
 }
+// Revision feedback: the real agent fixes the implementation per the user's
+// note; the mock applies a visible, testable correction marker.
+if (fs.existsSync("feedback.md")) {
+  const note = fs.readFileSync("feedback.md", "utf8").split("\n").filter(Boolean).pop() ?? "";
+  const index = "app/frontend/index.html";
+  fs.writeFileSync(
+    index,
+    fs.readFileSync(index, "utf8").replace("</body>", `<!-- revised per user feedback: ${note.slice(0, 120).replace(/-->/g, "")} -->\n</body>`),
+  );
+  fs.appendFileSync("app/SLICES.md", `- slice ${sliceIndex}: revised per user feedback\n`);
+}
 fs.appendFileSync("app/SLICES.md", `- slice ${sliceIndex}: ${slice.name} — ${slice.story}\n`);
 simulateCost(1.1, 60000, 12000);
