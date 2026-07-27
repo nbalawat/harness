@@ -1,0 +1,9 @@
+:root {
+  --primary: #111111;
+  --on-primary: #ffffff;
+  --bg: #ffffff;
+  --fg: #111111;
+  --surface: #f1f1f1;
+  --border: #dddddd;
+  --font: ui-monospace, monospace;
+}

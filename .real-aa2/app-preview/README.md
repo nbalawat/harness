@@ -20,3 +20,29 @@ docker compose up
     adds `agents/evals/cases.json`.
 - `backend/models.py` — `TABLES`, generated from the approved `data_model.json`
 - `composed_modules.json` — certified modules composed into this app
+
+## Agents
+
+The approved roster lives in `agents/roster.json` (2 agents: `support_draft_agent`,
+`precedent_finder`). `backend/agent_runtime.py` implements it:
+
+- `respond(message, agent=None)` returns the DRAFT reply; `agent` defaults to
+  `support_draft_agent` (the `/chat` endpoint uses the default).
+- Grounding data: `agents/corpus_index.json` (citable `doc_id`s) and
+  `agents/precedent_index.json` (stored conversations; only `approved` records
+  inside the 90-day retention window are ever surfaced).
+- No agent has a send/deliver tool. Approval is an analyst action; the analyst
+  copies approved text into the existing email tool.
+
+### Evals
+
+`agents/evals/cases.json` holds one executable case per `eval_criteria` entry in
+the roster (15 total), keyed `<agent>::<criterion_id>`. Run them with:
+
+```
+python3 agents/run_evals.py     # exit 0 == all green; writes agents/eval_results.json
+```
+
+Matchers: `expect_contains`, `expect_not_contains`, `expect_regex`,
+`expect_not_regex` (case-insensitive, multiline), plus the `every_match_in_corpus_index`
+and `max_matches` asserts.

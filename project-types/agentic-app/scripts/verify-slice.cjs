@@ -1,0 +1,90 @@
+// A slice's exit criteria: boot the app and run CUMULATIVE acceptance — this
+// slice's checks plus every previous slice's (features never regress) — then
+// the backend test suite. Runs inside the slice node's retry loop.
+const fs = require("node:fs");
+const net = require("node:net");
+const path = require("node:path");
+const { spawn, spawnSync } = require("node:child_process");
+
+const inputs = JSON.parse(fs.readFileSync("inputs.json", "utf8"));
+const sliceIndex = inputs._params.data.slice;
+const slices = inputs.slice_plan.data.slices.slice(0, sliceIndex);
+const app = path.resolve("app");
+
+function fail(msg) {
+  console.error(msg);
+  process.exit(1);
+}
+
+function freePort() {
+  return new Promise((resolve, reject) => {
+    const probe = net.createServer();
+    probe.listen(0, "127.0.0.1", () => {
+      const p = probe.address().port;
+      probe.close(() => resolve(p));
+    });
+    probe.on("error", reject);
+  });
+}
+
+async function main() {
+  // Fast static checks first.
+  if (fs.readFileSync(path.join(app, "frontend/index.html"), "utf8").includes("__APP_NAME__")) {
+    fail("branding placeholder __APP_NAME__ present");
+  }
+  const port = await freePort();
+  const log = fs.openSync("slice-app.log", "w");
+  const child = spawn(
+    `uv run --with fastapi --with uvicorn uvicorn dev:app --host 127.0.0.1 --port ${port}`,
+    { shell: true, detached: true, cwd: path.join(app, "backend"), stdio: ["ignore", log, log] },
+  );
+  fs.closeSync(log);
+  const kill = () => {
+    try { process.kill(-child.pid, "SIGTERM"); } catch { /* gone */ }
+  };
+
+  try {
+    let up = false;
+    for (let i = 0; i < 60; i++) {
+      await new Promise((r) => setTimeout(r, 500));
+      try {
+        if ((await fetch(`http://127.0.0.1:${port}/health`)).ok) { up = true; break; }
+      } catch { /* booting */ }
+    }
+    if (!up) fail("app did not boot for slice verification:\n" + fs.readFileSync("slice-app.log", "utf8").slice(-1500));
+
+    for (const slice of slices) {
+      for (const check of slice.acceptance) {
+        const res = await fetch(`http://127.0.0.1:${port}${check.path}`, {
+          method: check.method,
+          headers: check.body ? { "Content-Type": "application/json" } : undefined,
+          body: check.body ? JSON.stringify(check.body) : undefined,
+        });
+        const text = await res.text();
+        const wanted = check.expect_status ?? 200;
+        if (res.status !== wanted) {
+          fail(`[${slice.id}] ${check.method} ${check.path}: status ${res.status}, expected ${wanted}\n${text.slice(0, 400)}`);
+        }
+        for (const needle of check.expect_contains ?? []) {
+          if (!text.toLowerCase().includes(needle.toLowerCase())) {
+            fail(`[${slice.id}] ${check.method} ${check.path}: response missing "${needle}"\n${text.slice(0, 400)}`);
+          }
+        }
+      }
+      console.log(`acceptance passed: ${slice.id}`);
+    }
+  } finally {
+    kill();
+  }
+
+  const pytest = spawnSync(
+    "uv",
+    ["run", "--with", "fastapi", "--with", "httpx", "--with", "pytest", "python", "-m", "pytest", "tests", "-q"],
+    { cwd: path.join(app, "backend"), encoding: "utf8", timeout: 300000 },
+  );
+  if (pytest.status !== 0) fail(`backend tests FAILED\n${(pytest.stdout ?? "").slice(-1500)}\n${(pytest.stderr ?? "").slice(-1000)}`);
+  spawnSync("find", [app, "-name", "__pycache__", "-type", "d", "-exec", "rm", "-rf", "{}", "+"]);
+  console.log(`slice ${sliceIndex} verified: cumulative acceptance + tests green`);
+}
+
+main().catch((e) => fail(String(e)));

@@ -1,0 +1,90 @@
+{
+  "requirements": {
+    "path": "/Users/nbalawat/development/harness/.slice-test/artifacts/requirements-synthesis/requirements.json",
+    "data": {
+      "requirements": [
+        {
+          "id": "REQ-001",
+          "text": "The application must let a support analyst chat with an assistant that answers from our product knowledge.",
+          "category": "agent",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src-1",
+            "claim": "claim-1"
+          }
+        },
+        {
+          "id": "REQ-002",
+          "text": "Analysts should be able to review past conversations to reuse good answers.",
+          "category": "agent",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src-1",
+            "claim": "claim-2"
+          }
+        },
+        {
+          "id": "REQ-003",
+          "text": "The assistant must identify itself clearly so customers know it is automated.",
+          "category": "agent",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src-1",
+            "claim": "claim-3"
+          }
+        },
+        {
+          "id": "REQ-004",
+          "text": "Conversation records need to be stored for quality review.",
+          "category": "data",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src-1",
+            "claim": "claim-4"
+          }
+        },
+        {
+          "id": "REQ-005",
+          "text": "Current support process Tickets arrive by email. An analyst reads the ticket and searches old threads manually. The future process should route each question to the assistant first, and the analyst must approve the reply before it is sent.",
+          "category": "agent",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src-2",
+            "claim": "claim-5"
+          }
+        },
+        {
+          "id": "REQ-006",
+          "text": "Support analysts need an assistant that answers product questions from our knowledge and keeps reviewable conversation history.",
+          "category": "data",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src-3",
+            "claim": "claim-6"
+          }
+        },
+        {
+          "id": "REQ-007",
+          "text": "Conversations and messages must be persisted for later review.",
+          "category": "data",
+          "confidence": "inferred",
+          "provenance": {
+            "source": "src-1"
+          }
+        },
+        {
+          "id": "REQ-008",
+          "text": "Authentication requirements are unspecified.",
+          "category": "security",
+          "confidence": "unknown"
+        },
+        {
+          "id": "REQ-009",
+          "text": "Data retention policy is unspecified.",
+          "category": "data",
+          "confidence": "unknown"
+        }
+      ]
+    }
+  }
+}

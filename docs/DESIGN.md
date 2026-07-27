@@ -121,9 +121,8 @@ module/
 | 8b | traceability | deterministic | **RTM**: every non-unknown requirement joined to the design elements addressing it (`addresses` declarations on modules/tables/agents/design options); unaddressed requirement -> pipeline blocks |
 | 8c | design-review | gate | **User confirms the requirements->design mapping + all assumptions (defaulted answers, inferences) before any build spend** |
 | 9 | scaffold | deterministic | Skeleton render + module composition + **test harness first**; builds & boots empty |
-| 10 | build-backend | agent + verifier | FastAPI tests pass, boots |
-| 11 | build-agents | agent + verifier | Eval suite passes thresholds |
-| 12 | build-frontend | agent + verifier | Build + Playwright smoke green (approved design tokens applied) |
+| 10 | slice-plan | agent | 1–6 **vertical slices** derived from requirements: each an end-to-end user capability with executable HTTP acceptance; every slice traces to requirement IDs |
+| 11 | slice-1..N | agent + verify | Each slice delivers its feature across all layers; **cumulative acceptance** (this slice + all prior) + backend tests run inside the retry loop; each commit is a launchable app — the user watches features appear |
 | 13 | integrate | verifier | docker compose up + e2e smoke green |
 | 14 | security-scan | verifier | Deterministic scanners: semgrep, osv/dep audit, gitleaks, trivy — findings above pinned severity block |
 | 15 | governance-report | deterministic | Eval report, guardrail config, **security evidence pack vs pinned standards profile** (e.g. OWASP ASVS L2) |

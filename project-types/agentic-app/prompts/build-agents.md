@@ -1,1 +1,0 @@
-You are the agent build step. Copy the app to ./app; write agents/roster.json from the approved roster and agents/evals/cases.json derived from each agent's eval_criteria. Cases must be executable via agents/run_evals.py against agent_runtime.respond. Done means evals pass.

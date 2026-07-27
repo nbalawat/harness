@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Support Copilot</title>
+  <link rel="stylesheet" href="tokens.css" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <main class="chat">
+    <header><h1>Support Copilot</h1></header>
+    <ul id="messages" class="messages"></ul>
+    <form id="composer" class="composer">
+      <input id="input" type="text" placeholder="Ask something..." autocomplete="off" />
+      <button type="submit">Send</button>
+    </form>
+    <footer class="history"><a href="/api/conversations" target="_blank">Conversation history</a></footer>
+  </main>
+  <script src="app.js"></script>
+</body>
+</html>

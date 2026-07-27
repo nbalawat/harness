@@ -37,7 +37,22 @@ if (!option) {
 const tokensAbs = path.join(inputs.designs_dir.path, option.tokens_file.replace(/^designs\//, ""));
 fs.copyFileSync(tokensAbs, "app/frontend/tokens.css");
 
-// 4. Agents scaffolding — the roster is approved deterministic content
+// 4a. models.py is approved deterministic content (data-design artifact).
+const tables = inputs.data_model.data.tables;
+fs.writeFileSync(
+  "app/backend/models.py",
+  [
+    '"""Generated from the approved data model (data_model.json). Do not hand-edit."""',
+    "",
+    "TABLES = {",
+    ...tables.map((t) => `    "${t.name}": [${t.columns.map((c) => `"${c.name}"`).join(", ")}],`),
+    "}",
+    "",
+  ].join("\n"),
+);
+fs.writeFileSync("app/SLICES.md", `# ${appName} — slices\n\n`);
+
+// 4b. Agents scaffolding — the roster is approved deterministic content
 // (agent-design artifact), so it composes here; build-agents refines evals
 // and glue. Every stage after scaffold is self-consistent and testable.
 const roster = inputs.agent_roster.data;
@@ -58,8 +73,8 @@ fs.writeFileSync(
   ),
 );
 
-// 5. Brand backend + README (frontend branding happens in build-frontend).
-for (const rel of ["backend/main.py", "README.md"]) {
+// 5. Brand everything user-visible — the walking skeleton is fully branded.
+for (const rel of ["backend/main.py", "README.md", "frontend/index.html"]) {
   const file = path.join("app", rel);
   fs.writeFileSync(file, fs.readFileSync(file, "utf8").replaceAll("__APP_NAME__", appName));
 }

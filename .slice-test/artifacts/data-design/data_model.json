@@ -1,0 +1,44 @@
+{
+  "tables": [
+    {
+      "name": "conversations",
+      "addresses": [
+        "REQ-004",
+        "REQ-006",
+        "REQ-007"
+      ],
+      "columns": [
+        {
+          "name": "user",
+          "type": "str"
+        },
+        {
+          "name": "created_at",
+          "type": "str"
+        }
+      ]
+    },
+    {
+      "name": "messages",
+      "addresses": [
+        "REQ-004",
+        "REQ-006",
+        "REQ-007"
+      ],
+      "columns": [
+        {
+          "name": "conversation_id",
+          "type": "int"
+        },
+        {
+          "name": "role",
+          "type": "str"
+        },
+        {
+          "name": "content",
+          "type": "str"
+        }
+      ]
+    }
+  ]
+}

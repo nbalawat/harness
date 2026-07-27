@@ -60,9 +60,9 @@ test("golden run: all nodes complete, deploy skipped for local target", async ()
   const result = await runLoop(golden);
   assert.equal(result.status, "completed");
   assert.deepEqual(
-    events(golden, "node.skipped").map((e) => e.nodeId),
-    ["deploy"],
-    "deploy skips when deploy_target=local",
+    events(golden, "node.skipped").map((e) => e.nodeId).sort(),
+    ["deploy", "slice-4", "slice-5", "slice-6"],
+    "unused slices + deploy skip",
   );
   assert.equal(events(golden, "run.completed").length, 1);
 });
@@ -113,14 +113,14 @@ test("golden run: design options are comparable; chosen tokens reach the app", (
 
   // answers.json chose option-2 ("Forest") — its primary color must be live in the app.
   const tokens = fs.readFileSync(
-    path.join(golden.workspace, "artifacts/build-frontend/app/frontend/tokens.css"),
+    path.join(golden.workspace, "artifacts/slice-3/app/frontend/tokens.css"),
     "utf8",
   );
   assert.match(tokens, /#2b8a3e/, "Forest primary token composed into the app");
 });
 
 test("golden run: composed app matches the bill of materials and is branded", () => {
-  const appDir = path.join(golden.workspace, "artifacts/build-frontend/app");
+  const appDir = path.join(golden.workspace, "artifacts/slice-3/app");
   const composed = readJson(path.join(appDir, "composed_modules.json"));
   const arch = readJson(artifact(golden, "architecture", "architecture.json"));
   assert.deepEqual(composed.modules, arch.modules);
@@ -161,7 +161,10 @@ test("golden run: cost fully attributed and inside the envelope", () => {
   assert.ok(state.totalCostUsd > 0, "simulated spend recorded");
   assert.ok(state.totalCostUsd <= def.cost.run_budget_usd, "run stayed inside envelope");
 
-  const agentNodes = def.nodes.filter((n) => n.kind === "agent").map((n) => n.id);
+  const skipped = foldState(golden.journal.read()).skipped;
+  const agentNodes = def.nodes
+    .filter((n) => n.kind === "agent" && !skipped.has(n.id))
+    .map((n) => n.id);
   const costs = events(golden, "cost.recorded");
   for (const nodeId of agentNodes) {
     const record = costs.find((e) => e.nodeId === nodeId);
@@ -172,6 +175,30 @@ test("golden run: cost fully attributed and inside the envelope", () => {
   }
 });
 
+test("golden run: vertical slices trace to requirements and the app evolves per slice", () => {
+  const plan = readJson(artifact(golden, "slice-plan", "slice_plan.json"));
+  const { requirements } = readJson(artifact(golden, "requirements-synthesis", "requirements.json"));
+  const reqIds = new Set(requirements.map((r) => r.id));
+  for (const slice of plan.slices) {
+    for (const id of slice.addresses) assert.ok(reqIds.has(id), `slice ${slice.id} addresses unknown ${id}`);
+    assert.ok(slice.acceptance.length >= 1);
+  }
+
+  // Every built slice commits a launchable app; features accumulate.
+  const slice1Main = fs.readFileSync(path.join(golden.workspace, "artifacts/slice-1/app/backend/main.py"), "utf8");
+  const slice3Main = fs.readFileSync(path.join(golden.workspace, "artifacts/slice-3/app/backend/main.py"), "utf8");
+  assert.ok(!slice1Main.includes("/approvals"), "slice-1 predates the approval feature");
+  assert.ok(slice3Main.includes("/approvals"), "slice-3 delivers the approval feature");
+
+  const slices = fs.readFileSync(path.join(golden.workspace, "artifacts/slice-3/app/SLICES.md"), "utf8");
+  assert.equal((slices.match(/^- slice /gm) ?? []).length, 3, "SLICES.md records each delivered slice");
+
+  // The walking skeleton is already branded and testable at scaffold.
+  const scaffoldIndex = fs.readFileSync(path.join(golden.workspace, "artifacts/scaffold/app/frontend/index.html"), "utf8");
+  assert.doesNotMatch(scaffoldIndex, /__APP_NAME__/);
+  assert.ok(fs.existsSync(path.join(golden.workspace, "artifacts/scaffold/app/backend/models.py")));
+});
+
 // ---------------------------------------------------------------------------
 // Variants
 // ---------------------------------------------------------------------------
@@ -179,7 +206,9 @@ test("golden run: cost fully attributed and inside the envelope", () => {
 test("cloud-run target: deploy node runs and emits the plan", async () => {
   const ctx = makeCtx(tmpDir("cloudrun"), readAnswers("answers-cloudrun.json"));
   assert.equal((await runLoop(ctx)).status, "completed");
-  assert.equal(events(ctx, "node.skipped").length, 0);
+  const skipped = events(ctx, "node.skipped").map((e) => e.nodeId);
+  assert.ok(!skipped.includes("deploy"), "deploy runs for cloud-run target");
+  assert.deepEqual(skipped.sort(), ["slice-4", "slice-5", "slice-6"]);
   assert.ok(fs.existsSync(artifact(ctx, "deploy", "deploy/service.yaml")));
   assert.match(fs.readFileSync(artifact(ctx, "deploy", "deploy/plan.md"), "utf8"), /Cloud Run/);
 });

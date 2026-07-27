@@ -1,4 +1,8 @@
-# agentic-app v1.1 — problem statement + documents -> working agentic application.
+# agentic-app — problem statement + documents -> working agentic application.
+# v0.3.0: VERTICAL SLICES — after the walking-skeleton scaffold, the app is
+# built feature-by-feature (slice-plan derives 1-6 end-to-end slices from the
+# requirements; each slice node activates only if its slice exists, carries
+# its own cumulative acceptance verification, and commits a launchable app).
 # Model tiering (certified pins, sized from real run cost data 2026-07-26):
 #   haiku  — structured, bounded outputs (gap-questions, data-design)
 #   sonnet — mainstream coding/extraction (ingest, agent-design, build-*)
@@ -6,7 +10,7 @@
 # escalateModel: retries run one tier up with the failure feedback.
 # See docs/DESIGN.md §7/§7b for the design rationale per node.
 name: agentic-app
-version: 0.2.0
+version: 0.3.0
 
 cost:
   run_budget_usd: 25.00
@@ -18,9 +22,13 @@ cost:
     design-options: { budget_usd: 4.00 }
     data-design: { budget_usd: 1.50 }
     agent-design: { budget_usd: 1.50 }
-    build-backend: { budget_usd: 4.00 }
-    build-agents: { budget_usd: 3.00 }
-    build-frontend: { budget_usd: 3.00 }
+    slice-plan: { budget_usd: 1.50 }
+    slice-1: { budget_usd: 3.00 }
+    slice-2: { budget_usd: 3.00 }
+    slice-3: { budget_usd: 3.00 }
+    slice-4: { budget_usd: 3.00 }
+    slice-5: { budget_usd: 3.00 }
+    slice-6: { budget_usd: 3.00 }
 
 interaction:
   max_questions_per_gate: 6
@@ -169,56 +177,117 @@ nodes:
     outputs:
       - { name: app, file: app, dir: true }
 
-  - id: build-backend
+  - id: slice-plan
+    kind: agent
+    model: claude-opus-5
+    deps: [requirements-synthesis, architecture, data-design, agent-design, design-review]
+    prompt: prompts/slice-plan.md
+    mock: node "$HARNESS_PROJECT_DIR/mocks/slice-plan.cjs"
+    verify: node "$HARNESS_PROJECT_DIR/scripts/check-slice-plan.cjs"
+    outputs:
+      - { name: slice_plan, file: slice_plan.json, schema: schemas/slice_plan.schema.json }
+
+  - id: slice-1
     kind: agent
     model: claude-sonnet-5
     escalateModel: claude-opus-5
     maxTurns: 60
-    deps: [scaffold, data-design]
-    prompt: prompts/build-backend.md
-    mock: node "$HARNESS_PROJECT_DIR/mocks/build-backend.cjs"
-    verify: node "$HARNESS_PROJECT_DIR/scripts/verify-backend.cjs"
     retries: 2
+    params: { slice: 1 }
+    when: { artifact: slice_plan, path: "slices.0", exists: true }
+    deps: [scaffold, slice-plan]
+    prompt: prompts/build-slice.md
+    mock: node "$HARNESS_PROJECT_DIR/mocks/build-slice.cjs"
+    verify: node "$HARNESS_PROJECT_DIR/scripts/verify-slice.cjs"
     outputs:
       - { name: app, file: app, dir: true }
 
-  - id: build-agents
+  - id: slice-2
     kind: agent
     model: claude-sonnet-5
     escalateModel: claude-opus-5
     maxTurns: 60
-    deps: [build-backend, agent-design]
-    prompt: prompts/build-agents.md
-    mock: node "$HARNESS_PROJECT_DIR/mocks/build-agents.cjs"
-    verify: node "$HARNESS_PROJECT_DIR/scripts/verify-agents.cjs"
     retries: 2
+    params: { slice: 2 }
+    when: { artifact: slice_plan, path: "slices.1", exists: true }
+    deps: [slice-1, slice-plan]
+    prompt: prompts/build-slice.md
+    mock: node "$HARNESS_PROJECT_DIR/mocks/build-slice.cjs"
+    verify: node "$HARNESS_PROJECT_DIR/scripts/verify-slice.cjs"
     outputs:
       - { name: app, file: app, dir: true }
 
-  - id: build-frontend
+  - id: slice-3
     kind: agent
     model: claude-sonnet-5
     escalateModel: claude-opus-5
     maxTurns: 60
-    deps: [build-agents, design-select, intake]
-    prompt: prompts/build-frontend.md
-    mock: node "$HARNESS_PROJECT_DIR/mocks/build-frontend.cjs"
-    verify: node "$HARNESS_PROJECT_DIR/scripts/verify-frontend.cjs"
     retries: 2
+    params: { slice: 3 }
+    when: { artifact: slice_plan, path: "slices.2", exists: true }
+    deps: [slice-2, slice-plan]
+    prompt: prompts/build-slice.md
+    mock: node "$HARNESS_PROJECT_DIR/mocks/build-slice.cjs"
+    verify: node "$HARNESS_PROJECT_DIR/scripts/verify-slice.cjs"
+    outputs:
+      - { name: app, file: app, dir: true }
+
+  - id: slice-4
+    kind: agent
+    model: claude-sonnet-5
+    escalateModel: claude-opus-5
+    maxTurns: 60
+    retries: 2
+    params: { slice: 4 }
+    when: { artifact: slice_plan, path: "slices.3", exists: true }
+    deps: [slice-3, slice-plan]
+    prompt: prompts/build-slice.md
+    mock: node "$HARNESS_PROJECT_DIR/mocks/build-slice.cjs"
+    verify: node "$HARNESS_PROJECT_DIR/scripts/verify-slice.cjs"
+    outputs:
+      - { name: app, file: app, dir: true }
+
+  - id: slice-5
+    kind: agent
+    model: claude-sonnet-5
+    escalateModel: claude-opus-5
+    maxTurns: 60
+    retries: 2
+    params: { slice: 5 }
+    when: { artifact: slice_plan, path: "slices.4", exists: true }
+    deps: [slice-4, slice-plan]
+    prompt: prompts/build-slice.md
+    mock: node "$HARNESS_PROJECT_DIR/mocks/build-slice.cjs"
+    verify: node "$HARNESS_PROJECT_DIR/scripts/verify-slice.cjs"
+    outputs:
+      - { name: app, file: app, dir: true }
+
+  - id: slice-6
+    kind: agent
+    model: claude-sonnet-5
+    escalateModel: claude-opus-5
+    maxTurns: 60
+    retries: 2
+    params: { slice: 6 }
+    when: { artifact: slice_plan, path: "slices.5", exists: true }
+    deps: [slice-5, slice-plan]
+    prompt: prompts/build-slice.md
+    mock: node "$HARNESS_PROJECT_DIR/mocks/build-slice.cjs"
+    verify: node "$HARNESS_PROJECT_DIR/scripts/verify-slice.cjs"
     outputs:
       - { name: app, file: app, dir: true }
 
   # -- Validate + secure (challenges e + f) ---------------------------------
   - id: integrate
     kind: verifier
-    deps: [build-frontend]
+    deps: [slice-1, slice-2, slice-3, slice-4, slice-5, slice-6]
     command: node "$HARNESS_PROJECT_DIR/scripts/verify-integrate.cjs"
     outputs:
       - { name: integration_report, file: integration_report.json, schema: schemas/integration_report.schema.json }
 
   - id: security-scan
     kind: verifier
-    deps: [build-frontend]
+    deps: [slice-1, slice-2, slice-3, slice-4, slice-5, slice-6]
     command: node "$HARNESS_PROJECT_DIR/scripts/security-scan.cjs"
     outputs:
       - { name: security_report, file: security_report.json, schema: schemas/security_report.schema.json }
@@ -232,7 +301,7 @@ nodes:
 
   - id: uat
     kind: gate
-    deps: [governance-report, build-frontend]
+    deps: [governance-report]
     questions:
       - { id: approved, prompt: "Exercise the app (docker compose up). Approve? (yes/no)" }
     outputs:
@@ -241,7 +310,7 @@ nodes:
   # -- Optional deploy (conditional) ----------------------------------------
   - id: deploy
     kind: deterministic
-    deps: [uat, architecture, build-frontend]
+    deps: [uat, architecture]
     when: { artifact: architecture, path: deploy_target, equals: cloud-run }
     command: node "$HARNESS_PROJECT_DIR/scripts/deploy-plan.cjs"
     outputs:

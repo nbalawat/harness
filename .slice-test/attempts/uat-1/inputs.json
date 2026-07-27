@@ -1,0 +1,34 @@
+{
+  "governance": {
+    "path": "/Users/nbalawat/development/harness/.slice-test/artifacts/governance-report/governance.json",
+    "data": {
+      "standards_profile": "firm-baseline-v0",
+      "security": {
+        "high_findings": 0,
+        "total_findings": 0,
+        "files_scanned": 20,
+        "evidence": "security_report.json"
+      },
+      "validation": {
+        "backend_tests": "pass",
+        "agent_evals": "pass",
+        "compose_config": "pass",
+        "evidence": "integration_report.json"
+      },
+      "requirements": {
+        "total": 7,
+        "covered": 7,
+        "uncovered": 0,
+        "assumptions": 3,
+        "evidence": "rtm.json"
+      },
+      "agents": {
+        "count": 1,
+        "names": [
+          "assistant"
+        ],
+        "eval_criteria_total": 2
+      }
+    }
+  }
+}

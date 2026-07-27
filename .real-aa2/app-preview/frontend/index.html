@@ -3,19 +3,100 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>__APP_NAME__</title>
+  <title>Support Copilot</title>
   <link rel="stylesheet" href="tokens.css" />
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <main class="chat">
-    <header><h1>__APP_NAME__</h1></header>
-    <ul id="messages" class="messages"></ul>
-    <form id="composer" class="composer">
-      <input id="input" type="text" placeholder="Ask something..." autocomplete="off" />
-      <button type="submit">Send</button>
-    </form>
-  </main>
+  <header>
+    <div class="mast">
+      <div>
+        <h1>Support Copilot</h1>
+        <div class="sub">Drafted by machine &middot; approved by a person &middot; kept on the record</div>
+      </div>
+      <div class="sub" id="desk-line">Support desk &middot; local install</div>
+    </div>
+    <nav id="nav">
+      <a href="#chat" data-screen="chat" class="is-on">Assist</a>
+      <a href="#draft-review" data-screen="draft-review">Approvals <b id="pending-count">&middot;0</b></a>
+      <a href="#history" data-screen="history">Record</a>
+      <a href="#sources" data-screen="sources">Knowledge</a>
+    </nav>
+  </header>
+
+  <!-- ============ ASSIST ============ -->
+  <section id="chat" class="screen active" aria-labelledby="chat-title">
+    <div class="lede">
+      <h2 id="chat-title">Assist</h2>
+      <p>A correspondence between the analyst and the assistant. Every answer is a draft until you approve it.</p>
+    </div>
+    <div class="layout">
+      <div class="measure">
+        <ul id="thread" class="thread" aria-live="polite"></ul>
+
+        <form class="compose" id="composer" autocomplete="off">
+          <label class="sr-only" for="input">Ask the assistant</label>
+          <textarea id="input" rows="3" placeholder="Ask a product or support question&hellip;"></textarea>
+          <div class="row">
+            <span id="corpus-note">Answers are drawn only from the ingested product knowledge base.</span>
+            <button class="btn-p" id="ask" type="submit">Ask</button>
+          </div>
+        </form>
+      </div>
+
+      <aside>
+        <h4>Sources cited</h4>
+        <div id="cited-sources"></div>
+        <h4>Standing rules</h4>
+        <div class="fnote">Every answer carries its sources so you can verify before approving. Nothing is sent without your approval.</div>
+      </aside>
+    </div>
+  </section>
+
+  <!-- ============ APPROVALS ============ -->
+  <section id="draft-review" class="screen" aria-labelledby="approvals-title">
+    <div class="lede">
+      <h2 id="approvals-title">Approvals</h2>
+      <p>Nothing leaves this desk unapproved. Edits are recorded alongside the decision.</p>
+    </div>
+    <div class="layout">
+      <div id="approval-list"></div>
+      <aside>
+        <h4>Verify before approving</h4>
+        <div class="fnote">Read each cited passage before you approve. An answer with no covering source should be rejected or escalated.</div>
+        <h4>Disclosure</h4>
+        <div class="fnote">The line identifying a reply as machine-drafted is fixed by the assistant and travels with the draft into the record.</div>
+      </aside>
+    </div>
+  </section>
+
+  <!-- ============ RECORD ============ -->
+  <section id="history" class="screen" aria-labelledby="record-title">
+    <div class="lede">
+      <h2 id="record-title">The record</h2>
+      <p>Past correspondence, kept for quality review and for reuse.</p>
+    </div>
+    <label class="sr-only" for="record-search">Search the record</label>
+    <input class="search" id="record-search" type="search" placeholder="Search the record&hellip;" />
+    <div id="record-list"></div>
+    <p class="ledger" id="record-note">Open a record to read the full thread; <i>Reuse</i> lifts the approved wording into a fresh draft.</p>
+  </section>
+
+  <!-- ============ KNOWLEDGE ============ -->
+  <section id="sources" class="screen" aria-labelledby="knowledge-title">
+    <div class="lede">
+      <h2 id="knowledge-title">Knowledge</h2>
+      <p>Everything the assistant is allowed to know. Answers outside it are handed back to you.</p>
+    </div>
+    <div class="layout">
+      <div id="source-list"></div>
+      <aside>
+        <h4>Known gaps</h4>
+        <div class="fnote" id="gap-note">Questions with no covering passage are recorded here as they occur.</div>
+      </aside>
+    </div>
+  </section>
+
   <script src="app.js"></script>
 </body>
 </html>

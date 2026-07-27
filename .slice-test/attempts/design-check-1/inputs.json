@@ -1,0 +1,48 @@
+{
+  "designs_dir": {
+    "path": "/Users/nbalawat/development/harness/.slice-test/artifacts/design-options/designs"
+  },
+  "designs": {
+    "path": "/Users/nbalawat/development/harness/.slice-test/artifacts/design-options/designs.json",
+    "data": {
+      "options": [
+        {
+          "id": "option-1",
+          "name": "Calm Slate",
+          "screens": [
+            "chat",
+            "history",
+            "settings"
+          ],
+          "addresses": [],
+          "tokens_file": "designs/option-1/tokens.css",
+          "preview_file": "designs/option-1/index.html"
+        },
+        {
+          "id": "option-2",
+          "name": "Forest",
+          "screens": [
+            "chat",
+            "history",
+            "settings"
+          ],
+          "addresses": [],
+          "tokens_file": "designs/option-2/tokens.css",
+          "preview_file": "designs/option-2/index.html"
+        },
+        {
+          "id": "option-3",
+          "name": "Ink",
+          "screens": [
+            "chat",
+            "history",
+            "settings"
+          ],
+          "addresses": [],
+          "tokens_file": "designs/option-3/tokens.css",
+          "preview_file": "designs/option-3/index.html"
+        }
+      ]
+    }
+  }
+}

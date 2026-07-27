@@ -1,1 +1,0 @@
-You are the frontend build step. Copy the app to ./app; apply the approved design (tokens.css already composed) and brand the shell with the real project name. Use textContent for model-derived content — innerHTML fails the security scan. Done means node --check passes on all JS.
