@@ -1,5 +1,15 @@
 # Harness — Certified SDLC Workflow Factory
 
+## Documentation
+
+Full guides in [docs/](docs/README.md): [building an app](docs/guides/building-an-app.md) ·
+[authoring project types](docs/guides/authoring-project-types.md) ·
+[authoring modules](docs/guides/authoring-modules.md) ·
+[versioning & releases](docs/guides/versioning-and-releases.md) ·
+[reporting bugs](docs/guides/reporting-bugs.md) ·
+[reference (CLI/env/glossary/FAQ)](docs/guides/reference.md) ·
+[architecture](docs/DESIGN.md)
+
 ## Pilot quickstart (consumer path)
 
 ```bash
