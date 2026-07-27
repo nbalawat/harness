@@ -1,0 +1,23 @@
+/* Aurora Cards — soft, airy, rounded. Pastel violet ground, floating cards,
+   generous spacing and large touch targets. Approachable and low-pressure. */
+:root {
+  --primary: #6d4ae0;
+  --on-primary: #ffffff;
+  --bg: #f6f4ff;
+  --fg: #1f1b33;
+  --surface: #ffffff;
+  --border: #e4dff7;
+  --font: ui-rounded, "SF Pro Rounded", "Hiragino Maru Gothic ProN", "Avenir Next", Nunito, system-ui, sans-serif;
+
+  /* Supporting scale */
+  --muted: #6d6787;
+  --primary-soft: #ede8ff;
+  --accent-ok: #0d9488;
+  --accent-warn: #d97706;
+  --accent-danger: #e11d48;
+  --radius: 14px;
+  --radius-lg: 24px;
+  --shadow: 0 8px 24px rgba(109, 74, 224, 0.10), 0 2px 6px rgba(31, 27, 51, 0.05);
+  --gradient: linear-gradient(135deg, #6d4ae0 0%, #23b8c9 100%);
+  --space: 12px;
+}

@@ -1,0 +1,405 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Support Copilot — Paper Review</title>
+<link rel="stylesheet" href="tokens.css">
+<style>
+  :root{
+    --primary:#7a2e2e; --on-primary:#fdfbf6; --bg:#f7f2e8; --fg:#241e18; --surface:#fffdf7;
+    --border:#ded3be; --font:"Iowan Old Style","Palatino Linotype",Palatino,"Book Antiqua",Georgia,serif;
+    --muted:#6b6055; --primary-soft:#f0e2dd; --accent-ok:#4a6b3a; --accent-warn:#8a6212;
+    --accent-danger:#9c3024; --radius:2px;
+    --font-label:ui-sans-serif,"Helvetica Neue",Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--font);font-size:16.5px;line-height:1.62;
+       -webkit-font-smoothing:antialiased;
+       background-image:radial-gradient(rgba(120,100,70,.045) 1px,transparent 1px);background-size:3px 3px}
+  button,input,textarea{font:inherit;color:inherit}
+  .label{font-family:var(--font-label);font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);font-weight:600}
+
+  /* ---- masthead ---- */
+  .masthead{max-width:1080px;margin:0 auto;padding:26px 40px 0}
+  .rule-double{border-top:3px double var(--fg);border-bottom:1px solid var(--fg);height:0;margin:0}
+  .title-row{display:flex;align-items:flex-end;gap:16px;padding:0 0 10px}
+  .title-row h1{margin:0;font-size:31px;font-weight:400;letter-spacing:.01em;font-variant:small-caps}
+  .title-row .dek{color:var(--muted);font-style:italic;font-size:14px;padding-bottom:5px}
+  .title-row .stamp{margin-left:auto;text-align:right;line-height:1.35;padding-bottom:5px}
+  nav.folio{display:flex;gap:0;padding:9px 0;border-bottom:1px solid var(--fg)}
+  nav.folio button{background:none;border:0;padding:2px 20px 2px 0;margin-right:20px;cursor:pointer;
+    font-family:var(--font-label);font-size:11px;letter-spacing:.13em;text-transform:uppercase;color:var(--muted);
+    border-bottom:2px solid transparent;font-weight:600}
+  nav.folio button:hover{color:var(--fg)}
+  nav.folio button[aria-selected=true]{color:var(--primary);border-bottom-color:var(--primary)}
+  nav.folio .right{margin-left:auto;margin-right:0;padding-right:0;color:var(--muted);font-family:var(--font-label);font-size:11px;letter-spacing:.08em;display:flex;align-items:center;gap:8px}
+
+  /* ---- sheet ---- */
+  main{max-width:1080px;margin:0 auto 80px;padding:0 40px}
+  .screen{display:none}
+  .screen.active{display:block}
+  .sheet{background:var(--surface);border:1px solid var(--border);border-top:0;padding:34px 0 0;
+         box-shadow:0 1px 0 rgba(120,100,70,.12)}
+  .col{display:grid;grid-template-columns:158px minmax(0,1fr);gap:30px;padding:0 40px}
+  .margin{text-align:right;padding-top:4px}
+  .margin p{margin:0 0 14px;font-size:12.5px;line-height:1.5;color:var(--muted);font-style:italic}
+  .margin .label{display:block;margin-bottom:4px;font-style:normal}
+  .measure{max-width:66ch}
+
+  h2.headline{margin:0 0 4px;font-size:25px;font-weight:400;line-height:1.22;letter-spacing:.005em}
+  .byline{color:var(--muted);font-size:13px;font-style:italic;margin:0 0 20px;padding-bottom:14px;border-bottom:1px solid var(--border)}
+  .dropcap:first-letter{float:left;font-size:52px;line-height:.82;padding:5px 8px 0 0;color:var(--primary)}
+
+  /* ---- dialogue as an interview transcript ---- */
+  .turn{padding:16px 0;border-bottom:1px solid var(--border)}
+  .turn:last-of-type{border-bottom:0}
+  .speaker{display:flex;align-items:baseline;gap:9px;margin-bottom:5px}
+  .speaker .who{font-variant:small-caps;letter-spacing:.06em;font-size:15px;font-weight:600}
+  .speaker .when{color:var(--muted);font-size:12px;font-style:italic;margin-left:auto}
+  .turn p{margin:0 0 9px}
+  .turn p:last-child{margin-bottom:0}
+  .turn.machine{padding-left:16px;border-left:2px solid var(--primary-soft);margin-left:-18px}
+  code{font-family:ui-monospace,Menlo,monospace;font-size:13px;background:var(--primary-soft);padding:1px 4px;border-radius:2px}
+  sup.fn{color:var(--primary);font-size:11px;cursor:pointer;font-weight:600}
+  .pull{border-top:1px solid var(--fg);border-bottom:1px solid var(--fg);padding:11px 0;margin:16px 0;font-size:18px;font-style:italic;color:var(--primary)}
+
+  /* ---- tags ---- */
+  .tag{font-family:var(--font-label);font-size:9.5px;letter-spacing:.11em;text-transform:uppercase;font-weight:700;
+       padding:2px 7px;border:1px solid var(--border);border-radius:999px;color:var(--muted);background:var(--bg);white-space:nowrap}
+  .tag.bot{color:var(--primary);border-color:#d8bcb6;background:var(--primary-soft)}
+  .tag.ok{color:var(--accent-ok);border-color:#c3d3b6;background:#eef3e7}
+  .tag.pend{color:var(--accent-warn);border-color:#e2cf9e;background:#f8f0dc}
+  .tag.esc{color:var(--accent-danger);border-color:#e0bcb6;background:#f7e6e2}
+
+  /* ---- footnotes / sources ---- */
+  .footnotes{margin:26px 0 0;padding:16px 40px 30px;border-top:1px solid var(--fg);background:#fbf7ec}
+  .footnotes ol{margin:8px 0 0;padding-left:20px}
+  .footnotes li{font-size:13.5px;color:var(--muted);margin-bottom:7px;cursor:pointer}
+  .footnotes li:hover{color:var(--fg)}
+  .footnotes li b{color:var(--fg);font-weight:600}
+
+  /* ---- composer ---- */
+  .compose{margin-top:8px;padding:0 0 30px}
+  .compose textarea{width:100%;min-height:82px;background:transparent;border:0;border-bottom:1px solid var(--fg);
+    padding:8px 2px;resize:none;font-size:16.5px;line-height:1.6}
+  .compose textarea:focus{outline:0;background:#fbf5e6}
+  .cbar{display:flex;align-items:center;gap:14px;margin-top:12px}
+  .cbar em{color:var(--muted);font-size:13px;margin-right:auto}
+
+  /* ---- buttons ---- */
+  .btn{font-family:var(--font-label);font-size:11px;letter-spacing:.11em;text-transform:uppercase;font-weight:700;
+    padding:8px 16px;border:1px solid var(--fg);background:transparent;color:var(--fg);cursor:pointer;border-radius:var(--radius)}
+  .btn:hover{background:var(--bg)}
+  .btn.primary{background:var(--primary);border-color:var(--primary);color:var(--on-primary)}
+  .btn.primary:hover{background:#8f3838}
+  .btn.quiet{border-color:var(--border);color:var(--muted)}
+
+  /* ---- redline editor ---- */
+  .redline{background:#fbf7ec;border:1px solid var(--border);padding:26px 30px;position:relative;outline:0;line-height:1.7}
+  .redline:focus{background:#fffdf7;border-color:var(--primary)}
+  .redline::before{content:"DRAFT";position:absolute;top:14px;right:-1px;background:var(--primary);color:var(--on-primary);
+    font-family:var(--font-label);font-size:9px;letter-spacing:.2em;padding:3px 10px}
+  .redline p{margin:0 0 12px}
+  .redline ins{background:#e9f0e2;text-decoration:none;border-bottom:1px solid var(--accent-ok)}
+  .redline del{color:var(--muted);text-decoration:line-through}
+  .colophon{margin-top:18px;padding-top:12px;border-top:1px solid var(--border);font-size:13px;font-style:italic;color:var(--muted)}
+  .approvebar{display:flex;gap:12px;align-items:center;margin-top:22px;padding-top:16px;border-top:3px double var(--fg)}
+  .approvebar .note{font-size:13px;font-style:italic;color:var(--muted);margin-right:auto;max-width:38ch}
+
+  /* ---- index (history) ---- */
+  .searchline{display:flex;align-items:baseline;gap:12px;border-bottom:1px solid var(--fg);padding-bottom:8px;margin-bottom:4px}
+  .searchline input{flex:1;border:0;background:transparent;font-size:21px;font-style:italic;padding:4px 0}
+  .searchline input:focus{outline:0}
+  .refine{display:flex;gap:18px;padding:10px 0 20px;border-bottom:1px solid var(--border);margin-bottom:8px}
+  .refine button{background:none;border:0;cursor:pointer;font-family:var(--font-label);font-size:11px;letter-spacing:.1em;
+    text-transform:uppercase;color:var(--muted);padding:0;border-bottom:1px solid transparent;font-weight:600}
+  .refine button[aria-pressed=true]{color:var(--primary);border-bottom-color:var(--primary)}
+  .entry{display:grid;grid-template-columns:minmax(0,1fr) 132px;gap:22px;padding:15px 0;border-bottom:1px solid var(--border);
+         cursor:pointer;align-items:baseline}
+  .entry:hover{background:#fbf5e6}
+  .entry h3{margin:0 0 3px;font-size:18px;font-weight:400}
+  .entry .snip{margin:0;color:var(--muted);font-size:14px;font-style:italic;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .entry .aside{text-align:right;font-size:12.5px;color:var(--muted);line-height:1.5}
+  .entry .aside .tag{display:inline-block;margin-bottom:4px}
+  mark{background:#f5e3a8;color:inherit}
+  .dotleader{display:flex;align-items:baseline;gap:6px;color:var(--muted);font-size:12.5px}
+  .dotleader i{flex:1;border-bottom:1px dotted var(--border);font-style:normal}
+
+  .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:26px;background:var(--fg);color:var(--bg);
+    padding:10px 20px;font-size:13.5px;font-style:italic;opacity:0;pointer-events:none;transition:opacity .2s;border-radius:2px}
+  .toast.on{opacity:1}
+</style>
+</head>
+<body>
+
+<div class="masthead">
+  <div class="title-row">
+    <h1>Support Copilot</h1>
+    <span class="dek">a reviewed correspondence desk</span>
+    <div class="stamp label">Sunday, 26 July<br>D. Alvarez · Support</div>
+  </div>
+  <hr class="rule-double">
+  <nav class="folio" role="tablist">
+    <button role="tab" aria-selected="true" data-go="chat">The Enquiry</button>
+    <button role="tab" aria-selected="false" data-go="draft-review">The Draft</button>
+    <button role="tab" aria-selected="false" data-go="history">The Index</button>
+    <button role="tab" aria-selected="false" data-go="conversation-detail">The Record</button>
+    <span class="right">Three drafts awaiting your hand</span>
+  </nav>
+</div>
+
+<main>
+
+  <!-- ============ CHAT ============ -->
+  <section class="screen active" id="chat">
+    <div class="sheet">
+      <div class="col">
+        <div class="margin">
+          <span class="label">Enquiry</span>
+          <p>TCK‑4471<br>Northwind Ltd<br>Opened 09:39</p>
+          <span class="label">Standing rule</span>
+          <p>Every question goes to the assistant first. Nothing reaches the customer until an analyst signs it.</p>
+          <span class="label">Related</span>
+          <p style="font-style:normal"><a data-go="conversation-detail" style="color:var(--primary);cursor:pointer">“Token expired on nightly sync”</a> — approved 4 March, reused six times.</p>
+        </div>
+
+        <div class="measure">
+          <h2 class="headline">The nightly Atlas export fails; the manual one does not</h2>
+          <p class="byline">Correspondence with the assistant · begun 09:39, still open</p>
+
+          <div class="turn">
+            <div class="speaker"><span class="who">Analyst</span><span class="tag">You</span><span class="when">09:41</span></div>
+            <p>Customer says their scheduled Atlas export fails every night with <code>token_expired</code>, but manual exports work fine. What should I tell them?</p>
+          </div>
+
+          <div class="turn machine">
+            <div class="speaker"><span class="who">The Assistant</span><span class="tag bot">Automated — not a person</span><span class="when">09:41</span></div>
+            <p class="dropcap">Scheduled exports authenticate with a <b>service token</b>, which is a separate credential from the interactive session token used for manual exports. Service tokens expire ninety days after issue and do not renew themselves.<sup class="fn">1</sup></p>
+            <p>Ask the customer to rotate the token under <b>Settings → Integrations → Atlas → Rotate service token</b>, then to open the nightly schedule and save it once more. The re-save is what binds the new credential; rotation on its own leaves the schedule holding the expired one.<sup class="fn">2</sup><sup class="fn">3</sup></p>
+            <p>Should the job still fail, the schedule was in all likelihood created by an account since deactivated, and its ownership must be reassigned.</p>
+          </div>
+
+          <div class="turn">
+            <div class="speaker"><span class="who">Analyst</span><span class="tag">You</span><span class="when">09:43</span></div>
+            <p>And for the on‑premise connector build?</p>
+          </div>
+
+          <div class="turn machine">
+            <div class="speaker"><span class="who">The Assistant</span><span class="tag esc">Declines to answer</span><span class="when">09:43</span></div>
+            <p><b>I do not know.</b> Nothing in the product knowledge available to me describes the on‑premise connector's token lifetime, and I will not guess at an answer a customer will act upon.</p>
+            <div class="pull">Passed to you for a human answer. The draft remains unsent.</div>
+          </div>
+
+          <div class="compose">
+            <span class="label">Your instruction to the assistant</span>
+            <textarea>Draft a reply the customer can act on tonight.</textarea>
+            <div class="cbar">
+              <em>Answered by the assistant, signed by you.</em>
+              <button class="btn quiet">Attach ticket</button>
+              <button class="btn primary" data-go="draft-review">Set the draft</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="footnotes">
+        <span class="label">Sources consulted by the assistant</span>
+        <ol>
+          <li><b>Atlas service tokens</b> — kb/atlas/service-tokens.md, §3. “Service tokens expire ninety days after issue and are not renewed automatically.”</li>
+          <li><b>Rotating credentials</b> — kb/security/rotation.md, §1. “Each schedule must be re-saved after rotation.”</li>
+          <li><b>Scheduled export FAQ</b> — kb/atlas/schedules-faq.md. “A deactivated owner halts every schedule they created.”</li>
+        </ol>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ DRAFT REVIEW ============ -->
+  <section class="screen" id="draft-review">
+    <div class="sheet">
+      <div class="col">
+        <div class="margin">
+          <span class="label">In hand</span>
+          <p>Atlas exporter — token expired<br>TCK‑4471</p>
+          <span class="label">State</span>
+          <p style="font-style:normal"><span class="tag pend">Unapproved draft</span></p>
+          <span class="label">Signature required</span>
+          <p>Your name and the hour are written onto the record when you approve.</p>
+          <span class="label">Also waiting</span>
+          <p style="font-style:normal">Webhook retry backoff<br>Region migration window</p>
+        </div>
+
+        <div class="measure">
+          <h2 class="headline">A reply, set in draft, awaiting your signature</h2>
+          <p class="byline">Composed by the assistant at 09:44 · one revision by you · green marks are your edits</p>
+
+          <div class="redline" contenteditable="true" spellcheck="false">
+            <p>Hi Priya,</p>
+            <p>Thank you for the detail — the difference between your manual and scheduled exports is the credential each one uses. Manual exports run on your interactive session; scheduled exports run on a <b>service token</b>, which expires ninety days after issue and does not renew. That expiry is what produces <code>token_expired</code> overnight.</p>
+            <p>To put it right tonight: open <ins>Settings → Integrations → Atlas</ins> <del>the integrations page</del>, choose <b>Rotate service token</b>, then re-open the nightly schedule and save it once. The re-save is the step that binds the new token — rotating alone leaves the schedule pointed at the expired credential.</p>
+            <p>If the job still fails afterwards, the schedule's owner may be a deactivated account; reply here and we will reassign ownership for you.</p>
+            <p class="colophon">This reply was drafted by Support Copilot, an automated assistant, and was read and approved by a human support analyst before it was sent.</p>
+          </div>
+
+          <div class="approvebar">
+            <span class="note">Nothing leaves this desk unsigned. Rejecting returns the enquiry to the assistant with your notes.</span>
+            <button class="btn">Reject</button>
+            <button class="btn quiet">Save edits</button>
+            <button class="btn primary" data-approve>Approve &amp; send</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="footnotes">
+        <span class="label">Verify before you sign — the passages this draft rests upon</span>
+        <ol>
+          <li><b>Atlas service tokens</b> · 92% match — “Service tokens expire ninety days after issue…” <i>supports paragraph two</i></li>
+          <li><b>Rotating credentials</b> · 81% match — “Re-save each schedule after rotation.” <i>supports paragraph three</i></li>
+          <li><b>Scheduled export FAQ</b> · 74% match — “Deactivated owners halt schedules.” <i>supports paragraph four</i></li>
+        </ol>
+        <div class="dotleader" style="margin-top:12px"><span>Automated disclosure present</span><i></i><span class="tag ok">Yes</span></div>
+        <div class="dotleader" style="margin-top:6px"><span>Claims without a source</span><i></i><span class="tag ok">None</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ HISTORY ============ -->
+  <section class="screen" id="history">
+    <div class="sheet">
+      <div class="col">
+        <div class="margin">
+          <span class="label">The volume</span>
+          <p>1,284 conversations bound and kept.</p>
+          <span class="label">Readership</span>
+          <p>Legible to signed-in support staff alone; never to the public.</p>
+          <span class="label">Sections</span>
+          <p style="font-style:normal">Approved &amp; sent — 1,097<br>Unsigned drafts — 143<br>Escalations — 44</p>
+        </div>
+
+        <div class="measure" style="max-width:none">
+          <h2 class="headline">The Index</h2>
+          <p class="byline">Every conversation held with the assistant, kept message by message for review</p>
+
+          <div class="searchline">
+            <span class="label">Search</span>
+            <input value="token expired" aria-label="Search conversations">
+            <span class="label">31 entries</span>
+          </div>
+          <div class="refine">
+            <button aria-pressed="true">All</button>
+            <button aria-pressed="false">Approved</button>
+            <button aria-pressed="false">Draft</button>
+            <button aria-pressed="false">Escalated</button>
+            <button aria-pressed="false">Mine</button>
+          </div>
+
+          <div class="entry" data-go="conversation-detail">
+            <div><h3>Token expired on nightly sync</h3><p class="snip">“…scheduled exports use a service <mark>token</mark> that <mark>expired</mark> after ninety days…”</p></div>
+            <div class="aside"><span class="tag ok">Approved</span><br>M. Osei · 4 Mar<br>reused 6×</div>
+          </div>
+          <div class="entry" data-go="conversation-detail">
+            <div><h3>Atlas exporter — token expired</h3><p class="snip">“…rotate the service <mark>token</mark>, then re-save the schedule…”</p></div>
+            <div class="aside"><span class="tag pend">Draft</span><br>D. Alvarez · today</div>
+          </div>
+          <div class="entry" data-go="conversation-detail">
+            <div><h3>Scheduled report stopped after user offboarding</h3><p class="snip">“…owner deactivated, the <mark>token</mark> invalidated with the account…”</p></div>
+            <div class="aside"><span class="tag ok">Approved</span><br>D. Alvarez · 27 Feb</div>
+          </div>
+          <div class="entry" data-go="conversation-detail">
+            <div><h3>API key rotation breaks webhook signature</h3><p class="snip">“…rotation invalidates the previous signing secret at once…”</p></div>
+            <div class="aside"><span class="tag ok">Approved</span><br>L. Fontaine · 21 Feb</div>
+          </div>
+          <div class="entry" data-go="conversation-detail">
+            <div><h3>On-prem connector token lifecycle</h3><p class="snip">“…the assistant found no source and declined; escalated to an analyst…”</p></div>
+            <div class="aside"><span class="tag esc">Escalated</span><br>unassigned · 19 Feb</div>
+          </div>
+          <div class="entry" data-go="conversation-detail">
+            <div><h3>SSO metadata refresh cadence</h3><p class="snip">“…metadata is re-fetched every twenty-four hours…”</p></div>
+            <div class="aside"><span class="tag ok">Approved</span><br>M. Osei · 14 Feb</div>
+          </div>
+        </div>
+      </div>
+      <div class="footnotes"><span class="label">Bound quarterly · retention pending the archivist's ruling</span></div>
+    </div>
+  </section>
+
+  <!-- ============ CONVERSATION DETAIL ============ -->
+  <section class="screen" id="conversation-detail">
+    <div class="sheet">
+      <div class="col">
+        <div class="margin">
+          <span class="label">Record</span>
+          <p style="font-style:normal">CONV‑00918<br>4 messages<br>Vantage Co · TCK‑3902</p>
+          <span class="label">Signed by</span>
+          <p style="font-style:normal">M. Osei<br>4 March, 11:07:33</p>
+          <span class="label">Provenance</span>
+          <p>One revision by hand before signature.</p>
+          <span class="label">Return</span>
+          <p style="font-style:normal"><a data-go="history" style="color:var(--primary);cursor:pointer">← back to the Index</a></p>
+        </div>
+
+        <div class="measure">
+          <h2 class="headline">Token expired on nightly sync</h2>
+          <p class="byline">Approved and sent · 4 March · carried into six later replies</p>
+
+          <div class="turn">
+            <div class="speaker"><span class="who">Analyst</span><span class="tag">M. Osei</span><span class="when">11:02</span></div>
+            <p>Nightly sync fails with <code>token_expired</code> although the user can export by hand. Cause?</p>
+          </div>
+          <div class="turn machine">
+            <div class="speaker"><span class="who">The Assistant</span><span class="tag bot">Automated</span><span class="when">11:02</span></div>
+            <p>Scheduled jobs use a service token with a ninety-day lifetime; interactive exports use the session token. Rotate the service token, then re-save the schedule so the new credential is bound.<sup class="fn">1</sup><sup class="fn">2</sup></p>
+          </div>
+          <div class="turn">
+            <div class="speaker"><span class="who">M. Osei</span><span class="tag ok">Approved the reply</span><span class="when">11:07</span></div>
+            <p>Edited the closing line to name the exact settings path, then signed and sent it to the customer.</p>
+          </div>
+          <div class="turn">
+            <div class="speaker"><span class="who">Sent</span><span class="tag">Delivered</span><span class="when">11:07</span></div>
+            <p style="color:var(--muted);font-style:italic">The delivered reply carried the automated-assistant disclosure required of every machine-drafted answer.</p>
+          </div>
+
+          <div class="approvebar">
+            <span class="note">Carrying this answer forward copies its text and its sources into the draft you are working on.</span>
+            <button class="btn quiet">Copy text</button>
+            <button class="btn primary" data-reuse>Reuse in current draft</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="footnotes">
+        <span class="label">Sources on record</span>
+        <ol>
+          <li><b>Atlas service tokens</b> — kb/atlas/service-tokens.md, §3</li>
+          <li><b>Rotating credentials</b> — kb/security/rotation.md, §1</li>
+        </ol>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  const toast = (t) => {
+    const el = document.getElementById('toast');
+    el.textContent = t; el.classList.add('on');
+    clearTimeout(el._t); el._t = setTimeout(() => el.classList.remove('on'), 2000);
+  };
+  const go = (id) => {
+    document.querySelectorAll('.screen').forEach(s => s.classList.toggle('active', s.id === id));
+    document.querySelectorAll('nav.folio button').forEach(b => b.setAttribute('aria-selected', String(b.dataset.go === id)));
+    window.scrollTo({ top: 0 });
+  };
+  document.addEventListener('click', (e) => {
+    const nav = e.target.closest('[data-go]');
+    if (nav) { go(nav.dataset.go); return; }
+    if (e.target.closest('[data-approve]')) { toast('Signed by D. Alvarez, 09:47 — the reply has been sent.'); go('conversation-detail'); return; }
+    if (e.target.closest('[data-reuse]')) { toast('Answer and sources carried into your current draft.'); go('draft-review'); return; }
+    const f = e.target.closest('.refine button');
+    if (f) { f.parentElement.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed','false')); f.setAttribute('aria-pressed','true'); }
+  });
+</script>
+</body>
+</html>

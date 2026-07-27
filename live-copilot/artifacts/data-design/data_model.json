@@ -1,0 +1,114 @@
+{
+  "tables": [
+    {
+      "name": "conversations",
+      "addresses": [
+        "REQ-003",
+        "REQ-004",
+        "REQ-006",
+        "REQ-008",
+        "REQ-009"
+      ],
+      "columns": [
+        {
+          "name": "id",
+          "type": "string"
+        },
+        {
+          "name": "analyst_id",
+          "type": "string"
+        },
+        {
+          "name": "topic",
+          "type": "string"
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp"
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp"
+        }
+      ]
+    },
+    {
+      "name": "messages",
+      "addresses": [
+        "REQ-002",
+        "REQ-003",
+        "REQ-008"
+      ],
+      "columns": [
+        {
+          "name": "id",
+          "type": "string"
+        },
+        {
+          "name": "conversation_id",
+          "type": "string"
+        },
+        {
+          "name": "role",
+          "type": "string"
+        },
+        {
+          "name": "content",
+          "type": "text"
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp"
+        }
+      ]
+    },
+    {
+      "name": "drafts",
+      "addresses": [
+        "REQ-007",
+        "REQ-010",
+        "REQ-011",
+        "REQ-012",
+        "REQ-014"
+      ],
+      "columns": [
+        {
+          "name": "id",
+          "type": "string"
+        },
+        {
+          "name": "message_id",
+          "type": "string"
+        },
+        {
+          "name": "conversation_id",
+          "type": "string"
+        },
+        {
+          "name": "content",
+          "type": "text"
+        },
+        {
+          "name": "sources",
+          "type": "text"
+        },
+        {
+          "name": "approval_state",
+          "type": "string"
+        },
+        {
+          "name": "approved_by",
+          "type": "string"
+        },
+        {
+          "name": "approved_at",
+          "type": "timestamp"
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp"
+        }
+      ]
+    }
+  ]
+}

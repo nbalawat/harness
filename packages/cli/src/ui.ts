@@ -289,9 +289,12 @@ export function buildState(workspace: string): Record<string, unknown> {
     composeSmoke: (integration?.compose_smoke as string | undefined) ?? null,
     securityHigh: (security?.high_count as number | undefined) ?? null,
     securityFindings: Array.isArray(security?.findings) ? (security!.findings as unknown[]).length : null,
-    requirementsCovered: (governance?.requirements as { covered?: number; total?: number } | undefined) ?? null,
+    requirementsCovered:
+      (governance?.requirements as { covered?: number; total?: number } | undefined) ??
+      (rtmDoc ? { covered: rtmDoc.covered_count as number, total: rtmDoc.requirements_total as number } : null),
     assumptionCount: Array.isArray(rtmDoc?.assumptions) ? (rtmDoc!.assumptions as unknown[]).length : null,
-    sliceCount: Array.isArray(slicePlanDoc?.slices) ? (slicePlanDoc!.slices as unknown[]).length : null,
+    slicesPlanned: Array.isArray(slicePlanDoc?.slices) ? (slicePlanDoc!.slices as unknown[]).length : null,
+    slicesDelivered: def.nodes.filter((n) => /^slice-[0-9]+$/.test(n.id) && state.committed.has(n.id)).length,
   };
 
   const intakeDoc = readArtifactJson(workspace, state.artifacts, "intake");
@@ -412,7 +415,16 @@ export function buildNodeDetail(workspace: string, nodeId: string): Record<strin
     .map((e) => ({ type: e.type, ts: e.ts }));
 
   const describe = (id: string) => def.nodes.find((n) => n.id === id)?.description ?? null;
+  let promptText: string | null = null;
+  if (node.prompt) {
+    try {
+      promptText = fs.readFileSync(path.join(config.projectTypeDir, node.prompt), "utf8").slice(0, 6000);
+    } catch {
+      promptText = null;
+    }
+  }
   return {
+    prompt: promptText,
     id: node.id,
     kind: node.kind,
     description: node.description ?? null,
@@ -634,7 +646,16 @@ export function startUiServer(target: string, port: number): Promise<http.Server
         res.end(JSON.stringify({ selected: false }));
       } else if (url.pathname === "/api/state") {
         res.writeHead(200, { "content-type": "application/json" });
-        res.end(JSON.stringify({ selected: true, ...buildState(workspace!), resuming, app, appAvailable: latestAppArtifact() !== null }));
+        res.end(
+          JSON.stringify({
+            selected: true,
+            ...buildState(workspace!),
+            resuming,
+            app,
+            appAvailable: latestAppArtifact() !== null,
+            appStageNode: latestAppArtifact()?.node ?? null,
+          }),
+        );
       } else if (url.pathname === "/api/agent-answer" && req.method === "POST") {
         let body = "";
         req.on("data", (chunk) => (body += chunk));
@@ -760,6 +781,7 @@ body { font:14px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif; background:
 .tabs { display:flex; gap:.25rem; margin-left:auto; background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:.25rem; }
 .tabs button { border:0; background:transparent; color:var(--ink2); font:inherit; font-weight:550; padding:.4rem .95rem; border-radius:7px; cursor:pointer; }
 .tabs button.active { background:var(--accent); color:var(--accent-ink); }
+.tabs button .dot { display:inline-block; width:7px; height:7px; border-radius:50%; background:var(--warn); margin-left:.35rem; vertical-align:middle; }
 .banner { display:none; align-items:center; gap:.7rem; margin:1rem clamp(1rem,4vw,2.5rem) 0; padding:.7rem 1rem; border:1px solid var(--warn); border-left-width:4px; background:var(--surface); border-radius:10px; }
 .banner b { color:var(--warn); }
 .banner button { margin-left:auto; }
@@ -847,15 +869,15 @@ button.ghost { background:transparent; border:1px solid var(--border); color:var
 .opt input { margin-top:.2rem; }
 .opt .od { font-size:.76rem; color:var(--muted); }
 /* designs */
-.designs { display:grid; grid-template-columns:repeat(auto-fill,252px); gap:.8rem; }
+.designs { display:grid; grid-template-columns:repeat(auto-fill,300px); gap:.9rem; }
 .design { border:1px solid var(--border); border-radius:10px; overflow:hidden; background:var(--page); position:relative; }
 .design.chosen { border-color:var(--good); box-shadow:0 0 0 2px var(--good); }
 .design .sel { position:absolute; top:.5rem; right:.5rem; z-index:2; background:var(--good); color:#fff; font-size:.7rem; font-weight:600; padding:.15rem .6rem; border-radius:99px; }
-.design .thumb { height:200px; overflow:hidden; background:#fff; position:relative; }
-.design .thumb iframe { width:1200px; height:952px; border:0; transform:scale(0.21); transform-origin:0 0; pointer-events:none; }
+.design .thumb { height:230px; overflow:hidden; background:#fff; position:relative; }
+.design .thumb iframe { width:1200px; height:920px; border:0; transform:scale(0.25); transform-origin:0 0; pointer-events:none; }
 .design .thumb a { position:absolute; inset:0; }
-.design .bar { display:flex; align-items:center; gap:.5rem; padding:.5rem .7rem; border-top:1px solid var(--border); }
-.design .bar b { font-size:.85rem; }
+.design .bar { display:flex; align-items:center; gap:.45rem .5rem; padding:.5rem .7rem; border-top:1px solid var(--border); flex-wrap:wrap; }
+.design .bar b { font-size:.85rem; flex:1 1 100%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .design .bar .chip { margin-right:auto; }
 .design .bar a { font-size:.78rem; color:var(--accent); text-decoration:none; }
 .design .bar button { background:transparent; border:1px solid var(--accent); color:var(--accent); border-radius:6px; padding:.2rem .7rem; font:inherit; font-size:.78rem; cursor:pointer; }
@@ -939,14 +961,15 @@ button.ghost { background:transparent; border:1px solid var(--border); color:var
 </section>
 <div id="runview" style="display:none">
 <section class="tabpane active" id="tab-overview">
+  <div class="card gate" id="agentQPanel" style="display:none"><h2>The agent needs your input</h2><form id="agentQForm"></form></div>
+  <div class="card gate" id="gatePanel" style="display:none"><h2>Waiting on you — the run continues after you answer</h2><form id="gateForm"></form></div>
   <div class="tiles">
     <div class="tile"><div class="k">Progress</div><div class="v" id="progressV"></div><div class="meter"><div id="progressBar"></div></div><div class="sub" id="progressSub"></div></div>
     <div class="tile"><div class="k">Cost</div><div class="v" id="costV"></div><div class="meter"><div id="costBar"></div></div><div class="sub" id="costSub"></div></div>
     <div class="tile"><div class="k">Tokens</div><div class="v" id="tokV"></div><div class="sub" id="tokSub"></div></div>
     <div class="tile"><div class="k">Active time</div><div class="v" id="elapsedV"></div><div class="sub" id="elapsedSub"></div></div>
+    <div class="tile"><div class="k">Your inputs</div><div class="v" id="attnV" style="font-size:1.02rem"></div><div class="sub" id="attnSub"></div></div>
   </div>
-  <div class="card gate" id="agentQPanel" style="display:none"><h2>The agent needs your input</h2><form id="agentQForm"></form></div>
-  <div class="card gate" id="gatePanel" style="display:none"><h2>Waiting on you</h2><form id="gateForm"></form></div>
   <div class="grid2">
     <div class="card"><h2>About this build</h2><div id="about"></div></div>
     <div class="card"><h2>Quality &amp; test results</h2><div id="quality"></div></div>
@@ -1039,10 +1062,12 @@ async function openRun(dir) { await fetch('/api/select', { method:'POST', body: 
 let openNode = null;
 function closeDrawer() { openNode = null; document.getElementById('drawer').classList.remove('open'); }
 async function openDrawer(id) {
+  if (openNode === id) { closeDrawer(); return; } // same step toggles the panel
   openNode = id;
   document.getElementById('drawer').classList.add('open');
   await refreshDrawer();
 }
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { closeDrawer(); closeDoc(); } });
 async function refreshDrawer() {
   if (!openNode) return;
   const d = await (await fetch('/api/node/' + encodeURIComponent(openNode))).json();
@@ -1087,6 +1112,7 @@ async function refreshDrawer() {
     '<h3>Waits for</h3>' + (d.deps.map(dep).join('') || '<div class="empty">Nothing — a starting step.</div>') +
     '<h3>Feeds into</h3>' + (d.feeds.map(dep).join('') || '<div class="empty">Nothing — a final step.</div>') +
     '<h3>Attempts</h3>' + attempts +
+    (d.prompt ? '<details style="margin-top:.6rem"><summary class="hint" style="cursor:pointer">Prompt used for this step</summary><pre style="background:var(--page);border:1px solid var(--grid);border-radius:8px;padding:.7rem .9rem;font:11.5px/1.5 ui-monospace,Menlo,monospace;white-space:pre-wrap;margin-top:.4rem">' + esc(d.prompt) + '</pre></details>' : '') +
     (tr ? '<h3>What the agent did</h3>' + tr : '')
   );
 }
@@ -1198,6 +1224,11 @@ async function tick() {
   const banner = document.getElementById('banner');
   const needsHuman = (s.parkedGate || s.pendingQuestion) && !s.resuming;
   banner.style.display = needsHuman ? 'flex' : 'none';
+  setText('attnV', needsHuman ? 'Action needed' : 'Nothing right now');
+  setText('attnSub', needsHuman ? 'answer at the top of Overview' : 'questions appear at the top of Overview when the run needs you');
+  const ovBtn = document.querySelector('#tabs button[data-tab=overview]');
+  const wantBadge = needsHuman ? '<span class="dot"></span>' : '';
+  if (ovBtn.innerHTML !== 'Overview' + wantBadge) ovBtn.innerHTML = 'Overview' + wantBadge;
   if (s.pendingQuestion) setText('bannerText', 'the ' + s.pendingQuestion.nodeId + ' agent asked you a question');
   else if (s.parkedGate) setText('bannerText', s.parkedGate.questions.length + ' question' + (s.parkedGate.questions.length===1?'':'s') + ' at ' + s.parkedGate.nodeId);
 
@@ -1237,7 +1268,7 @@ async function tick() {
     '<div class="qrow">' + mark(q.securityHigh === null ? null : q.securityHigh === 0) + '<span>Security scan</span><span class="stat">' + (q.securityHigh === null ? 'runs after build' : q.securityHigh + ' blocking · ' + (q.securityFindings ?? 0) + ' total findings') + '</span></div>' +
     '<div class="qrow">' + mark(q.composeSmoke === null ? null : q.composeSmoke !== 'failed') + '<span>Container boot smoke</span><span class="stat">' + esc(q.composeSmoke ?? '—') + '</span></div>' +
     '<div class="qrow">' + mark(q.requirementsCovered ? q.requirementsCovered.covered === q.requirementsCovered.total : null) + '<span>Requirements covered</span><span class="stat">' + (q.requirementsCovered ? q.requirementsCovered.covered + '/' + q.requirementsCovered.total : 'traceability pending') + '</span></div>' +
-    '<div class="qrow">' + mark(q.sliceCount ? true : null) + '<span>Feature slices delivered</span><span class="stat">' + (q.sliceCount ?? '—') + '</span></div>'
+    '<div class="qrow">' + mark(q.slicesPlanned ? q.slicesDelivered >= q.slicesPlanned : null) + '<span>Feature slices</span><span class="stat">' + (q.slicesPlanned ? q.slicesDelivered + ' delivered of ' + q.slicesPlanned + ' planned' : '—') + '</span></div>'
   );
 
   // slice screenshots
@@ -1373,8 +1404,10 @@ async function tick() {
 
   // app panel
   const appPanel = document.getElementById('appPanel');
-  appPanel.style.display = s.appAvailable ? '' : 'none';
-  if (s.appAvailable) {
+  // Only offer the app once real features exist (post-scaffold) or it's running.
+  const appReady = s.appAvailable && (s.appStageNode !== 'scaffold' || s.app.status === 'running' || s.app.status === 'starting');
+  appPanel.style.display = appReady ? '' : 'none';
+  if (appReady) {
     const a = s.app;
     document.getElementById('appDot').style.background = STATUS_COLOR[a.status] || 'var(--muted)';
     setText('appStatus', a.status === 'failed' ? 'failed — ' + (a.error||'') : a.status);

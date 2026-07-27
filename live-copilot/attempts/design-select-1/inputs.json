@@ -1,0 +1,124 @@
+{
+  "designs_dir": {
+    "path": "/Users/nbalawat/development/harness/live-copilot/artifacts/design-options/designs"
+  },
+  "designs": {
+    "path": "/Users/nbalawat/development/harness/live-copilot/artifacts/design-options/designs.json",
+    "data": {
+      "options": [
+        {
+          "id": "option-1",
+          "name": "Signal Desk — dense operations console",
+          "screens": [
+            "chat",
+            "draft-review",
+            "history",
+            "conversation-detail"
+          ],
+          "tokens_file": "designs/option-1/tokens.css",
+          "preview_file": "designs/option-1/index.html",
+          "addresses": [
+            "REQ-002",
+            "REQ-003",
+            "REQ-004",
+            "REQ-005",
+            "REQ-007",
+            "REQ-008",
+            "REQ-009",
+            "REQ-010",
+            "REQ-011",
+            "REQ-012",
+            "REQ-013",
+            "REQ-014",
+            "REQ-015",
+            "REQ-019"
+          ]
+        },
+        {
+          "id": "option-2",
+          "name": "Paper Review — editorial manuscript desk",
+          "screens": [
+            "chat",
+            "draft-review",
+            "history",
+            "conversation-detail"
+          ],
+          "tokens_file": "designs/option-2/tokens.css",
+          "preview_file": "designs/option-2/index.html",
+          "addresses": [
+            "REQ-002",
+            "REQ-003",
+            "REQ-004",
+            "REQ-005",
+            "REQ-007",
+            "REQ-008",
+            "REQ-009",
+            "REQ-010",
+            "REQ-011",
+            "REQ-012",
+            "REQ-013",
+            "REQ-014",
+            "REQ-015",
+            "REQ-019"
+          ]
+        },
+        {
+          "id": "option-3",
+          "name": "Night Terminal — keyboard-first dark console",
+          "screens": [
+            "chat",
+            "draft-review",
+            "history",
+            "conversation-detail"
+          ],
+          "tokens_file": "designs/option-3/tokens.css",
+          "preview_file": "designs/option-3/index.html",
+          "addresses": [
+            "REQ-002",
+            "REQ-003",
+            "REQ-004",
+            "REQ-005",
+            "REQ-007",
+            "REQ-008",
+            "REQ-009",
+            "REQ-010",
+            "REQ-011",
+            "REQ-012",
+            "REQ-013",
+            "REQ-014",
+            "REQ-015",
+            "REQ-019"
+          ]
+        },
+        {
+          "id": "option-4",
+          "name": "Aurora — soft rounded assistant",
+          "screens": [
+            "chat",
+            "draft-review",
+            "history",
+            "conversation-detail"
+          ],
+          "tokens_file": "designs/option-4/tokens.css",
+          "preview_file": "designs/option-4/index.html",
+          "addresses": [
+            "REQ-002",
+            "REQ-003",
+            "REQ-004",
+            "REQ-005",
+            "REQ-007",
+            "REQ-008",
+            "REQ-009",
+            "REQ-010",
+            "REQ-011",
+            "REQ-012",
+            "REQ-013",
+            "REQ-014",
+            "REQ-015",
+            "REQ-019"
+          ]
+        }
+      ]
+    }
+  }
+}

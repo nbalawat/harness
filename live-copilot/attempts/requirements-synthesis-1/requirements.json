@@ -1,0 +1,161 @@
+{
+  "requirements": [
+    {
+      "id": "REQ-001",
+      "text": "The assistant must answer support analysts' product questions using the organization's own product knowledge.",
+      "category": "agent",
+      "confidence": "stated",
+      "provenance": { "source": "src-problem-statement", "claim": "claim-001" }
+    },
+    {
+      "id": "REQ-002",
+      "text": "The application must provide a chat interface in which a support analyst converses with the assistant.",
+      "category": "functional",
+      "confidence": "stated",
+      "provenance": { "source": "src-brief", "claim": "claim-003" }
+    },
+    {
+      "id": "REQ-003",
+      "text": "The application must keep a reviewable history of every conversation held with the assistant.",
+      "category": "functional",
+      "confidence": "stated",
+      "provenance": { "source": "src-problem-statement", "claim": "claim-002" }
+    },
+    {
+      "id": "REQ-004",
+      "text": "Analysts must be able to open and review past conversations so that good answers can be reused.",
+      "category": "ux",
+      "confidence": "stated",
+      "provenance": { "source": "src-brief", "claim": "claim-004" }
+    },
+    {
+      "id": "REQ-005",
+      "text": "The assistant must identify itself clearly as automated so customers know the reply was machine-generated.",
+      "category": "agent",
+      "confidence": "stated",
+      "provenance": { "source": "src-brief", "claim": "claim-005" }
+    },
+    {
+      "id": "REQ-006",
+      "text": "Conversation records must be stored durably so they can be retrieved for quality review.",
+      "category": "data",
+      "confidence": "stated",
+      "provenance": { "source": "src-brief", "claim": "claim-006" }
+    },
+    {
+      "id": "REQ-007",
+      "text": "Each question must be routed to the assistant first, and the analyst must explicitly approve the assistant's draft reply before it is sent.",
+      "category": "functional",
+      "confidence": "stated",
+      "provenance": { "source": "src-process", "claim": "claim-007" }
+    },
+    {
+      "id": "REQ-008",
+      "text": "Conversations and their individual messages (role, content, timestamp) must be persisted as structured records rather than opaque transcript blobs, so history can be listed, opened, and reviewed message by message.",
+      "category": "data",
+      "confidence": "inferred",
+      "provenance": { "source": "src-brief" }
+    },
+    {
+      "id": "REQ-009",
+      "text": "Analysts must be able to search and filter past conversations by keyword, since the current process is manual searching of old threads.",
+      "category": "ux",
+      "confidence": "inferred",
+      "provenance": { "source": "src-process" }
+    },
+    {
+      "id": "REQ-010",
+      "text": "Each draft reply must record its approval state plus the approving analyst and timestamp, so quality review can distinguish approved/sent replies from unapproved drafts.",
+      "category": "data",
+      "confidence": "inferred",
+      "provenance": { "source": "src-process" }
+    },
+    {
+      "id": "REQ-011",
+      "text": "The approval step must be part of the analyst-facing UI: the analyst can view, edit, approve, or reject the assistant's draft before it leaves the system.",
+      "category": "ux",
+      "confidence": "inferred",
+      "provenance": { "source": "src-process" }
+    },
+    {
+      "id": "REQ-012",
+      "text": "The assistant must ground its answers in retrieved product-knowledge content and surface which sources it used, so the analyst can verify the draft before approving it.",
+      "category": "agent",
+      "confidence": "inferred",
+      "provenance": { "source": "src-brief" }
+    },
+    {
+      "id": "REQ-013",
+      "text": "The assistant must have defined behavior for questions it cannot answer from available knowledge: state that it does not know and escalate to the analyst rather than guess.",
+      "category": "agent",
+      "confidence": "inferred",
+      "provenance": { "source": "src-problem-statement" }
+    },
+    {
+      "id": "REQ-014",
+      "text": "Reusing a past answer must be a supported action: an analyst reviewing a prior conversation can carry that answer into the current draft.",
+      "category": "functional",
+      "confidence": "inferred",
+      "provenance": { "source": "src-brief" }
+    },
+    {
+      "id": "REQ-015",
+      "text": "Stored conversation history must be readable only by authenticated support staff and must not be exposed publicly or to unauthenticated callers.",
+      "category": "security",
+      "confidence": "inferred",
+      "provenance": { "source": "src-brief" }
+    },
+    {
+      "id": "REQ-016",
+      "text": "Model and knowledge-source credentials must be supplied through environment configuration and must never be committed to the repository or written into conversation records.",
+      "category": "security",
+      "confidence": "inferred",
+      "provenance": { "source": "src-problem-statement" }
+    },
+    {
+      "id": "REQ-017",
+      "text": "The application must run locally via a single container-compose command; no cloud infrastructure is required for v1 (declared deploy target is local).",
+      "category": "ops",
+      "confidence": "inferred",
+      "provenance": { "source": "src-problem-statement" }
+    },
+    {
+      "id": "REQ-018",
+      "text": "The assistant must be covered by automated evaluations — at minimum self-identification as automated and refusal to answer beyond available knowledge — so behavior can be checked before release.",
+      "category": "ops",
+      "confidence": "inferred",
+      "provenance": { "source": "src-brief" }
+    },
+    {
+      "id": "REQ-019",
+      "text": "The application is scoped as an internal single-team tool for support analysts at low concurrency; there is no customer-facing self-service portal in v1.",
+      "category": "functional",
+      "confidence": "inferred",
+      "provenance": { "source": "src-brief" }
+    },
+    {
+      "id": "REQ-020",
+      "text": "The authoritative source of 'our product knowledge' and how it is kept current is unspecified: documents loaded into the application versus an existing external knowledge base the app must query.",
+      "category": "agent",
+      "confidence": "unknown"
+    },
+    {
+      "id": "REQ-021",
+      "text": "Analyst authentication and identity are unspecified: whether analysts sign in at all, and if so via local accounts or company SSO.",
+      "category": "security",
+      "confidence": "unknown"
+    },
+    {
+      "id": "REQ-022",
+      "text": "The retention period for stored conversation records is unspecified.",
+      "category": "data",
+      "confidence": "unknown"
+    },
+    {
+      "id": "REQ-023",
+      "text": "Delivery of an approved reply is unspecified: whether the application sends it to the customer through an email/ticketing integration or the analyst copies it into the existing ticket tool.",
+      "category": "functional",
+      "confidence": "unknown"
+    }
+  ]
+}

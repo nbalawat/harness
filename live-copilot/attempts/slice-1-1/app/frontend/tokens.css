@@ -1,0 +1,26 @@
+/* Paper Review — editorial manuscript. Warm cream stock, ink type, oxblood
+   accent. Rules and margins instead of boxes; reading and redlining first. */
+:root {
+  --primary: #7a2e2e;
+  --on-primary: #fdfbf6;
+  --bg: #f7f2e8;
+  --fg: #241e18;
+  --surface: #fffdf7;
+  --border: #ded3be;
+  --font: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
+
+  /* Supporting scale */
+  --muted: #6b6055;
+  --primary-soft: #f0e2dd;
+  --accent-ok: #4a6b3a;
+  --accent-warn: #8a6212;
+  --accent-danger: #9c3024;
+  --radius: 2px;
+  --radius-lg: 3px;
+  --shadow: none;
+  --rule: 1px solid #ded3be;
+  --font-ui: "Iowan Old Style", Georgia, serif;
+  --font-label: ui-sans-serif, "Helvetica Neue", Arial, sans-serif;
+  --space: 12px;
+  --measure: 68ch;
+}

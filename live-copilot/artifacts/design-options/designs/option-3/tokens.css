@@ -1,0 +1,24 @@
+/* Night Terminal — dark, monospaced, keyboard-driven. Near-black ground with a
+   single lime signal colour. Square corners, bracketed labels, zero chrome. */
+:root {
+  --primary: #b8e62e;
+  --on-primary: #0b0e0c;
+  --bg: #0b0e0c;
+  --fg: #d8e4da;
+  --surface: #141a16;
+  --border: #2a342c;
+  --font: ui-monospace, SFMono-Regular, "SF Mono", Menlo, "JetBrains Mono", "Courier New", monospace;
+
+  /* Supporting scale */
+  --muted: #7d8c81;
+  --primary-soft: #1d2a15;
+  --accent-ok: #5ad18a;
+  --accent-warn: #e0a83a;
+  --accent-danger: #ef6a5a;
+  --radius: 0px;
+  --radius-lg: 0px;
+  --shadow: none;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+  --space: 8px;
+  --grid: 1px solid #2a342c;
+}

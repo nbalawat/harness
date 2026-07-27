@@ -1,0 +1,526 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Support Copilot — Signal Desk</title>
+<link rel="stylesheet" href="tokens.css">
+<style>
+  :root {
+    --primary:#2b4acb; --on-primary:#fff; --bg:#f2f4f9; --fg:#12161c; --surface:#fff;
+    --border:#d2d8e4; --font:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,system-ui,sans-serif;
+    --muted:#5b6577; --primary-soft:#e6ebfb; --accent-ok:#0f7b53; --accent-warn:#a35a06;
+    --accent-danger:#b42318; --radius:4px; --radius-lg:6px; --shadow:0 1px 2px rgba(18,22,28,.06);
+    --font-mono:ui-monospace,SFMono-Regular,Menlo,monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{margin:0;font-family:var(--font);background:var(--bg);color:var(--fg);font-size:13px;line-height:1.45;-webkit-font-smoothing:antialiased}
+  button,input,textarea{font:inherit;color:inherit}
+
+  /* ---- app chrome ---- */
+  .app{display:flex;flex-direction:column;height:100vh}
+  .topbar{display:flex;align-items:center;gap:16px;height:44px;padding:0 12px;background:var(--surface);border-bottom:1px solid var(--border);flex:none}
+  .brand{display:flex;align-items:center;gap:8px;font-weight:650;letter-spacing:-.01em}
+  .mark{width:18px;height:18px;border-radius:var(--radius);background:var(--primary);display:grid;place-items:center;color:var(--on-primary);font-size:10px;font-weight:700}
+  .tabs{display:flex;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:2px;gap:2px}
+  .tabs button{border:0;background:transparent;padding:3px 10px;border-radius:2px;color:var(--muted);cursor:pointer;font-size:12px;font-weight:550}
+  .tabs button[aria-selected=true]{background:var(--surface);color:var(--fg);box-shadow:var(--shadow)}
+  .top-right{margin-left:auto;display:flex;align-items:center;gap:10px;color:var(--muted);font-size:12px}
+  .kbd{font-family:var(--font-mono);font-size:10px;border:1px solid var(--border);border-bottom-width:2px;border-radius:3px;padding:1px 4px;background:var(--bg)}
+  .who{display:flex;align-items:center;gap:6px;color:var(--fg);font-weight:550}
+  .avatar{width:20px;height:20px;border-radius:var(--radius);background:var(--primary-soft);color:var(--primary);display:grid;place-items:center;font-size:10px;font-weight:700}
+
+  /* ---- three-pane ---- */
+  main{flex:1;min-height:0}
+  .screen{display:none;height:100%}
+  .screen.active{display:grid}
+  .pane3{grid-template-columns:236px minmax(0,1fr) 272px}
+  .pane2{grid-template-columns:236px minmax(0,1fr)}
+  .pane1{grid-template-columns:minmax(0,1fr)}
+  .rail,.inspector{background:var(--surface);overflow:auto;min-height:0}
+  .rail{border-right:1px solid var(--border)}
+  .inspector{border-left:1px solid var(--border)}
+  .center{display:flex;flex-direction:column;min-height:0;min-width:0}
+  .phead{display:flex;align-items:center;gap:8px;padding:7px 12px;border-bottom:1px solid var(--border);background:var(--surface);flex:none}
+  .phead h2{margin:0;font-size:12px;font-weight:650;letter-spacing:.02em}
+  .phead .sub{color:var(--muted);font-size:11px;font-family:var(--font-mono)}
+  .plabel{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);padding:9px 12px 5px}
+
+  /* ---- queue rows ---- */
+  .row{display:block;width:100%;text-align:left;border:0;border-bottom:1px solid var(--border);background:transparent;padding:7px 12px;cursor:pointer}
+  .row:hover{background:var(--bg)}
+  .row[aria-current=true]{background:var(--primary-soft);box-shadow:inset 2px 0 0 var(--primary)}
+  .row .t{display:flex;justify-content:space-between;gap:8px;align-items:baseline}
+  .row .title{font-weight:600;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .row .time{color:var(--muted);font-size:10px;font-family:var(--font-mono);flex:none}
+  .row .meta{color:var(--muted);font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:1px}
+
+  /* ---- chips ---- */
+  .chip{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:650;letter-spacing:.02em;padding:1px 6px;border-radius:2px;border:1px solid var(--border);background:var(--bg);color:var(--muted);white-space:nowrap}
+  .chip.bot{border-color:#c3cdf3;background:var(--primary-soft);color:var(--primary)}
+  .chip.ok{border-color:#b7e0cd;background:#e8f6ef;color:var(--accent-ok)}
+  .chip.pend{border-color:#f0d9b0;background:#fdf3e3;color:var(--accent-warn)}
+  .chip.esc{border-color:#f2c8c3;background:#fdeceb;color:var(--accent-danger)}
+  .dot{width:5px;height:5px;border-radius:50%;background:currentColor}
+
+  /* ---- transcript ---- */
+  .scroll{flex:1;overflow:auto;min-height:0;padding:12px 16px}
+  .msg{display:grid;grid-template-columns:64px minmax(0,1fr);gap:12px;padding:8px 0;border-bottom:1px solid var(--border)}
+  .msg:last-child{border-bottom:0}
+  .msg .side{text-align:right;color:var(--muted);font-size:10px;font-family:var(--font-mono);padding-top:2px}
+  .msg .side b{display:block;font-family:var(--font);font-size:11px;color:var(--fg);font-weight:650}
+  .msg .body{max-width:76ch}
+  .msg p{margin:0 0 6px}
+  .msg p:last-child{margin-bottom:0}
+  .msg .hdr{display:flex;gap:6px;align-items:center;margin-bottom:4px;flex-wrap:wrap}
+  .cite{font-family:var(--font-mono);font-size:10px;color:var(--primary);background:var(--primary-soft);border-radius:2px;padding:0 3px;cursor:pointer}
+  .callout{border:1px solid var(--border);border-left:2px solid var(--accent-warn);background:#fffaf2;border-radius:var(--radius);padding:7px 9px;margin:6px 0 0}
+
+  /* ---- composer ---- */
+  .composer{flex:none;border-top:1px solid var(--border);background:var(--surface);padding:8px 16px 10px}
+  .composer textarea{width:100%;min-height:52px;resize:none;border:1px solid var(--border);border-radius:var(--radius);padding:7px 9px;background:var(--bg)}
+  .composer textarea:focus{outline:2px solid var(--primary);outline-offset:-1px;background:var(--surface)}
+  .cbar{display:flex;align-items:center;gap:8px;margin-top:7px}
+  .cbar .hint{color:var(--muted);font-size:11px;margin-right:auto}
+
+  /* ---- buttons ---- */
+  .btn{border:1px solid var(--border);background:var(--surface);color:var(--fg);border-radius:var(--radius);padding:4px 10px;font-size:12px;font-weight:600;cursor:pointer;box-shadow:var(--shadow)}
+  .btn:hover{background:var(--bg)}
+  .btn.primary{background:var(--primary);border-color:var(--primary);color:var(--on-primary)}
+  .btn.primary:hover{filter:brightness(1.07)}
+  .btn.danger{color:var(--accent-danger);border-color:#f0cbc7}
+  .btn.sm{padding:2px 7px;font-size:11px}
+
+  /* ---- inspector ---- */
+  .sec{padding:9px 12px;border-bottom:1px solid var(--border)}
+  .sec h3{margin:0 0 6px;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+  .kv{display:grid;grid-template-columns:78px 1fr;gap:3px 8px;font-size:11px}
+  .kv dt{color:var(--muted)}
+  .kv dd{margin:0;font-weight:550}
+  .src{display:block;width:100%;text-align:left;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);padding:6px 8px;margin-bottom:5px;cursor:pointer}
+  .src:hover{border-color:var(--primary)}
+  .src .n{display:flex;justify-content:space-between;gap:6px;font-size:11px;font-weight:600}
+  .src .p{color:var(--muted);font-size:10px;font-family:var(--font-mono);margin-top:1px}
+  .meter{height:3px;background:var(--border);border-radius:2px;margin-top:5px;overflow:hidden}
+  .meter i{display:block;height:100%;background:var(--primary)}
+
+  /* ---- draft editor ---- */
+  .draftwrap{padding:14px 16px;overflow:auto;min-height:0;flex:1}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow)}
+  .card > .ch{display:flex;align-items:center;gap:8px;padding:7px 11px;border-bottom:1px solid var(--border)}
+  .card > .ch b{font-size:12px}
+  .card > .cb{padding:11px}
+  .editor{border:1px solid var(--border);border-radius:var(--radius);padding:10px 12px;background:var(--bg);min-height:190px;font-size:13px;line-height:1.55;max-width:78ch;outline:0}
+  .editor:focus{background:var(--surface);outline:2px solid var(--primary);outline-offset:-1px}
+  .editor p{margin:0 0 9px}
+  .editor .sig{color:var(--muted);font-size:11.5px;border-top:1px solid var(--border);padding-top:7px;margin-top:11px}
+  .actbar{display:flex;align-items:center;gap:8px;padding:9px 11px;border-top:1px solid var(--border);background:var(--bg);border-radius:0 0 var(--radius-lg) var(--radius-lg)}
+  .actbar .note{color:var(--muted);font-size:11px;margin-right:auto}
+
+  /* ---- history table ---- */
+  .toolbar{display:flex;gap:8px;align-items:center;padding:8px 14px;border-bottom:1px solid var(--border);background:var(--surface);flex:none;flex-wrap:wrap}
+  .search{flex:1;min-width:200px;position:relative}
+  .search input{width:100%;border:1px solid var(--border);border-radius:var(--radius);padding:5px 9px 5px 26px;background:var(--bg)}
+  .search input:focus{outline:2px solid var(--primary);outline-offset:-1px;background:var(--surface)}
+  .search svg{position:absolute;left:7px;top:6px;color:var(--muted)}
+  .filters{display:flex;gap:4px}
+  .filters button{border:1px solid var(--border);background:var(--surface);border-radius:var(--radius);padding:4px 9px;font-size:11px;font-weight:600;color:var(--muted);cursor:pointer}
+  .filters button[aria-pressed=true]{background:var(--primary-soft);border-color:#c3cdf3;color:var(--primary)}
+  table{width:100%;border-collapse:collapse;font-size:12px}
+  thead th{position:sticky;top:0;background:var(--surface);text-align:left;font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);font-weight:700;padding:6px 14px;border-bottom:1px solid var(--border);z-index:1}
+  tbody td{padding:6px 14px;border-bottom:1px solid var(--border);vertical-align:top}
+  tbody tr{cursor:pointer}
+  tbody tr:hover{background:var(--primary-soft)}
+  td.q{font-weight:600;max-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  td.mono{font-family:var(--font-mono);font-size:11px;color:var(--muted);white-space:nowrap}
+  .hits{color:var(--muted);font-weight:400;font-size:11px;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  mark{background:#fff2b8;color:inherit;padding:0 1px;border-radius:2px}
+
+  /* ---- detail ---- */
+  .detailhead{padding:11px 16px;border-bottom:1px solid var(--border);background:var(--surface);flex:none}
+  .detailhead h1{margin:0 0 4px;font-size:15px;font-weight:650;letter-spacing:-.01em}
+  .crumbs{display:flex;gap:6px;align-items:center;color:var(--muted);font-size:11px;margin-bottom:5px}
+  .crumbs a{color:var(--primary);text-decoration:none;cursor:pointer}
+  .crumbs a:hover{text-decoration:underline}
+  .reuse{position:sticky;bottom:0;background:var(--surface);border-top:1px solid var(--border);padding:8px 16px;display:flex;gap:8px;align-items:center}
+  .reuse .note{color:var(--muted);font-size:11px;margin-right:auto}
+  .flash{position:fixed;left:50%;transform:translateX(-50%);bottom:18px;background:var(--fg);color:#fff;padding:7px 14px;border-radius:var(--radius);font-size:12px;font-weight:550;opacity:0;pointer-events:none;transition:opacity .18s;z-index:9}
+  .flash.on{opacity:1}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header class="topbar">
+    <div class="brand"><span class="mark">SC</span> Support Copilot</div>
+    <nav class="tabs" role="tablist" aria-label="Screens">
+      <button role="tab" aria-selected="true" data-go="chat">Chat</button>
+      <button role="tab" aria-selected="false" data-go="draft-review">Draft review</button>
+      <button role="tab" aria-selected="false" data-go="history">History</button>
+      <button role="tab" aria-selected="false" data-go="conversation-detail">Conversation</button>
+    </nav>
+    <div class="top-right">
+      <span>Queue <b>3</b></span><span class="kbd">⌘K</span>
+      <span class="who"><span class="avatar">DA</span> D. Alvarez</span>
+    </div>
+  </header>
+
+  <main>
+
+    <!-- ============ CHAT ============ -->
+    <section class="screen active pane3" id="chat">
+      <aside class="rail">
+        <div class="plabel">Open threads</div>
+        <button class="row" aria-current="true">
+          <div class="t"><span class="title">Atlas exporter — token expired</span><span class="time">2m</span></div>
+          <div class="meta">TCK-4471 · Northwind Ltd</div>
+        </button>
+        <button class="row">
+          <div class="t"><span class="title">Seat count vs. billing mismatch</span><span class="time">18m</span></div>
+          <div class="meta">TCK-4468 · Kestrel Group</div>
+        </button>
+        <button class="row">
+          <div class="t"><span class="title">SSO metadata refresh cadence</span><span class="time">1h</span></div>
+          <div class="meta">TCK-4460 · Halden AB</div>
+        </button>
+        <div class="plabel">Awaiting my approval</div>
+        <button class="row">
+          <div class="t"><span class="title">Webhook retry backoff</span><span class="time">4m</span></div>
+          <div class="meta"><span class="chip pend"><span class="dot"></span>Draft pending</span></div>
+        </button>
+      </aside>
+
+      <div class="center">
+        <div class="phead">
+          <h2>Atlas exporter — token expired</h2>
+          <span class="sub">TCK-4471</span>
+          <span class="chip bot">Automated assistant</span>
+        </div>
+
+        <div class="scroll">
+          <article class="msg">
+            <div class="side"><b>You</b>09:41</div>
+            <div class="body"><p>Customer says their scheduled Atlas export fails every night with <code>token_expired</code>, but manual exports work fine. What do I tell them?</p></div>
+          </article>
+
+          <article class="msg">
+            <div class="side"><b>Copilot</b>09:41</div>
+            <div class="body">
+              <div class="hdr"><span class="chip bot"><span class="dot"></span>Automated — not a human agent</span><span class="chip">3 sources</span></div>
+              <p>Scheduled exports authenticate with a <b>service token</b>, which is separate from the interactive session token used for manual exports. Service tokens expire after 90 days and do not auto-renew. <span class="cite">[1]</span></p>
+              <p>Have the customer rotate the token in <b>Settings → Integrations → Atlas → Rotate service token</b>, then re-save the schedule so the new token is bound to it. Re-saving is required — rotation alone leaves the old token on the schedule. <span class="cite">[2]</span> <span class="cite">[3]</span></p>
+              <p>If the failure continues after rotation, the schedule was likely created by a deactivated user; ownership must be reassigned.</p>
+            </div>
+          </article>
+
+          <article class="msg">
+            <div class="side"><b>You</b>09:43</div>
+            <div class="body"><p>Does that also apply to the on-prem connector build?</p></div>
+          </article>
+
+          <article class="msg">
+            <div class="side"><b>Copilot</b>09:43</div>
+            <div class="body">
+              <div class="hdr"><span class="chip bot"><span class="dot"></span>Automated</span><span class="chip esc">Escalated — no source</span></div>
+              <p><b>I don't know.</b> The product knowledge I can search has no material covering the on-prem connector's token lifecycle, and I won't guess on a customer-facing answer.</p>
+              <div class="callout">Routed to you for a human answer. Add a source document or answer directly — the draft stays unsent until you approve it.</div>
+            </div>
+          </article>
+        </div>
+
+        <div class="composer">
+          <textarea placeholder="Ask the assistant, or write the answer yourself…">Draft a reply the customer can act on tonight.</textarea>
+          <div class="cbar">
+            <span class="hint">Every question is answered by the assistant first — nothing is sent until you approve it.</span>
+            <button class="btn sm">Attach ticket</button>
+            <button class="btn primary" data-go="draft-review">Generate draft ⏎</button>
+          </div>
+        </div>
+      </div>
+
+      <aside class="inspector">
+        <div class="sec">
+          <h3>Thread</h3>
+          <dl class="kv">
+            <dt>Ticket</dt><dd>TCK-4471</dd>
+            <dt>Account</dt><dd>Northwind Ltd</dd>
+            <dt>Opened</dt><dd>Today 09:39</dd>
+            <dt>Status</dt><dd><span class="chip pend"><span class="dot"></span>Draft pending</span></dd>
+          </dl>
+        </div>
+        <div class="sec">
+          <h3>Sources used</h3>
+          <button class="src"><span class="n">[1] Atlas service tokens<span>92%</span></span><span class="p">kb/atlas/service-tokens.md · §3</span><span class="meter"><i style="width:92%"></i></span></button>
+          <button class="src"><span class="n">[2] Rotating credentials<span>81%</span></span><span class="p">kb/security/rotation.md · §1</span><span class="meter"><i style="width:81%"></i></span></button>
+          <button class="src"><span class="n">[3] Scheduled export FAQ<span>74%</span></span><span class="p">kb/atlas/schedules-faq.md</span><span class="meter"><i style="width:74%"></i></span></button>
+        </div>
+        <div class="sec">
+          <h3>Similar answered threads</h3>
+          <button class="row" style="border:0;padding:5px 0" data-go="conversation-detail">
+            <div class="t"><span class="title">Token expired on nightly sync</span><span class="time">Mar 4</span></div>
+            <div class="meta"><span class="chip ok"><span class="dot"></span>Approved</span> reused 6×</div>
+          </button>
+        </div>
+      </aside>
+    </section>
+
+    <!-- ============ DRAFT REVIEW ============ -->
+    <section class="screen pane3" id="draft-review">
+      <aside class="rail">
+        <div class="plabel">Approval queue</div>
+        <button class="row" aria-current="true">
+          <div class="t"><span class="title">Atlas exporter — token expired</span><span class="time">now</span></div>
+          <div class="meta"><span class="chip pend"><span class="dot"></span>Awaiting you</span></div>
+        </button>
+        <button class="row">
+          <div class="t"><span class="title">Webhook retry backoff</span><span class="time">4m</span></div>
+          <div class="meta"><span class="chip pend"><span class="dot"></span>Awaiting you</span></div>
+        </button>
+        <button class="row">
+          <div class="t"><span class="title">Region migration window</span><span class="time">22m</span></div>
+          <div class="meta"><span class="chip esc"><span class="dot"></span>Assistant unsure</span></div>
+        </button>
+        <div class="plabel">Recently approved</div>
+        <button class="row" data-go="conversation-detail">
+          <div class="t"><span class="title">Seat count vs. billing</span><span class="time">09:12</span></div>
+          <div class="meta"><span class="chip ok"><span class="dot"></span>Approved · you</span></div>
+        </button>
+      </aside>
+
+      <div class="center">
+        <div class="phead">
+          <h2>Review draft before it leaves the system</h2>
+          <span class="sub">TCK-4471</span>
+          <span class="chip pend"><span class="dot"></span>Unapproved draft</span>
+        </div>
+
+        <div class="draftwrap">
+          <div class="card">
+            <div class="ch">
+              <b>Assistant draft</b>
+              <span class="chip bot"><span class="dot"></span>Machine-generated</span>
+              <span class="chip">v2 · edited by you</span>
+              <span style="margin-left:auto" class="chip">312 words</span>
+            </div>
+            <div class="cb">
+              <div class="editor" contenteditable="true" spellcheck="false">
+                <p>Hi Priya,</p>
+                <p>Thanks for the detail — the difference between your manual and scheduled exports is the credential each one uses. Manual exports run on your interactive session; scheduled exports run on a <b>service token</b>, which expires after 90 days and does not renew automatically. That expiry is what produces <code>token_expired</code> overnight.</p>
+                <p>To fix it tonight: open <b>Settings → Integrations → Atlas</b>, choose <b>Rotate service token</b>, then re-open the nightly schedule and save it once. The re-save is the step that binds the new token — rotating alone leaves the schedule pointing at the expired credential.</p>
+                <p>If the job still fails after that, the schedule owner's account may be deactivated; reply here and we'll reassign ownership for you.</p>
+                <p class="sig">This reply was drafted by Support Copilot, an automated assistant, and reviewed and approved by a human support analyst before sending.</p>
+              </div>
+            </div>
+            <div class="actbar">
+              <span class="note">Approving records your name and timestamp on the conversation record.</span>
+              <button class="btn danger">Reject &amp; rewrite</button>
+              <button class="btn">Save edits</button>
+              <button class="btn primary" data-approve>Approve &amp; send</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <aside class="inspector">
+        <div class="sec">
+          <h3>Approval state</h3>
+          <dl class="kv">
+            <dt>State</dt><dd><span class="chip pend"><span class="dot"></span>Pending</span></dd>
+            <dt>Approver</dt><dd>— not yet —</dd>
+            <dt>Approved at</dt><dd>—</dd>
+            <dt>Drafted</dt><dd>09:44:02</dd>
+          </dl>
+        </div>
+        <div class="sec">
+          <h3>Grounding — verify before approving</h3>
+          <button class="src"><span class="n">[1] Atlas service tokens<span>92%</span></span><span class="p">"Service tokens expire 90 days after issue…"</span><span class="meter"><i style="width:92%"></i></span></button>
+          <button class="src"><span class="n">[2] Rotating credentials<span>81%</span></span><span class="p">"Re-save each schedule after rotation."</span><span class="meter"><i style="width:81%"></i></span></button>
+          <button class="src"><span class="n">[3] Scheduled export FAQ<span>74%</span></span><span class="p">"Deactivated owners halt schedules."</span><span class="meter"><i style="width:74%"></i></span></button>
+        </div>
+        <div class="sec">
+          <h3>Checks</h3>
+          <dl class="kv">
+            <dt>Self-ID</dt><dd><span class="chip ok"><span class="dot"></span>Present</span></dd>
+            <dt>Unsourced</dt><dd><span class="chip ok"><span class="dot"></span>None</span></dd>
+            <dt>Ticket link</dt><dd><span class="chip ok"><span class="dot"></span>TCK-4471</span></dd>
+          </dl>
+        </div>
+      </aside>
+    </section>
+
+    <!-- ============ HISTORY ============ -->
+    <section class="screen pane2" id="history">
+      <aside class="rail">
+        <div class="plabel">Saved views</div>
+        <button class="row" aria-current="true"><div class="t"><span class="title">All conversations</span><span class="time">1,284</span></div></button>
+        <button class="row"><div class="t"><span class="title">Approved &amp; sent</span><span class="time">1,097</span></div></button>
+        <button class="row"><div class="t"><span class="title">Unapproved drafts</span><span class="time">143</span></div></button>
+        <button class="row"><div class="t"><span class="title">Assistant escalations</span><span class="time">44</span></div></button>
+        <button class="row"><div class="t"><span class="title">Mine this week</span><span class="time">61</span></div></button>
+        <div class="plabel">Access</div>
+        <div style="padding:0 12px 12px;color:var(--muted);font-size:11px">History is visible to signed-in support staff only.</div>
+      </aside>
+
+      <div class="center">
+        <div class="toolbar">
+          <div class="search">
+            <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="7" cy="7" r="4.5"/><path d="M10.5 10.5 14 14"/></svg>
+            <input value="token expired" aria-label="Search conversations">
+          </div>
+          <div class="filters">
+            <button aria-pressed="true">All</button>
+            <button aria-pressed="false">Approved</button>
+            <button aria-pressed="false">Draft</button>
+            <button aria-pressed="false">Escalated</button>
+          </div>
+          <span style="color:var(--muted);font-size:11px">31 of 1,284</span>
+        </div>
+        <div class="scroll" style="padding:0">
+          <table>
+            <thead><tr><th style="width:44%">Question</th><th style="width:14%">Account</th><th style="width:14%">Status</th><th style="width:14%">Analyst</th><th style="width:14%">Updated</th></tr></thead>
+            <tbody>
+              <tr data-go="conversation-detail">
+                <td class="q">Token expired on nightly sync<span class="hits">…scheduled exports use a service <mark>token</mark> that <mark>expired</mark> after 90 days…</span></td>
+                <td>Vantage Co</td><td><span class="chip ok"><span class="dot"></span>Approved</span></td><td>M. Osei</td><td class="mono">Mar 4</td>
+              </tr>
+              <tr data-go="conversation-detail">
+                <td class="q">Atlas exporter — token expired<span class="hits">…rotate the service <mark>token</mark>, then re-save the schedule…</span></td>
+                <td>Northwind Ltd</td><td><span class="chip pend"><span class="dot"></span>Draft</span></td><td>D. Alvarez</td><td class="mono">09:44</td>
+              </tr>
+              <tr data-go="conversation-detail">
+                <td class="q">Scheduled report stopped after user offboarding<span class="hits">…owner deactivated, <mark>token</mark> invalidated…</span></td>
+                <td>Halden AB</td><td><span class="chip ok"><span class="dot"></span>Approved</span></td><td>D. Alvarez</td><td class="mono">Feb 27</td>
+              </tr>
+              <tr data-go="conversation-detail">
+                <td class="q">API key rotation breaks webhook signature<span class="hits">…rotation invalidates the previous secret…</span></td>
+                <td>Kestrel Group</td><td><span class="chip ok"><span class="dot"></span>Approved</span></td><td>L. Fontaine</td><td class="mono">Feb 21</td>
+              </tr>
+              <tr data-go="conversation-detail">
+                <td class="q">On-prem connector token lifecycle<span class="hits">…assistant found no source; escalated to analyst…</span></td>
+                <td>Northwind Ltd</td><td><span class="chip esc"><span class="dot"></span>Escalated</span></td><td>—</td><td class="mono">Feb 19</td>
+              </tr>
+              <tr data-go="conversation-detail">
+                <td class="q">SSO metadata refresh cadence<span class="hits">…metadata re-fetched every 24h…</span></td>
+                <td>Halden AB</td><td><span class="chip ok"><span class="dot"></span>Approved</span></td><td>M. Osei</td><td class="mono">Feb 14</td>
+              </tr>
+              <tr data-go="conversation-detail">
+                <td class="q">Export CSV encoding mismatch<span class="hits">…UTF-8 BOM added for Excel compatibility…</span></td>
+                <td>Vantage Co</td><td><span class="chip ok"><span class="dot"></span>Approved</span></td><td>L. Fontaine</td><td class="mono">Feb 9</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ CONVERSATION DETAIL ============ -->
+    <section class="screen pane3" id="conversation-detail">
+      <aside class="rail">
+        <div class="plabel">Search results</div>
+        <button class="row" aria-current="true"><div class="t"><span class="title">Token expired on nightly sync</span><span class="time">Mar 4</span></div><div class="meta"><span class="chip ok"><span class="dot"></span>Approved</span></div></button>
+        <button class="row"><div class="t"><span class="title">Atlas exporter — token expired</span><span class="time">09:44</span></div><div class="meta"><span class="chip pend"><span class="dot"></span>Draft</span></div></button>
+        <button class="row"><div class="t"><span class="title">Scheduled report stopped…</span><span class="time">Feb 27</span></div><div class="meta"><span class="chip ok"><span class="dot"></span>Approved</span></div></button>
+      </aside>
+
+      <div class="center">
+        <div class="detailhead">
+          <div class="crumbs"><a data-go="history">History</a> › <span>token expired</span> › <span>CONV-00918</span></div>
+          <h1>Token expired on nightly sync</h1>
+          <div style="display:flex;gap:6px;flex-wrap:wrap">
+            <span class="chip ok"><span class="dot"></span>Approved &amp; sent</span>
+            <span class="chip">Vantage Co · TCK-3902</span>
+            <span class="chip">Reused 6×</span>
+          </div>
+        </div>
+
+        <div class="scroll">
+          <article class="msg">
+            <div class="side"><b>Analyst</b>Mar 4<br>11:02</div>
+            <div class="body"><p>Nightly sync fails with <code>token_expired</code> although the user can export by hand. Cause?</p></div>
+          </article>
+          <article class="msg">
+            <div class="side"><b>Copilot</b>Mar 4<br>11:02</div>
+            <div class="body">
+              <div class="hdr"><span class="chip bot"><span class="dot"></span>Automated</span><span class="chip">2 sources</span></div>
+              <p>Scheduled jobs use a service token with a 90-day lifetime; interactive exports use the session token. Rotate the service token, then re-save the schedule so the new credential is bound. <span class="cite">[1]</span> <span class="cite">[2]</span></p>
+            </div>
+          </article>
+          <article class="msg">
+            <div class="side"><b>M. Osei</b>Mar 4<br>11:07</div>
+            <div class="body">
+              <div class="hdr"><span class="chip ok"><span class="dot"></span>Approved this reply</span></div>
+              <p>Edited the closing line to name the exact settings path, then approved and sent to the customer.</p>
+            </div>
+          </article>
+          <article class="msg">
+            <div class="side"><b>Sent</b>Mar 4<br>11:07</div>
+            <div class="body">
+              <p style="color:var(--muted)">Delivered reply included the automated-assistant disclosure required on every machine-drafted answer.</p>
+            </div>
+          </article>
+        </div>
+
+        <div class="reuse">
+          <span class="note">Reusing copies the approved answer into your current draft, with its sources attached.</span>
+          <button class="btn">Copy text</button>
+          <button class="btn primary" data-reuse>Reuse in current draft →</button>
+        </div>
+      </div>
+
+      <aside class="inspector">
+        <div class="sec">
+          <h3>Record</h3>
+          <dl class="kv">
+            <dt>ID</dt><dd>CONV-00918</dd>
+            <dt>Messages</dt><dd>4 structured</dd>
+            <dt>Opened</dt><dd>Mar 4, 11:02</dd>
+            <dt>Closed</dt><dd>Mar 4, 11:07</dd>
+          </dl>
+        </div>
+        <div class="sec">
+          <h3>Approval</h3>
+          <dl class="kv">
+            <dt>State</dt><dd><span class="chip ok"><span class="dot"></span>Approved</span></dd>
+            <dt>Approver</dt><dd>M. Osei</dd>
+            <dt>At</dt><dd>Mar 4, 11:07:33</dd>
+            <dt>Edited</dt><dd>Yes — 1 revision</dd>
+          </dl>
+        </div>
+        <div class="sec">
+          <h3>Sources on record</h3>
+          <button class="src"><span class="n">[1] Atlas service tokens<span>§3</span></span><span class="p">kb/atlas/service-tokens.md</span></button>
+          <button class="src"><span class="n">[2] Rotating credentials<span>§1</span></span><span class="p">kb/security/rotation.md</span></button>
+        </div>
+      </aside>
+    </section>
+
+  </main>
+</div>
+
+<div class="flash" id="flash"></div>
+
+<script>
+  const flash = (t) => {
+    const el = document.getElementById('flash');
+    el.textContent = t; el.classList.add('on');
+    clearTimeout(el._t); el._t = setTimeout(() => el.classList.remove('on'), 1900);
+  };
+  const go = (id) => {
+    document.querySelectorAll('.screen').forEach(s => s.classList.toggle('active', s.id === id));
+    document.querySelectorAll('.tabs button').forEach(b => b.setAttribute('aria-selected', String(b.dataset.go === id)));
+    window.scrollTo(0, 0);
+  };
+  document.addEventListener('click', (e) => {
+    const nav = e.target.closest('[data-go]');
+    if (nav) { go(nav.dataset.go); return; }
+    if (e.target.closest('[data-approve]')) { flash('Approved by D. Alvarez · 09:47:11 — reply sent'); go('conversation-detail'); return; }
+    if (e.target.closest('[data-reuse]')) { flash('Answer + sources copied into your current draft'); go('draft-review'); return; }
+    const f = e.target.closest('.filters button');
+    if (f) { f.parentElement.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', 'false')); f.setAttribute('aria-pressed', 'true'); return; }
+    const row = e.target.closest('.rail .row');
+    if (row) { row.parentElement.querySelectorAll('.row').forEach(r => r.removeAttribute('aria-current')); row.setAttribute('aria-current', 'true'); }
+  });
+</script>
+</body>
+</html>

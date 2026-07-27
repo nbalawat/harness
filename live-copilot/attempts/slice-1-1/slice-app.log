@@ -1,0 +1,21 @@
+INFO:     Started server process [87114]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:49799 (Press CTRL+C to quit)
+INFO:     127.0.0.1:49801 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49802 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49801 - "POST /chat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49802 - "POST /chat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49801 - "POST /chat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49802 - "POST /chat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49801 - "POST /chat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49811 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49811 - "GET /tokens.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49812 - "GET /style.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49813 - "GET /app.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49813 - "GET /agent/mode HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49813 - "GET /favicon.ico HTTP/1.1" 404 Not Found
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [87114]

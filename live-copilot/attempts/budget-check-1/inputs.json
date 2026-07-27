@@ -1,0 +1,60 @@
+{
+  "architecture": {
+    "path": "/Users/nbalawat/development/harness/live-copilot/artifacts/architecture/architecture.json",
+    "data": {
+      "modules": [
+        "persistence-core",
+        "chat-shell",
+        "agent-runtime"
+      ],
+      "deploy_target": "local",
+      "module_coverage": [
+        {
+          "module": "agent-runtime",
+          "addresses": [
+            "REQ-001",
+            "REQ-005",
+            "REQ-012",
+            "REQ-013",
+            "REQ-016",
+            "REQ-018"
+          ]
+        },
+        {
+          "module": "persistence-core",
+          "addresses": [
+            "REQ-003",
+            "REQ-006",
+            "REQ-008",
+            "REQ-010",
+            "REQ-015",
+            "REQ-017"
+          ]
+        },
+        {
+          "module": "chat-shell",
+          "addresses": [
+            "REQ-002",
+            "REQ-004",
+            "REQ-007",
+            "REQ-009",
+            "REQ-011",
+            "REQ-014",
+            "REQ-019"
+          ]
+        }
+      ],
+      "build_budget_plan": {
+        "nodes": {
+          "slice-1": 1.6,
+          "slice-2": 1.4,
+          "slice-3": 1.4,
+          "slice-4": 1.2,
+          "slice-5": 1.3
+        },
+        "total_usd": 6.9
+      },
+      "composition_rationale": "All three certified modules are composed rather than generated. agent-runtime supplies respond() against the roster contract (grounded answering, automated self-identification, refuse-and-escalate); persistence-core supplies the table-registry store so conversations and messages persist as structured records with approval metadata; chat-shell supplies the analyst chat UI wired to POST /chat, extended in-slice with history, search and the draft approval control. Because the skeleton, data layer, agent host and UI arrive pre-certified, each of the five planned slices is an incremental feature build rather than a from-scratch layer, holding every slice well under its $3.00 node cap and the whole build plan at $6.90 against the $25.00 run envelope. Clarifications applied: embedded documents (no external KB connector to build), local accounts (no SSO integration), indefinite retention (no purge job), manual copy of approved replies (no email/ticketing integration) — each removes build scope and is why deploy_target stays 'local'."
+    }
+  }
+}

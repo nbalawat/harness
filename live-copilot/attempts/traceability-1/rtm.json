@@ -1,0 +1,673 @@
+{
+  "requirements_total": 19,
+  "covered_count": 19,
+  "uncovered": [],
+  "coverage": [
+    {
+      "id": "REQ-001",
+      "text": "The assistant must answer support analysts' product questions using the organization's own product knowledge.",
+      "category": "agent",
+      "confidence": "stated",
+      "addressed_by": [
+        {
+          "via": "module",
+          "item": "agent-runtime"
+        },
+        {
+          "via": "agent",
+          "item": "support_draft_agent"
+        }
+      ]
+    },
+    {
+      "id": "REQ-002",
+      "text": "The application must provide a chat interface in which a support analyst converses with the assistant.",
+      "category": "functional",
+      "confidence": "stated",
+      "addressed_by": [
+        {
+          "via": "module",
+          "item": "chat-shell"
+        },
+        {
+          "via": "table",
+          "item": "messages"
+        },
+        {
+          "via": "agent",
+          "item": "support_draft_agent"
+        },
+        {
+          "via": "design",
+          "item": "option-1"
+        },
+        {
+          "via": "design",
+          "item": "option-2"
+        },
+        {
+          "via": "design",
+          "item": "option-3"
+        },
+        {
+          "via": "design",
+          "item": "option-4"
+        }
+      ]
+    },
+    {
+      "id": "REQ-003",
+      "text": "The application must keep a reviewable history of every conversation held with the assistant.",
+      "category": "functional",
+      "confidence": "stated",
+      "addressed_by": [
+        {
+          "via": "module",
+          "item": "persistence-core"
+        },
+        {
+          "via": "table",
+          "item": "conversations"
+        },
+        {
+          "via": "table",
+          "item": "messages"
+        },
+        {
+          "via": "design",
+          "item": "option-1"
+        },
+        {
+          "via": "design",
+          "item": "option-2"
+        },
+        {
+          "via": "design",
+          "item": "option-3"
+        },
+        {
+          "via": "design",
+          "item": "option-4"
+        }
+      ]
+    },
+    {
+      "id": "REQ-004",
+      "text": "Analysts must be able to open and review past conversations so that good answers can be reused.",
+      "category": "ux",
+      "confidence": "stated",
+      "addressed_by": [
+        {
+          "via": "module",
+          "item": "chat-shell"
+        },
+        {
+          "via": "table",
+          "item": "conversations"
+        },
+        {
+          "via": "agent",
+          "item": "precedent_finder"
+        },
+        {
+          "via": "design",
+          "item": "option-1"
+        },
+        {
+          "via": "design",
+          "item": "option-2"
+        },
+        {
+          "via": "design",
+          "item": "option-3"
+        },
+        {
+          "via": "design",
+          "item": "option-4"
+        }
+      ]
+    },
+    {
+      "id": "REQ-005",
+      "text": "The assistant must identify itself clearly as automated so customers know the reply was machine-generated.",
+      "category": "agent",
+      "confidence": "stated",
+      "addressed_by": [
+        {
+          "via": "module",
+          "item": "agent-runtime"
+        },
+        {
+          "via": "agent",
+          "item": "support_draft_agent"
+        },
+        {
+          "via": "design",
+          "item": "option-1"
+        },
+        {
+          "via": "design",
+          "item": "option-2"
+        },
+        {
+          "via": "design",
+          "item": "option-3"
+        },
+        {
+          "via": "design",
+          "item": "option-4"
+        }
+      ]
+    },
+    {
+      "id": "REQ-006",
+      "text": "Conversation records must be stored durably so they can be retrieved for quality review.",
+      "category": "data",
+      "confidence": "stated",
+      "addressed_by": [
+        {
+          "via": "module",
+          "item": "persistence-core"
+        },
+        {
+          "via": "table",
+          "item": "conversations"
+        }
+      ]
+    },
+    {
+      "id": "REQ-007",
+      "text": "Each question must be routed to the assistant first, and the analyst must explicitly approve the assistant's draft reply before it is sent.",
+      "category": "functional",
+      "confidence": "stated",
+      "addressed_by": [
+        {
+          "via": "module",
+          "item": "chat-shell"
+        },
+        {
+          "via": "table",
+          "item": "drafts"
+        },
+        {
+          "via": "agent",
+          "item": "support_draft_agent"
+        },
+        {
+          "via": "agent",
+          "item": "precedent_finder"
+        },
+        {
+          "via": "design",
+          "item": "option-1"
+        },
+        {
+          "via": "design",
+          "item": "option-2"
+        },
+        {
+          "via": "design",
+          "item": "option-3"
+        },
+        {
+          "via": "design",
+          "item": "option-4"
+        }
+      ]
+    },
+    {
+      "id": "REQ-008",
+      "text": "Conversations and their individual messages (role, content, timestamp) must be persisted as structured records rather than opaque transcript blobs, so history can be listed, opened, and reviewed message by message.",
+      "category": "data",
+      "confidence": "inferred",
+      "addressed_by": [
+        {
+          "via": "module",
+          "item": "persistence-core"
+        },
+        {
+          "via": "table",
+          "item": "conversations"
+        },
+        {
+          "via": "table",
+          "item": "messages"
+        },
+        {
+          "via": "agent",
+          "item": "precedent_finder"
+        },
+        {
+          "via": "design",
+          "item": "option-1"
+        },
+        {
+          "via": "design",
+          "item": "option-2"
+        },
+        {
+          "via": "design",
+          "item": "option-3"
+        },
+        {
+          "via": "design",
+          "item": "option-4"
+        }
+      ]
+    },
+    {
+      "id": "REQ-009",
+      "text": "Analysts must be able to search and filter past conversations by keyword, since the current process is manual searching of old threads.",
+      "category": "ux",
+      "confidence": "inferred",
+      "addressed_by": [
+        {
+          "via": "module",
+          "item": "chat-shell"
+        },
+        {
+          "via": "table",
+          "item": "conversations"
+        },
+        {
+          "via": "agent",
+          "item": "precedent_finder"
+        },
+        {
+          "via": "design",
+          "item": "option-1"
+        },
+        {
+          "via": "design",
+          "item": "option-2"
+        },
+        {
+          "via": "design",
+          "item": "option-3"
+        },
+        {
+          "via": "design",
+          "item": "option-4"
+        }
+      ]
+    },
+    {
+      "id": "REQ-010",
+      "text": "Each draft reply must record its approval state plus the approving analyst and timestamp, so quality review can distinguish approved/sent replies from unapproved drafts.",
+      "category": "data",
+      "confidence": "inferred",
+      "addressed_by": [
+        {
+          "via": "module",
+          "item": "persistence-core"
+        },
+        {
+          "via": "table",
+          "item": "drafts"
+        },
+        {
+          "via": "agent",
+          "item": "precedent_finder"
+        },
+        {
+          "via": "design",
+          "item": "option-1"
+        },
+        {
+          "via": "design",
+          "item": "option-2"
+        },
+        {
+          "via": "design",
+          "item": "option-3"
+        },
+        {
+          "via": "design",
+          "item": "option-4"
+        }
+      ]
+    },
+    {
+      "id": "REQ-011",
+      "text": "The approval step must be part of the analyst-facing UI: the analyst can view, edit, approve, or reject the assistant's draft before it leaves the system.",
+      "category": "ux",
+      "confidence": "inferred",
+      "addressed_by": [
+        {
+          "via": "module",
+          "item": "chat-shell"
+        },
+        {
+          "via": "table",
+          "item": "drafts"
+        },
+        {
+          "via": "design",
+          "item": "option-1"
+        },
+        {
+          "via": "design",
+          "item": "option-2"
+        },
+        {
+          "via": "design",
+          "item": "option-3"
+        },
+        {
+          "via": "design",
+          "item": "option-4"
+        }
+      ]
+    },
+    {
+      "id": "REQ-012",
+      "text": "The assistant must ground its answers in retrieved product-knowledge content and surface which sources it used, so the analyst can verify the draft before approving it.",
+      "category": "agent",
+      "confidence": "inferred",
+      "addressed_by": [
+        {
+          "via": "module",
+          "item": "agent-runtime"
+        },
+        {
+          "via": "table",
+          "item": "drafts"
+        },
+        {
+          "via": "agent",
+          "item": "support_draft_agent"
+        },
+        {
+          "via": "design",
+          "item": "option-1"
+        },
+        {
+          "via": "design",
+          "item": "option-2"
+        },
+        {
+          "via": "design",
+          "item": "option-3"
+        },
+        {
+          "via": "design",
+          "item": "option-4"
+        }
+      ]
+    },
+    {
+      "id": "REQ-013",
+      "text": "The assistant must have defined behavior for questions it cannot answer from available knowledge: state that it does not know and escalate to the analyst rather than guess.",
+      "category": "agent",
+      "confidence": "inferred",
+      "addressed_by": [
+        {
+          "via": "module",
+          "item": "agent-runtime"
+        },
+        {
+          "via": "agent",
+          "item": "support_draft_agent"
+        },
+        {
+          "via": "design",
+          "item": "option-1"
+        },
+        {
+          "via": "design",
+          "item": "option-2"
+        },
+        {
+          "via": "design",
+          "item": "option-3"
+        },
+        {
+          "via": "design",
+          "item": "option-4"
+        }
+      ]
+    },
+    {
+      "id": "REQ-014",
+      "text": "Reusing a past answer must be a supported action: an analyst reviewing a prior conversation can carry that answer into the current draft.",
+      "category": "functional",
+      "confidence": "inferred",
+      "addressed_by": [
+        {
+          "via": "module",
+          "item": "chat-shell"
+        },
+        {
+          "via": "table",
+          "item": "drafts"
+        },
+        {
+          "via": "agent",
+          "item": "precedent_finder"
+        },
+        {
+          "via": "design",
+          "item": "option-1"
+        },
+        {
+          "via": "design",
+          "item": "option-2"
+        },
+        {
+          "via": "design",
+          "item": "option-3"
+        },
+        {
+          "via": "design",
+          "item": "option-4"
+        }
+      ]
+    },
+    {
+      "id": "REQ-015",
+      "text": "Stored conversation history must be readable only by authenticated support staff and must not be exposed publicly or to unauthenticated callers.",
+      "category": "security",
+      "confidence": "inferred",
+      "addressed_by": [
+        {
+          "via": "module",
+          "item": "persistence-core"
+        },
+        {
+          "via": "agent",
+          "item": "precedent_finder"
+        },
+        {
+          "via": "design",
+          "item": "option-1"
+        },
+        {
+          "via": "design",
+          "item": "option-2"
+        },
+        {
+          "via": "design",
+          "item": "option-3"
+        },
+        {
+          "via": "design",
+          "item": "option-4"
+        }
+      ]
+    },
+    {
+      "id": "REQ-016",
+      "text": "Model and knowledge-source credentials must be supplied through environment configuration and must never be committed to the repository or written into conversation records.",
+      "category": "security",
+      "confidence": "inferred",
+      "addressed_by": [
+        {
+          "via": "module",
+          "item": "agent-runtime"
+        },
+        {
+          "via": "agent",
+          "item": "support_draft_agent"
+        }
+      ]
+    },
+    {
+      "id": "REQ-017",
+      "text": "The application must run locally via a single container-compose command; no cloud infrastructure is required for v1 (declared deploy target is local).",
+      "category": "ops",
+      "confidence": "inferred",
+      "addressed_by": [
+        {
+          "via": "module",
+          "item": "persistence-core"
+        }
+      ]
+    },
+    {
+      "id": "REQ-018",
+      "text": "The assistant must be covered by automated evaluations — at minimum self-identification as automated and refusal to answer beyond available knowledge — so behavior can be checked before release.",
+      "category": "ops",
+      "confidence": "inferred",
+      "addressed_by": [
+        {
+          "via": "module",
+          "item": "agent-runtime"
+        },
+        {
+          "via": "agent",
+          "item": "support_draft_agent"
+        }
+      ]
+    },
+    {
+      "id": "REQ-019",
+      "text": "The application is scoped as an internal single-team tool for support analysts at low concurrency; there is no customer-facing self-service portal in v1.",
+      "category": "functional",
+      "confidence": "inferred",
+      "addressed_by": [
+        {
+          "via": "module",
+          "item": "chat-shell"
+        },
+        {
+          "via": "agent",
+          "item": "support_draft_agent"
+        },
+        {
+          "via": "design",
+          "item": "option-1"
+        },
+        {
+          "via": "design",
+          "item": "option-2"
+        },
+        {
+          "via": "design",
+          "item": "option-3"
+        },
+        {
+          "via": "design",
+          "item": "option-4"
+        }
+      ]
+    }
+  ],
+  "assumptions": [
+    {
+      "question": "Where does the application source product knowledge: embedded documents loaded at deployment time, or queries to an existing external knowledge base API?",
+      "answer": "embedded-documents",
+      "source": "default",
+      "why": "This determines the data architecture: embedded requires document parsing + vector storage in the app layer; external KB requires API client, auth, and network calls. Affects build scope, deployment complexity, and knowledge freshness strategy."
+    },
+    {
+      "question": "How should analysts authenticate: local username/password accounts managed by the application, or single sign-on (SSO) via company identity provider?",
+      "answer": "local-accounts",
+      "source": "default",
+      "why": "Determines authentication layer design: local requires user/password schema + session management; SSO requires OIDC/SAML integration. Impacts security posture, deployment model, and operational burden."
+    },
+    {
+      "question": "How long should conversation records be retained before automatic deletion: indefinitely, 1 year, 90 days, or another interval?",
+      "answer": "indefinitely",
+      "source": "default",
+      "why": "Shapes data-tier retention policies and cleanup job requirements. Affects database schema design, query patterns for archival, and compliance reporting."
+    },
+    {
+      "question": "How is an approved reply delivered to the customer: via automated integration (email, ticketing system API, etc.), or manually by the analyst copying it into their existing tool?",
+      "answer": "manual-copy",
+      "source": "default",
+      "why": "Determines integration surface: manual requires no downstream APIs; automated requires outbound connectors, error handling, and delivery status tracking. Affects backend design and deployment risk."
+    },
+    {
+      "question": "Inferred requirement: Conversations and their individual messages (role, content, timestamp) must be persisted as structured records rather than opaque transcript blobs, so history can be listed, opened, and reviewed message by message.",
+      "answer": "assumed true",
+      "source": "inferred",
+      "why": "REQ-008"
+    },
+    {
+      "question": "Inferred requirement: Analysts must be able to search and filter past conversations by keyword, since the current process is manual searching of old threads.",
+      "answer": "assumed true",
+      "source": "inferred",
+      "why": "REQ-009"
+    },
+    {
+      "question": "Inferred requirement: Each draft reply must record its approval state plus the approving analyst and timestamp, so quality review can distinguish approved/sent replies from unapproved drafts.",
+      "answer": "assumed true",
+      "source": "inferred",
+      "why": "REQ-010"
+    },
+    {
+      "question": "Inferred requirement: The approval step must be part of the analyst-facing UI: the analyst can view, edit, approve, or reject the assistant's draft before it leaves the system.",
+      "answer": "assumed true",
+      "source": "inferred",
+      "why": "REQ-011"
+    },
+    {
+      "question": "Inferred requirement: The assistant must ground its answers in retrieved product-knowledge content and surface which sources it used, so the analyst can verify the draft before approving it.",
+      "answer": "assumed true",
+      "source": "inferred",
+      "why": "REQ-012"
+    },
+    {
+      "question": "Inferred requirement: The assistant must have defined behavior for questions it cannot answer from available knowledge: state that it does not know and escalate to the analyst rather than guess.",
+      "answer": "assumed true",
+      "source": "inferred",
+      "why": "REQ-013"
+    },
+    {
+      "question": "Inferred requirement: Reusing a past answer must be a supported action: an analyst reviewing a prior conversation can carry that answer into the current draft.",
+      "answer": "assumed true",
+      "source": "inferred",
+      "why": "REQ-014"
+    },
+    {
+      "question": "Inferred requirement: Stored conversation history must be readable only by authenticated support staff and must not be exposed publicly or to unauthenticated callers.",
+      "answer": "assumed true",
+      "source": "inferred",
+      "why": "REQ-015"
+    },
+    {
+      "question": "Inferred requirement: Model and knowledge-source credentials must be supplied through environment configuration and must never be committed to the repository or written into conversation records.",
+      "answer": "assumed true",
+      "source": "inferred",
+      "why": "REQ-016"
+    },
+    {
+      "question": "Inferred requirement: The application must run locally via a single container-compose command; no cloud infrastructure is required for v1 (declared deploy target is local).",
+      "answer": "assumed true",
+      "source": "inferred",
+      "why": "REQ-017"
+    },
+    {
+      "question": "Inferred requirement: The assistant must be covered by automated evaluations — at minimum self-identification as automated and refusal to answer beyond available knowledge — so behavior can be checked before release.",
+      "answer": "assumed true",
+      "source": "inferred",
+      "why": "REQ-018"
+    },
+    {
+      "question": "Inferred requirement: The application is scoped as an internal single-team tool for support analysts at low concurrency; there is no customer-facing self-service portal in v1.",
+      "answer": "assumed true",
+      "source": "inferred",
+      "why": "REQ-019"
+    }
+  ]
+}

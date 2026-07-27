@@ -1,0 +1,28 @@
+{
+  "questions": [
+    {
+      "id": "REQ-020",
+      "prompt": "Where does the application source product knowledge: embedded documents loaded at deployment time, or queries to an existing external knowledge base API?",
+      "default": "embedded-documents",
+      "why": "This determines the data architecture: embedded requires document parsing + vector storage in the app layer; external KB requires API client, auth, and network calls. Affects build scope, deployment complexity, and knowledge freshness strategy."
+    },
+    {
+      "id": "REQ-021",
+      "prompt": "How should analysts authenticate: local username/password accounts managed by the application, or single sign-on (SSO) via company identity provider?",
+      "default": "local-accounts",
+      "why": "Determines authentication layer design: local requires user/password schema + session management; SSO requires OIDC/SAML integration. Impacts security posture, deployment model, and operational burden."
+    },
+    {
+      "id": "REQ-022",
+      "prompt": "How long should conversation records be retained before automatic deletion: indefinitely, 1 year, 90 days, or another interval?",
+      "default": "indefinitely",
+      "why": "Shapes data-tier retention policies and cleanup job requirements. Affects database schema design, query patterns for archival, and compliance reporting."
+    },
+    {
+      "id": "REQ-023",
+      "prompt": "How is an approved reply delivered to the customer: via automated integration (email, ticketing system API, etc.), or manually by the analyst copying it into their existing tool?",
+      "default": "manual-copy",
+      "why": "Determines integration surface: manual requires no downstream APIs; automated requires outbound connectors, error handling, and delivery status tracking. Affects backend design and deployment risk."
+    }
+  ]
+}
