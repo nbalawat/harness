@@ -210,6 +210,16 @@ async function main(): Promise<void> {
       }
       break;
     }
+    case "setup": {
+      const { flags } = parseFlags(rest);
+      const { setup } = await import("./setup.js");
+      const { checks, ok } = await setup(flags["install-sdk"] === true);
+      console.log("harness preflight — a live build needs every required row green\n");
+      for (const c of checks) console.log(`  ${c.ok ? "OK " : "FAIL"}  ${c.name.padEnd(44)} ${c.detail}`);
+      console.log(ok ? "\nready to build with live agents" : "\nfix the FAIL rows above, then re-run: harness setup");
+      code = ok ? 0 : 1;
+      break;
+    }
     case "telemetry": {
       const { summarize } = await import("./telemetry.js");
       console.log(summarize());
@@ -286,7 +296,7 @@ async function main(): Promise<void> {
       return; // keep serving
     }
     default:
-      console.log("usage: harness <run|resume|revise|status|ui|certify|install|list|telemetry|self-update>");
+      console.log("usage: harness <run|resume|revise|status|ui|setup|certify|install|list|telemetry|self-update>");
       console.log("  harness run <project-type-dir> [--workspace dir] [--answers file] [--mock-agents]");
       console.log("  harness resume <workspace> [--answers file]");
       console.log('  harness revise <workspace> <nodeId> --feedback "what to change" [--resume]');
@@ -294,6 +304,7 @@ async function main(): Promise<void> {
       console.log("  harness certify <project-type-dir> [--update-golden]");
       console.log("  harness install <name>@<version> --registry <git-url>");
       console.log("  harness list");
+      console.log("  harness setup [--install-sdk]   # verify/provision the live-agent toolchain");
       code = command ? 1 : 0;
   }
   process.exit(code);

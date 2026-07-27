@@ -275,6 +275,40 @@ async function runGate(
 }
 
 /**
+ * The Claude Agent SDK is the harness's EXECUTION ENGINE — every certified
+ * agent node runs through it (mocks exist only so certification replay is
+ * deterministic). It isn't bundled into harness.cjs, so resolution is:
+ *   1. HARNESS_SDK_DIR       — explicit pin (firms, tests)
+ *   2. normal module lookup  — source checkouts / npm installs
+ *   3. $HARNESS_HOME/runtime — where `harness setup` provisions the engine
+ */
+export async function loadAgentSdk(): Promise<{ query: (args: unknown) => AsyncIterable<Record<string, unknown>> }> {
+  const { createRequire } = await import("node:module");
+  const { pathToFileURL } = await import("node:url");
+  const sdkModuleName = "@anthropic-ai/claude-agent-sdk";
+  const candidates: (() => Promise<unknown>)[] = [];
+  if (process.env.HARNESS_SDK_DIR) {
+    const base = path.join(process.env.HARNESS_SDK_DIR, "noop.js");
+    candidates.push(async () => import(pathToFileURL(createRequire(base).resolve(sdkModuleName)).href));
+  }
+  candidates.push(async () => import(sdkModuleName));
+  const home = process.env.HARNESS_HOME ?? path.join((await import("node:os")).homedir(), ".harness");
+  const runtime = path.join(home, "runtime", "node_modules", "noop.js");
+  candidates.push(async () => import(pathToFileURL(createRequire(runtime).resolve(sdkModuleName)).href));
+
+  for (const load of candidates) {
+    try {
+      return (await load()) as { query: (args: unknown) => AsyncIterable<Record<string, unknown>> };
+    } catch {
+      /* try the next resolution root */
+    }
+  }
+  throw new Error(
+    "Claude Agent SDK (the harness execution engine) is not available. Run: harness setup --install-sdk  (or npm i @anthropic-ai/claude-agent-sdk in a source checkout)",
+  );
+}
+
+/**
  * Escalate-on-retry: attempt 1 runs the node's pinned (cheaper) model; retries
  * run escalateModel when declared — the failure feedback plus a stronger model
  * is the cost-optimal recovery path.
@@ -350,19 +384,7 @@ async function runAgent(
       : "",
   ].join("\n");
 
-  // Dynamic non-literal specifier: the SDK is an optional runtime dependency
-  // (mock mode and certification replay never need it).
-  const sdkModuleName = "@anthropic-ai/claude-agent-sdk";
-  let query: (args: unknown) => AsyncIterable<Record<string, unknown>>;
-  try {
-    ({ query } = (await import(sdkModuleName)) as {
-      query: (args: unknown) => AsyncIterable<Record<string, unknown>>;
-    });
-  } catch {
-    throw new Error(
-      "Claude Agent SDK not installed. Run: npm i @anthropic-ai/claude-agent-sdk (or use --mock-agents)",
-    );
-  }
+  const { query } = await loadAgentSdk();
 
   const model = modelForAttempt(node, attempt);
   const usage = {
