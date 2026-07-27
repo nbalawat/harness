@@ -73,7 +73,20 @@ function report(ctx: RunContext, status: string, extra?: string): void {
 
 async function cmdRun(args: string[]): Promise<number> {
   const { positional, flags } = parseFlags(args);
-  const projectTypeDir = path.resolve(positional[0] ?? ".");
+  // `harness run name@version` resolves from the local store of certified
+  // installs; a path runs directly (authoring mode).
+  let projectTypeDir: string;
+  if (/^[a-z0-9-]+@[0-9][\w.-]*$/.test(positional[0] ?? "")) {
+    const { installedPackageDir } = await import("./registry.js");
+    const resolved = installedPackageDir(positional[0]);
+    if (!resolved) {
+      console.error(`'${positional[0]}' is not installed — run: harness install ${positional[0]} --registry <git-url>`);
+      return 1;
+    }
+    projectTypeDir = resolved;
+  } else {
+    projectTypeDir = path.resolve(positional[0] ?? ".");
+  }
   const workspace = path.resolve((flags.workspace as string) ?? ".harness-run");
   const config: RunConfig = {
     projectTypeDir,
@@ -166,6 +179,34 @@ async function main(): Promise<void> {
     case "revise":
       code = await cmdRevise(rest);
       break;
+    case "install": {
+      const { positional, flags } = parseFlags(rest);
+      const registry = flags.registry as string | undefined;
+      if (!positional[0] || !registry) {
+        console.error("usage: harness install <name>@<version> --registry <git-url>");
+        code = 1;
+        break;
+      }
+      const { install } = await import("./registry.js");
+      try {
+        const result = install(positional[0], registry);
+        console.log(`installed ${result.tag} (certified ${result.digest.slice(0, 12)})`);
+        console.log(`run it: harness run ${result.tag} --workspace my-app`);
+      } catch (e) {
+        console.error(String(e instanceof Error ? e.message : e));
+        code = 1;
+      }
+      break;
+    }
+    case "list": {
+      const { listInstalled } = await import("./registry.js");
+      const installed = listInstalled();
+      if (installed.length === 0) console.log("no certified project types installed");
+      for (const p of installed) {
+        console.log(`  ${p.tag.padEnd(28)} ${p.packageDigest.slice(0, 12)}  installed ${p.installedAt.slice(0, 10)}  from ${p.registry}`);
+      }
+      break;
+    }
     case "certify": {
       const { positional, flags } = parseFlags(rest);
       const { certify } = await import("./certify.js");
@@ -199,11 +240,14 @@ async function main(): Promise<void> {
       return; // keep serving
     }
     default:
-      console.log("usage: harness <run|resume|revise|status|ui>");
+      console.log("usage: harness <run|resume|revise|status|ui|certify|install|list>");
       console.log("  harness run <project-type-dir> [--workspace dir] [--answers file] [--mock-agents]");
       console.log("  harness resume <workspace> [--answers file]");
       console.log('  harness revise <workspace> <nodeId> --feedback "what to change" [--resume]');
       console.log("  harness status <workspace>");
+      console.log("  harness certify <project-type-dir> [--update-golden]");
+      console.log("  harness install <name>@<version> --registry <git-url>");
+      console.log("  harness list");
       code = command ? 1 : 0;
   }
   process.exit(code);

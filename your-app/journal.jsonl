@@ -1,0 +1,4 @@
+{"type":"run.created","projectType":"agentic-app","projectTypeVersion":"0.4.0","ts":"2026-07-27T06:22:08.220Z"}
+{"type":"node.running","nodeId":"intake","attempt":1,"ts":"2026-07-27T06:22:08.224Z"}
+{"type":"node.parked","nodeId":"intake","attempt":1,"ts":"2026-07-27T06:22:08.225Z"}
+{"type":"run.parked","nodeId":"intake","ts":"2026-07-27T06:22:08.225Z"}

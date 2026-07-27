@@ -158,6 +158,9 @@ Artifacts are immutable, but decisions are not final: feedback re-enters the pip
 
 ## 9. Certification pipeline
 
+**Shipped (2026-07-27): `harness certify <dir> [--update-golden]`** — static completeness (mocks/prompts/schemas/referenced scripts), golden scenario replays (every fixtures/answers*.json) with per-file artifact digests (workspace-normalized, renderer output excluded), cost-envelope enforcement, and a revision drill (declared in dag `certification.revision_drill`) proving feedback→cascade→memoization. Green cert writes `certification.json` (package digest = release record). First use caught real nondeterminism (pytest timing in an artifact).
+
+
 1. Fixtures: canned problem statements + **recorded human answers** (gate replay)
 2. Full unattended DAG runs in CI (replayed gates, real or recorded agents)
 3. Per-node contract tests with fixture inputs
@@ -166,6 +169,9 @@ Artifacts are immutable, but decisions are not final: feedback re-enters the pip
 6. Green → sign + tag → published. Release = git push a signed tag.
 
 ## 10. Packaging & distribution
+
+**Shipped (2026-07-27): registry v1** — `harness install <name>@<version> --registry <git-url>` clones the signed tag, recomputes the package digest against certification.json (tamper-proof; uncertified refused), stores the full tree (project type + certified modules) under `~/.harness/store` (HARNESS_HOME override), `harness list` shows installs, `harness run name@version` resolves from the store. Remaining: single-file bundle + self-update + pilot telemetry.
+
 
 - **One self-contained binary** per platform (bundled Node runtime; contains runner + CLI + dashboard assets + Agent SDK runtime). Internal registry + firm software catalog. `harness login` (SSO → Claude credentials), `harness doctor` (Docker, git checks).
 - **Two update planes**: platform (binary, weekly, careful) vs content (project types/modules, as fast as certification allows, pulled at `harness new` — publishing requires shipping nothing).
