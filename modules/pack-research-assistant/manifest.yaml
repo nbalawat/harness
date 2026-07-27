@@ -1,0 +1,18 @@
+name: pack-research-assistant
+version: 0.1.0
+description: "Corpus Q&A with citations and reading-list curation — the knowledge-worker staple."
+kind: pack
+provides:
+  - "bundle: 9 certified modules pre-selected for this app shape"
+requires: []
+modules:
+  - persistence-core
+  - agent-runtime
+  - chat-shell
+  - rag-core
+  - corpus-refresh
+  - citation-tracker
+  - conversation-memory
+  - search-index
+  - export-csv
+certify:

@@ -1,0 +1,11 @@
+name: pdf-render
+version: 0.1.0
+description: "Generate the PDF artifact (reports, letters, packets) — a valid, dependency-free text PDF writer."
+provides:
+  - "python: pdf.render(title, lines) -> bytes of a valid single-page PDF"
+requires:
+  - "nothing beyond the base app"
+compose:
+  overlay: compose/
+certify:
+  tests: test/

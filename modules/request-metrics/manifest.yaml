@@ -1,0 +1,11 @@
+name: request-metrics
+version: 0.1.0
+description: "Latency/error counters + /metrics — ops can't fly blind, and every app must expose the same shape."
+provides:
+  - "middleware counting requests by path/status + http: GET /metrics (text exposition)"
+requires:
+  - "nothing beyond the base app"
+compose:
+  overlay: compose/
+certify:
+  tests: test/

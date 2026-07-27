@@ -1,0 +1,12 @@
+name: health-plus
+version: 0.1.0
+description: "Deep health checks (store, engine, dependencies) beyond /health's liveness — what readiness probes actually need."
+provides:
+  - "http: GET /healthz with per-component status and overall verdict"
+requires:
+  - "persistence-core"
+  - "agent-runtime"
+compose:
+  overlay: compose/
+certify:
+  tests: test/

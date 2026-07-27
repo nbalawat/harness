@@ -1,0 +1,11 @@
+name: queue-bridge
+version: 0.1.0
+description: "Task-queue abstraction with ack/retry semantics — in-process now, Pub/Sub behind the same interface at deploy scale."
+provides:
+  - "python: queue_bridge.Queue — publish(msg) / pull() / ack(id) / nack(id) with redelivery"
+requires:
+  - "nothing beyond the base app"
+compose:
+  overlay: compose/
+certify:
+  tests: test/

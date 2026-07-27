@@ -1,0 +1,725 @@
+{
+  "modules": [
+    {
+      "name": "admin-console",
+      "version": "0.1.0",
+      "description": "Settings/users/flags surface every app grows — one console instead of scattered admin fragments.",
+      "requires": [
+        "rbac",
+        "feature-flags"
+      ]
+    },
+    {
+      "name": "agent-router",
+      "version": "0.1.0",
+      "description": "Multi-agent apps need 'which agent handles this' as data, not nested ifs sprinkled by build agents.",
+      "requires": [
+        "agent-runtime"
+      ]
+    },
+    {
+      "name": "agent-runtime",
+      "version": "0.1.0",
+      "description": "Hosts the app's agents. v0 is a deterministic stub honoring the roster contract; real mode swaps respond() for a Claude Agent SDK session with the same signature.",
+      "requires": []
+    },
+    {
+      "name": "api-keys",
+      "version": "0.1.0",
+      "description": "Service-to-service callers of generated apps — hashed keys with prefixes, revocation, and last-used tracking.",
+      "requires": []
+    },
+    {
+      "name": "approval-flow",
+      "version": "0.1.0",
+      "description": "Draft -> review -> approve/reject with a full trail — THE core loop of internal tools (our first three real apps all needed it).",
+      "requires": [
+        "persistence-core",
+        "audit-log"
+      ]
+    },
+    {
+      "name": "assignment",
+      "version": "0.1.0",
+      "description": "Route work items to people/queues — fairness rules are policy, not whoever the agent thought of.",
+      "requires": []
+    },
+    {
+      "name": "audit-log",
+      "version": "0.1.0",
+      "description": "Append-only audit trail for app actions — who did what, when. Governance evidence for every generated app.",
+      "requires": []
+    },
+    {
+      "name": "audit-view",
+      "version": "0.1.0",
+      "description": "The uniform 'history' panel over audit-log/row-history — one way to read what happened.",
+      "requires": [
+        "audit-log"
+      ]
+    },
+    {
+      "name": "auth-basic",
+      "version": "0.1.0",
+      "description": "Minimal session identity — login issues a bearer token, /auth/me resolves it. The Wave-3 sso-oidc module replaces the token issuer without touching callers.",
+      "requires": []
+    },
+    {
+      "name": "backup-restore",
+      "version": "0.1.0",
+      "description": "Scheduled dumps and TESTED restore for the persistence layer — a backup that never restored is a rumor.",
+      "requires": [
+        "persistence-core"
+      ]
+    },
+    {
+      "name": "batch-runner",
+      "version": "0.1.0",
+      "description": "Long operations with progress and resume — the difference between a demo and a tool.",
+      "requires": []
+    },
+    {
+      "name": "blob-store",
+      "version": "0.1.0",
+      "description": "Files and attachments with the same discipline as rows — local dir now, GCS behind the same interface later.",
+      "requires": []
+    },
+    {
+      "name": "cache-layer",
+      "version": "0.1.0",
+      "description": "Read-through TTL caching with explicit invalidation — agents otherwise sprinkle dicts with no invalidation story.",
+      "requires": []
+    },
+    {
+      "name": "calendar-bridge",
+      "version": "0.1.0",
+      "description": "Meetings/deadlines as standard .ics — calendar sync without a calendar API dependency.",
+      "requires": []
+    },
+    {
+      "name": "charting",
+      "version": "0.1.0",
+      "description": "Honest SVG charts (bars/lines) with sane scales — agents freehand charts badly; axes must start at zero for bars.",
+      "requires": []
+    },
+    {
+      "name": "chat-shell",
+      "version": "0.1.0",
+      "description": "Chat UI with streaming-ready message list, wired to POST /chat. Design tokens injected via frontend/tokens.css by scaffold.",
+      "requires": []
+    },
+    {
+      "name": "checklists",
+      "version": "0.1.0",
+      "description": "Structured task lists with completion tracking — onboarding, reviews, audits all need the same primitive.",
+      "requires": [
+        "persistence-core"
+      ]
+    },
+    {
+      "name": "citation-tracker",
+      "version": "0.1.0",
+      "description": "Source attribution structure for grounded answers — trust requires 'says who' on every claim.",
+      "requires": [
+        "rag-core"
+      ]
+    },
+    {
+      "name": "comments-threads",
+      "version": "0.1.0",
+      "description": "Discussion on any record — the social glue of workflow tools, attached uniformly instead of re-modeled per app.",
+      "requires": [
+        "persistence-core",
+        "input-sanitizer"
+      ]
+    },
+    {
+      "name": "consent-tracking",
+      "version": "0.1.0",
+      "description": "Record the basis for holding each person's data where that matters — consent is evidence, not a checkbox memory.",
+      "requires": [
+        "persistence-core"
+      ]
+    },
+    {
+      "name": "conversation-memory",
+      "version": "0.1.0",
+      "description": "Multi-turn context windows with deterministic summarization — everyone gets truncation wrong per app.",
+      "requires": []
+    },
+    {
+      "name": "corpus-refresh",
+      "version": "0.1.0",
+      "description": "Re-index knowledge when documents change, atomically — RAG apps rot without a refresh story.",
+      "requires": [
+        "rag-core",
+        "doc-extract"
+      ]
+    },
+    {
+      "name": "cost-meter",
+      "version": "0.1.0",
+      "description": "Per-app LLM spend tracking — the deployed sibling of the harness's own cost ledger, so owners see what their app burns.",
+      "requires": [
+        "persistence-core"
+      ]
+    },
+    {
+      "name": "csp-headers",
+      "version": "0.1.0",
+      "description": "Security headers as configuration — the response-header counterpart of the textContent-only frontend policy.",
+      "requires": []
+    },
+    {
+      "name": "dashboard-cards",
+      "version": "0.1.0",
+      "description": "KPI tiles fed by declared queries — count/sum/latest computed one way, formatted one way.",
+      "requires": []
+    },
+    {
+      "name": "data-classification",
+      "version": "0.1.0",
+      "description": "Sensitivity tags per table/column driving retention, redaction, and export rules — policy attached to the data model itself.",
+      "requires": []
+    },
+    {
+      "name": "data-retention",
+      "version": "0.1.0",
+      "description": "TTL/purge honoring the retention answers users give at clarify — the requirement appears in almost every intake.",
+      "requires": [
+        "persistence-core",
+        "soft-delete"
+      ]
+    },
+    {
+      "name": "data-table",
+      "version": "0.1.0",
+      "description": "Sortable/filterable/paginated tables — the single most re-built UI artifact in internal tools.",
+      "requires": []
+    },
+    {
+      "name": "doc-extract",
+      "version": "0.1.0",
+      "description": "PDF/docx/HTML/text to clean text+structure — the intake path of most business apps, done once with honest fallbacks.",
+      "requires": []
+    },
+    {
+      "name": "email-ingest",
+      "version": "0.1.0",
+      "description": "'Forward it to the app' — the lowest-friction intake there is, parsed with the stdlib, no daemon required.",
+      "requires": [
+        "persistence-core"
+      ]
+    },
+    {
+      "name": "email-send",
+      "version": "0.1.0",
+      "description": "Templated transactional mail with suppression rules — compliance-sensitive enough to centralize.",
+      "requires": [
+        "persistence-core"
+      ]
+    },
+    {
+      "name": "env-config",
+      "version": "0.1.0",
+      "description": "Typed, validated runtime configuration — 12-factor with loud startup failures instead of NoneType surprises at 2am.",
+      "requires": []
+    },
+    {
+      "name": "error-reporter",
+      "version": "0.1.0",
+      "description": "Capture and group unhandled exceptions with context — errors owners can triage instead of logs nobody reads.",
+      "requires": [
+        "persistence-core"
+      ]
+    },
+    {
+      "name": "eval-harness",
+      "version": "0.1.0",
+      "description": "Richer eval runner (contains / not_contains / regex rubrics with reports) — evals are how app agents stay honest after changes.",
+      "requires": [
+        "agent-runtime"
+      ]
+    },
+    {
+      "name": "export-csv",
+      "version": "0.1.0",
+      "description": "CSV export for any registered table — analysts always need the data out.",
+      "requires": []
+    },
+    {
+      "name": "fallback-chain",
+      "version": "0.1.0",
+      "description": "Model/provider failover policy in one place — retries and degradation are policy, not per-endpoint improvisation.",
+      "requires": []
+    },
+    {
+      "name": "feature-flags",
+      "version": "0.1.0",
+      "description": "Gradual rollout inside generated apps without redeploys — flags as data with deterministic percentage buckets.",
+      "requires": []
+    },
+    {
+      "name": "feed-poller",
+      "version": "0.1.0",
+      "description": "Scheduled pulls from URLs/APIs with dedupe — background ingestion written once, injectable for tests.",
+      "requires": [
+        "persistence-core"
+      ]
+    },
+    {
+      "name": "feedback-inbox",
+      "version": "0.1.0",
+      "description": "In-app feedback capture — end users of the generated app report issues/wishes where they see them; owners triage from one inbox.",
+      "requires": []
+    },
+    {
+      "name": "file-preview",
+      "version": "0.1.0",
+      "description": "Render uploaded documents inline by type — pairs with file-upload/blob-store so previews are uniform.",
+      "requires": [
+        "file-upload"
+      ]
+    },
+    {
+      "name": "file-upload",
+      "version": "0.1.0",
+      "description": "Safe upload endpoint with type/size allowlists — security-sensitive enough that agents must never improvise it.",
+      "requires": [
+        "blob-store"
+      ]
+    },
+    {
+      "name": "forms-engine",
+      "version": "0.1.0",
+      "description": "Validated forms from a schema — every CRUD app draws the same form badly; validation must be shared with the backend.",
+      "requires": []
+    },
+    {
+      "name": "guardrails-io",
+      "version": "0.1.0",
+      "description": "Input/output filters (PII, injection heuristics, topic fences) as composable policy instead of scattered regexes.",
+      "requires": [
+        "pii-redaction"
+      ]
+    },
+    {
+      "name": "health-plus",
+      "version": "0.1.0",
+      "description": "Deep health checks (store, engine, dependencies) beyond /health's liveness — what readiness probes actually need.",
+      "requires": [
+        "persistence-core",
+        "agent-runtime"
+      ]
+    },
+    {
+      "name": "import-mapper",
+      "version": "0.1.0",
+      "description": "CSV/XLSX import with column mapping and dry-run — data onboarding for every app, with mistakes caught before commit.",
+      "requires": [
+        "persistence-core",
+        "spreadsheet-io",
+        "forms-engine"
+      ]
+    },
+    {
+      "name": "input-sanitizer",
+      "version": "0.1.0",
+      "description": "Central request-text hardening beyond schema types — control chars, length caps, and HTML escaping in one place.",
+      "requires": []
+    },
+    {
+      "name": "migrations",
+      "version": "0.1.0",
+      "description": "Ordered, tracked, idempotent schema/data migrations — ad-hoc ALTERs by agents are how data gets destroyed.",
+      "requires": []
+    },
+    {
+      "name": "multi-env",
+      "version": "0.1.0",
+      "description": "dev/staging/prod promotion story — layered env templates merged one way, with prod safety rails.",
+      "requires": [
+        "env-config"
+      ]
+    },
+    {
+      "name": "notifications-ui",
+      "version": "0.1.0",
+      "description": "In-app toasts/inbox for events and SLA breaches — one queue, deduped, never stacking forever.",
+      "requires": []
+    },
+    {
+      "name": "ocr-bridge",
+      "version": "0.1.0",
+      "description": "Scanned documents appear in every ops workflow eventually — one interface, explicit availability.",
+      "requires": [
+        "doc-extract"
+      ]
+    },
+    {
+      "name": "pdf-render",
+      "version": "0.1.0",
+      "description": "Generate the PDF artifact (reports, letters, packets) — a valid, dependency-free text PDF writer.",
+      "requires": []
+    },
+    {
+      "name": "permissions-ui",
+      "version": "0.1.0",
+      "description": "The admin screen for rbac — role assignment rendered uniformly instead of re-drawn per app.",
+      "requires": [
+        "rbac"
+      ]
+    },
+    {
+      "name": "persistence-core",
+      "version": "0.1.0",
+      "description": "Data layer with table registry. v0 is an in-memory store honoring the same interface the Postgres adapter will implement.",
+      "requires": []
+    },
+    {
+      "name": "pii-redaction",
+      "version": "0.1.0",
+      "description": "Detect and mask PII in stored text and transcripts — the most common compliance ask, done once and tested.",
+      "requires": []
+    },
+    {
+      "name": "postgres-adapter",
+      "version": "0.1.0",
+      "description": "Production Store implementing the persistence-core contract against Postgres — the local-to-production step is a compose choice, not a rewrite.",
+      "requires": []
+    },
+    {
+      "name": "prompt-registry",
+      "version": "0.1.0",
+      "description": "App prompts as versioned data, not string literals buried in code — reviewable and hot-fixable without a rebuild.",
+      "requires": []
+    },
+    {
+      "name": "queue-bridge",
+      "version": "0.1.0",
+      "description": "Task-queue abstraction with ack/retry semantics — in-process now, Pub/Sub behind the same interface at deploy scale.",
+      "requires": []
+    },
+    {
+      "name": "rag-core",
+      "version": "0.1.0",
+      "description": "Chunking + retrieval done right once — grounding quality is the #1 driver of app trust.",
+      "requires": []
+    },
+    {
+      "name": "rate-limit",
+      "version": "0.1.0",
+      "description": "Per-client request throttle — protects agent endpoints (which cost real money per call) from loops and abuse.",
+      "requires": []
+    },
+    {
+      "name": "rbac",
+      "version": "0.1.0",
+      "description": "Approver vs viewer vs admin as declarative roles — permissions must be data, not if-statements scattered by build agents.",
+      "requires": [
+        "auth-basic"
+      ]
+    },
+    {
+      "name": "record-detail",
+      "version": "0.1.0",
+      "description": "Standard detail view with field layout from the data model — one way to show a record.",
+      "requires": [
+        "data-table"
+      ]
+    },
+    {
+      "name": "request-metrics",
+      "version": "0.1.0",
+      "description": "Latency/error counters + /metrics — ops can't fly blind, and every app must expose the same shape.",
+      "requires": []
+    },
+    {
+      "name": "rest-client",
+      "version": "0.1.0",
+      "description": "Outbound HTTP with timeout/retry/backoff policy — agents otherwise scatter bare fetches with none.",
+      "requires": []
+    },
+    {
+      "name": "row-history",
+      "version": "0.1.0",
+      "description": "Field-level change history for regulated data — pairs with audit-log to answer 'what changed, from what, to what'.",
+      "requires": [
+        "persistence-core"
+      ]
+    },
+    {
+      "name": "row-level-security",
+      "version": "0.1.0",
+      "description": "'You see your team's records' — ownership scoping subtle enough that it must be written once, correctly.",
+      "requires": [
+        "rbac"
+      ]
+    },
+    {
+      "name": "scheduling",
+      "version": "0.1.0",
+      "description": "Cron-style in-app jobs with visibility and no threads — run_due is called by the host, everything is observable.",
+      "requires": []
+    },
+    {
+      "name": "screen-router",
+      "version": "0.1.0",
+      "description": "Hash navigation binding the design shells' #screen-* mount points — formalizes what every shell implies.",
+      "requires": [
+        "chat-shell"
+      ]
+    },
+    {
+      "name": "search-index",
+      "version": "0.1.0",
+      "description": "Text search over stored rows — every 'find past X' feature reinvents it worse.",
+      "requires": [
+        "persistence-core"
+      ]
+    },
+    {
+      "name": "secrets-manager",
+      "version": "0.1.0",
+      "description": "App secrets via environment with loud failures — never in code, never in the store; enforced by a scanner, not advised.",
+      "requires": []
+    },
+    {
+      "name": "seed-data",
+      "version": "0.1.0",
+      "description": "Deterministic demo/dev fixtures — every stakeholder demo needs believable data, seeded the same way every time.",
+      "requires": [
+        "persistence-core"
+      ]
+    },
+    {
+      "name": "session-audit",
+      "version": "0.1.0",
+      "description": "Login/logout/denied-access trail — identity events feed the same audit stream as business actions.",
+      "requires": [
+        "audit-log"
+      ]
+    },
+    {
+      "name": "sla-timers",
+      "version": "0.1.0",
+      "description": "Due dates, breach flags, escalations — ops apps are judged on these, and clock math is where bugs hide.",
+      "requires": []
+    },
+    {
+      "name": "slack-notify",
+      "version": "0.1.0",
+      "description": "Where firm users actually live — 'post to the channel' is in every third intake; outbox mode until a webhook is configured.",
+      "requires": [
+        "rest-client",
+        "persistence-core"
+      ]
+    },
+    {
+      "name": "soft-delete",
+      "version": "0.1.0",
+      "description": "'Deleted' rows auditors can still see — deletion is a policy, so it must be uniform, not per-endpoint improvisation.",
+      "requires": [
+        "persistence-core"
+      ]
+    },
+    {
+      "name": "spreadsheet-io",
+      "version": "0.1.0",
+      "description": "CSV/TSV in and out with type coercion — the lingua franca of analysts, parsed one way.",
+      "requires": []
+    },
+    {
+      "name": "sqlite-adapter",
+      "version": "0.1.0",
+      "description": "Single-file durable Store honoring the persistence-core interface — laptop-class durability without a database server.",
+      "requires": []
+    },
+    {
+      "name": "sso-oidc",
+      "version": "0.1.0",
+      "description": "Firm identity via OIDC ID tokens — replaces auth-basic's issuer while keeping the current_user contract.",
+      "requires": [
+        "auth-basic"
+      ]
+    },
+    {
+      "name": "state-machine",
+      "version": "0.1.0",
+      "description": "Declarative status transitions — scattered ifs are how QA dies; transitions must be data.",
+      "requires": []
+    },
+    {
+      "name": "structured-logging",
+      "version": "0.1.0",
+      "description": "JSON logs with request/user/agent correlation — debugging composed apps needs uniform, parseable logs.",
+      "requires": []
+    },
+    {
+      "name": "table-extract",
+      "version": "0.1.0",
+      "description": "Tables inside documents are where the numbers live — naive text extraction destroys them.",
+      "requires": [
+        "doc-extract"
+      ]
+    },
+    {
+      "name": "token-budgeter",
+      "version": "0.1.0",
+      "description": "Per-conversation/user spend caps inside the generated app — the app-level version of the harness's own cost discipline.",
+      "requires": []
+    },
+    {
+      "name": "tool-registry",
+      "version": "0.1.0",
+      "description": "Declarative tool definitions with roster enforcement — which agent may call what is data, checked at invoke time.",
+      "requires": [
+        "agent-runtime"
+      ]
+    },
+    {
+      "name": "transcript-store",
+      "version": "0.1.0",
+      "description": "Standard storage + redaction of agent transcripts — the raw material for evals, audits, and retention policies.",
+      "requires": [
+        "persistence-core",
+        "pii-redaction"
+      ]
+    },
+    {
+      "name": "usage-analytics",
+      "version": "0.1.0",
+      "description": "Which features actually get used — feeds the owner's roadmap and the firm's ROI story, without third-party trackers.",
+      "requires": []
+    },
+    {
+      "name": "versioned-drafts",
+      "version": "0.1.0",
+      "description": "Draft/publish semantics for content-like records — 'live' and 'working copy' must never be the same row.",
+      "requires": [
+        "persistence-core"
+      ]
+    },
+    {
+      "name": "vuln-watch",
+      "version": "0.1.0",
+      "description": "Dependency advisories for the generated app's requirements — supply-chain awareness without external calls.",
+      "requires": []
+    },
+    {
+      "name": "webhook-in",
+      "version": "0.1.0",
+      "description": "Receive events safely — signature verification and replay protection before anything touches app logic.",
+      "requires": [
+        "persistence-core"
+      ]
+    },
+    {
+      "name": "webhook-out",
+      "version": "0.1.0",
+      "description": "Notify other systems on events with signing and retries — integration's front door, with an outbox you can inspect.",
+      "requires": [
+        "rest-client",
+        "persistence-core"
+      ]
+    }
+  ],
+  "packs": [
+    {
+      "name": "pack-document-review",
+      "description": "Ingest -> extract -> human review queue -> decision trail for document-centric workflows.",
+      "modules": [
+        "persistence-core",
+        "agent-runtime",
+        "chat-shell",
+        "doc-extract",
+        "table-extract",
+        "file-upload",
+        "approval-flow",
+        "assignment",
+        "audit-log",
+        "row-history"
+      ]
+    },
+    {
+      "name": "pack-intake-triage",
+      "description": "Form/email intake -> classification -> routing -> SLA — the ops-team workhorse.",
+      "modules": [
+        "persistence-core",
+        "agent-runtime",
+        "chat-shell",
+        "email-ingest",
+        "forms-engine",
+        "agent-router",
+        "assignment",
+        "sla-timers",
+        "state-machine",
+        "slack-notify",
+        "audit-log"
+      ]
+    },
+    {
+      "name": "pack-kb-manager",
+      "description": "Curate the knowledge corpus itself — staleness, gaps, ownership; the meta-app every RAG deployment needs.",
+      "modules": [
+        "persistence-core",
+        "agent-runtime",
+        "chat-shell",
+        "rag-core",
+        "corpus-refresh",
+        "versioned-drafts",
+        "checklists",
+        "comments-threads",
+        "usage-analytics",
+        "audit-log"
+      ]
+    },
+    {
+      "name": "pack-report-generator",
+      "description": "Data in -> analysis -> templated PDF/deck out on a schedule — the recurring-deliverable machine.",
+      "modules": [
+        "persistence-core",
+        "agent-runtime",
+        "chat-shell",
+        "import-mapper",
+        "spreadsheet-io",
+        "batch-runner",
+        "pdf-render",
+        "scheduling",
+        "email-send",
+        "audit-log"
+      ]
+    },
+    {
+      "name": "pack-research-assistant",
+      "description": "Corpus Q&A with citations and reading-list curation — the knowledge-worker staple.",
+      "modules": [
+        "persistence-core",
+        "agent-runtime",
+        "chat-shell",
+        "rag-core",
+        "corpus-refresh",
+        "citation-tracker",
+        "conversation-memory",
+        "search-index",
+        "export-csv"
+      ]
+    },
+    {
+      "name": "pack-support-copilot",
+      "description": "Grounded answers + approval gate + history — the shape built three times already (the rule of three, literally).",
+      "modules": [
+        "persistence-core",
+        "agent-runtime",
+        "chat-shell",
+        "rag-core",
+        "citation-tracker",
+        "approval-flow",
+        "audit-log",
+        "transcript-store",
+        "export-csv",
+        "feedback-inbox"
+      ]
+    }
+  ]
+}

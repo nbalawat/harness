@@ -1,0 +1,11 @@
+name: record-detail
+version: 0.1.0
+description: "Standard detail view with field layout from the data model — one way to show a record."
+provides:
+  - "js: HarnessDetail.fields(row, columns, labels) pure; render(el, row, columns)"
+requires:
+  - "data-table"
+compose:
+  overlay: compose/
+certify:
+  command: node --check "$HARNESS_MODULE_DIR/compose/frontend/mod_recorddetail.js" && ! grep -q ".innerHTML =" "$HARNESS_MODULE_DIR/compose/frontend/mod_recorddetail.js" && node "$HARNESS_MODULE_DIR/test/test.mjs"

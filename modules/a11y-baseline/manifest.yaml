@@ -1,0 +1,9 @@
+name: a11y-baseline
+version: 0.1.0
+description: "Accessibility floor as an enforced check — focusable controls labeled, lang attr present, buttons non-empty."
+kind: tool
+provides:
+  - "node: check.mjs <frontend-dir> — exit 1 on violations (inputs without label/placeholder/aria, empty buttons, missing lang)"
+requires: []
+certify:
+  command: node "$HARNESS_MODULE_DIR/check.mjs" "$HARNESS_MODULES_DIR/chat-shell/compose/frontend" --allow-missing-html && node "$HARNESS_MODULE_DIR/test/test.mjs"

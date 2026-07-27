@@ -1,0 +1,12 @@
+name: slack-notify
+version: 0.1.0
+description: "Where firm users actually live — 'post to the channel' is in every third intake; outbox mode until a webhook is configured."
+provides:
+  - "python: slack.notify(channel, text) — delivers via SLACK_WEBHOOK_URL or records to outbox in dev"
+requires:
+  - "rest-client"
+  - "persistence-core"
+compose:
+  overlay: compose/
+certify:
+  tests: test/

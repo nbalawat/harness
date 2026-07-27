@@ -1,0 +1,20 @@
+name: pack-intake-triage
+version: 0.1.0
+description: "Form/email intake -> classification -> routing -> SLA — the ops-team workhorse."
+kind: pack
+provides:
+  - "bundle: 11 certified modules pre-selected for this app shape"
+requires: []
+modules:
+  - persistence-core
+  - agent-runtime
+  - chat-shell
+  - email-ingest
+  - forms-engine
+  - agent-router
+  - assignment
+  - sla-timers
+  - state-machine
+  - slack-notify
+  - audit-log
+certify:

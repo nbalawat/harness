@@ -20,11 +20,11 @@ npm run bundle          # produces dist-bundle/harness.cjs — or receive it fro
 node harness.cjs setup --install-sdk
 
 # 3. Install a certified project type from the registry (a git repo with signed tags)
-node harness.cjs install agentic-app@0.5.0 --registry <git-url>
+node harness.cjs install agentic-app@0.6.0 --registry <git-url>
 node harness.cjs list
 
 # 4. Build an app (parks at intake; answer in the dashboard)
-node harness.cjs run agentic-app@0.5.0 --workspace my-app
+node harness.cjs run agentic-app@0.6.0 --workspace my-app
 node harness.cjs ui .   # open http://localhost:4400 -> answer intake -> watch it build
 
 # 5. Change your mind at any point

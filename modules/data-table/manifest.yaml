@@ -1,0 +1,11 @@
+name: data-table
+version: 0.1.0
+description: "Sortable/filterable/paginated tables — the single most re-built UI artifact in internal tools."
+provides:
+  - "js: HarnessTable.prepare(rows, {sort, filter, page, pageSize}) pure; render(el, rows, columns) textContent-only"
+requires:
+  - "nothing beyond the design shell"
+compose:
+  overlay: compose/
+certify:
+  command: node --check "$HARNESS_MODULE_DIR/compose/frontend/mod_datatable.js" && ! grep -q ".innerHTML =" "$HARNESS_MODULE_DIR/compose/frontend/mod_datatable.js" && node "$HARNESS_MODULE_DIR/test/test.mjs"

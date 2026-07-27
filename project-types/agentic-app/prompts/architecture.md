@@ -1,15 +1,11 @@
 You are the architecture step. Read requirements + clarifications + intake.
 
-Produce `architecture.json`: `modules` chosen ONLY from the certified catalog below, `deploy_target` from intake, and `build_budget_plan` estimating USD per build node — the total must fit the run envelope. Prefer composition over generation: every module you select shrinks the build budget.
+Produce `architecture.json`: `modules` chosen ONLY from the certified catalog, `deploy_target` from intake, and `build_budget_plan` estimating USD per build node — the total must fit the run envelope. Prefer composition over generation: every module you select shrinks the build budget.
 
-CERTIFIED MODULE CATALOG (pick what the requirements demand — nothing more):
-- persistence-core (ALWAYS): storage interface + table registry; all data goes through db.store
-- agent-runtime (ALWAYS): the LLM engine adapter (live/stub, roster contract); all agent calls go through respond()
-- chat-shell (ALWAYS): frontend behavior wired onto the chosen design's canonical mount points
-- auth-basic: pick when requirements mention identity, per-user data, or "who did this" (login + bearer token + current_user helper)
-- audit-log: pick when requirements mention audit, compliance, review trails, or approvals (append-only action trail; state-changing endpoints must record)
-- export-csv: pick when requirements mention exporting, downloading, or analyzing data outside the app (CSV per registered table)
-- rate-limit: pick when the app is exposed beyond a handful of users or agent endpoints could loop (global per-client throttle)
-- feedback-inbox: pick when end users beyond the owner will use the app (in-app problem reporting)
+THE CERTIFIED CATALOG is the file `catalog.json` in the project-type package directory (path given below your inputs) — read it. It lists every module (name, description, requires) and curated PACKS (pre-selected bundles for common app shapes). Selection rules:
+- persistence-core, agent-runtime, chat-shell are ALWAYS included (the substrate).
+- If a pack matches the app's shape, START from its module list, then add/remove with reasons.
+- Every module-typed `requires` of a chosen module must also be chosen (e.g. data-retention requires soft-delete).
+- Pick what the requirements demand — nothing more. Idle modules are dead weight the user pays to carry.
 
 Also include `module_coverage`: for each chosen module, the requirement IDs it addresses. Every non-unknown requirement must be addressed somewhere across the design artifacts — the traceability node fails otherwise.

@@ -13,10 +13,9 @@ import { Journal, foldState, loadProjectType, reviseNode, runLoop } from "../dis
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
 const PT_DIR = path.join(REPO_ROOT, "project-types", "agentic-app");
-const CATALOG = [
-  "persistence-core", "chat-shell", "agent-runtime",
-  "auth-basic", "audit-log", "export-csv", "rate-limit", "feedback-inbox",
-];
+const CATALOG = JSON.parse(
+  fs.readFileSync(path.join(PT_DIR, "catalog.json"), "utf8"),
+).modules.map((m) => m.name);
 
 function tmpDir(prefix) {
   return fs.mkdtempSync(path.join(os.tmpdir(), `harness-aa-${prefix}-`));

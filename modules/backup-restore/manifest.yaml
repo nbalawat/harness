@@ -1,0 +1,11 @@
+name: backup-restore
+version: 0.1.0
+description: "Scheduled dumps and TESTED restore for the persistence layer — a backup that never restored is a rumor."
+provides:
+  - "python: backup.dump(tables, path) -> file / restore(path, store) -> counts"
+requires:
+  - "persistence-core"
+compose:
+  overlay: compose/
+certify:
+  tests: test/

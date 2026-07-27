@@ -1,0 +1,19 @@
+name: pack-report-generator
+version: 0.1.0
+description: "Data in -> analysis -> templated PDF/deck out on a schedule — the recurring-deliverable machine."
+kind: pack
+provides:
+  - "bundle: 10 certified modules pre-selected for this app shape"
+requires: []
+modules:
+  - persistence-core
+  - agent-runtime
+  - chat-shell
+  - import-mapper
+  - spreadsheet-io
+  - batch-runner
+  - pdf-render
+  - scheduling
+  - email-send
+  - audit-log
+certify:

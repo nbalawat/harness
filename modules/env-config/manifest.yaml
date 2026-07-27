@@ -1,0 +1,11 @@
+name: env-config
+version: 0.1.0
+description: "Typed, validated runtime configuration — 12-factor with loud startup failures instead of NoneType surprises at 2am."
+provides:
+  - "python: app_config.load(spec) -> validated config object from env (types, defaults, required)"
+requires:
+  - "nothing beyond the base app"
+compose:
+  overlay: compose/
+certify:
+  tests: test/

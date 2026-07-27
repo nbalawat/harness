@@ -1,0 +1,11 @@
+name: rest-client
+version: 0.1.0
+description: "Outbound HTTP with timeout/retry/backoff policy — agents otherwise scatter bare fetches with none."
+provides:
+  - "python: http_client.request(method, url, transport, retries, timeout) with exponential backoff and error taxonomy"
+requires:
+  - "nothing beyond the base app"
+compose:
+  overlay: compose/
+certify:
+  tests: test/

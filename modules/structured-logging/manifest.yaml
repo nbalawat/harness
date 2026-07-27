@@ -1,0 +1,11 @@
+name: structured-logging
+version: 0.1.0
+description: "JSON logs with request/user/agent correlation — debugging composed apps needs uniform, parseable logs."
+provides:
+  - "python: slog.bind(**context) / slog.info|warn|error(event, **fields) -> one JSON line each"
+requires:
+  - "nothing beyond the base app"
+compose:
+  overlay: compose/
+certify:
+  tests: test/

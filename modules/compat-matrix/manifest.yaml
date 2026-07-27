@@ -1,0 +1,9 @@
+name: compat-matrix
+version: 0.1.0
+description: "Declared conflicts/requirements between modules, checked before composition instead of discovered at integrate."
+kind: tool
+provides:
+  - "node: check.mjs <modules-dir> <picked...> — validates a selection (deps present, no declared conflicts)"
+requires: []
+certify:
+  command: node "$HARNESS_MODULE_DIR/test/test.mjs"

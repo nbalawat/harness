@@ -1,0 +1,19 @@
+name: pack-kb-manager
+version: 0.1.0
+description: "Curate the knowledge corpus itself — staleness, gaps, ownership; the meta-app every RAG deployment needs."
+kind: pack
+provides:
+  - "bundle: 10 certified modules pre-selected for this app shape"
+requires: []
+modules:
+  - persistence-core
+  - agent-runtime
+  - chat-shell
+  - rag-core
+  - corpus-refresh
+  - versioned-drafts
+  - checklists
+  - comments-threads
+  - usage-analytics
+  - audit-log
+certify:

@@ -1,0 +1,12 @@
+name: admin-console
+version: 0.1.0
+description: "Settings/users/flags surface every app grows — one console instead of scattered admin fragments."
+provides:
+  - "js: HarnessAdmin.sections(available) pure composition of admin panels; render into #screen-admin"
+requires:
+  - "rbac"
+  - "feature-flags"
+compose:
+  overlay: compose/
+certify:
+  command: node --check "$HARNESS_MODULE_DIR/compose/frontend/mod_admin.js" && ! grep -q ".innerHTML =" "$HARNESS_MODULE_DIR/compose/frontend/mod_admin.js" && node "$HARNESS_MODULE_DIR/test/test.mjs"

@@ -1,0 +1,9 @@
+name: module-sdk
+version: 0.1.0
+description: "harness new-module scaffolder — the growth engine: a new module starts with the contract pre-wired and a passing test."
+kind: tool
+provides:
+  - "node: new-module.mjs <name> [--kind app|tool|pack] [--modules-dir d] generates manifest/guide/compose/test that certify green"
+requires: []
+certify:
+  command: node "$HARNESS_MODULE_DIR/test/test.mjs"
