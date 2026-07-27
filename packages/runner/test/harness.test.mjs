@@ -745,3 +745,33 @@ test("per-node verify: failing exit criteria feed the retry loop and block commi
   assert.equal((await runLoop(badCtx)).status, "failed");
   assert.ok(!fs.existsSync(path.join(badCtx.workspace, "artifacts/work")), "never commits on failed verification");
 });
+
+test("reopen-on-resume: a failed node retries after the environment is fixed", async () => {
+  const dir = writeFixture(
+    tmpDir("reopen-pt"),
+    [
+      "name: reopen",
+      "version: 0.0.1",
+      "nodes:",
+      "  - id: fragile",
+      "    kind: verifier",
+      "    retries: 0",
+      '    command: test -f "$HARNESS_PROJECT_DIR/fixed.marker"',
+    ].join("\n"),
+  );
+  const workspace = tmpDir("reopen-ws");
+
+  const first = makeCtx(workspace, dir, {});
+  assert.equal((await runLoop(first)).status, "failed");
+
+  // "Fix the issue" (here: create the marker), then resume with reopen.
+  fs.writeFileSync(path.join(dir, "fixed.marker"), "");
+  const second = makeCtx(workspace, dir, {});
+  const { reopenFailed } = await import("../dist/index.js");
+  assert.deepEqual(reopenFailed(second), ["fragile"]);
+  assert.equal((await runLoop(second)).status, "completed");
+
+  // Attempt numbering continued across the reopen (no attempt-dir collision).
+  const attempts = events(second, "node.running").map((e) => e.attempt);
+  assert.deepEqual(attempts, [1, 2]);
+});

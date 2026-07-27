@@ -34,6 +34,9 @@ export function foldState(events: LedgerEvent[]): RunState {
       case "node.skipped":
         state.skipped.add(e.nodeId!);
         break;
+      case "node.reopened":
+        state.failed.delete(e.nodeId!);
+        break;
       case "cost.recorded": {
         const cost = e.cost as { costUsd?: number } | undefined;
         state.totalCostUsd += cost?.costUsd ?? 0;
@@ -42,6 +45,16 @@ export function foldState(events: LedgerEvent[]): RunState {
     }
   }
   return state;
+}
+
+/**
+ * Reopen failed nodes so a resume can retry them — the fix-then-resume
+ * support workflow. Journal stays append-only; the fold forgets the failure.
+ */
+export function reopenFailed(ctx: RunContext): string[] {
+  const failed = [...foldState(ctx.journal.read()).failed];
+  for (const nodeId of failed) ctx.journal.append({ type: "node.reopened", nodeId });
+  return failed;
 }
 
 /** A dependency is satisfied when its node committed or was conditionally skipped. */
@@ -61,9 +74,13 @@ function whenSatisfied(ctx: RunContext, when: WhenClause, state: RunState): bool
     if (!fs.existsSync(abs) || !abs.endsWith(".json")) return false;
     let value: unknown = JSON.parse(fs.readFileSync(abs, "utf8"));
     for (const seg of when.path.split(".")) {
-      if (value === null || typeof value !== "object") return false;
+      if (value === null || typeof value !== "object") {
+        value = undefined;
+        break;
+      }
       value = (value as Record<string, unknown>)[seg];
     }
+    if (when.exists !== undefined) return (value !== undefined) === when.exists;
     return value === when.equals;
   }
   return false;

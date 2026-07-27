@@ -8,7 +8,10 @@ const appDir = inputs.app.path;
 
 const RULES = [
   { rule: "hardcoded-secret", severity: "high", ext: null, pattern: /(?:api[_-]?key|secret|password|token)\s*[:=]\s*["'][A-Za-z0-9+\/_-]{12,}["']/i },
-  { rule: "dynamic-eval", severity: "high", ext: [".py", ".js"], pattern: /\beval\s*\(|\bexec\s*\(/ },
+  // Python: eval()/exec() are dynamic code execution. JS: RegExp.prototype.exec()
+  // is safe — only bare eval() and new Function() are dangerous.
+  { rule: "dynamic-eval-py", severity: "high", ext: [".py"], pattern: /\b(?:eval|exec)\s*\(/ },
+  { rule: "dynamic-eval-js", severity: "high", ext: [".js", ".html"], pattern: /(?<![.\w])eval\s*\(|new\s+Function\s*\(/ },
   { rule: "inner-html", severity: "medium", ext: [".js", ".html"], pattern: /\.innerHTML\s*=/ },
   { rule: "insecure-http", severity: "low", ext: null, pattern: /http:\/\/(?!localhost|127\.0\.0\.1)/ },
 ];

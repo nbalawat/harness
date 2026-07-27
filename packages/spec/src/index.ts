@@ -45,7 +45,10 @@ export interface QuestionsFrom {
 export interface WhenClause {
   artifact: string;
   path: string;
-  equals: unknown;
+  /** Satisfied when the value strictly equals this. */
+  equals?: unknown;
+  /** Satisfied when the value's existence matches (for data-driven fan-out). */
+  exists?: boolean;
 }
 
 /** Interaction budgets — user attention is enforced like dollars. */
@@ -89,6 +92,9 @@ export interface NodeDef {
 
   /** Conditional enablement; unmet condition -> node is skipped, not failed. */
   when?: WhenClause;
+
+  /** Static per-node parameters, surfaced to payloads as inputs._params (e.g. slice index). */
+  params?: Record<string, unknown>;
 }
 
 export interface NodeCostSpec {
@@ -151,6 +157,7 @@ export interface LedgerEvent {
     | "node.failed"
     | "node.parked"
     | "node.skipped"
+    | "node.reopened"
     | "gate.answered"
     | "agent.message"
     | "agent.question_denied"

@@ -1,0 +1,12 @@
+{
+  "files_scanned": 22,
+  "findings": [
+    {
+      "severity": "high",
+      "rule": "dynamic-eval",
+      "file": "frontend/app.js",
+      "detail": "exec("
+    }
+  ],
+  "high_count": 1
+}

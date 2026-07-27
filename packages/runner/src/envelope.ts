@@ -24,8 +24,14 @@ export async function executeNode(
 ): Promise<"committed" | "failed" | "parked"> {
   const maxAttempts = (node.retries ?? 1) + 1;
   let feedback: string | undefined;
+  // Attempt numbering continues across reopens so attempt dirs never collide
+  // and telemetry keeps the full history.
+  const priorAttempts = ctx.journal
+    .read()
+    .filter((e) => e.type === "node.running" && e.nodeId === node.id).length;
 
-  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+  for (let seq = 1; seq <= maxAttempts; seq++) {
+    const attempt = priorAttempts + seq;
     const started = Date.now();
     ctx.journal.append({ type: "node.running", nodeId: node.id, attempt });
 
@@ -111,6 +117,7 @@ function buildInputs(
   state: RunState,
 ): Record<string, { path: string; data?: unknown }> {
   const inputs: Record<string, { path: string; data?: unknown }> = {};
+  if (node.params) inputs._params = { path: "", data: node.params };
   for (const dep of node.deps ?? []) {
     for (const [name, rel] of Object.entries(state.artifacts[dep] ?? {})) {
       const abs = path.join(ctx.workspace, rel);

@@ -225,7 +225,25 @@ test("security-scan: eval() in generated code blocks", () => {
   fs.writeFileSync(path.join(dir, "inputs.json"), JSON.stringify({ app: { path: appDir } }));
   const result = runScript("security-scan.cjs", dir);
   assert.equal(result.status, 1);
-  assert.match(result.stderr, /dynamic-eval/);
+  assert.match(result.stderr, /dynamic-eval-py/);
+});
+
+test("security-scan: JS RegExp.exec() is NOT flagged (real-run false positive)", () => {
+  const dir = tmpDir("sec3");
+  const appDir = path.join(dir, "okapp");
+  fs.mkdirSync(appDir, { recursive: true });
+  fs.writeFileSync(path.join(appDir, "app.js"), "const m = /^(a)$/.exec(input);\n");
+  fs.writeFileSync(path.join(dir, "inputs.json"), JSON.stringify({ app: { path: appDir } }));
+  assert.equal(runScript("security-scan.cjs", dir).status, 0);
+
+  const badDir = tmpDir("sec4");
+  const badApp = path.join(badDir, "badapp");
+  fs.mkdirSync(badApp, { recursive: true });
+  fs.writeFileSync(path.join(badApp, "app.js"), "const out = eval(userInput);\n");
+  fs.writeFileSync(path.join(badDir, "inputs.json"), JSON.stringify({ app: { path: badApp } }));
+  const bad = runScript("security-scan.cjs", badDir);
+  assert.equal(bad.status, 1);
+  assert.match(bad.stderr, /dynamic-eval-js/);
 });
 
 test("design-check: options with different screen sets are rejected", () => {

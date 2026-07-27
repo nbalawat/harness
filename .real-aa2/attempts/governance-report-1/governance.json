@@ -1,0 +1,30 @@
+{
+  "standards_profile": "firm-baseline-v0",
+  "security": {
+    "high_findings": 0,
+    "total_findings": 0,
+    "files_scanned": 22,
+    "evidence": "security_report.json"
+  },
+  "validation": {
+    "backend_tests": "pass",
+    "agent_evals": "pass",
+    "compose_config": "pass",
+    "evidence": "integration_report.json"
+  },
+  "requirements": {
+    "total": 18,
+    "covered": 18,
+    "uncovered": 0,
+    "assumptions": 13,
+    "evidence": "rtm.json"
+  },
+  "agents": {
+    "count": 2,
+    "names": [
+      "support_draft_agent",
+      "precedent_finder"
+    ],
+    "eval_criteria_total": 15
+  }
+}

@@ -1,0 +1,65 @@
+{
+  "description": "Product knowledge corpus ingested from documents_dir at intake. Only doc_ids listed here may be fetched or cited by support_draft_agent (roster tool_policy: knowledge_fetch).",
+  "source_corpus": "artifacts/ingest/corpus",
+  "documents": [
+    {
+      "doc_id": "doc-account-access",
+      "title": "Account access and password reset",
+      "ingested_from": "src-brief",
+      "keywords": [
+        "password",
+        "passwords",
+        "reset",
+        "resets",
+        "resetting",
+        "sign-in",
+        "signin",
+        "login",
+        "log-in",
+        "credential",
+        "credentials",
+        "locked",
+        "lockout",
+        "2fa",
+        "authenticator"
+      ],
+      "text": "A customer resets their password from the sign-in page: they choose \"Forgot password\", enter the email address on the account, and receive a reset link that stays valid for 60 minutes. If the link expires they request a new one. Customers with two-factor authentication enabled must complete the 2FA challenge after setting the new password. If the customer no longer has access to the account email, the analyst opens an identity-verification request rather than changing the address directly."
+    },
+    {
+      "doc_id": "doc-support-process",
+      "title": "Support reply and approval process",
+      "ingested_from": "src-process",
+      "keywords": [
+        "approval",
+        "approve",
+        "approved",
+        "review",
+        "draft",
+        "drafts",
+        "escalation",
+        "escalate",
+        "workflow",
+        "process",
+        "handoff"
+      ],
+      "text": "Every assistant-generated reply is a draft. A support analyst reviews the draft, edits it if needed, and marks it approved. Approval only records the decision in the conversation record; the analyst then copies the approved text into the existing email tool to reach the customer. Rejected drafts are retained on the conversation for audit but are never reused as precedent."
+    },
+    {
+      "doc_id": "doc-conversation-history",
+      "title": "Conversation history and retention",
+      "ingested_from": "src-brief",
+      "keywords": [
+        "history",
+        "retention",
+        "retained",
+        "purge",
+        "purged",
+        "conversation",
+        "conversations",
+        "thread",
+        "transcript"
+      ],
+      "text": "Conversations are stored with their messages, approval status and timestamps so analysts can review past threads. Records are retained for 90 days from creation and are purged afterwards, so precedent lookups only cover the trailing 90-day window."
+    }
+  ]
+}

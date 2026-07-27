@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { Journal, foldState, loadProjectType, runLoop, type RunContext } from "@harness/runner";
+import { Journal, foldState, loadProjectType, reopenFailed, runLoop, type RunContext } from "@harness/runner";
 
 interface RunConfig {
   projectTypeDir: string;
@@ -104,6 +104,8 @@ async function cmdResume(args: string[]): Promise<number> {
   if (flags["accept-defaults"] === true) config.acceptDefaults = true;
 
   const ctx = buildContext(workspace, config);
+  const reopened = reopenFailed(ctx);
+  if (reopened.length > 0) console.log(`reopening failed node(s): ${reopened.join(", ")}`);
   console.log(`resuming ${ctx.def.name}@${ctx.def.version}`);
   const result = await runLoop(ctx);
   report(ctx, result.status, result.failedNodeId ?? result.parkedNodeId);
