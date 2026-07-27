@@ -1,0 +1,27 @@
+{
+  "gaps": {
+    "path": "/Users/nbalawat/development/harness/live-copilot-2/artifacts/gap-questions/gaps.json",
+    "data": {
+      "questions": [
+        {
+          "id": "REQ-017",
+          "prompt": "How should the product-knowledge corpus be supplied to the application?",
+          "default": "A folder of documents loaded at startup",
+          "why": "This determines the data-ingestion layer architecture: startup loading (simpler, single-file config) vs. in-app upload UI (requires document management views and persistence) vs. external sync (requires integration point and polling/webhook logic). The choice cascades to storage schema, indexing strategy, and UX complexity."
+        },
+        {
+          "id": "REQ-018",
+          "prompt": "After an analyst approves a reply, who is responsible for delivering it to the customer?",
+          "default": "The analyst manually copies the approved reply into their existing email tool",
+          "why": "Determines whether the application needs email/ticketing integration, OAuth/API credentials for external systems, message delivery retry logic, and delivery status tracking. Affects infrastructure dependencies and security scope."
+        },
+        {
+          "id": "REQ-019",
+          "prompt": "Should analysts authenticate individually or is the local instance untrusted-environment aware?",
+          "default": "No authentication: the local instance is trusted, and all analysts are treated as the same user",
+          "why": "Determines whether the app needs user accounts, per-analyst audit trails, SSO/LDAP integration, session management, and role-based access control. Directly affects data-model design (analyst attribution on approvals) and auth infrastructure scope."
+        }
+      ]
+    }
+  }
+}

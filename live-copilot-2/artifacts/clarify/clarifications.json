@@ -1,0 +1,5 @@
+{
+  "REQ-017": "A folder of documents loaded at startup",
+  "REQ-018": "The analyst manually copies the approved reply into their existing email tool",
+  "REQ-019": "No authentication: the local instance is trusted, and all analysts are treated as the same user"
+}

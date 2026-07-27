@@ -23,7 +23,7 @@ cost:
     requirements-synthesis: { budget_usd: 3.00 }
     gap-questions: { budget_usd: 1.00 }
     architecture: { budget_usd: 2.00 }
-    design-options: { budget_usd: 4.00 }
+    design-options: { budget_usd: 12.00 }  # produces 3-4 buildable app shells (full HTML/CSS), not sketches
     data-design: { budget_usd: 1.50 }
     agent-design: { budget_usd: 1.50 }
     slice-plan: { budget_usd: 1.50 }

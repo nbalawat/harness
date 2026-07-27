@@ -134,7 +134,8 @@ body:has(#nav-approvals:checked) #screen-approvals{display:flex;flex-direction:c
   word-break:break-word;box-shadow:var(--elev)}
 .message::before{display:block;margin-bottom:5px;font-family:var(--font-mono);font-size:10px;
   letter-spacing:.1em;text-transform:uppercase;color:var(--muted-3)}
-.message.user{align-self:flex-end;background:var(--surface-3);border-color:var(--border-strong)}
+.message.user{align-self:flex-end;background:var(--surface-3);border-color:var(--border-strong);
+  box-shadow:var(--elev-raised)}
 .message.user::before{content:"analyst";color:var(--muted-2)}
 .message.assistant{align-self:flex-start;border-left:2px solid var(--primary);
   background:linear-gradient(90deg,var(--primary-soft),var(--surface) 42%)}
@@ -256,8 +257,10 @@ kbd{display:inline-grid;place-items:center;min-width:18px;height:18px;padding:0 
 .history-item{display:flex;align-items:center;gap:10px;padding:10px 12px;
   border:1px solid var(--border-hair);border-radius:var(--radius-sm);background:var(--surface);
   font-size:13px;color:var(--fg);cursor:pointer;transition:background .12s ease,border-color .12s ease}
-.history-item::before{content:"▚";flex:none;font-family:var(--font-mono);font-size:10px;color:var(--muted-3)}
+.history-item::before{content:"";flex:none;width:3px;height:15px;border-radius:1px;
+  background:var(--muted-3);transition:background .12s ease}
 .history-item:hover{background:var(--surface-2);border-color:var(--border-strong)}
+.history-item:hover::before{background:var(--primary)}
 .history-item:nth-child(even){background:var(--surface-inset)}
 .history-item:nth-child(even):hover{background:var(--surface-2)}
 
@@ -295,7 +298,7 @@ kbd{display:inline-grid;place-items:center;min-width:18px;height:18px;padding:0 
 .status-live{color:var(--primary)}
 .status-live::before{content:"●";margin-right:5px}
 .status-guard{color:var(--accent-warn)}
-.statusbar .push{margin-left:auto}
+.push{margin-left:auto}
 
 /* ─── narrow viewports ─────────────────────────────────────── */
 @media (max-width:1080px){
@@ -334,8 +337,8 @@ kbd{display:inline-grid;place-items:center;min-width:18px;height:18px;padding:0 
       <span>Approvals</span></label></li>
   </ul>
   <div class="rail-foot">
-    <p class="micro">Corpus</p>
-    <p class="rail-meta mono">fixtures/<wbr>sample-docs</p>
+    <p class="micro">Index</p>
+    <p class="rail-meta mono">product-kb</p>
     <span class="rail-tag">LOCAL</span>
   </div>
 </nav>
@@ -349,7 +352,7 @@ kbd{display:inline-grid;place-items:center;min-width:18px;height:18px;padding:0 
     </div>
     <div class="topbar-right">
       <span class="tb-meta mono">retrieval-grounded</span>
-      <span id="agent-mode" class="agent-badge" role="status" aria-live="polite"></span>
+      <span id="agent-mode" role="status" aria-live="polite"></span>
     </div>
   </header>
 

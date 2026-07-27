@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Support Copilot — review-gated support assistant</title>
+<link rel="stylesheet" href="tokens.css">
+<style>
+/* ============================================================
+   LEDGER — structural stylesheet
+   ============================================================ */
+
+*,*::before,*::after{box-sizing:border-box;border-radius:0!important;box-shadow:none!important}
+
+html{-webkit-text-size-adjust:100%}
+
+body{
+  margin:0;height:100dvh;overflow:hidden;
+  display:grid;grid-template-rows:auto minmax(0,1fr) auto;grid-template-columns:minmax(0,1fr);
+  background:var(--bg);color:var(--fg);
+  font-family:var(--font);font-size:13px;line-height:20px;
+  font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1,"calt" 0;
+}
+
+/* --- hidden nav radios (focusable, not visible) ------------- */
+.nav-radio{position:absolute;width:1px;height:1px;margin:0;padding:0;
+  clip:rect(0 0 0 0);clip-path:inset(50%);overflow:hidden;white-space:nowrap}
+
+:focus-visible{outline:2px solid var(--signal);outline-offset:2px}
+
+/* ============================================================
+   COMMAND BAR
+   ============================================================ */
+.cmdbar{
+  display:flex;align-items:stretch;flex-wrap:nowrap;min-width:0;
+  min-height:var(--bar-h);
+  border-bottom:var(--rule);background:var(--bg);
+}
+.brand{
+  flex:0 0 auto;display:flex;align-items:center;padding:0 14px;
+  background:var(--fg);color:var(--bg);
+  font-size:13px;font-weight:700;letter-spacing:var(--track);
+  text-transform:uppercase;white-space:nowrap;
+}
+.brand-meta{
+  flex:0 1 auto;display:flex;align-items:center;padding:0 12px;overflow:hidden;
+  border-right:var(--rule);
+  font-size:10px;letter-spacing:var(--track-micro);color:var(--muted);
+  text-transform:uppercase;white-space:nowrap;
+}
+.tabs{flex:0 0 auto;display:flex;align-items:stretch}
+.tab{
+  flex:0 0 auto;display:flex;align-items:center;padding:0 14px;
+  border-right:var(--rule-thin);
+  font-size:11px;letter-spacing:var(--track-micro);text-transform:uppercase;
+  color:var(--muted);cursor:pointer;user-select:none;white-space:nowrap;
+}
+.tab .brk{color:var(--dot);padding:0 4px}
+.tab:hover{background:var(--cell);color:var(--fg)}
+.spacer{flex:1 1 0;min-width:0;border-bottom:0}
+
+/* active tab — signal marker */
+body:has(#nav-chat:checked) label[for="nav-chat"],
+body:has(#nav-history:checked) label[for="nav-history"],
+body:has(#nav-agents:checked) label[for="nav-agents"],
+body:has(#nav-approvals:checked) label[for="nav-approvals"]{
+  background:var(--fg);color:var(--bg);font-weight:700;
+  box-shadow:none;position:relative;
+}
+body:has(#nav-chat:checked) label[for="nav-chat"] .brk,
+body:has(#nav-history:checked) label[for="nav-history"] .brk,
+body:has(#nav-agents:checked) label[for="nav-agents"] .brk,
+body:has(#nav-approvals:checked) label[for="nav-approvals"] .brk{color:var(--signal)}
+body:has(#nav-chat:checked) label[for="nav-chat"]::after,
+body:has(#nav-history:checked) label[for="nav-history"]::after,
+body:has(#nav-agents:checked) label[for="nav-agents"]::after,
+body:has(#nav-approvals:checked) label[for="nav-approvals"]::after{
+  content:"";position:absolute;left:0;right:0;bottom:0;height:3px;background:var(--signal)}
+/* focus ring for keyboard users on the hidden radios */
+body:has(#nav-chat:focus-visible) label[for="nav-chat"],
+body:has(#nav-history:focus-visible) label[for="nav-history"],
+body:has(#nav-agents:focus-visible) label[for="nav-agents"],
+body:has(#nav-approvals:focus-visible) label[for="nav-approvals"]{
+  outline:2px solid var(--signal);outline-offset:-4px}
+
+.agent-badge{
+  flex:0 1 auto;min-width:0;display:flex;align-items:stretch;border-left:var(--rule);
+}
+.agent-badge .k{
+  flex:0 0 auto;display:flex;align-items:center;padding:0 10px;
+  background:var(--fg);color:var(--bg);
+  font-size:10px;letter-spacing:var(--track-micro);text-transform:uppercase}
+#agent-mode{
+  flex:0 1 auto;min-width:0;
+  display:flex;align-items:center;gap:5px;padding:0 12px;
+  background:var(--cell);
+  font-size:11px;line-height:14px;letter-spacing:.04em;color:var(--fg);
+  text-transform:uppercase;overflow-wrap:anywhere;
+}
+#agent-mode::before{content:"[";flex:0 0 auto;color:var(--dot)}
+#agent-mode::after{content:"]";flex:0 0 auto;color:var(--dot)}
+#agent-mode:empty::before{content:"[ awaiting runtime"}
+
+/* ============================================================
+   SCREEN FRAME
+   ============================================================ */
+.screen{display:none;min-height:0;min-width:0;overflow:hidden}
+body:has(#nav-chat:checked) #screen-chat{display:grid}
+body:has(#nav-history:checked) #screen-history{display:grid}
+body:has(#nav-agents:checked) #screen-agents{display:grid}
+body:has(#nav-approvals:checked) #screen-approvals{display:grid}
+
+/* inverted section header */
+.panel-hd{
+  display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;min-width:0;
+  background:var(--fg);color:var(--bg);
+  padding:5px 12px;font-size:11px;letter-spacing:var(--track);
+  text-transform:uppercase;font-weight:700;
+}
+.panel-hd .rt{
+  margin-left:auto;min-width:0;font-weight:400;color:#c9c5bd;
+  letter-spacing:var(--track-micro);font-size:10px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mark{color:var(--signal)}
+
+/* key/value rows with dotted leaders */
+.kv{display:flex;align-items:baseline;gap:0;padding:3px 0;font-size:11px;min-width:0}
+.kv .k{flex:0 1 auto;min-width:0;letter-spacing:var(--track-micro);text-transform:uppercase;
+  color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.kv .lead{flex:1 1 6px;min-width:6px;margin:0 6px;border-bottom:var(--rule-dotted);transform:translateY(-4px)}
+.kv .v{flex:0 1 auto;min-width:0;color:var(--fg);text-align:right;overflow-wrap:anywhere}
+
+/* ============================================================
+   SCREEN — CHAT
+   ============================================================ */
+#screen-chat{grid-template-columns:minmax(0,1fr) var(--col-sources)}
+
+.thread{display:grid;grid-template-rows:auto auto minmax(0,1fr) auto auto;grid-template-columns:minmax(0,1fr);min-height:0;min-width:0;overflow:hidden}
+
+/* permanent AI disclosure stamp */
+.stamp{
+  display:flex;align-items:flex-start;gap:10px;
+  padding:8px 12px;border-bottom:var(--rule);
+  border-left:6px solid var(--signal);
+  background:var(--cell-alt);
+}
+.stamp-mark{color:var(--signal);font-size:13px;line-height:18px}
+.stamp-body{font-size:11px;line-height:16px;color:var(--muted)}
+.stamp-body strong{
+  display:block;color:var(--fg);font-size:11px;font-weight:700;
+  letter-spacing:var(--track);text-transform:uppercase}
+.stamp-lock{
+  margin-left:auto;align-self:center;white-space:nowrap;
+  border:var(--rule);padding:1px 7px;font-size:10px;font-weight:700;
+  letter-spacing:var(--track-micro);text-transform:uppercase}
+
+/* transcript */
+#messages{
+  list-style:none;margin:0;padding:0;overflow:hidden auto;min-width:0;min-height:0;
+  background:var(--bg);
+}
+#messages:empty::after{
+  content:"·  NO TURNS RECORDED — ASK A PRODUCT QUESTION TO OPEN A DRAFT";
+  display:block;padding:22px 14px;font-size:11px;letter-spacing:var(--track-micro);
+  color:var(--faint);border-bottom:var(--rule-dotted);
+}
+.message{
+  position:relative;
+  padding:9px 14px 9px 108px;
+  border-bottom:var(--rule-dotted);
+  font-size:13px;line-height:20px;
+  white-space:pre-wrap;overflow-wrap:anywhere;
+}
+.message::before{
+  position:absolute;left:0;top:0;bottom:0;width:96px;
+  padding:9px 0 0 12px;white-space:nowrap;overflow:hidden;
+  font-size:10px;font-weight:700;letter-spacing:var(--track-micro);
+  text-transform:uppercase;
+}
+/* USER — inverted full-height gutter label */
+.message.user{background:var(--bg)}
+.message.user::before{content:"User ▸";background:var(--fg);color:var(--bg)}
+
+/* ASSISTANT — bordered draft block carrying the stamped disclosure */
+.message.assistant{background:var(--cell-alt);border-bottom:var(--rule);border-top:var(--rule)}
+.message.assistant::before{content:"Draft ▸";color:var(--muted);border-right:var(--rule-thin)}
+.message.assistant::after{
+  content:"— Generated by an automated assistant · disclosure attached · citations logged";
+  display:block;margin-top:8px;padding-top:5px;border-top:var(--rule-dotted);
+  font-size:10px;line-height:15px;letter-spacing:var(--track-micro);
+  color:var(--signal-ink);text-transform:uppercase;white-space:normal;
+}
+/* ERROR — red-ruled */
+.message.error{
+  background:var(--bg);border-bottom:var(--rule);
+  border-left:6px solid var(--signal);color:var(--signal-ink)}
+.message.error::before{content:"Error ▸";color:var(--signal-ink);border-right:var(--rule-thin)}
+
+/* disposition gate */
+.disposition{border-top:var(--rule);border-bottom:var(--rule);background:var(--cell)}
+.disp-row{display:flex;align-items:stretch;flex-wrap:wrap;min-width:0}
+.disp{
+  flex:0 0 auto;display:flex;align-items:center;gap:8px;
+  border:0;border-right:var(--rule-thin);background:transparent;
+  padding:8px 14px;font-family:var(--font);font-size:11px;font-weight:700;
+  letter-spacing:var(--track-micro);text-transform:uppercase;color:var(--fg);
+  cursor:pointer;
+}
+.disp::before{content:"[ ]";color:var(--dot);font-weight:400}
+.disp:hover{background:var(--bg)}
+.disp.ok{color:var(--ok)}
+.disp.ok:hover::before{content:"[x]";color:var(--ok)}
+.disp.edit{color:var(--fg)}
+.disp.edit:hover::before{content:"[x]";color:var(--fg)}
+.disp.no{color:var(--rejected)}
+.disp.no:hover::before{content:"[x]";color:var(--rejected)}
+.disp-state{
+  margin-left:auto;display:flex;align-items:center;gap:6px;padding:8px 14px;
+  border-left:var(--rule-thin);
+  font-size:10px;letter-spacing:var(--track-micro);text-transform:uppercase;color:var(--muted)}
+.disp-state b{color:var(--signal);font-weight:700}
+
+/* composer */
+#composer{display:flex;align-items:stretch;background:var(--bg)}
+.sigil{
+  display:flex;align-items:center;padding:0 10px 0 12px;
+  font-size:15px;font-weight:700;color:var(--signal)}
+#input{
+  flex:1;min-width:0;border:0;background:transparent;
+  padding:12px 8px;font-family:var(--font);font-size:13px;color:var(--fg);
+  letter-spacing:.01em;
+}
+#input::placeholder{color:var(--faint)}
+#input:focus{outline:0;background:var(--cell-alt)}
+#composer:focus-within{outline:2px solid var(--signal);outline-offset:-2px}
+#composer button[type="submit"]{
+  border:0;border-left:var(--rule);background:var(--primary);color:var(--on-primary);
+  padding:0 22px;font-family:var(--font);font-size:11px;font-weight:700;
+  letter-spacing:var(--track);text-transform:uppercase;cursor:pointer}
+#composer button[type="submit"]:hover{background:var(--fg)}
+
+/* sources / retrieval log column */
+.sources{
+  border-left:var(--rule);display:grid;
+  grid-template-rows:auto auto minmax(0,1fr) auto;grid-template-columns:minmax(0,1fr);
+  min-width:0;min-height:0;overflow:hidden;background:var(--cell-alt)}
+.colhead{
+  display:grid;grid-template-columns:max-content minmax(0,1fr) max-content;
+  min-width:0;border-bottom:var(--rule);background:var(--cell);
+  font-size:10px;letter-spacing:var(--track-micro);text-transform:uppercase;color:var(--muted)}
+.colhead span{min-width:0;padding:4px 6px;border-right:var(--rule-dotted);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.colhead span:last-child{border-right:0;text-align:right}
+.retrieval-log{overflow:hidden auto;min-width:0;min-height:0;padding:0;overflow-wrap:anywhere}
+.retrieval-log:empty::after{
+  content:"·  AWAITING RETRIEVAL — PASSAGES CITED BY A DRAFT ARE LOGGED HERE AND STORED WITH THE RECORD";
+  display:block;padding:14px 10px;
+  font-size:10px;line-height:17px;letter-spacing:var(--track-micro);color:var(--faint)}
+.src-block{border-top:var(--rule);padding:8px 10px;min-width:0;overflow-wrap:anywhere}
+.src-block h3{
+  margin:0 0 4px;font-size:10px;font-weight:700;letter-spacing:var(--track);
+  text-transform:uppercase;color:var(--fg)}
+.note{margin:6px 0 0;font-size:10px;line-height:16px;color:var(--muted)}
+.note b{color:var(--fg);font-weight:700}
+
+/* ============================================================
+   SCREEN — HISTORY
+   ============================================================ */
+#screen-history,#screen-agents,#screen-approvals{
+  grid-template-rows:auto auto auto minmax(0,1fr);grid-template-columns:minmax(0,1fr);min-height:0}
+
+.toolbar{display:flex;align-items:stretch;flex-wrap:wrap;min-width:0;
+  border-bottom:var(--rule);background:var(--cell)}
+.searchbar{display:flex;align-items:center;flex:1 1 22ch;min-width:0;border-right:var(--rule)}
+.searchbar .sigil{color:var(--fg);font-size:13px}
+#history-search{
+  flex:1;min-width:0;border:0;background:transparent;padding:9px 8px;
+  font-family:var(--font);font-size:12px;color:var(--fg)}
+#history-search::placeholder{color:var(--faint)}
+#history-search:focus{outline:0;background:var(--bg)}
+.searchbar:focus-within{outline:2px solid var(--signal);outline-offset:-2px}
+
+.chips{display:flex;align-items:stretch;flex:0 1 auto;flex-wrap:wrap;min-width:0}
+.chip-cb{position:absolute;width:1px;height:1px;clip:rect(0 0 0 0);clip-path:inset(50%);overflow:hidden}
+.chip{
+  display:flex;align-items:center;gap:6px;padding:0 12px;border-right:var(--rule-thin);
+  font-size:10px;letter-spacing:var(--track-micro);text-transform:uppercase;
+  color:var(--muted);cursor:pointer;user-select:none;white-space:nowrap}
+.chip::before{content:"[ ]";color:var(--dot)}
+.chip-cb:checked + .chip{background:var(--fg);color:var(--bg)}
+.chip-cb:checked + .chip::before{content:"[x]";color:var(--signal)}
+.chip-cb:focus-visible + .chip{outline:2px solid var(--signal);outline-offset:-3px}
+.chip:hover{background:var(--bg);color:var(--fg)}
+.chip-cb:checked + .chip:hover{background:var(--fg);color:var(--bg)}
+
+.ledger-head{
+  display:grid;grid-template-columns:minmax(0,2.2fr) minmax(0,2.2fr) minmax(0,14ch) minmax(0,18ch);
+  min-width:0;border-bottom:var(--rule);background:var(--bg)}
+.ledger-head span{
+  min-width:0;padding:5px 12px;border-right:var(--rule-dotted);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  font-size:10px;font-weight:700;letter-spacing:var(--track-micro);
+  text-transform:uppercase;color:var(--fg)}
+.ledger-head span:last-child{border-right:0}
+
+#history-list{overflow:hidden auto;min-width:0;min-height:0;background:var(--bg)}
+#history-list:empty::after{
+  content:"·  NO CONVERSATIONS ON RECORD — RECORDS APPEAR HERE AFTER A DISPOSITION IS FILED";
+  display:block;padding:22px 14px;font-size:11px;letter-spacing:var(--track-micro);color:var(--faint)}
+.history-item{
+  display:block;padding:8px 12px 8px 26px;position:relative;
+  border-bottom:var(--rule-dotted);font-size:12px;line-height:19px;
+  overflow-wrap:anywhere;cursor:pointer}
+.history-item::before{
+  content:"▸";position:absolute;left:10px;top:8px;color:var(--signal);font-size:11px}
+.history-item:nth-child(even){background:var(--cell-alt)}
+.history-item:hover{background:var(--cell);outline:2px solid var(--fg);outline-offset:-2px}
+
+/* ============================================================
+   SCREEN — AGENTS
+   ============================================================ */
+.preamble{
+  min-width:0;overflow-wrap:anywhere;background:var(--cell-alt);
+  padding:10px 12px 10px 12px;padding-right:max(12px,28%);
+  border-bottom:var(--rule);
+  font-size:11px;line-height:17px;color:var(--muted)}
+.preamble strong{color:var(--fg);font-weight:700;letter-spacing:var(--track-micro);text-transform:uppercase}
+
+.list-wrap{overflow:hidden auto;min-width:0;min-height:0;padding:14px}
+#agents-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(300px,100%),1fr));gap:2px;min-width:0}
+#agents-list:not(:empty){background:var(--fg);border:var(--rule)}
+#agents-list:empty::after{
+  content:"·  AGENT REGISTRY NOT LOADED";
+  display:block;font-size:11px;letter-spacing:var(--track-micro);color:var(--faint)}
+.agent-card{background:var(--bg);padding:0 0 10px;min-width:0;overflow-wrap:anywhere}
+.agent-card strong{
+  display:block;overflow-wrap:anywhere;background:var(--fg);color:var(--bg);padding:5px 10px;margin-bottom:8px;
+  font-size:11px;font-weight:700;letter-spacing:var(--track);text-transform:uppercase}
+.agent-card p{margin:0;padding:0 10px 6px;font-size:11px;line-height:17px;color:var(--fg)}
+.agent-card .agent-tools,.agent-card .agent-evals{
+  position:relative;padding-left:24px;font-size:10px;line-height:16px;color:var(--muted);
+  border-top:var(--rule-dotted);padding-top:6px;margin-top:2px}
+.agent-card .agent-tools::before,.agent-card .agent-evals::before{
+  content:"·";position:absolute;left:10px;top:6px;color:var(--signal);font-weight:700}
+
+/* ============================================================
+   SCREEN — APPROVALS
+   ============================================================ */
+.legend{display:flex;align-items:stretch;border-bottom:var(--rule);background:var(--bg);flex-wrap:wrap;min-width:0}
+.legend .lg{
+  flex:0 0 auto;display:flex;align-items:center;gap:7px;padding:6px 14px;border-right:var(--rule-thin);
+  font-size:10px;letter-spacing:var(--track-micro);text-transform:uppercase;color:var(--muted)}
+.sw{width:10px;height:10px;border:var(--rule-thin);display:inline-block}
+.sw.pending{background:var(--signal);border-color:var(--signal)}
+.sw.approved{background:var(--ok);border-color:var(--ok)}
+.sw.edited{background:var(--fg)}
+.sw.rejected{background:var(--rejected);border-color:var(--rejected)}
+.legend .lg:last-child{border-right:0;margin-left:auto;color:var(--fg);font-weight:700}
+
+#approval-queue{overflow:hidden auto;min-width:0;min-height:0;padding:14px;background:var(--bg)}
+#approval-queue:empty::after{
+  content:"·  QUEUE EMPTY — NO DRAFT IS AWAITING A DECISION";
+  display:block;border:var(--rule);border-left:6px solid var(--signal);
+  padding:18px 14px;font-size:11px;letter-spacing:var(--track-micro);color:var(--muted)}
+#approval-queue > *{
+  border:var(--rule);padding:10px 12px;margin-bottom:14px;
+  font-size:12px;line-height:19px;background:var(--cell-alt)}
+
+/* ============================================================
+   BOTTOM STATUS STRIP
+   ============================================================ */
+.strip{
+  display:flex;align-items:stretch;min-width:0;min-height:var(--strip-h);
+  border-top:var(--rule);background:var(--cell);overflow:hidden}
+.strip .cell{
+  flex:0 0 auto;display:flex;align-items:center;gap:7px;padding:0 12px;
+  border-right:var(--rule-thin);
+  font-size:10px;letter-spacing:var(--track-micro);text-transform:uppercase;white-space:nowrap}
+.strip .cell .k{color:var(--muted)}
+.strip .cell .v{color:var(--fg);font-weight:700}
+.strip .cell .v.hot{color:var(--signal)}
+.strip .cell .v.good{color:var(--ok)}
+.strip .cell.end{margin-left:auto;border-right:0;border-left:var(--rule);color:var(--muted)}
+
+/* ============================================================
+   RESPONSIVE — collapse the sources column, keep the grid honest
+   ============================================================ */
+/* status-strip priority: shed low-value cells before they can clip */
+@media (max-width:1360px){ .strip .cell.p-lo{display:none} }
+@media (max-width:1180px){ .strip .cell.p-mid{display:none} }
+@media (max-width:1040px){ .brand-meta{display:none} }
+@media (max-width:960px){ .strip .cell.p-hi{display:none} }
+
+@media (max-width:900px){
+  #screen-chat{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1fr) auto}
+  .sources{border-left:0;border-top:var(--rule);max-height:38dvh}
+  .ledger-head{grid-template-columns:minmax(0,1fr) minmax(0,14ch)}
+  .ledger-head span:nth-child(2),.ledger-head span:nth-child(4){display:none}
+  .message{padding-left:88px}
+  .message::before{width:78px;padding-left:8px}
+}
+@media (max-width:700px){
+  .cmdbar{flex-wrap:wrap}
+  .tab{padding:0 8px}
+  .agent-badge{flex:1 1 100%;border-left:0;border-top:var(--rule-thin)}
+  .strip .cell.p-min{display:none}
+}
+</style>
+</head>
+<body>
+
+<input type="radio" name="nav" id="nav-chat" class="nav-radio" checked>
+<input type="radio" name="nav" id="nav-history" class="nav-radio">
+<input type="radio" name="nav" id="nav-agents" class="nav-radio">
+<input type="radio" name="nav" id="nav-approvals" class="nav-radio">
+
+<!-- ================= COMMAND BAR ================= -->
+<header class="cmdbar">
+  <div class="brand">Support Copilot</div>
+  <div class="brand-meta">v1 · local instance</div>
+  <nav class="tabs" aria-label="Primary sections">
+    <label class="tab" for="nav-chat"><span class="brk">[</span>Chat<span class="brk">]</span></label>
+    <label class="tab" for="nav-history"><span class="brk">[</span>History<span class="brk">]</span></label>
+    <label class="tab" for="nav-agents"><span class="brk">[</span>Agents<span class="brk">]</span></label>
+    <label class="tab" for="nav-approvals"><span class="brk">[</span>Approvals<span class="brk">]</span></label>
+  </nav>
+  <div class="spacer"></div>
+  <div class="agent-badge">
+    <span class="k">Agent</span>
+    <span id="agent-mode" role="status" aria-live="polite" aria-label="Assistant runtime mode"></span>
+  </div>
+</header>
+
+<!-- ================= SCREEN: CHAT ================= -->
+<main class="screen" id="screen-chat" aria-label="Chat">
+
+  <section class="thread" aria-label="Transcript and draft workspace">
+    <div class="panel-hd"><span class="mark">▸</span>Transcript — draft workspace<span class="rt">grounded · review-gated</span></div>
+
+    <div class="stamp" role="note" aria-label="Permanent automated assistant disclosure">
+      <span class="stamp-mark" aria-hidden="true">▣</span>
+      <span class="stamp-body">
+        <strong>Generated by an automated assistant</strong>
+        This disclosure is stamped onto every reply this application produces. It cannot be dismissed, disabled, edited or removed, and it is stored with the conversation record.
+      </span>
+      <span class="stamp-lock">Locked</span>
+    </div>
+
+    <ul id="messages" aria-label="Conversation turns" aria-live="polite"></ul>
+
+    <div class="disposition">
+      <div class="panel-hd"><span class="mark">▸</span>Disposition — required before send<span class="rt">audit trail records analyst · time · edited</span></div>
+      <div class="disp-row">
+        <button class="disp ok" type="button">Approve as-is</button>
+        <button class="disp edit" type="button">Edit, then approve</button>
+        <button class="disp no" type="button">Reject</button>
+        <span class="disp-state">State ▸ <b>Unapproved</b></span>
+      </div>
+    </div>
+
+    <form id="composer" aria-label="Ask a product question">
+      <span class="sigil" aria-hidden="true">&gt;</span>
+      <input id="input" type="text" autocomplete="off" aria-label="Product question" placeholder="Ask a product question — retrieval runs before generation">
+      <button type="submit">Ask ▸</button>
+    </form>
+  </section>
+
+  <aside class="sources" aria-label="Sources and retrieval log">
+    <div class="panel-hd"><span class="mark">▸</span>Sources / retrieval log</div>
+    <div class="colhead" role="row"><span>#</span><span>Source</span><span>Score</span></div>
+    <div class="retrieval-log" aria-label="Retrieved passages"></div>
+
+    <div class="src-block">
+      <h3>Grounding</h3>
+      <div class="kv"><span class="k">Corpus</span><span class="lead"></span><span class="v">fixtures/sample-docs</span></div>
+      <div class="kv"><span class="k">Strategy</span><span class="lead"></span><span class="v">passage retrieval</span></div>
+      <div class="kv"><span class="k">Scope</span><span class="lead"></span><span class="v">internal only</span></div>
+      <div class="kv"><span class="k">Egress</span><span class="lead"></span><span class="v">model provider</span></div>
+      <p class="note"><b>Policy —</b> answers are composed from retrieved passages, not from the model's general knowledge. Citations shown here are stored with the record so a reviewer can verify grounding.</p>
+    </div>
+  </aside>
+
+</main>
+
+<!-- ================= SCREEN: HISTORY ================= -->
+<main class="screen" id="screen-history" aria-label="History">
+  <div class="panel-hd"><span class="mark">▸</span>Conversation record<span class="rt">persisted · searchable · retained indefinitely</span></div>
+
+  <div class="toolbar">
+    <div class="searchbar">
+      <span class="sigil" aria-hidden="true">/</span>
+      <input id="history-search" type="search" autocomplete="off" aria-label="Search past conversations" placeholder="Search questions, drafts and decisions">
+    </div>
+    <div class="chips">
+      <input type="checkbox" class="chip-cb" id="f-approved"><label class="chip" for="f-approved">Approved</label>
+      <input type="checkbox" class="chip-cb" id="f-edited"><label class="chip" for="f-edited">Edited</label>
+      <input type="checkbox" class="chip-cb" id="f-rejected"><label class="chip" for="f-rejected">Rejected</label>
+      <input type="checkbox" class="chip-cb" id="f-cited"><label class="chip" for="f-cited">Has citations</label>
+    </div>
+  </div>
+
+  <div class="ledger-head" role="row">
+    <span>Question</span><span>Draft</span><span>Decision</span><span>Timestamp</span>
+  </div>
+
+  <div id="history-list" aria-label="Past conversations"></div>
+</main>
+
+<!-- ================= SCREEN: AGENTS ================= -->
+<main class="screen" id="screen-agents" aria-label="Agents">
+  <div class="panel-hd"><span class="mark">▸</span>Agent registry — disclosure<span class="rt">what runs, what it may touch</span></div>
+
+  <p class="preamble"><strong>Transparency —</strong> every automated component that participates in drafting a reply is listed below with its role, the tools it is permitted to call, and the evaluations it is held to. Nothing here can send a reply on its own: output is gated on an explicit analyst disposition, and every reply carries the permanent automated-assistant disclosure.</p>
+
+  <div class="legend" aria-label="Card field key">
+    <span class="lg"><span class="sw edited"></span>Role</span>
+    <span class="lg"><span class="sw rejected"></span>Tools</span>
+    <span class="lg"><span class="sw approved"></span>Evals</span>
+    <span class="lg">Send authority ▸ none</span>
+  </div>
+
+  <div class="list-wrap">
+    <div id="agents-list" aria-label="Registered agents"></div>
+  </div>
+</main>
+
+<!-- ================= SCREEN: APPROVALS ================= -->
+<main class="screen" id="screen-approvals" aria-label="Approvals">
+  <div class="panel-hd"><span class="mark">▸</span>Approval queue<span class="rt">no draft leaves the application undecided</span></div>
+
+  <div class="legend">
+    <span class="lg"><span class="sw pending"></span>Pending</span>
+    <span class="lg"><span class="sw approved"></span>Approved</span>
+    <span class="lg"><span class="sw edited"></span>Edited</span>
+    <span class="lg"><span class="sw rejected"></span>Rejected</span>
+    <span class="lg">Gate ▸ enforced</span>
+  </div>
+
+  <div class="ledger-head" role="row">
+    <span>Draft</span><span>Citations</span><span>Decision</span><span>Analyst · time</span>
+  </div>
+
+  <div id="approval-queue" aria-label="Drafts awaiting a decision"></div>
+</main>
+
+<!-- ================= STATUS STRIP ================= -->
+<footer class="strip" aria-label="System status">
+  <span class="cell"><span class="k">Mode</span><span class="v">review-gated</span></span>
+  <span class="cell"><span class="k">Pending</span><span class="v hot">—</span></span>
+  <span class="cell p-min"><span class="k">Retained</span><span class="v">indefinite</span></span>
+  <span class="cell p-hi"><span class="k">Disclosure</span><span class="v good">locked</span></span>
+  <span class="cell p-lo"><span class="k">Corpus</span><span class="v">fixtures/sample-docs</span></span>
+  <span class="cell p-mid"><span class="k">Build</span><span class="v">v1.0.0 · local</span></span>
+  <span class="cell end"><span class="k">Ledger</span><span class="v">append-only</span></span>
+</footer>
+
+<script src="app.js" defer></script>
+</body>
+</html>
