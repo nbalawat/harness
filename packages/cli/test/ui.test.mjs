@@ -50,6 +50,8 @@ test("ui: state API reflects a completed run with costs and artifacts", async ()
     assert.ok(state.nodes.every((n) => n.state === "committed"));
     assert.ok(state.rawArtifacts.includes("render/README.md"));
     assert.ok(state.events.length > 0);
+    assert.equal(typeof state.activeMs, 'number');
+    assert.ok(state.nodes.every((n) => typeof n.phase === 'string'));
 
     // Artifact serving works...
     const readme = await fetch(`${base}/artifact/render/README.md`);

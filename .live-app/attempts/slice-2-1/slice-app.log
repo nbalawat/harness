@@ -1,13 +1,13 @@
-INFO:     Started server process [74584]
+INFO:     Started server process [76425]
 INFO:     Waiting for application startup.
 INFO:     Application startup complete.
-INFO:     Uvicorn running on http://127.0.0.1:64580 (Press CTRL+C to quit)
-INFO:     127.0.0.1:64582 - "GET /health HTTP/1.1" 200 OK
-INFO:     127.0.0.1:64583 - "GET /health HTTP/1.1" 200 OK
-INFO:     127.0.0.1:64582 - "POST /chat HTTP/1.1" 200 OK
-INFO:     127.0.0.1:64583 - "POST /api/conversations HTTP/1.1" 200 OK
-INFO:     127.0.0.1:64582 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     Uvicorn running on http://127.0.0.1:64885 (Press CTRL+C to quit)
+INFO:     127.0.0.1:64887 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64888 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64887 - "POST /chat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64888 - "POST /api/conversations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64887 - "GET /api/conversations HTTP/1.1" 200 OK
 INFO:     Shutting down
 INFO:     Waiting for application shutdown.
 INFO:     Application shutdown complete.
-INFO:     Finished server process [74584]
+INFO:     Finished server process [76425]

@@ -189,6 +189,7 @@ export function buildState(workspace: string): Record<string, unknown> {
   const nodes = def.nodes.map((n) => ({
     id: n.id,
     kind: n.kind,
+    phase: n.phase ?? "Steps",
     description: n.description ?? null,
     deps: n.deps ?? [],
     feeds: dependents[n.id] ?? [],
@@ -244,12 +245,13 @@ export function buildState(workspace: string): Record<string, unknown> {
   }
 
   // Documents: curated human-readable outputs; raw files tucked behind "advanced".
-  const documents: { label: string; blurb: string; node: string; href: string }[] = [];
+  const documents: { label: string; blurb: string; node: string; href: string; fetch: string }[] = [];
   for (const [nodeId, byName] of Object.entries(state.artifacts)) {
     for (const [name, rel] of Object.entries(byName)) {
       const meta = DOC_LABELS[name];
       if (meta && rel.endsWith(".json")) {
-        documents.push({ ...meta, node: nodeId, href: `/view/${rel.replace(/^artifacts\//, "")}` });
+        const clean = rel.replace(/^artifacts\//, "");
+        documents.push({ ...meta, node: nodeId, href: `/view/${clean}`, fetch: `/artifact/${clean}` });
       }
     }
   }
@@ -272,6 +274,7 @@ export function buildState(workspace: string): Record<string, unknown> {
   const costMap = new Map(Object.entries(costs).map(([k, v]) => [k, { costUsd: v.costUsd }]));
   const firstTs = events[0]?.ts;
   const lastTs = events[events.length - 1]?.ts;
+  const activeMs = Object.values(costs).reduce((sum, c) => sum + c.wallClockMs, 0);
 
   return {
     projectType: `${def.name}@${def.version}`,
@@ -297,6 +300,8 @@ export function buildState(workspace: string): Record<string, unknown> {
     documents,
     designOptions,
     elapsedMs: firstTs && lastTs ? Date.parse(String(lastTs)) - Date.parse(String(firstTs)) : 0,
+    activeMs,
+    startedAt: firstTs ?? null,
     rawArtifacts: walk(path.join(workspace, "artifacts"), path.join(workspace, "artifacts")),
     events: events
       .map((e) => ({ ts: e.ts, type: e.type, text: narrate(e, costMap) }))
@@ -599,14 +604,23 @@ const PAGE = /* html */ `<!doctype html>
   }
 }
 * { box-sizing:border-box; margin:0; }
-body { font:14px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif; background:var(--page); color:var(--ink); padding:1.4rem clamp(1rem,4vw,2.5rem); }
+body { font:14px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif; background:var(--page); color:var(--ink); }
 .mono { font-family:ui-monospace,Menlo,monospace; }
-.hero { display:flex; align-items:flex-start; gap:1rem; flex-wrap:wrap; margin-bottom:1rem; }
-.hero h1 { font-size:1.35rem; font-weight:650; letter-spacing:-.01em; }
-.hero .ws { color:var(--muted); font-size:.78rem; margin-top:.15rem; }
-.pill { margin-left:auto; display:inline-flex; align-items:center; gap:.45rem; padding:.35rem .85rem; border-radius:999px; border:1px solid var(--border); background:var(--surface); font-weight:550; font-size:.85rem; box-shadow:var(--shadow); }
-.pill .dot { width:9px; height:9px; border-radius:50%; }
-.tiles { display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:.8rem; margin-bottom:1.1rem; }
+.topbar { position:sticky; top:0; z-index:40; background:var(--page); border-bottom:1px solid var(--grid); padding:.8rem clamp(1rem,4vw,2.5rem); display:flex; align-items:center; gap:1rem; flex-wrap:wrap; }
+.topbar h1 { font-size:1.05rem; font-weight:650; }
+.topbar .mini { color:var(--ink2); font-size:.82rem; }
+.pill { display:inline-flex; align-items:center; gap:.45rem; padding:.28rem .8rem; border-radius:999px; border:1px solid var(--border); background:var(--surface); font-weight:550; font-size:.82rem; }
+.pill .dot { width:8px; height:8px; border-radius:50%; }
+.tabs { display:flex; gap:.25rem; margin-left:auto; background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:.25rem; }
+.tabs button { border:0; background:transparent; color:var(--ink2); font:inherit; font-weight:550; padding:.4rem .95rem; border-radius:7px; cursor:pointer; }
+.tabs button.active { background:var(--accent); color:var(--accent-ink); }
+.banner { display:none; align-items:center; gap:.7rem; margin:0 clamp(1rem,4vw,2.5rem); margin-top:1rem; padding:.7rem 1rem; border:1px solid var(--warn); border-left-width:4px; background:var(--surface); border-radius:10px; }
+.banner b { color:var(--warn); }
+.banner button { margin-left:auto; }
+main { padding:1.2rem clamp(1rem,4vw,2.5rem); }
+.tabpane { display:none; }
+.tabpane.active { display:block; }
+.tiles { display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:.8rem; margin-bottom:1rem; }
 .tile { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:.85rem 1rem; box-shadow:var(--shadow); }
 .tile .k { font-size:.72rem; text-transform:uppercase; letter-spacing:.07em; color:var(--muted); margin-bottom:.35rem; }
 .tile .v { font-size:1.4rem; font-weight:650; letter-spacing:-.01em; }
@@ -614,37 +628,45 @@ body { font:14px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif; background:
 .meter { height:6px; border-radius:3px; background:var(--grid); margin-top:.55rem; overflow:hidden; }
 .meter > div { height:100%; border-radius:3px; background:var(--accent); transition:width .6s ease; }
 .meter > div.over { background:var(--crit); }
-.grid { display:grid; grid-template-columns:minmax(0,1.2fr) minmax(0,.9fr); gap:1rem; align-items:start; }
-@media (max-width: 980px) { .grid { grid-template-columns:1fr; } }
 .card { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:1rem 1.15rem; box-shadow:var(--shadow); margin-bottom:1rem; }
 .card h2 { font-size:.72rem; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); margin-bottom:.7rem; }
-.hint { font-size:.78rem; color:var(--muted); }
-.rail { position:relative; }
-.rail::before { content:""; position:absolute; left:11px; top:8px; bottom:8px; width:2px; background:var(--grid); border-radius:1px; }
-.node { position:relative; display:flex; align-items:center; gap:.6rem; padding:.34rem .4rem .34rem 2rem; border-radius:8px; cursor:pointer; }
-.node:hover { background:var(--page); }
-.node .icon { position:absolute; left:0; width:24px; height:24px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:.72rem; background:var(--surface); border:2px solid var(--grid); color:var(--muted); }
+.hint { font-size:.78rem; color:var(--muted); text-transform:none; letter-spacing:0; }
+.empty { color:var(--muted); font-size:.84rem; }
+.chip { white-space:nowrap; font-size:.68rem; padding:.05rem .5rem; border-radius:999px; border:1px solid var(--border); color:var(--ink2); }
+.chip.model { color:var(--accent); border-color:var(--accent); }
+.chip.retry { color:var(--serious); border-color:var(--serious); }
+.chip.default { color:var(--muted); }
+button.primary { background:var(--accent); color:var(--accent-ink); border:0; border-radius:8px; padding:.55rem 1.1rem; font:inherit; font-weight:560; cursor:pointer; }
+button.primary:hover { filter:brightness(1.08); }
+button.ghost { background:transparent; border:1px solid var(--border); color:var(--ink2); border-radius:8px; padding:.5rem .9rem; font:inherit; cursor:pointer; }
+/* pipeline phases */
+.phase { margin-bottom:1rem; }
+.phase .phead { display:flex; align-items:center; gap:.7rem; padding:.4rem 0; }
+.phase .phead b { font-size:.95rem; }
+.phase .phead .bar { flex:1; height:4px; border-radius:2px; background:var(--grid); overflow:hidden; }
+.phase .phead .bar div { height:100%; background:var(--good); }
+.phase .phead .stat { font-size:.75rem; color:var(--muted); white-space:nowrap; }
+.node { display:flex; align-items:center; gap:.6rem; padding:.4rem .5rem; border-radius:8px; cursor:pointer; border:1px solid transparent; }
+.node:hover { background:var(--page); border-color:var(--border); }
+.node .icon { width:22px; height:22px; flex:none; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:.7rem; background:var(--surface); border:2px solid var(--grid); color:var(--muted); position:relative; }
 .node.committed .icon { border-color:var(--good); color:var(--good); }
 .node.failed .icon { border-color:var(--crit); background:var(--crit); color:#fff; }
 .node.parked .icon { border-color:var(--warn); color:var(--warn); }
 .node.started .icon { border-color:var(--accent); color:var(--accent); }
 .node.started .icon::after { content:""; position:absolute; inset:-6px; border-radius:50%; border:2px solid var(--accent); opacity:.5; animation:pulse 1.4s ease-out infinite; }
 @keyframes pulse { from { transform:scale(.7); opacity:.6; } to { transform:scale(1.15); opacity:0; } }
-.node .id { font-weight:560; }
+.node .id { font-weight:560; min-width:150px; }
 .node.pending .id, .node.skipped .id { color:var(--muted); font-weight:450; }
-.node .desc { font-size:.75rem; color:var(--muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1; }
-.chip { white-space:nowrap; font-size:.68rem; padding:.05rem .5rem; border-radius:999px; border:1px solid var(--border); color:var(--ink2); }
-.chip.retry { color:var(--serious); border-color:var(--serious); }
+.node .desc { font-size:.76rem; color:var(--muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1; }
 .node .cost { font-size:.72rem; color:var(--ink2); white-space:nowrap; }
+/* gate */
 .gate { border-left:3px solid var(--warn); }
 .gate .q { margin-bottom:.85rem; }
 .gate label { display:block; font-weight:560; margin-bottom:.12rem; }
 .gate .why { font-size:.78rem; color:var(--ink2); margin-bottom:.35rem; }
 .gate input { width:100%; background:var(--page); border:1px solid var(--grid); color:var(--ink); border-radius:8px; padding:.55rem .7rem; font:inherit; }
 .gate input:focus { outline:2px solid var(--accent); outline-offset:1px; border-color:transparent; }
-button.primary { background:var(--accent); color:var(--accent-ink); border:0; border-radius:8px; padding:.55rem 1.1rem; font:inherit; font-weight:560; cursor:pointer; }
-button.primary:hover { filter:brightness(1.08); }
-button.ghost { background:transparent; border:1px solid var(--border); color:var(--ink2); border-radius:8px; padding:.5rem .9rem; font:inherit; cursor:pointer; }
+/* designs */
 .designs { display:grid; grid-template-columns:repeat(auto-fill,252px); gap:.8rem; }
 .design { border:1px solid var(--border); border-radius:10px; overflow:hidden; background:var(--page); }
 .design .thumb { height:200px; overflow:hidden; background:#fff; position:relative; }
@@ -655,33 +677,38 @@ button.ghost { background:transparent; border:1px solid var(--border); color:var
 .design .bar .chip { margin-right:auto; }
 .design .bar a { font-size:.78rem; color:var(--accent); text-decoration:none; }
 .design .bar button { background:transparent; border:1px solid var(--accent); color:var(--accent); border-radius:6px; padding:.2rem .7rem; font:inherit; font-size:.78rem; cursor:pointer; }
-.events { max-height:320px; overflow-y:auto; font-size:.8rem; }
-.event { display:flex; gap:.55rem; align-items:baseline; padding:.16rem 0; color:var(--ink2); }
-.event .t { color:var(--muted); font-size:.7rem; flex:none; width:52px; }
+/* documents */
+.docgrid { display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:.8rem; }
+.doccard { text-align:left; background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:.9rem 1rem; cursor:pointer; font:inherit; color:inherit; box-shadow:var(--shadow); }
+.doccard:hover { border-color:var(--accent); }
+.doccard b { color:var(--accent); font-size:.92rem; }
+.doccard .blurb { font-size:.78rem; color:var(--ink2); margin-top:.2rem; }
+.doccard .src { font-size:.7rem; color:var(--muted); margin-top:.4rem; }
+/* decisions */
+.dcard { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:1rem 1.15rem; margin-bottom:.9rem; box-shadow:var(--shadow); }
+.dcard .dhead { display:flex; align-items:baseline; gap:.6rem; margin-bottom:.5rem; }
+.dcard .dhead b { font-size:.95rem; }
+.dcard .dhead .when { color:var(--muted); font-size:.74rem; margin-left:auto; }
+.qa { display:grid; grid-template-columns:minmax(220px,1.1fr) 1fr; gap:.4rem 1.2rem; padding:.45rem 0; border-top:1px solid var(--grid); align-items:baseline; }
+.qa .q { color:var(--ink2); font-size:.84rem; }
+.qa .a { font-weight:580; }
+@media (max-width:720px){ .qa { grid-template-columns:1fr; } }
+/* activity */
+.events { font-size:.84rem; }
+.event { display:flex; gap:.6rem; align-items:baseline; padding:.22rem 0; color:var(--ink2); border-bottom:1px solid var(--grid); }
+.event:last-child { border-bottom:0; }
+.event .t { color:var(--muted); font-size:.72rem; flex:none; width:56px; }
 .event .d { width:7px; height:7px; border-radius:50%; background:var(--grid); flex:none; align-self:center; }
 .event.good .d { background:var(--good); } .event.bad .d { background:var(--crit); }
 .event.warn .d { background:var(--warn); } .event.info .d { background:var(--accent); }
 .event.bad { color:var(--crit); }
-.decision { border-bottom:1px solid var(--grid); padding:.55rem 0; }
-.decision:last-child { border-bottom:0; }
-.decision .head { display:flex; gap:.5rem; align-items:baseline; font-weight:560; }
-.decision .head .chip { margin-left:auto; }
-.decision .item { font-size:.82rem; margin-top:.3rem; }
-.decision .item .p { color:var(--ink2); }
-.decision .item .a { font-weight:560; }
-.docs a.doc { display:block; text-decoration:none; color:inherit; padding:.5rem .6rem; border-radius:8px; }
-.docs a.doc:hover { background:var(--page); }
-.docs .doc b { color:var(--accent); font-size:.88rem; }
-.docs .doc .blurb { font-size:.76rem; color:var(--muted); }
-.advanced summary { cursor:pointer; color:var(--muted); font-size:.78rem; }
-.advanced a { display:block; color:var(--ink2); text-decoration:none; font-size:.74rem; padding:.08rem 0 .08rem .8rem; }
-/* Step inspector drawer */
-#drawer { position:fixed; top:0; right:-560px; width:min(540px,92vw); height:100vh; background:var(--surface); border-left:1px solid var(--border); box-shadow:-12px 0 40px rgba(0,0,0,.18); transition:right .25s ease; z-index:50; display:flex; flex-direction:column; }
+/* drawer + modal */
+#drawer { position:fixed; top:0; right:-580px; width:min(560px,94vw); height:100vh; background:var(--surface); border-left:1px solid var(--border); box-shadow:-12px 0 40px rgba(0,0,0,.18); transition:right .25s ease; z-index:60; display:flex; flex-direction:column; }
 #drawer.open { right:0; }
-#drawer .head { padding:1rem 1.2rem; border-bottom:1px solid var(--grid); display:flex; align-items:center; gap:.6rem; }
-#drawer .head b { font-size:1rem; }
-#drawer .body { padding:1rem 1.2rem; overflow-y:auto; flex:1; }
-#drawer h3 { font-size:.72rem; text-transform:uppercase; letter-spacing:.07em; color:var(--muted); margin:.9rem 0 .4rem; }
+#drawer .head, #docModal .head { padding:1rem 1.2rem; border-bottom:1px solid var(--grid); display:flex; align-items:center; gap:.6rem; }
+#drawer .head b, #docModal .head b { font-size:1rem; }
+#drawer .body, #docModal .body { padding:1rem 1.2rem; overflow-y:auto; flex:1; }
+#drawer h3, .docsec h3 { font-size:.72rem; text-transform:uppercase; letter-spacing:.07em; color:var(--muted); margin:.9rem 0 .4rem; }
 #drawer .depitem { font-size:.82rem; padding:.2rem 0; }
 #drawer .depitem .mono { color:var(--accent); }
 #drawer .depitem .d { color:var(--muted); font-size:.76rem; }
@@ -692,55 +719,86 @@ button.ghost { background:transparent; border:1px solid var(--border); color:var
 .tr .lbl { color:var(--accent); font-weight:560; }
 .tr .prev { color:var(--ink2); word-break:break-word; }
 .tr.text .prev { color:var(--ink); }
-.empty { color:var(--muted); font-size:.82rem; }
+#docModal { position:fixed; inset:0; z-index:70; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,.45); }
+#docModal.open { display:flex; }
+#docModal .sheet { width:min(860px,94vw); max-height:88vh; background:var(--surface); border:1px solid var(--border); border-radius:14px; display:flex; flex-direction:column; overflow:hidden; }
+.doctable { width:100%; border-collapse:collapse; font-size:.8rem; margin:.3rem 0 .6rem; }
+.doctable th { text-align:left; color:var(--muted); font-weight:560; font-size:.7rem; text-transform:uppercase; letter-spacing:.05em; padding:.35rem .5rem; border-bottom:1px solid var(--grid); }
+.doctable td { padding:.4rem .5rem; border-bottom:1px solid var(--grid); vertical-align:top; }
+.kv { display:grid; grid-template-columns:minmax(160px,220px) 1fr; gap:.3rem 1rem; font-size:.84rem; padding:.2rem 0; }
+.kv .k { color:var(--muted); }
+.badgechip { display:inline-block; font-size:.72rem; border:1px solid var(--border); border-radius:99px; padding:.02rem .5rem; margin:.06rem .15rem .06rem 0; color:var(--ink2); }
 </style>
 </head>
 <body>
-<header class="hero">
-  <div><h1 id="title">harness</h1><div class="ws mono" id="status"></div></div>
+<div class="topbar">
+  <div><h1 id="title">harness</h1></div>
   <span class="pill"><span class="dot" id="statusDot"></span><span id="statusText"></span></span>
-</header>
-<div class="tiles">
-  <div class="tile"><div class="k">Progress</div><div class="v" id="progressV"></div><div class="meter"><div id="progressBar"></div></div><div class="sub" id="progressSub"></div></div>
-  <div class="tile"><div class="k">Cost</div><div class="v" id="costV"></div><div class="meter"><div id="costBar"></div></div><div class="sub" id="costSub"></div></div>
-  <div class="tile"><div class="k">Tokens</div><div class="v" id="tokV"></div><div class="sub" id="tokSub"></div></div>
-  <div class="tile"><div class="k">Elapsed</div><div class="v" id="elapsedV"></div><div class="sub">wall clock</div></div>
-  <div class="tile"><div class="k">Attention</div><div class="v" id="attnV" style="font-size:1.02rem"></div><div class="sub" id="attnSub"></div></div>
+  <span class="mini" id="miniStats"></span>
+  <nav class="tabs" id="tabs">
+    <button data-tab="overview" class="active">Overview</button>
+    <button data-tab="pipeline">Pipeline</button>
+    <button data-tab="documents">Documents</button>
+    <button data-tab="decisions">Decisions</button>
+    <button data-tab="activity">Activity</button>
+  </nav>
 </div>
-<div class="card" id="appPanel" style="display:none">
-  <div style="display:flex;align-items:center;gap:.8rem;flex-wrap:wrap">
-    <h2 style="margin:0">Your application</h2>
-    <span class="chip" id="appStage"></span>
-    <span class="pill" style="margin-left:0;padding:.2rem .7rem;font-size:.78rem"><span class="dot" id="appDot"></span><span id="appStatus"></span></span>
-    <span style="margin-left:auto;display:flex;gap:.5rem;align-items:center">
-      <a id="appLink" class="mono" target="_blank" style="color:var(--accent);text-decoration:none;display:none"></a>
-      <button class="primary" id="appLaunch">Launch app</button>
-      <button class="ghost" id="appStop" style="display:none">Stop</button>
-    </span>
+<div class="banner" id="banner"><b>Waiting on you</b><span id="bannerText"></span><button class="primary" onclick="showTab('overview');document.getElementById('gatePanel').scrollIntoView({behavior:'smooth'})">Answer now</button></div>
+<main>
+<section class="tabpane active" id="tab-overview">
+  <div class="tiles">
+    <div class="tile"><div class="k">Progress</div><div class="v" id="progressV"></div><div class="meter"><div id="progressBar"></div></div><div class="sub" id="progressSub"></div></div>
+    <div class="tile"><div class="k">Cost</div><div class="v" id="costV"></div><div class="meter"><div id="costBar"></div></div><div class="sub" id="costSub"></div></div>
+    <div class="tile"><div class="k">Tokens</div><div class="v" id="tokV"></div><div class="sub" id="tokSub"></div></div>
+    <div class="tile"><div class="k">Active time</div><div class="v" id="elapsedV"></div><div class="sub" id="elapsedSub"></div></div>
   </div>
-  <div id="appFrameWrap" style="display:none;margin-top:.9rem;border:1px solid var(--border);border-radius:10px;overflow:hidden;background:#fff">
-    <iframe id="appFrame" style="width:100%;height:520px;border:0;display:block"></iframe>
-  </div>
-</div>
-<div class="grid">
-<div>
   <div class="card gate" id="gatePanel" style="display:none"><h2>Waiting on you</h2><form id="gateForm"></form></div>
-  <div class="card" id="designPanel" style="display:none"><h2>Design options — pick one</h2><div class="designs" id="designs"></div></div>
-  <div class="card"><h2>Pipeline <span class="hint" style="text-transform:none;letter-spacing:0">— click any step to inspect it</span></h2><div class="rail" id="nodes"></div></div>
-</div>
-<div>
-  <div class="card"><h2>Your decisions</h2><div id="decisions"><div class="empty">No decisions yet.</div></div></div>
-  <div class="card docs"><h2>Documents</h2><div id="docs"><div class="empty">Documents appear as steps finish.</div></div>
-    <details class="advanced" style="margin-top:.6rem"><summary>Advanced: all raw files</summary><div id="raw"></div></details>
+  <div class="card" id="appPanel" style="display:none">
+    <div style="display:flex;align-items:center;gap:.8rem;flex-wrap:wrap">
+      <h2 style="margin:0">Your application</h2>
+      <span class="chip" id="appStage"></span>
+      <span class="pill" style="padding:.2rem .7rem;font-size:.78rem"><span class="dot" id="appDot"></span><span id="appStatus"></span></span>
+      <span style="margin-left:auto;display:flex;gap:.5rem;align-items:center">
+        <a id="appLink" class="mono" target="_blank" style="color:var(--accent);text-decoration:none;display:none"></a>
+        <button class="primary" id="appLaunch">Launch app</button>
+        <button class="ghost" id="appStop" style="display:none">Stop</button>
+      </span>
+    </div>
+    <div id="appFrameWrap" style="display:none;margin-top:.9rem;border:1px solid var(--border);border-radius:10px;overflow:hidden;background:#fff">
+      <iframe id="appFrame" style="width:100%;height:520px;border:0;display:block"></iframe>
+    </div>
   </div>
+  <div class="card" id="designPanel" style="display:none"><h2>Design options — pick one</h2><div class="designs" id="designs"></div></div>
+</section>
+<section class="tabpane" id="tab-pipeline">
+  <div class="card"><h2>Pipeline <span class="hint">— grouped by phase; click any step to inspect it</span></h2><div id="nodes"></div></div>
+</section>
+<section class="tabpane" id="tab-documents">
+  <div class="card"><h2>Documents <span class="hint">— what the run produced for you to read</span></h2>
+    <div class="docgrid" id="docs"></div>
+    <details style="margin-top:.8rem"><summary class="hint" style="cursor:pointer">Advanced: all raw files</summary><div id="raw" style="margin-top:.4rem"></div></details>
+  </div>
+</section>
+<section class="tabpane" id="tab-decisions">
+  <div id="decisions"></div>
+</section>
+<section class="tabpane" id="tab-activity">
   <div class="card"><h2>Activity</h2><div class="events" id="events"></div></div>
-</div>
-</div>
+</section>
+</main>
 <aside id="drawer">
   <div class="head"><b id="dTitle"></b><span class="chip" id="dKind"></span><span class="chip" id="dState"></span>
     <button class="ghost" style="margin-left:auto" onclick="closeDrawer()">Close</button></div>
   <div class="body" id="dBody"></div>
 </aside>
+<div id="docModal" onclick="if(event.target===this)closeDoc()">
+  <div class="sheet">
+    <div class="head"><b id="docTitle"></b><span class="hint" id="docBlurb"></span>
+      <a id="docRaw" target="_blank" style="margin-left:auto;font-size:.78rem;color:var(--accent);text-decoration:none">raw</a>
+      <button class="ghost" onclick="closeDoc()">Close</button></div>
+    <div class="body docsec" id="docBody"></div>
+  </div>
+</div>
 <script>
 const STATUS_COLOR = { completed:'var(--good)', running:'var(--accent)', parked:'var(--warn)', failed:'var(--crit)', stopped:'var(--muted)', starting:'var(--warn)' };
 const STATE_ICON = { committed:'✓', failed:'✕', parked:'⏸', started:'●', skipped:'↷', pending:'○' };
@@ -758,10 +816,23 @@ function setText(id, txt) {
 function esc(s) { return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;'); }
 function fmtDur(ms) {
   if (!ms) return '0s';
+  if (ms < 950) return (ms/1000).toFixed(1) + 's';
   const s = Math.round(ms/1000);
-  return s < 90 ? s + 's' : Math.floor(s/60) + 'm ' + (s%60) + 's';
+  if (s < 90) return s + 's';
+  if (s < 3600) return Math.floor(s/60) + 'm ' + (s%60) + 's';
+  return Math.floor(s/3600) + 'h ' + Math.round((s%3600)/60) + 'm';
 }
 function fmtTok(n) { return n >= 1e6 ? (n/1e6).toFixed(1) + 'M' : n >= 1e3 ? Math.round(n/1e3) + 'k' : String(n); }
+function shortModel(m) { return m ? m.replace('claude-','') : ''; }
+function title(k) { return String(k).replace(/_/g,' ').replace(/^./, c => c.toUpperCase()); }
+
+function showTab(name) {
+  document.querySelectorAll('.tabpane').forEach(p => p.classList.toggle('active', p.id === 'tab-' + name));
+  document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
+  location.hash = name;
+}
+document.querySelectorAll('#tabs button').forEach(b => b.onclick = () => showTab(b.dataset.tab));
+if (location.hash) showTab(location.hash.slice(1));
 
 let openNode = null;
 function closeDrawer() { openNode = null; document.getElementById('drawer').classList.remove('open'); }
@@ -804,24 +875,80 @@ async function refreshDrawer() {
     (d.model ? '<h3>Model</h3><div class="depitem mono">' + esc(d.model) + (d.escalateModel ? ' <span class="d">(retries escalate to ' + esc(d.escalateModel) + ')</span>' : '') + '</div>' : '') +
     '<h3>Waits for</h3>' + (d.deps.map(dep).join('') || '<div class="empty">Nothing — a starting step.</div>') +
     '<h3>Feeds into</h3>' + (d.feeds.map(dep).join('') || '<div class="empty">Nothing — a final step.</div>') +
-    '<h3>Attempts' + (d.hasVerify ? ' <span style="text-transform:none;letter-spacing:0">(each attempt must pass this step\\'s own verification)</span>' : '') + '</h3>' + attempts +
+    '<h3>Attempts</h3>' + attempts +
     (tr ? '<h3>What the agent did</h3>' + tr : '')
   );
 }
+
+// ---- Document reader: formatted, in-page, never raw JSON in a new tab ----
+function renderCell(v) {
+  if (v === null || v === undefined) return '<span class="hint">—</span>';
+  if (Array.isArray(v)) {
+    if (v.every(x => typeof x !== 'object')) return v.map(x => '<span class="badgechip">' + esc(x) + '</span>').join('');
+    return '<span class="hint">' + v.length + ' item' + (v.length === 1 ? '' : 's') + '</span>';
+  }
+  if (typeof v === 'object') return '<span class="hint mono">' + esc(JSON.stringify(v).slice(0, 60)) + '</span>';
+  if (typeof v === 'boolean') return v ? 'yes' : 'no';
+  return esc(String(v));
+}
+function renderTable(rows) {
+  const cols = [];
+  for (const r of rows) for (const k of Object.keys(r)) if (!cols.includes(k)) cols.push(k);
+  const shown = cols.slice(0, 7);
+  return '<table class="doctable"><thead><tr>' + shown.map(c => '<th>' + esc(title(c)) + '</th>').join('') + '</tr></thead><tbody>' +
+    rows.map(r => '<tr>' + shown.map(c => '<td>' + renderCell(r[c]) + '</td>').join('') + '</tr>').join('') + '</tbody></table>';
+}
+function renderDoc(data) {
+  if (Array.isArray(data)) {
+    return data.length && typeof data[0] === 'object' ? renderTable(data) : data.map(x => '<span class="badgechip">' + esc(x) + '</span>').join('');
+  }
+  if (typeof data !== 'object' || data === null) return '<div class="kv"><div class="v">' + esc(String(data)) + '</div></div>';
+  let out = '';
+  const scalars = [];
+  for (const [k, v] of Object.entries(data)) {
+    if (v !== null && typeof v === 'object') continue;
+    scalars.push('<div class="kv"><span class="k">' + esc(title(k)) + '</span><span>' + renderCell(v) + '</span></div>');
+  }
+  out += scalars.join('');
+  for (const [k, v] of Object.entries(data)) {
+    if (v === null || typeof v !== 'object') continue;
+    out += '<h3>' + esc(title(k)) + '</h3>';
+    if (Array.isArray(v)) out += v.length && typeof v[0] === 'object' ? renderTable(v) : (v.map(x => '<span class="badgechip">' + esc(x) + '</span>').join('') || '<div class="empty">Empty.</div>');
+    else out += renderDoc(v);
+  }
+  return out;
+}
+async function openDoc(label, blurb, fetchUrl, rawUrl) {
+  setText('docTitle', label);
+  setText('docBlurb', blurb);
+  document.getElementById('docRaw').href = rawUrl;
+  document.getElementById('docBody').innerHTML = '<div class="empty">Loading…</div>';
+  document.getElementById('docModal').classList.add('open');
+  try {
+    const data = await (await fetch(fetchUrl)).json();
+    document.getElementById('docBody').innerHTML = renderDoc(data);
+  } catch (e) {
+    document.getElementById('docBody').innerHTML = '<div class="empty">Could not load: ' + esc(e.message) + '</div>';
+  }
+}
+function closeDoc() { document.getElementById('docModal').classList.remove('open'); }
 
 async function tick() {
   const s = await (await fetch('/api/state')).json();
   window.__nodes = s.nodes;
   setText('title', s.projectType);
-  setText('status', s.workspace);
   setText('statusText', s.resuming ? 'resuming…' : s.status);
   document.getElementById('statusDot').style.background = STATUS_COLOR[s.resuming ? 'running' : s.status] || 'var(--muted)';
-
   const done = s.nodes.filter(n => n.state === 'committed' || n.state === 'skipped').length;
+  setText('miniStats', done + '/' + s.nodes.length + ' steps · $' + s.totalCostUsd.toFixed(2) + ' · ' + fmtTok(s.tokensIn + s.tokensOut) + ' tokens');
+
+  const banner = document.getElementById('banner');
+  banner.style.display = s.parkedGate && !s.resuming ? 'flex' : 'none';
+  if (s.parkedGate) setText('bannerText', s.parkedGate.questions.length + ' question' + (s.parkedGate.questions.length===1?'':'s') + ' at ' + s.parkedGate.nodeId);
+
   setText('progressV', done + ' / ' + s.nodes.length);
   document.getElementById('progressBar').style.width = (100*done/s.nodes.length) + '%';
   setText('progressSub', 'steps complete');
-
   setText('costV', '$' + s.totalCostUsd.toFixed(2));
   const costBar = document.getElementById('costBar');
   if (s.runBudgetUsd) {
@@ -829,38 +956,58 @@ async function tick() {
     costBar.className = s.totalCostUsd > s.runBudgetUsd ? 'over' : '';
     setText('costSub', 'of $' + s.runBudgetUsd.toFixed(2) + ' budget');
   } else setText('costSub', 'no budget set');
-
   setText('tokV', fmtTok(s.tokensIn + s.tokensOut));
   setText('tokSub', fmtTok(s.tokensIn) + ' in · ' + fmtTok(s.tokensOut) + ' out');
-  setText('elapsedV', fmtDur(s.elapsedMs));
-  setText('attnV', s.parkedGate ? 'Answer ' + s.parkedGate.questions.length + ' question' + (s.parkedGate.questions.length===1?'':'s') : 'Nothing');
-  setText('attnSub', s.parkedGate ? 'gate: ' + s.parkedGate.nodeId : 'the run does not need you right now');
+  setText('elapsedV', fmtDur(s.activeMs));
+  setText('elapsedSub', 'steps working; ' + fmtDur(s.elapsedMs) + ' start to finish');
 
-  setHTML('nodes', s.nodes.map(n =>
-    '<div class="node ' + n.state + '" data-id="' + esc(n.id) + '"><span class="icon">' + (STATE_ICON[n.state]||'') + '</span>' +
-    '<span class="id mono">' + esc(n.id) + '</span><span class="chip">' + n.kind + '</span>' +
-    (n.retries ? '<span class="chip retry">retry ×' + n.retries + '</span>' : '') +
-    '<span class="desc">' + esc(n.description ?? '') + '</span>' +
-    '<span class="cost mono">' + (n.cost && (n.cost.costUsd || n.cost.wallClockMs) ? ('$' + n.cost.costUsd.toFixed(2) + ' · ' + fmtTok(n.cost.tokensIn + n.cost.tokensOut) + ' tok · ' + fmtDur(n.cost.wallClockMs)) : '') + '</span></div>'
-  ).join(''));
+  // pipeline grouped by phase
+  const phases = [];
+  const byPhase = {};
+  for (const n of s.nodes) {
+    if (!byPhase[n.phase]) { byPhase[n.phase] = []; phases.push(n.phase); }
+    byPhase[n.phase].push(n);
+  }
+  setHTML('nodes', phases.map(ph => {
+    const list = byPhase[ph];
+    const phDone = list.filter(n => n.state === 'committed' || n.state === 'skipped').length;
+    return '<div class="phase"><div class="phead"><b>' + esc(ph) + '</b><div class="bar"><div style="width:' + (100*phDone/list.length) + '%"></div></div><span class="stat">' + phDone + '/' + list.length + '</span></div>' +
+      list.map(n =>
+        '<div class="node ' + n.state + '" data-id="' + esc(n.id) + '"><span class="icon">' + (STATE_ICON[n.state]||'') + '</span>' +
+        '<span class="id mono">' + esc(n.id) + '</span>' +
+        (n.kind === 'agent' ? '<span class="chip model">' + esc(shortModel(n.model) || 'agent') + '</span>' : '<span class="chip">' + n.kind + '</span>') +
+        (n.retries ? '<span class="chip retry">retry ×' + n.retries + '</span>' : '') +
+        '<span class="desc">' + esc(n.description ?? '') + '</span>' +
+        '<span class="cost mono">' + (n.cost && (n.cost.costUsd || n.cost.wallClockMs) ? ('$' + n.cost.costUsd.toFixed(2) + ' · ' + fmtTok(n.cost.tokensIn + n.cost.tokensOut) + ' tok · ' + fmtDur(n.cost.wallClockMs)) : '') + '</span></div>'
+      ).join('') + '</div>';
+  }).join(''));
   document.querySelectorAll('#nodes .node').forEach(el => el.onclick = () => openDrawer(el.dataset.id));
 
+  // decisions
   setHTML('decisions',
     (s.decisions.length ? s.decisions.map(d =>
-      '<div class="decision"><div class="head"><span class="mono">' + esc(d.gate) + '</span><span class="chip">' + esc(d.source) + '</span></div>' +
+      '<div class="dcard"><div class="dhead"><b>' + esc(title(d.gate)) + '</b><span class="chip">' + esc(d.source) + '</span><span class="when">' + esc((d.ts||'').slice(0,19).replace('T',' ')) + '</span></div>' +
+      (d.description ? '<div class="hint" style="margin-bottom:.4rem">' + esc(d.description) + '</div>' : '') +
       d.items.map(i =>
-        '<div class="item"><span class="p">' + esc(i.prompt) + '</span><br><span class="a">' + esc(i.answer) + '</span>' +
-        (i.defaulted ? ' <span class="chip">default</span>' : '') + '</div>').join('') + '</div>'
-    ).join('') : '<div class="empty">No decisions yet.</div>') +
-    (s.assumptions.length ? '<div class="decision"><div class="head">Assumptions the run proceeded on</div>' +
-      s.assumptions.map(a => '<div class="item"><span class="p">' + esc(a.question) + '</span><br><span class="a">' + esc(a.answer) + '</span> <span class="chip">' + esc(a.source) + '</span></div>').join('') + '</div>' : '')
+        '<div class="qa"><span class="q">' + esc(i.prompt) + '</span><span class="a">' + esc(i.answer) +
+        (i.defaulted ? ' <span class="chip default">default</span>' : '') + '</span></div>').join('') + '</div>'
+    ).join('') : '<div class="card"><div class="empty">No decisions yet — gates you answer will appear here.</div></div>') +
+    (s.assumptions.length ? '<div class="dcard"><div class="dhead"><b>Assumptions the run proceeded on</b></div>' +
+      s.assumptions.map(a => '<div class="qa"><span class="q">' + esc(a.question) + '</span><span class="a">' + esc(a.answer) + ' <span class="chip default">' + esc(a.source) + '</span></span></div>').join('') + '</div>' : '')
   );
 
-  setHTML('docs', s.documents.length ? s.documents.map(d =>
-    '<a class="doc" href="' + d.href + '" target="_blank"><b>' + esc(d.label) + '</b><div class="blurb">' + esc(d.blurb) + '</div></a>'
+  // documents
+  const docsChanged = setHTML('docs', s.documents.length ? s.documents.map((d, i) =>
+    '<button class="doccard" data-i="' + i + '"><b>' + esc(d.label) + '</b><div class="blurb">' + esc(d.blurb) + '</div><div class="src mono">from ' + esc(d.node) + '</div></button>'
   ).join('') : '<div class="empty">Documents appear as steps finish.</div>');
-  setHTML('raw', s.rawArtifacts.map(a => '<a class="mono" href="/artifact/' + a + '" target="_blank">' + esc(a) + '</a>').join(''));
+  if (docsChanged) document.querySelectorAll('.doccard').forEach(b => b.onclick = () => {
+    const d = window.__docs[Number(b.dataset.i)];
+    openDoc(d.label, d.blurb, d.fetch, d.href);
+  });
+  window.__docs = s.documents;
+  setHTML('raw', s.rawArtifacts.map(a => '<a class="mono" style="display:block;color:var(--ink2);text-decoration:none;font-size:.74rem;padding:.06rem 0" href="/artifact/' + a + '" target="_blank">' + esc(a) + '</a>').join(''));
 
+  // activity
   setHTML('events', s.events.slice().reverse().map(e => {
     const cls = e.type.includes('committed') || e.type === 'run.completed' ? 'good'
       : e.type.includes('failed') || e.type.includes('exceeded') ? 'bad'
@@ -869,6 +1016,7 @@ async function tick() {
     return '<div class="event ' + cls + '"><span class="t mono">' + (e.ts||'').slice(11,19) + '</span><span class="d"></span><span>' + esc(e.text) + '</span></div>';
   }).join(''));
 
+  // designs
   const meta = {};
   for (const o of (s.designOptions || [])) meta[o.id] = o;
   const previews = s.rawArtifacts.filter(a => a.startsWith('design-options/') && a.endsWith('/index.html'));
@@ -888,6 +1036,7 @@ async function tick() {
     else alert('The design-select gate is not waiting right now.');
   });
 
+  // app panel
   const appPanel = document.getElementById('appPanel');
   appPanel.style.display = s.appAvailable ? '' : 'none';
   if (s.appAvailable) {
@@ -916,6 +1065,7 @@ async function tick() {
     }
   }
 
+  // gate
   const panel = document.getElementById('gatePanel');
   if (s.parkedGate && !s.resuming) {
     panel.style.display = '';

@@ -61,6 +61,8 @@ export interface NodeDef {
   kind: NodeKind;
   /** Plain-language explanation of what this step does — shown to users. */
   description?: string;
+  /** Display grouping for the pipeline (e.g. Requirements, Design, Build). */
+  phase?: string;
   deps?: string[];
   outputs?: ArtifactDecl[];
   /** Extra payload attempts after the first failure (default 1). */

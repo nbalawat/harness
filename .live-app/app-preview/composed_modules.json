@@ -1,7 +1,0 @@
-{
-  "modules": [
-    "persistence-core",
-    "chat-shell",
-    "agent-runtime"
-  ]
-}

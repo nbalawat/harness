@@ -5,7 +5,7 @@
   "compose_smoke": "skipped",
   "backend_tests": {
     "status": "pass",
-    "summary": "5 passed, 1 warning in 0.52s"
+    "summary": "5 passed, 1 warning in 0.41s"
   },
   "evals": {
     "status": "pass",
