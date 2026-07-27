@@ -1,6 +1,6 @@
-# Regression gate: every change to the runner must pass the full suite.
-# This same job will later grow the certification stages (golden runs,
-# artifact diffs, cost-envelope checks) as separate steps.
+# Regression + certification gate: every change must pass the full suite AND
+# re-certify every project type against its recorded goldens (byte-level
+# artifact digests, cost envelopes, revision drill). Drift = red.
 name: ci
 on:
   push:
@@ -13,5 +13,12 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+      - uses: astral-sh/setup-uv@v5
       - run: npm ci
       - run: npm test
+      - name: certify demo-pipeline
+        run: node packages/cli/dist/index.js certify project-types/demo
+      - name: certify agentic-app
+        run: node packages/cli/dist/index.js certify project-types/agentic-app
+      - name: bundle
+        run: npm run bundle

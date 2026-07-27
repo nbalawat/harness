@@ -1,5 +1,30 @@
 # Harness — Certified SDLC Workflow Factory
 
+## Pilot quickstart (consumer path)
+
+```bash
+# 1. Get the binary (single file, node >= 20)
+npm run bundle          # produces dist-bundle/harness.cjs — or receive it from your platform team
+
+# 2. Install a certified project type from the registry (a git repo with signed tags)
+node harness.cjs install agentic-app@0.4.0 --registry <git-url>
+node harness.cjs list
+
+# 3. Build an app (parks at intake; answer in the dashboard)
+node harness.cjs run agentic-app@0.4.0 --workspace my-app
+node harness.cjs ui .   # open http://localhost:4400 -> answer intake -> watch it build
+
+# 4. Change your mind at any point
+node harness.cjs revise my-app slice-2 --feedback "..." --resume
+
+# 5. Keep current + see how your runs are going
+node harness.cjs self-update --registry <git-url>
+node harness.cjs telemetry
+```
+
+Certifier path: `harness certify project-types/<name> --update-golden` records golden digests; CI re-certifies on every push; tag the repo `<name>@<version>` to release.
+
+
 Deterministic DAG runner + certified project types. A small team certifies
 workflow types; consumers run them and get working applications. Design:
 [docs/DESIGN.md](docs/DESIGN.md).

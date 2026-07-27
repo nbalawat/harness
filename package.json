@@ -9,10 +9,12 @@
     "build": "tsc -b packages/spec packages/runner packages/cli",
     "test": "npm run build && node --test packages/*/test/*.test.mjs",
     "demo": "node packages/cli/dist/index.js run project-types/demo --workspace .demo-run --answers project-types/demo/fixtures/answers.json --mock-agents",
-    "demo:status": "node packages/cli/dist/index.js status .demo-run"
+    "demo:status": "node packages/cli/dist/index.js status .demo-run",
+    "bundle": "npm run build && node scripts/bundle.mjs"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
+    "esbuild": "^0.28.1",
     "playwright-core": "^1.62.0",
     "typescript": "^5.6.0"
   }

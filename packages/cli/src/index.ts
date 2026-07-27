@@ -109,6 +109,7 @@ async function cmdRun(args: string[]): Promise<number> {
 
   const result = await runLoop(ctx);
   report(ctx, result.status, result.failedNodeId ?? result.parkedNodeId);
+  (await import("./telemetry.js")).recordRun(ctx, result, "run");
   return result.status === "completed" ? 0 : result.status === "parked" ? 0 : 1;
 }
 
@@ -127,6 +128,7 @@ async function cmdResume(args: string[]): Promise<number> {
   console.log(`resuming ${ctx.def.name}@${ctx.def.version}`);
   const result = await runLoop(ctx);
   report(ctx, result.status, result.failedNodeId ?? result.parkedNodeId);
+  (await import("./telemetry.js")).recordRun(ctx, result, "resume");
   return result.status === "failed" ? 1 : 0;
 }
 
@@ -149,6 +151,7 @@ async function cmdRevise(args: string[]): Promise<number> {
   if (flags.resume === true) {
     const result = await runLoop(ctx);
     report(ctx, result.status, result.failedNodeId ?? result.parkedNodeId);
+    (await import("./telemetry.js")).recordRun(ctx, result, "revise");
     return result.status === "failed" ? 1 : 0;
   }
   console.log(`run 'harness resume ${workspace}' to re-derive`);
@@ -207,6 +210,49 @@ async function main(): Promise<void> {
       }
       break;
     }
+    case "telemetry": {
+      const { summarize } = await import("./telemetry.js");
+      console.log(summarize());
+      break;
+    }
+    case "self-update": {
+      const { flags } = parseFlags(rest);
+      const entry = process.argv[1] ?? "";
+      if (!entry.endsWith("harness.cjs")) {
+        console.log("self-update applies to the bundled binary (harness.cjs).");
+        console.log("From a source checkout, update with: git pull && npm install && npm run bundle");
+        break;
+      }
+      const registry = flags.registry as string | undefined;
+      if (!registry) {
+        console.error("usage: harness self-update --registry <git-url> [--ref <branch-or-tag>]");
+        code = 1;
+        break;
+      }
+      const os = await import("node:os");
+      const { spawnSync } = await import("node:child_process");
+      const checkout = fs.mkdtempSync(path.join(os.tmpdir(), "harness-update-"));
+      const cloneArgs = ["clone", "--depth", "1", ...(flags.ref ? ["--branch", flags.ref as string] : []), registry, checkout];
+      for (const [what, cmd, args, cwd] of [
+        ["fetch", "git", cloneArgs, undefined],
+        ["install", "npm", ["install", "--no-audit", "--no-fund"], checkout],
+        ["bundle", "npm", ["run", "bundle"], checkout],
+      ] as [string, string, string[], string | undefined][]) {
+        const r = spawnSync(cmd, args, { cwd, encoding: "utf8", timeout: 600000 });
+        if (r.status !== 0) {
+          console.error(`self-update ${what} failed:\n${(r.stderr ?? "").slice(-500)}`);
+          code = 1;
+          break;
+        }
+      }
+      if (code === 0) {
+        const fresh = path.join(checkout, "dist-bundle", "harness.cjs");
+        fs.copyFileSync(entry, entry + ".bak");
+        fs.copyFileSync(fresh, entry);
+        console.log(`updated ${entry} (previous version kept at ${entry}.bak)`);
+      }
+      break;
+    }
     case "certify": {
       const { positional, flags } = parseFlags(rest);
       const { certify } = await import("./certify.js");
@@ -240,7 +286,7 @@ async function main(): Promise<void> {
       return; // keep serving
     }
     default:
-      console.log("usage: harness <run|resume|revise|status|ui|certify|install|list>");
+      console.log("usage: harness <run|resume|revise|status|ui|certify|install|list|telemetry|self-update>");
       console.log("  harness run <project-type-dir> [--workspace dir] [--answers file] [--mock-agents]");
       console.log("  harness resume <workspace> [--answers file]");
       console.log('  harness revise <workspace> <nodeId> --feedback "what to change" [--resume]');

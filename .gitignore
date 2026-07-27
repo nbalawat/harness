@@ -8,3 +8,5 @@ dist/
 .aa-cr/
 .exp-run/
 my-*run*/
+dist-bundle/
+your-app/

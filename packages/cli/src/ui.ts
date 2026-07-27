@@ -548,6 +548,17 @@ export function scanRuns(root: string): Record<string, unknown>[] {
   return runs.slice(0, 50);
 }
 
+/** The CLI entry to spawn for resume — dist sibling in source layout, the bundle itself when bundled. */
+function cliEntryPath(): string {
+  try {
+    const sibling = fileURLToPath(new URL("./index.js", import.meta.url));
+    if (fs.existsSync(sibling)) return sibling;
+  } catch {
+    /* bundled: import.meta.url is shimmed */
+  }
+  return process.argv[1];
+}
+
 export function startUiServer(target: string, port: number): Promise<http.Server> {
   const singleMode = fs.existsSync(path.join(target, "run.json"));
   const root = singleMode ? path.dirname(target) : target;
@@ -591,7 +602,7 @@ export function startUiServer(target: string, port: number): Promise<http.Server
 
   /** Continue the run in a child CLI process; ui-answers ride along when present. */
   function spawnResume(extraArgs: string[] = []): void {
-    const cliEntry = fileURLToPath(new URL("./index.js", import.meta.url));
+    const cliEntry = cliEntryPath();
     const uiAnswers = path.join(workspace!, "ui-answers.json");
     const args =
       extraArgs.length > 0
@@ -726,8 +737,7 @@ export function startUiServer(target: string, port: number): Promise<http.Server
             }
             // Live agents, no recorded answers: the run parks at intake and the
             // dashboard walks the user through the whole Q&A from there.
-            const cliEntry = fileURLToPath(new URL("./index.js", import.meta.url));
-            spawn(process.execPath, [cliEntry, "run", ptAbs, "--workspace", ws], { stdio: "ignore", detached: false });
+            spawn(process.execPath, [cliEntryPath(), "run", ptAbs, "--workspace", ws], { stdio: "ignore", detached: false });
             for (let i = 0; i < 40 && !fs.existsSync(path.join(ws, "journal.jsonl")); i++) {
               await new Promise((r) => setTimeout(r, 250));
             }
