@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Support Copilot</title>
+  <link rel="stylesheet" href="tokens.css" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <nav class="tabs">
+    <button id="tab-chat" class="tab" type="button" aria-selected="true">Chat</button>
+    <button id="tab-history" class="tab" type="button" aria-selected="false">History</button>
+  </nav>
+
+  <main class="chat" id="view-chat">
+    <header><h1>Support Copilot</h1><span id="agent-mode" class="agent-mode"></span></header>
+    <form id="analyst-session" class="analyst-session">
+      <input id="analyst-token-input" type="password" placeholder="Analyst token (e.g. analyst1) — needed to approve drafts" autocomplete="off" />
+      <button type="submit">Set token</button>
+      <span id="analyst-session-status" class="signin-status"></span>
+    </form>
+    <ul id="messages" class="messages"></ul>
+    <form id="composer" class="composer">
+      <input id="input" type="text" placeholder="Ask something..." autocomplete="off" />
+      <button type="submit">Send</button>
+    </form>
+  </main>
+
+  <main class="history" id="view-history" hidden>
+    <header><h1>Conversation History</h1></header>
+    <form id="signin" class="signin">
+      <input id="token-input" type="password" placeholder="Analyst token (e.g. analyst1)" autocomplete="off" />
+      <button type="submit">Sign in</button>
+      <span id="signin-status" class="signin-status"></span>
+    </form>
+    <div class="history-body" id="history-body" hidden>
+      <ul id="conversation-list" class="conversation-list"></ul>
+      <div id="conversation-detail" class="conversation-detail">
+        <p class="hint">Select a conversation to read its messages.</p>
+      </div>
+    </div>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>

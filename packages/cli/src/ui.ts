@@ -831,7 +831,8 @@ button.ghost { background:transparent; border:1px solid var(--border); color:var
 .qrow .mark.ok { color:var(--good); } .qrow .mark.bad { color:var(--crit); } .qrow .mark.na { color:var(--muted); }
 /* slice progress */
 .shots { display:flex; gap:.8rem; overflow-x:auto; padding-bottom:.3rem; }
-.shot { flex:none; width:260px; border:1px solid var(--border); border-radius:10px; overflow:hidden; background:var(--page); }
+.shot { flex:none; width:260px; border:1px solid var(--border); border-radius:10px; overflow:hidden; background:var(--page); cursor:zoom-in; padding:0; font:inherit; color:inherit; }
+.shot:hover { border-color:var(--accent); }
 .shot img { width:100%; display:block; }
 .shot .cap { padding:.4rem .6rem; font-size:.76rem; color:var(--ink2); }
 /* pipeline */
@@ -1160,6 +1161,7 @@ async function openDoc(label, blurb, fetchUrl) {
   document.getElementById('docBody').innerHTML = '<div class="empty">Loading…</div>';
   document.getElementById('docModal').classList.add('open');
   const btn = document.getElementById('docRawBtn');
+  btn.style.display = '';
   btn.textContent = 'View raw';
   try {
     docCache = await (await fetch(fetchUrl)).json();
@@ -1273,8 +1275,15 @@ async function tick() {
 
   // slice screenshots
   document.getElementById('shotsPanel').style.display = s.sliceShots.length ? '' : 'none';
-  setHTML('shots', s.sliceShots.map(x =>
-    '<div class="shot"><img src="' + x.href + '" loading="lazy"><div class="cap">' + esc(x.slice) + '</div></div>').join(''));
+  const shotsChanged = setHTML('shots', s.sliceShots.map(x =>
+    '<button class="shot" data-href="' + x.href + '" data-cap="' + esc(x.slice) + '"><img src="' + x.href + '" loading="lazy"><div class="cap">' + esc(x.slice) + ' — click to view full size</div></button>').join(''));
+  if (shotsChanged) document.querySelectorAll('.shot').forEach(b => b.onclick = () => {
+    setText('docTitle', b.dataset.cap);
+    setText('docBlurb', 'the app as it looked after this slice');
+    document.getElementById('docRawBtn').style.display = 'none';
+    document.getElementById('docBody').innerHTML = '<img src="' + b.dataset.href + '" style="width:100%;border-radius:8px;border:1px solid var(--grid)">';
+    document.getElementById('docModal').classList.add('open');
+  });
 
   // agent mid-step question
   const aq = document.getElementById('agentQPanel');

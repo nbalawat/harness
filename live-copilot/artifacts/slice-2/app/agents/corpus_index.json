@@ -1,0 +1,29 @@
+{
+  "corpus": "embedded product-knowledge documents ingested from documents_dir at intake",
+  "documents": [
+    {
+      "id": "doc-pwd-reset",
+      "title": "Resetting Your Password",
+      "keywords": ["password", "reset", "forgot", "login"],
+      "text": "To reset your password, go to Settings > Security > Reset Password, then follow the link emailed to the account's registered address to choose a new password."
+    },
+    {
+      "id": "doc-account-security",
+      "title": "Account Security & Two-Factor Authentication",
+      "keywords": ["security", "two-factor", "2fa", "authentication"],
+      "text": "Two-factor authentication can be enabled from Settings > Security > Two-Factor Authentication. We recommend an authenticator app over SMS codes."
+    },
+    {
+      "id": "doc-billing-email",
+      "title": "Updating Your Billing Email",
+      "keywords": ["billing", "invoice", "email"],
+      "text": "Customers can update their own billing email from Account > Billing > Billing Contact without needing analyst assistance."
+    },
+    {
+      "id": "doc-getting-started",
+      "title": "Getting Started Guide",
+      "keywords": ["getting", "started", "onboarding", "setup", "welcome"],
+      "text": "New accounts are guided through a short setup wizard on first login: workspace name, invite teammates, and connect a data source."
+    }
+  ]
+}
