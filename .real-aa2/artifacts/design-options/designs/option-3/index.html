@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Support Copilot — Signal Cobalt (option-3)</title>
+<link rel="stylesheet" href="tokens.css">
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--font);font-size:14px;line-height:1.6;-webkit-font-smoothing:antialiased}
+  a{text-decoration:none;color:inherit}
+  .app{display:grid;grid-template-columns:76px 1fr;min-height:100vh}
+  /* ---- icon rail ---- */
+  .rail{background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;align-items:center;padding:16px 0;gap:6px}
+  .logo{width:40px;height:40px;border-radius:12px;background:var(--primary);color:var(--on-primary);display:grid;place-items:center;font-weight:700;margin-bottom:14px}
+  .rail a{width:48px;height:48px;border-radius:var(--radius);display:grid;place-items:center;color:var(--muted);font-size:19px;position:relative}
+  .rail a:hover{background:var(--surface-2);color:var(--fg)}
+  .rail a.is-on{background:var(--surface-2);color:var(--primary);box-shadow:inset 0 0 0 1px var(--border)}
+  .rail a i{font-style:normal}
+  .rail a .dot{position:absolute;top:8px;right:8px;width:16px;height:16px;border-radius:99px;background:var(--primary);color:var(--on-primary);font-size:9px;display:grid;place-items:center;font-family:var(--font)}
+  .rail .who{margin-top:auto;width:36px;height:36px;border-radius:99px;background:var(--surface-2);display:grid;place-items:center;color:var(--muted);font-size:12px;font-weight:600}
+  /* ---- topbar + screens ---- */
+  .screen{display:none;padding:24px 30px 40px;max-width:1240px}
+  .screen.active{display:block}
+  .top{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px}
+  .top h1{margin:0;font-size:22px;font-weight:650;letter-spacing:-.01em}
+  .top p{margin:2px 0 0;color:var(--muted);font-size:13px}
+  .pill{display:inline-flex;align-items:center;gap:6px;padding:3px 11px;border-radius:99px;font-size:12px;font-weight:600;background:var(--surface-2);color:var(--muted)}
+  .pill.brand{background:rgba(47,91,234,.10);color:var(--primary)}
+  .pill.warn{background:rgba(181,71,8,.10);color:var(--accent-warn)}
+  .pill.ok{background:rgba(6,118,71,.10);color:#067647}
+  .pill.bad{background:rgba(217,45,32,.10);color:var(--accent-danger)}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:20px 22px;margin-bottom:16px}
+  .split{display:grid;grid-template-columns:1fr 320px;gap:16px;align-items:start}
+  /* ---- chat bubbles ---- */
+  .thread{display:flex;flex-direction:column;gap:14px}
+  .msg{display:flex;gap:12px;max-width:78%}
+  .msg .av{width:34px;height:34px;border-radius:99px;display:grid;place-items:center;font-size:12px;font-weight:700;flex:none}
+  .msg.me{align-self:flex-end;flex-direction:row-reverse}
+  .msg.me .av{background:var(--surface-2);color:var(--muted)}
+  .msg.ai .av{background:var(--primary);color:var(--on-primary)}
+  .bub{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px 15px;box-shadow:var(--shadow)}
+  .msg.me .bub{background:var(--primary);color:var(--on-primary);border-color:var(--primary)}
+  .meta{font-size:11px;color:var(--muted);margin-top:6px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .msg.me .meta{color:rgba(255,255,255,.75);justify-content:flex-end}
+  .chip{display:inline-block;background:var(--surface-2);color:var(--primary);border-radius:99px;padding:1px 9px;font-size:11px;font-weight:600;cursor:pointer}
+  .composer{margin-top:20px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:12px 14px}
+  .composer textarea{width:100%;border:0;background:transparent;font:inherit;color:var(--fg);resize:vertical;outline:none}
+  .composer .row{display:flex;justify-content:space-between;align-items:center;margin-top:8px;color:var(--muted);font-size:12px}
+  button{font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;border-radius:99px;padding:8px 18px}
+  .btn-p{background:var(--primary);color:var(--on-primary);border:1px solid var(--primary)}
+  .btn-s{background:var(--surface);color:var(--fg);border:1px solid var(--border)}
+  .btn-d{background:var(--surface);color:var(--accent-danger);border:1px solid var(--border)}
+  /* ---- draft ---- */
+  .draft{width:100%;min-height:170px;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface-2);font:inherit;color:var(--fg);padding:14px;resize:vertical;outline:none;line-height:1.65}
+  .actions{display:flex;gap:10px;align-items:center;margin-top:14px;flex-wrap:wrap}
+  .steps{display:flex;gap:0;align-items:center;margin-bottom:16px;color:var(--muted);font-size:12px;font-weight:600}
+  .steps span{padding:5px 14px;border:1px solid var(--border);background:var(--surface)}
+  .steps span:first-child{border-radius:99px 0 0 99px}
+  .steps span:last-child{border-radius:0 99px 99px 0}
+  .steps span.on{background:var(--primary);color:var(--on-primary);border-color:var(--primary)}
+  /* ---- history ---- */
+  .search{width:100%;border:1px solid var(--border);border-radius:99px;padding:10px 16px;font:inherit;background:var(--surface);outline:none;color:var(--fg);margin-bottom:14px}
+  .row-item{display:flex;justify-content:space-between;align-items:center;gap:14px;padding:14px 16px;border:1px solid var(--border);background:var(--surface);border-radius:var(--radius);margin-bottom:10px;box-shadow:var(--shadow)}
+  .row-item b{display:block;font-size:15px}
+  .row-item small{color:var(--muted)}
+  .filters{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}
+  /* ---- sources ---- */
+  .doc{display:flex;justify-content:space-between;align-items:center;gap:14px;padding:14px 16px;border-bottom:1px solid var(--border)}
+  .doc:last-child{border-bottom:0}
+  .meter{height:6px;width:130px;border-radius:99px;background:var(--surface-2);overflow:hidden}
+  .meter i{display:block;height:100%;background:var(--primary)}
+  .quote{background:var(--surface-2);border-left:3px solid var(--primary);border-radius:0 var(--radius) var(--radius) 0;padding:12px 14px;color:var(--fg);font-size:13px;margin-top:10px}
+  h3{margin:0 0 10px;font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="app">
+  <nav class="rail">
+    <div class="logo">SC</div>
+    <a href="#" data-screen="chat" class="is-on" title="Assist"><i>💬</i></a>
+    <a href="#" data-screen="draft-review" title="Approvals"><i>✓</i><span class="dot">3</span></a>
+    <a href="#" data-screen="history" title="History"><i>🕘</i></a>
+    <a href="#" data-screen="sources" title="Knowledge"><i>📚</i></a>
+    <div class="who">RO</div>
+  </nav>
+
+  <main>
+    <!-- ============ CHAT ============ -->
+    <section id="chat" class="screen active">
+      <div class="top">
+        <div><h1>Assist</h1><p>Ticket #4821 · Acme Corp · answers grounded in your product knowledge</p></div>
+        <div><span class="pill brand">REQ-001 · 006 · 009</span></div>
+      </div>
+
+      <div class="card">
+        <div class="thread">
+          <div class="msg me"><div class="av">RO</div><div><div class="bub">Customer asks whether the Pro plan includes SSO, and if they can configure it themselves.</div><div class="meta">You · 09:14</div></div></div>
+
+          <div class="msg ai"><div class="av">AI</div><div><div class="bub">
+            Yes — SSO over SAML 2.0 is included on <b>Pro</b> and above. The workspace owner can set it up without contacting support: <b>Settings → Security → Identity provider</b>, then upload the IdP metadata XML. Existing members inherit the change in about 15 minutes.
+          </div><div class="meta"><span class="pill brand">Automated assistant</span> 09:14 · grounded in
+            <span class="chip" data-screen="sources">product-guide §2.3</span>
+            <span class="chip" data-screen="sources">sso-setup §1</span></div></div></div>
+
+          <div class="msg me"><div class="av">RO</div><div><div class="bub">And the refund window if they downgrade mid-cycle?</div><div class="meta">You · 09:15</div></div></div>
+
+          <div class="msg ai"><div class="av">AI</div><div><div class="bub">
+            I don’t have this in the knowledge base — nothing in the ingested documents covers mid-cycle refunds. I’m handing this one back to you rather than guessing. Add a billing document and I’ll pick it up.
+          </div><div class="meta"><span class="pill brand">Automated assistant</span> <span class="pill warn">Not covered · deferred</span> 09:15</div></div></div>
+        </div>
+
+        <div class="composer">
+          <textarea rows="2">Draft a reply covering the SSO answer only.</textarea>
+          <div class="row"><span>Knowledge: fixtures/sample-docs · 3 documents · 41 passages · runs locally</span><button class="btn-p">Ask assistant</button></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ DRAFT REVIEW ============ -->
+    <section id="draft-review" class="screen">
+      <div class="top">
+        <div><h1>Approvals</h1><p>3 drafts waiting · nothing is sent without a human decision</p></div>
+        <div><span class="pill brand">REQ-007 · 011 · 015</span></div>
+      </div>
+      <div class="steps"><span>Question</span><span>Drafted by assistant</span><span class="on">Analyst review</span><span>Sent</span></div>
+
+      <div class="split">
+        <div class="card">
+          <div class="top" style="margin-bottom:12px"><div><h1 style="font-size:17px">#4821 · Acme Corp — SSO on Pro</h1><p>Draft is editable before you approve</p></div><span class="pill warn" id="o3-badge">Awaiting approval</span></div>
+          <textarea class="draft">Hi Dana,
+
+Yes — SSO via SAML 2.0 is included on the Pro plan, and you can set it up yourself: Settings → Security → Identity provider, then upload your IdP metadata XML. Existing members pick up the change within about 15 minutes.
+
+Best,
+Acme Support
+
+— This reply was drafted by an automated assistant and reviewed by a support analyst before sending.</textarea>
+          <div class="actions">
+            <button class="btn-p" data-decide="Approved &amp; sent">Approve &amp; send</button>
+            <button class="btn-s" data-decide="Edited &amp; approved">Save edit &amp; approve</button>
+            <button class="btn-d" data-decide="Rejected">Reject</button>
+          </div>
+          <p class="meta" id="o3-status">No decision recorded yet — approver, decision, timestamp and edited-flag are written to the audit trail on submit.</p>
+        </div>
+
+        <div class="card">
+          <h3>Verify the sources</h3>
+          <div class="quote"><b>product-guide.md §2.3</b><br>“SAML 2.0 single sign-on is available on Pro and Enterprise plans.”</div>
+          <div class="quote"><b>sso-setup.md §1</b><br>“Owners upload IdP metadata under Settings → Security.”</div>
+          <h3 style="margin-top:18px">Disclosure</h3>
+          <p class="meta">The automated-assistant line is fixed in the template and cannot be deleted. <span class="pill brand">REQ-003</span></p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ HISTORY ============ -->
+    <section id="history" class="screen">
+      <div class="top"><div><h1>History</h1><p>Every conversation is stored and reviewable — reuse the good answers</p></div><span class="pill brand">REQ-008 · 010 · 012 · 013</span></div>
+      <input class="search" value="sso" placeholder="Search conversations, customers, topics…">
+      <div class="filters"><button class="btn-p">All</button><button class="btn-s">Approved</button><button class="btn-s">Edited</button><button class="btn-s">Rejected</button><button class="btn-s">Last 30 days</button></div>
+
+      <div class="row-item"><div><b>SSO included on Pro; self-serve setup</b><small>#4821 · Acme Corp · 26 Jul 09:14 · 2 sources</small></div><div class="actions" style="margin:0"><span class="pill warn">Awaiting</span><button class="btn-s" data-screen="draft-review">Open</button></div></div>
+      <div class="row-item"><div><b>SCIM provisioning limits</b><small>#4795 · Northwind · 25 Jul 16:02 · 1 source</small></div><div class="actions" style="margin:0"><span class="pill ok">Approved</span><button class="btn-s" data-copy>Reuse answer</button></div></div>
+      <div class="row-item"><div><b>Export retention window</b><small>#4788 · Contoso · 25 Jul 11:48 · 3 sources</small></div><div class="actions" style="margin:0"><span class="pill ok">Edited &amp; approved</span><button class="btn-s" data-copy>Reuse answer</button></div></div>
+      <div class="row-item"><div><b>Mid-cycle refund policy</b><small>#4771 · Acme Corp · 24 Jul 14:20 · no covering source</small></div><div class="actions" style="margin:0"><span class="pill bad">Rejected</span><button class="btn-s" data-copy>Reuse answer</button></div></div>
+      <div class="row-item"><div><b>API rate limits per plan</b><small>#4762 · Fabrikam · 24 Jul 10:05 · 2 sources</small></div><div class="actions" style="margin:0"><span class="pill ok">Approved</span><button class="btn-s" data-copy>Reuse answer</button></div></div>
+      <p class="meta" id="o3-copy">Open a conversation to read the full thread; “Reuse answer” drops the approved text into a new draft.</p>
+    </section>
+
+    <!-- ============ SOURCES ============ -->
+    <section id="sources" class="screen">
+      <div class="top"><div><h1>Knowledge</h1><p>fixtures/sample-docs — the only thing the assistant may answer from</p></div><span class="pill brand">REQ-002 · 004 · 016</span></div>
+      <div class="split">
+        <div class="card" style="padding:6px 16px">
+          <div class="doc"><div><b>product-guide.md</b><br><small style="color:var(--muted)">24 passages · cited by 14 answers</small></div><div class="meter"><i style="width:72%"></i></div></div>
+          <div class="doc"><div><b>sso-setup.md</b><br><small style="color:var(--muted)">11 passages · cited by 6 answers</small></div><div class="meter"><i style="width:41%"></i></div></div>
+          <div class="doc"><div><b>process.html</b><br><small style="color:var(--muted)">6 passages · cited by 2 answers</small></div><div class="meter"><i style="width:18%"></i></div></div>
+        </div>
+        <div class="card">
+          <h3>Coverage gaps</h3>
+          <p class="meta">“Billing &amp; refunds” — 3 questions this week had no covering passage; the assistant deferred each time instead of answering.</p>
+          <button class="btn-p" style="margin-top:8px">Ingest a document</button>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+<script>
+document.addEventListener('click', function (e) {
+  var nav = e.target.closest('[data-screen]');
+  if (nav) {
+    e.preventDefault();
+    var id = nav.dataset.screen;
+    document.querySelectorAll('.screen').forEach(function (s) { s.classList.toggle('active', s.id === id); });
+    document.querySelectorAll('.rail a').forEach(function (a) { a.classList.toggle('is-on', a.dataset.screen === id); });
+    window.scrollTo(0, 0);
+    return;
+  }
+  var d = e.target.closest('[data-decide]');
+  if (d) {
+    var b = document.getElementById('o3-badge');
+    b.textContent = d.dataset.decide;
+    b.className = 'pill ' + (d.dataset.decide === 'Rejected' ? 'bad' : 'ok');
+    document.getElementById('o3-status').innerHTML = 'Recorded: <b>' + d.dataset.decide + '</b> · R. Okafor · 26 Jul 2026, 09:17 · edited: ' + (d.dataset.decide.indexOf('Edited') === 0 ? 'yes' : 'no');
+    return;
+  }
+  if (e.target.closest('[data-copy]')) {
+    document.getElementById('o3-copy').innerHTML = '<b>Copied.</b> The approved answer is now a new draft in Approvals.';
+  }
+});
+</script>
+</body>
+</html>

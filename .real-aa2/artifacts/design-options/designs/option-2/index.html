@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Support Copilot — Editorial Desk (option-2)</title>
+<link rel="stylesheet" href="tokens.css">
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--font);font-size:16px;line-height:1.65}
+  a{color:var(--primary)}
+  /* ---- masthead ---- */
+  header{border-bottom:2px solid var(--fg);background:var(--bg);position:sticky;top:0;z-index:5}
+  .mast{max-width:1040px;margin:0 auto;padding:20px 24px 12px;display:flex;align-items:flex-end;justify-content:space-between}
+  .mast h1{margin:0;font-size:30px;letter-spacing:.01em;font-weight:600}
+  .mast .sub{font-style:italic;color:var(--muted);font-size:14px}
+  nav{max-width:1040px;margin:0 auto;padding:0 24px;display:flex;gap:26px}
+  nav a{text-decoration:none;color:var(--muted);padding:8px 0 10px;border-bottom:3px solid transparent;font-size:14px;letter-spacing:.06em;text-transform:uppercase}
+  nav a:hover{color:var(--fg)}
+  nav a.is-on{color:var(--fg);border-bottom-color:var(--primary)}
+  /* ---- page ---- */
+  .screen{display:none;max-width:1040px;margin:0 auto;padding:34px 24px 70px}
+  .screen.active{display:block}
+  .lede{border-bottom:1px solid var(--border);padding-bottom:14px;margin-bottom:26px}
+  .lede h2{margin:0 0 4px;font-size:24px;font-weight:600}
+  .lede p{margin:0;color:var(--muted);font-style:italic;font-size:14px}
+  .layout{display:grid;grid-template-columns:1fr 240px;gap:40px;align-items:start}
+  .measure{max-width:62ch}
+  /* ---- thread as correspondence ---- */
+  .entry{margin-bottom:26px;padding-bottom:22px;border-bottom:1px solid var(--border)}
+  .attrib{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+  .attrib b{color:var(--fg);letter-spacing:.12em}
+  .entry p{margin:0 0 8px}
+  .drop::first-letter{float:left;font-size:52px;line-height:.82;padding:4px 8px 0 0;color:var(--primary)}
+  .stamp{display:inline-block;border:1px solid var(--primary);color:var(--primary);padding:1px 8px;font-size:11px;letter-spacing:.14em;text-transform:uppercase;vertical-align:2px;border-radius:var(--radius)}
+  .stamp.warn{border-color:var(--accent-warn);color:var(--accent-warn)}
+  .stamp.ok{border-color:#3f7a44;color:#3f7a44}
+  .stamp.dim{border-color:var(--border);color:var(--muted)}
+  sup.fn{color:var(--primary);cursor:pointer;font-size:12px}
+  /* ---- margin ---- */
+  aside{font-size:13px;color:var(--muted);border-left:1px solid var(--border);padding-left:18px;position:sticky;top:120px}
+  aside h4{margin:0 0 6px;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--fg)}
+  aside .fnote{margin-bottom:14px}
+  aside .fnote b{color:var(--fg)}
+  /* ---- composer ---- */
+  .compose{background:var(--surface);border:1px solid var(--border);box-shadow:var(--shadow);padding:16px;border-radius:var(--radius)}
+  .compose textarea{width:100%;border:0;border-bottom:1px solid var(--border);background:transparent;font:inherit;color:var(--fg);padding:6px 0 10px;resize:vertical;outline:none}
+  .compose .row{display:flex;justify-content:space-between;align-items:center;margin-top:12px;font-size:13px;color:var(--muted);font-style:italic}
+  button{font-family:var(--font);font-size:14px;cursor:pointer;padding:7px 18px;border-radius:var(--radius)}
+  .btn-p{background:var(--primary);color:var(--on-primary);border:1px solid var(--primary)}
+  .btn-s{background:transparent;color:var(--fg);border:1px solid var(--border)}
+  .btn-d{background:transparent;color:var(--accent-danger);border:1px solid var(--accent-danger)}
+  /* ---- draft sheet ---- */
+  .sheet{background:var(--surface);border:1px solid var(--border);box-shadow:var(--shadow);padding:28px 32px;border-radius:var(--radius)}
+  .sheet .head{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border);padding-bottom:10px;margin-bottom:18px}
+  .sheet textarea{width:100%;min-height:190px;border:0;background:transparent;font:inherit;color:var(--fg);resize:vertical;outline:none;line-height:1.7}
+  .actions{display:flex;gap:10px;align-items:center;border-top:1px solid var(--border);padding-top:16px;margin-top:8px;flex-wrap:wrap}
+  .ledger{margin-top:18px;font-size:13px;color:var(--muted);font-style:italic}
+  /* ---- history ---- */
+  .search{width:100%;border:0;border-bottom:2px solid var(--fg);background:transparent;font:inherit;font-size:18px;padding:6px 0 10px;outline:none;color:var(--fg);margin-bottom:22px}
+  .rec{padding:16px 0;border-bottom:1px solid var(--border);display:grid;grid-template-columns:88px 1fr auto;gap:18px;align-items:baseline}
+  .rec .date{font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+  .rec h3{margin:0 0 2px;font-size:18px;font-weight:600}
+  .rec p{margin:0;color:var(--muted);font-size:14px}
+  .rec .end{display:flex;gap:8px;align-items:center}
+  /* ---- sources ---- */
+  .card{background:var(--surface);border:1px solid var(--border);box-shadow:var(--shadow);padding:18px 20px;margin-bottom:14px;border-radius:var(--radius)}
+  .card h3{margin:0 0 2px;font-size:18px}
+  .card .meta{font-size:13px;color:var(--muted);font-style:italic}
+  blockquote{margin:12px 0 0;padding-left:14px;border-left:3px solid var(--primary);font-style:italic;color:var(--fg)}
+</style>
+</head>
+<body>
+<header>
+  <div class="mast">
+    <div><h1>Support Copilot</h1><div class="sub">Drafted by machine · approved by a person · kept on the record</div></div>
+    <div class="sub">R. Okafor · Support desk · local install</div>
+  </div>
+  <nav>
+    <a href="#" data-screen="chat" class="is-on">Assist</a>
+    <a href="#" data-screen="draft-review">Approvals <b>·3</b></a>
+    <a href="#" data-screen="history">Record</a>
+    <a href="#" data-screen="sources">Knowledge</a>
+  </nav>
+</header>
+
+<!-- ============ CHAT ============ -->
+<section id="chat" class="screen active">
+  <div class="lede"><h2>Ticket #4821 — Acme Corp</h2><p>A correspondence between the analyst and the assistant. REQ-001 · 006 · 009</p></div>
+  <div class="layout">
+    <div class="measure">
+      <div class="entry">
+        <div class="attrib"><b>Analyst</b> · 09:14</div>
+        <p>Customer asks whether the Pro plan includes SSO, and whether they can configure it themselves.</p>
+      </div>
+
+      <div class="entry">
+        <div class="attrib"><b>Assistant</b> · 09:14 · <span class="stamp">Automated reply</span></div>
+        <p class="drop">Yes — single sign-on over SAML&nbsp;2.0 is included on the Pro plan<sup class="fn" data-screen="sources">1</sup>, and the workspace owner can configure it without involving support.</p>
+        <p>They open <b>Settings → Security → Identity provider</b> and upload the IdP metadata XML<sup class="fn" data-screen="sources">2</sup>. Existing members inherit the change within roughly fifteen minutes.</p>
+      </div>
+
+      <div class="entry">
+        <div class="attrib"><b>Analyst</b> · 09:15</div>
+        <p>They also want the refund window for a mid-cycle downgrade.</p>
+      </div>
+
+      <div class="entry">
+        <div class="attrib"><b>Assistant</b> · 09:15 · <span class="stamp">Automated reply</span> <span class="stamp warn">Outside the corpus</span></div>
+        <p>The ingested product knowledge says nothing about mid-cycle refunds. Rather than speculate, I am handing this part back to you — or point me at a document covering billing and I will ingest it. <i>(REQ-005)</i></p>
+      </div>
+
+      <div class="compose">
+        <textarea rows="3">Draft a reply covering the SSO answer only.</textarea>
+        <div class="row"><span>Answers drawn only from fixtures/sample-docs — 3 documents, 41 passages.</span><button class="btn-p">Ask</button></div>
+      </div>
+    </div>
+
+    <aside>
+      <h4>Sources cited</h4>
+      <div class="fnote"><b>1.</b> product-guide.md, §2.3 <i>Plan entitlements</i> — “SAML 2.0 single sign-on is available on Pro and Enterprise.”</div>
+      <div class="fnote"><b>2.</b> sso-setup.md, §1 <i>Self-serve configuration</i> — “Owners upload IdP metadata under Settings → Security.”</div>
+      <h4>Standing rules</h4>
+      <div class="fnote">Every answer carries its sources so you can verify before approving. Nothing is sent without your approval.</div>
+    </aside>
+  </div>
+</section>
+
+<!-- ============ DRAFT REVIEW ============ -->
+<section id="draft-review" class="screen">
+  <div class="lede"><h2>Approvals</h2><p>Three drafts await a decision. Nothing leaves this desk unapproved. REQ-007 · 011 · 015</p></div>
+  <div class="layout">
+    <div>
+      <div class="sheet">
+        <div class="head"><div><b>#4821 · Acme Corp</b> <span class="meta">— SSO on Pro</span></div><span class="stamp warn" id="o2-badge">Awaiting approval</span></div>
+        <textarea>Hi Dana,
+
+Yes — SSO via SAML 2.0 is included on the Pro plan, and you can set it up yourself: Settings → Security → Identity provider, then upload your IdP metadata XML. Existing members pick up the change within about fifteen minutes.
+
+Kind regards,
+Acme Support
+
+— This reply was drafted by an automated assistant and reviewed by a support analyst before sending.</textarea>
+        <div class="actions">
+          <button class="btn-p" data-decide="Approved &amp; sent">Approve &amp; send</button>
+          <button class="btn-s" data-decide="Edited &amp; approved">Save edit, then approve</button>
+          <button class="btn-d" data-decide="Rejected">Reject</button>
+        </div>
+        <div class="ledger" id="o2-status">No decision recorded yet. On approval the record keeps: approver, decision, timestamp, and whether you edited the text.</div>
+      </div>
+    </div>
+    <aside>
+      <h4>Verify before approving</h4>
+      <div class="fnote"><b>1.</b> product-guide.md §2.3 — entitlement confirmed for Pro.</div>
+      <div class="fnote"><b>2.</b> sso-setup.md §1 — self-serve path confirmed.</div>
+      <h4>Disclosure</h4>
+      <div class="fnote">The closing line identifying the reply as machine-drafted is fixed in the template and cannot be removed. <i>(REQ-003)</i></div>
+    </aside>
+  </div>
+</section>
+
+<!-- ============ HISTORY ============ -->
+<section id="history" class="screen">
+  <div class="lede"><h2>The record</h2><p>Past correspondence, kept for quality review and for reuse. REQ-008 · 010 · 012 · 013</p></div>
+  <input class="search" value="sso" placeholder="Search the record…">
+  <div class="rec"><div class="date">26 Jul</div><div><h3>SSO included on Pro; self-serve setup</h3><p>#4821 · Acme Corp · 2 sources cited</p></div><div class="end"><span class="stamp warn">Awaiting</span><button class="btn-s" data-screen="draft-review">Open</button></div></div>
+  <div class="rec"><div class="date">25 Jul</div><div><h3>SCIM provisioning limits</h3><p>#4795 · Northwind · 1 source cited</p></div><div class="end"><span class="stamp ok">Approved</span><button class="btn-s" data-copy>Reuse</button></div></div>
+  <div class="rec"><div class="date">25 Jul</div><div><h3>Export retention window</h3><p>#4788 · Contoso · 3 sources cited</p></div><div class="end"><span class="stamp ok">Edited &amp; approved</span><button class="btn-s" data-copy>Reuse</button></div></div>
+  <div class="rec"><div class="date">24 Jul</div><div><h3>Mid-cycle refund policy</h3><p>#4771 · Acme Corp · no covering source</p></div><div class="end"><span class="stamp dim">Rejected</span><button class="btn-s" data-copy>Reuse</button></div></div>
+  <div class="rec"><div class="date">24 Jul</div><div><h3>API rate limits per plan</h3><p>#4762 · Fabrikam · 2 sources cited</p></div><div class="end"><span class="stamp ok">Approved</span><button class="btn-s" data-copy>Reuse</button></div></div>
+  <p class="ledger" id="o2-copy">Open a record to read the full thread; <i>Reuse</i> lifts the approved wording into a fresh draft.</p>
+</section>
+
+<!-- ============ SOURCES ============ -->
+<section id="sources" class="screen">
+  <div class="lede"><h2>Knowledge</h2><p>Everything the assistant is allowed to know: fixtures/sample-docs. REQ-002 · 004 · 016</p></div>
+  <div class="layout">
+    <div>
+      <div class="card"><h3>product-guide.md</h3><div class="meta">24 passages · ingested 26 Jul 08:02 · cited by 14 answers</div>
+        <blockquote>“SAML 2.0 single sign-on is available on Pro and Enterprise plans. Workspace owners configure the identity provider from the security settings; support intervention is not required.”</blockquote>
+      </div>
+      <div class="card"><h3>sso-setup.md</h3><div class="meta">11 passages · ingested 26 Jul 08:02 · cited by 6 answers</div>
+        <blockquote>“Owners upload IdP metadata under Settings → Security. Propagation completes within fifteen minutes.”</blockquote>
+      </div>
+      <div class="card"><h3>process.html</h3><div class="meta">6 passages · ingested 26 Jul 08:02 · cited by 2 answers</div></div>
+    </div>
+    <aside>
+      <h4>Known gaps</h4>
+      <div class="fnote">Billing &amp; refunds — three questions this week had no covering passage. The assistant deferred each time rather than answer.</div>
+      <h4>Ingest</h4>
+      <div class="fnote"><button class="btn-s">Add a document</button></div>
+    </aside>
+  </div>
+</section>
+
+<script>
+document.addEventListener('click', function (e) {
+  var nav = e.target.closest('[data-screen]');
+  if (nav) {
+    e.preventDefault();
+    var id = nav.dataset.screen;
+    document.querySelectorAll('.screen').forEach(function (s) { s.classList.toggle('active', s.id === id); });
+    document.querySelectorAll('nav a').forEach(function (a) { a.classList.toggle('is-on', a.dataset.screen === id); });
+    window.scrollTo(0, 0);
+    return;
+  }
+  var d = e.target.closest('[data-decide]');
+  if (d) {
+    var b = document.getElementById('o2-badge');
+    b.textContent = d.dataset.decide;
+    b.className = 'stamp ' + (d.dataset.decide === 'Rejected' ? 'dim' : 'ok');
+    document.getElementById('o2-status').innerHTML = 'Recorded — <b>' + d.dataset.decide + '</b> by R. Okafor, 26 July 2026 at 09:17. Edited: ' + (d.dataset.decide.indexOf('Edited') === 0 ? 'yes' : 'no') + '.';
+    return;
+  }
+  if (e.target.closest('[data-copy]')) {
+    document.getElementById('o2-copy').innerHTML = '<b>Copied.</b> The approved wording is now waiting in Approvals as a fresh draft.';
+  }
+});
+</script>
+</body>
+</html>

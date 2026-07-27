@@ -1,0 +1,27 @@
+{
+  "gaps": {
+    "path": "/Users/nbalawat/development/harness/.real-aa2/artifacts/gap-questions/gaps.json",
+    "data": {
+      "questions": [
+        {
+          "id": "req-019",
+          "prompt": "How do analysts sign in, and should the signed-in analyst's identity be recorded on each approval? (e.g. 'local username+password, record approver' / 'shared login, no identity' / 'SSO')",
+          "default": "Local username + password accounts held by the app itself; the signed-in analyst's identity is recorded on every approval.",
+          "why": "Decides whether architecture composes a local auth module (no managed identity service, per the local self-contained deploy target) and whether the data model's approval record carries an approver identity field for the REQ-015 audit trail; also determines how REQ-017's 'analysts only, never anonymous' access rule is enforced on the conversation-history screen."
+        },
+        {
+          "id": "req-020",
+          "prompt": "How long should conversation records be kept, and must customer PII be redacted before storage?",
+          "default": "Retain conversations for 90 days, then purge; store customer content as written with no automated PII redaction.",
+          "why": "Sets the retention window and purge job in the data-design layer and the PII-handling stance in the governance/security report; a 'redact' answer adds a redaction step to the message-persistence path in build-backend, which a 'store as-is' answer omits entirely."
+        },
+        {
+          "id": "req-021",
+          "prompt": "After an analyst approves a reply, does the app send it to the customer itself (outbound email / ticket-system integration), or does the analyst copy it into the existing email tool?",
+          "default": "The app does not send anything; on approval it marks the reply approved and the analyst copies it into the existing email tool.",
+          "why": "Decides whether architecture and build-backend include an outbound delivery integration plus its credentials and send/failure states, or whether approval is a terminal state with a copy-to-clipboard affordance in the frontend; this is the single largest swing in the build budget for this run."
+        }
+      ]
+    }
+  }
+}

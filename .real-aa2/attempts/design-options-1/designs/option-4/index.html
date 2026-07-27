@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Support Copilot — Swiss Ledger (option-4)</title>
+<link rel="stylesheet" href="tokens.css">
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--font);font-size:14px;line-height:1.5}
+  a{text-decoration:none;color:inherit}
+  .wrap{max-width:1180px;margin:0 auto;border-left:2px solid var(--border);border-right:2px solid var(--border);min-height:100vh}
+  /* ---- header ---- */
+  .hd{border-bottom:2px solid var(--border);padding:16px 22px;display:flex;justify-content:space-between;align-items:flex-end}
+  .hd h1{margin:0;font-size:26px;font-weight:700;letter-spacing:-.03em;text-transform:uppercase}
+  .hd .l{font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:var(--muted)}
+  nav{display:grid;grid-template-columns:repeat(4,1fr);border-bottom:2px solid var(--border)}
+  nav a{padding:11px 14px;border-right:2px solid var(--border);font-size:11px;letter-spacing:.18em;text-transform:uppercase;display:flex;justify-content:space-between;align-items:center}
+  nav a:last-child{border-right:0}
+  nav a:hover{background:var(--surface-2)}
+  nav a.is-on{background:var(--primary);color:var(--on-primary)}
+  nav a b{font-weight:700}
+  /* ---- screens ---- */
+  .screen{display:none}
+  .screen.active{display:block}
+  .strip{border-bottom:2px solid var(--border);padding:14px 22px;display:flex;justify-content:space-between;align-items:baseline;gap:16px;flex-wrap:wrap}
+  .strip h2{margin:0;font-size:15px;letter-spacing:.16em;text-transform:uppercase;font-weight:700}
+  .l{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted)}
+  .cols{display:grid;grid-template-columns:1fr 300px}
+  .cols > div:first-child{border-right:2px solid var(--border)}
+  .pad{padding:20px 22px}
+  /* ---- transcript ---- */
+  .line{display:grid;grid-template-columns:120px 1fr;border-bottom:1px solid var(--border)}
+  .line .id{border-right:1px solid var(--border);padding:14px 12px;font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted)}
+  .line .id b{display:block;color:var(--fg);font-size:11px;letter-spacing:.16em}
+  .line .bd{padding:14px 16px}
+  .tag{display:inline-block;border:2px solid var(--border);padding:0 6px;font-size:10px;letter-spacing:.14em;text-transform:uppercase;font-weight:700}
+  .tag.hot{background:var(--primary);color:var(--on-primary);border-color:var(--primary)}
+  .tag.inv{background:var(--fg);color:var(--bg)}
+  .ref{border-bottom:2px solid var(--primary);color:var(--primary);font-weight:700;cursor:pointer}
+  .fine{font-size:11px;color:var(--muted);margin-top:8px;letter-spacing:.02em}
+  /* ---- form ---- */
+  .compose{border-top:2px solid var(--border);display:grid;grid-template-columns:1fr 170px}
+  .compose textarea{border:0;border-right:2px solid var(--border);padding:14px 16px;font:inherit;background:var(--surface);color:var(--fg);resize:vertical;outline:none}
+  button{font-family:var(--font);font-size:11px;letter-spacing:.16em;text-transform:uppercase;font-weight:700;cursor:pointer;padding:11px 14px;border-radius:var(--radius)}
+  .btn-p{background:var(--primary);color:var(--on-primary);border:2px solid var(--primary)}
+  .btn-s{background:var(--bg);color:var(--fg);border:2px solid var(--border)}
+  .btn-d{background:var(--bg);color:var(--fg);border:2px solid var(--border);text-decoration:line-through}
+  .compose button{border:0;height:100%}
+  /* ---- draft ---- */
+  .draft{width:100%;min-height:190px;border:2px solid var(--border);background:var(--surface);font:inherit;color:var(--fg);padding:14px;resize:vertical;outline:none;line-height:1.6}
+  .btnrow{display:grid;grid-template-columns:repeat(3,1fr);gap:0;margin-top:0;border:2px solid var(--border);border-top:0}
+  .btnrow button{border-radius:0;border:0;border-right:2px solid var(--border)}
+  .btnrow button:last-child{border-right:0}
+  .ledger{border:2px solid var(--border);border-top:0;padding:12px 14px;font-size:11px;color:var(--muted);letter-spacing:.02em}
+  /* ---- table ---- */
+  table{width:100%;border-collapse:collapse}
+  th{font-size:10px;letter-spacing:.18em;text-transform:uppercase;text-align:left;padding:10px 12px;border-bottom:2px solid var(--border);color:var(--muted);font-weight:700}
+  td{padding:12px;border-bottom:1px solid var(--border);vertical-align:top}
+  tr:hover td{background:var(--surface)}
+  td b{font-size:14px}
+  .num{font-variant-numeric:tabular-nums;color:var(--muted);font-size:12px}
+  .searchrow{display:grid;grid-template-columns:1fr auto;border-bottom:2px solid var(--border)}
+  .searchrow input{border:0;padding:14px 22px;font:inherit;font-size:16px;background:var(--bg);color:var(--fg);outline:none}
+  .searchrow button{border:0;border-left:2px solid var(--border)}
+  /* ---- sources ---- */
+  .docrow{display:grid;grid-template-columns:1fr 90px 110px;border-bottom:1px solid var(--border)}
+  .docrow > *{padding:12px 14px;border-right:1px solid var(--border)}
+  .docrow > *:last-child{border-right:0}
+  .rule{height:10px;background:var(--surface-2);border:2px solid var(--border);margin-top:8px}
+  .rule i{display:block;height:100%;background:var(--primary)}
+  .quote{border:2px solid var(--border);padding:12px 14px;margin-top:12px;background:var(--surface);font-size:13px}
+  .side h4{margin:0 0 8px;font-size:10px;letter-spacing:.2em;text-transform:uppercase}
+  .side p{margin:0 0 16px;font-size:12px;color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="hd">
+    <div><h1>Support&nbsp;Copilot</h1><div class="l">Machine draft → human approval → permanent record</div></div>
+    <div class="l">Analyst R. Okafor<br>Local deployment · no cloud</div>
+  </div>
+  <nav>
+    <a href="#" data-screen="chat" class="is-on"><span>01 / Assist</span><b>→</b></a>
+    <a href="#" data-screen="draft-review"><span>02 / Approve</span><b>3</b></a>
+    <a href="#" data-screen="history"><span>03 / Record</span><b>142</b></a>
+    <a href="#" data-screen="sources"><span>04 / Knowledge</span><b>3</b></a>
+  </nav>
+
+  <!-- ============ CHAT ============ -->
+  <section id="chat" class="screen active">
+    <div class="strip"><h2>01 — Assist</h2><span class="l">Ticket 4821 · Acme Corp</span><span class="l">REQ-001 / 006 / 009</span></div>
+    <div class="cols">
+      <div>
+        <div class="line"><div class="id"><b>Analyst</b>09:14:02</div><div class="bd">Customer asks whether the Pro plan includes SSO, and whether they can configure it themselves.</div></div>
+
+        <div class="line"><div class="id"><b>Assistant</b>09:14:05<br><span class="tag hot">Automated</span></div>
+          <div class="bd">Yes. SAML 2.0 single sign-on is included on <b>Pro</b> and above <span class="ref" data-screen="sources">[1]</span>. The workspace owner configures it without support involvement — <b>Settings → Security → Identity provider</b>, upload IdP metadata XML <span class="ref" data-screen="sources">[2]</span>. Existing members inherit the change within ~15 minutes.
+            <div class="fine">Grounded in 2 passages · every claim carries a reference · REQ-002 / 004</div>
+          </div></div>
+
+        <div class="line"><div class="id"><b>Analyst</b>09:15:40</div><div class="bd">Also: refund window on a mid-cycle downgrade?</div></div>
+
+        <div class="line"><div class="id"><b>Assistant</b>09:15:43<br><span class="tag hot">Automated</span></div>
+          <div class="bd"><span class="tag">No covering source</span> The ingested knowledge does not address mid-cycle refunds. Answer withheld — returned to the analyst.
+            <div class="fine">0 passages above the relevance floor · no speculation · REQ-005</div>
+          </div></div>
+
+        <div class="compose">
+          <textarea rows="3">Draft a reply covering the SSO answer only.</textarea>
+          <button class="btn-p">Ask →</button>
+        </div>
+      </div>
+      <div class="pad side">
+        <h4>References</h4>
+        <p><b>[1]</b> product-guide.md §2.3 — plan entitlements.<br><b>[2]</b> sso-setup.md §1 — self-serve configuration.</p>
+        <h4>Corpus</h4>
+        <p>fixtures/sample-docs<br>3 documents · 41 passages</p>
+        <h4>Rule</h4>
+        <p>Out-of-corpus questions are refused, not guessed.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ DRAFT REVIEW ============ -->
+  <section id="draft-review" class="screen">
+    <div class="strip"><h2>02 — Approve</h2><span class="l">Draft 1 of 3</span><span class="l">REQ-007 / 011 / 015</span></div>
+    <div class="cols">
+      <div class="pad">
+        <div class="strip" style="border:2px solid var(--border);padding:10px 14px;margin-bottom:0">
+          <span class="l">Ticket 4821 · Acme Corp · SSO on Pro</span><span class="tag" id="o4-badge">Awaiting approval</span>
+        </div>
+        <textarea class="draft" style="border-top:0">Hi Dana,
+
+Yes — SSO via SAML 2.0 is included on the Pro plan, and you can set it up yourself: Settings → Security → Identity provider, then upload your IdP metadata XML. Existing members pick up the change within about 15 minutes.
+
+Regards,
+Acme Support
+
+— Drafted by an automated assistant; reviewed by a support analyst before sending.</textarea>
+        <div class="btnrow">
+          <button class="btn-p" data-decide="Approved &amp; sent">Approve &amp; send</button>
+          <button class="btn-s" data-decide="Edited &amp; approved">Edit &amp; approve</button>
+          <button class="btn-d" data-decide="Rejected">Reject</button>
+        </div>
+        <div class="ledger" id="o4-status">LEDGER — empty. On decision this row is written: approver / decision / timestamp / edited-flag. No reply exits the system without it.</div>
+      </div>
+      <div class="pad side">
+        <h4>Verify before approving</h4>
+        <p><b>[1]</b> “SAML 2.0 single sign-on is available on Pro and Enterprise plans.”<br>— product-guide.md §2.3</p>
+        <p><b>[2]</b> “Owners upload IdP metadata under Settings → Security.”<br>— sso-setup.md §1</p>
+        <h4>Locked</h4>
+        <p>The automated-sender disclosure line cannot be removed from the template. REQ-003</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ HISTORY ============ -->
+  <section id="history" class="screen">
+    <div class="strip"><h2>03 — Record</h2><span class="l">142 conversations retained</span><span class="l">REQ-008 / 010 / 012 / 013</span></div>
+    <div class="searchrow"><input value="sso" placeholder="Search the record"><button class="btn-s">Filter</button></div>
+    <table>
+      <thead><tr><th>Date</th><th>Ticket</th><th>Subject</th><th>Decision</th><th>Refs</th><th></th></tr></thead>
+      <tbody>
+        <tr><td class="num">26.07 09:14</td><td class="num">4821</td><td><b>SSO included on Pro; self-serve setup</b><br><span class="l">Acme Corp</span></td><td><span class="tag">Awaiting</span></td><td class="num">2</td><td><button class="btn-s" data-screen="draft-review">Open</button></td></tr>
+        <tr><td class="num">25.07 16:02</td><td class="num">4795</td><td><b>SCIM provisioning limits</b><br><span class="l">Northwind</span></td><td><span class="tag inv">Approved</span></td><td class="num">1</td><td><button class="btn-s" data-copy>Reuse</button></td></tr>
+        <tr><td class="num">25.07 11:48</td><td class="num">4788</td><td><b>Export retention window</b><br><span class="l">Contoso</span></td><td><span class="tag inv">Edited · approved</span></td><td class="num">3</td><td><button class="btn-s" data-copy>Reuse</button></td></tr>
+        <tr><td class="num">24.07 14:20</td><td class="num">4771</td><td><b>Mid-cycle refund policy</b><br><span class="l">Acme Corp</span></td><td><span class="tag">Rejected</span></td><td class="num">0</td><td><button class="btn-s" data-copy>Reuse</button></td></tr>
+        <tr><td class="num">24.07 10:05</td><td class="num">4762</td><td><b>API rate limits per plan</b><br><span class="l">Fabrikam</span></td><td><span class="tag inv">Approved</span></td><td class="num">2</td><td><button class="btn-s" data-copy>Reuse</button></td></tr>
+      </tbody>
+    </table>
+    <div class="pad l" id="o4-copy">Open a row for the full thread. “Reuse” lifts approved wording into a new draft.</div>
+  </section>
+
+  <!-- ============ SOURCES ============ -->
+  <section id="sources" class="screen">
+    <div class="strip"><h2>04 — Knowledge</h2><span class="l">fixtures/sample-docs</span><span class="l">REQ-002 / 004 / 016</span></div>
+    <div class="cols">
+      <div>
+        <div class="docrow" style="border-bottom:2px solid var(--border)"><div class="l">Document</div><div class="l">Passages</div><div class="l">Citations</div></div>
+        <div class="docrow"><div><b>[1] product-guide.md</b><div class="rule"><i style="width:72%"></i></div></div><div class="num">24</div><div class="num">14 answers</div></div>
+        <div class="docrow"><div><b>[2] sso-setup.md</b><div class="rule"><i style="width:41%"></i></div></div><div class="num">11</div><div class="num">6 answers</div></div>
+        <div class="docrow"><div><b>[3] process.html</b><div class="rule"><i style="width:18%"></i></div></div><div class="num">6</div><div class="num">2 answers</div></div>
+        <div class="pad">
+          <div class="quote"><span class="tag hot">Passage [1] §2.3</span><br><br>“SAML 2.0 single sign-on is available on Pro and Enterprise plans. Workspace owners configure the identity provider from the security settings; support intervention is not required.”</div>
+        </div>
+      </div>
+      <div class="pad side">
+        <h4>Gaps</h4>
+        <p>Billing / refunds — 3 questions this week, no covering passage. Each was deferred to the analyst.</p>
+        <h4>Ingest</h4>
+        <p><button class="btn-s">Add document</button></p>
+      </div>
+    </div>
+  </section>
+</div>
+<script>
+document.addEventListener('click', function (e) {
+  var nav = e.target.closest('[data-screen]');
+  if (nav) {
+    e.preventDefault();
+    var id = nav.dataset.screen;
+    document.querySelectorAll('.screen').forEach(function (s) { s.classList.toggle('active', s.id === id); });
+    document.querySelectorAll('nav a').forEach(function (a) { a.classList.toggle('is-on', a.dataset.screen === id); });
+    window.scrollTo(0, 0);
+    return;
+  }
+  var d = e.target.closest('[data-decide]');
+  if (d) {
+    var b = document.getElementById('o4-badge');
+    b.textContent = d.dataset.decide;
+    b.className = 'tag ' + (d.dataset.decide === 'Rejected' ? '' : 'inv');
+    document.getElementById('o4-status').innerHTML = 'LEDGER — <b>' + d.dataset.decide.toUpperCase() + '</b> / R.OKAFOR / 2026-07-26 09:17:31 / EDITED: ' + (d.dataset.decide.indexOf('Edited') === 0 ? 'YES' : 'NO');
+    return;
+  }
+  if (e.target.closest('[data-copy]')) {
+    document.getElementById('o4-copy').innerHTML = 'COPIED — approved wording queued as a new draft under 02 / Approve.';
+  }
+});
+</script>
+</body>
+</html>

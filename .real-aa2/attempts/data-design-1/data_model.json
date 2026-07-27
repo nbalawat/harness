@@ -1,0 +1,67 @@
+{
+  "tables": [
+    {
+      "name": "conversations",
+      "addresses": ["REQ-008", "REQ-010", "REQ-011", "REQ-012", "REQ-013", "REQ-014", "REQ-017"],
+      "columns": [
+        { "name": "title", "type": "str" },
+        { "name": "customer_question", "type": "str" },
+        { "name": "analyst", "type": "str" },
+        { "name": "approval_status", "type": "str" },
+        { "name": "created_at", "type": "str" },
+        { "name": "updated_at", "type": "str" }
+      ]
+    },
+    {
+      "name": "messages",
+      "addresses": ["REQ-003", "REQ-005", "REQ-006", "REQ-009", "REQ-013", "REQ-014"],
+      "columns": [
+        { "name": "conversation_id", "type": "int" },
+        { "name": "role", "type": "str" },
+        { "name": "content", "type": "str" },
+        { "name": "turn_index", "type": "int" },
+        { "name": "is_draft_reply", "type": "bool" },
+        { "name": "is_automated", "type": "bool" },
+        { "name": "coverage_status", "type": "str" },
+        { "name": "created_at", "type": "str" }
+      ]
+    },
+    {
+      "name": "knowledge_documents",
+      "addresses": ["REQ-002", "REQ-016"],
+      "columns": [
+        { "name": "title", "type": "str" },
+        { "name": "source_path", "type": "str" },
+        { "name": "content", "type": "str" },
+        { "name": "content_hash", "type": "str" },
+        { "name": "ingested_at", "type": "str" }
+      ]
+    },
+    {
+      "name": "message_citations",
+      "addresses": ["REQ-002", "REQ-004", "REQ-016"],
+      "columns": [
+        { "name": "message_id", "type": "int" },
+        { "name": "document_id", "type": "int" },
+        { "name": "document_title", "type": "str" },
+        { "name": "locator", "type": "str" },
+        { "name": "excerpt", "type": "str" }
+      ]
+    },
+    {
+      "name": "approvals",
+      "addresses": ["REQ-007", "REQ-011", "REQ-012", "REQ-015"],
+      "columns": [
+        { "name": "conversation_id", "type": "int" },
+        { "name": "message_id", "type": "int" },
+        { "name": "decision", "type": "str" },
+        { "name": "approver", "type": "str" },
+        { "name": "was_edited", "type": "bool" },
+        { "name": "drafted_text", "type": "str" },
+        { "name": "final_text", "type": "str" },
+        { "name": "note", "type": "str" },
+        { "name": "decided_at", "type": "str" }
+      ]
+    }
+  ]
+}

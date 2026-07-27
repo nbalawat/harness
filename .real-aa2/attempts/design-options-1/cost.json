@@ -1,0 +1,7 @@
+{
+  "inputTokens": 30,
+  "outputTokens": 35216,
+  "cacheReadTokens": 603925,
+  "cacheWriteTokens": 47419,
+  "costUsd": 1.6576465
+}

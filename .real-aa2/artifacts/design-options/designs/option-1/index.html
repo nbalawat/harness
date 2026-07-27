@@ -1,0 +1,234 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Support Copilot — Console Graphite (option-1)</title>
+<link rel="stylesheet" href="tokens.css">
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--font);font-size:13px;line-height:1.55}
+  a{color:inherit;text-decoration:none}
+  .app{display:grid;grid-template-columns:216px 1fr;min-height:100vh}
+  /* ---- rail ---- */
+  .rail{background:var(--surface);border-right:1px solid var(--border);padding:14px 0;display:flex;flex-direction:column}
+  .brand{padding:0 14px 14px;border-bottom:1px solid var(--border);margin-bottom:10px}
+  .brand b{display:block;font-size:13px;letter-spacing:.04em}
+  .brand span{color:var(--muted);font-size:11px}
+  .rail a{display:flex;justify-content:space-between;padding:7px 14px;color:var(--muted);border-left:2px solid transparent}
+  .rail a:hover{color:var(--fg);background:var(--surface-2)}
+  .rail a.is-on{color:var(--primary);border-left-color:var(--primary);background:var(--surface-2)}
+  .rail a small{color:var(--muted);font-size:10px}
+  .rail .spacer{flex:1}
+  .rail .who{padding:10px 14px;border-top:1px solid var(--border);color:var(--muted);font-size:11px}
+  /* ---- main ---- */
+  main{padding:0;overflow:hidden}
+  .screen{display:none;padding:18px 22px 28px}
+  .screen.active{display:block}
+  .hdr{display:flex;align-items:baseline;gap:12px;border-bottom:1px solid var(--border);padding-bottom:10px;margin-bottom:16px}
+  .hdr h1{font-size:14px;margin:0;letter-spacing:.06em;text-transform:uppercase}
+  .hdr .req{color:var(--muted);font-size:10px}
+  .k{color:var(--muted);font-size:11px;letter-spacing:.08em;text-transform:uppercase}
+  /* ---- chat ---- */
+  .turn{display:grid;grid-template-columns:96px 1fr;gap:14px;padding:12px 0;border-bottom:1px solid var(--border)}
+  .who-col{color:var(--muted);font-size:11px}
+  .who-col b{display:block;color:var(--fg);font-size:11px;letter-spacing:.06em}
+  .badge{display:inline-block;padding:1px 6px;border:1px solid var(--primary);color:var(--primary);font-size:10px;letter-spacing:.08em;border-radius:var(--radius)}
+  .badge.warn{border-color:var(--accent-warn);color:var(--accent-warn)}
+  .badge.dim{border-color:var(--border);color:var(--muted)}
+  .cite{color:var(--primary);border-bottom:1px dotted var(--primary);cursor:pointer}
+  .srcline{margin-top:8px;color:var(--muted);font-size:11px}
+  .composer{margin-top:16px;border:1px solid var(--border);background:var(--surface);border-radius:var(--radius)}
+  .composer textarea{width:100%;background:transparent;border:0;color:var(--fg);font:inherit;padding:10px;resize:vertical;outline:none}
+  .composer .bar{display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--border);padding:6px 10px;color:var(--muted);font-size:11px}
+  /* ---- buttons ---- */
+  button{font:inherit;cursor:pointer;border-radius:var(--radius);padding:5px 12px;letter-spacing:.04em}
+  .btn-p{background:var(--primary);color:var(--on-primary);border:1px solid var(--primary)}
+  .btn-s{background:transparent;color:var(--fg);border:1px solid var(--border)}
+  .btn-d{background:transparent;color:var(--accent-danger);border:1px solid var(--accent-danger)}
+  /* ---- draft ---- */
+  .panel{border:1px solid var(--border);background:var(--surface);border-radius:var(--radius);margin-bottom:14px}
+  .panel .ph{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;border-bottom:1px solid var(--border)}
+  .panel .pb{padding:12px}
+  .draft{width:100%;min-height:150px;background:var(--surface-2);color:var(--fg);border:1px solid var(--border);font:inherit;padding:10px;border-radius:var(--radius);outline:none}
+  .actions{display:flex;gap:8px;align-items:center;margin-top:10px}
+  .audit{color:var(--muted);font-size:11px;margin-top:10px;border-top:1px dashed var(--border);padding-top:8px}
+  /* ---- table ---- */
+  table{width:100%;border-collapse:collapse;font-size:12px}
+  th{text-align:left;color:var(--muted);font-weight:400;font-size:10px;letter-spacing:.09em;text-transform:uppercase;border-bottom:1px solid var(--border);padding:6px 8px}
+  td{border-bottom:1px solid var(--border);padding:8px}
+  tr:hover td{background:var(--surface)}
+  .toolbar{display:flex;gap:8px;margin-bottom:12px}
+  .toolbar input{flex:1;background:var(--surface);border:1px solid var(--border);color:var(--fg);font:inherit;padding:6px 10px;border-radius:var(--radius);outline:none}
+  .grid2{display:grid;grid-template-columns:1fr 300px;gap:16px}
+  .doc{border:1px solid var(--border);background:var(--surface);border-radius:var(--radius);padding:10px 12px;margin-bottom:8px}
+  .doc b{color:var(--primary)}
+  .bar-meter{height:4px;background:var(--surface-2);border:1px solid var(--border);margin-top:6px}
+  .bar-meter i{display:block;height:100%;background:var(--primary)}
+  .note{color:var(--muted);font-size:11px}
+</style>
+</head>
+<body>
+<div class="app">
+  <nav class="rail">
+    <div class="brand"><b>SUPPORT COPILOT</b><span>console · local</span></div>
+    <a href="#" data-screen="chat" class="is-on">assist <small>⌘1</small></a>
+    <a href="#" data-screen="draft-review">review queue <small>3</small></a>
+    <a href="#" data-screen="history">history <small>⌘3</small></a>
+    <a href="#" data-screen="sources">knowledge <small>⌘4</small></a>
+    <div class="spacer"></div>
+    <div class="who">analyst: r.okafor<br>session local · no cloud</div>
+  </nav>
+
+  <main>
+    <!-- ============ CHAT ============ -->
+    <section id="chat" class="screen active">
+      <div class="hdr"><h1>Assist</h1><span class="k">ticket #4821 · acme corp</span><span class="req">REQ-001 · 006 · 009</span></div>
+
+      <div class="turn">
+        <div class="who-col"><b>ANALYST</b>09:14:02</div>
+        <div>Customer asks whether the Pro plan includes SSO and if they can configure it themselves.</div>
+      </div>
+
+      <div class="turn">
+        <div class="who-col"><b>ASSISTANT</b>09:14:05<br><span class="badge">AUTOMATED</span></div>
+        <div>
+          Yes — SSO (SAML 2.0) is included on Pro and above <span class="cite" data-screen="sources">[S1 §2.3]</span>.
+          Workspace owners can configure it without contacting support: <b>Settings → Security → Identity provider</b>,
+          then upload the IdP metadata XML <span class="cite" data-screen="sources">[S2 §1]</span>.
+          Propagation to existing members takes up to 15 minutes.
+          <div class="srcline">grounded in 2 sources · <a href="#" data-screen="sources" class="cite">inspect passages</a> · REQ-002 · 004</div>
+        </div>
+      </div>
+
+      <div class="turn">
+        <div class="who-col"><b>ANALYST</b>09:15:40</div>
+        <div>They also want to know the refund window if they downgrade mid-cycle.</div>
+      </div>
+
+      <div class="turn">
+        <div class="who-col"><b>ASSISTANT</b>09:15:43<br><span class="badge">AUTOMATED</span></div>
+        <div>
+          <span class="badge warn">NOT IN CORPUS</span>
+          The ingested product knowledge does not cover mid-cycle refunds. I will not guess —
+          please answer this part yourself or point me at a document to ingest.
+          <div class="srcline">0 passages above relevance floor · deferring to analyst · REQ-005</div>
+        </div>
+      </div>
+
+      <div class="composer">
+        <textarea rows="3" placeholder="Ask the assistant…  (⌘↵ to send)">Draft a reply covering the SSO answer only.</textarea>
+        <div class="bar"><span>corpus: fixtures/sample-docs · 2 docs · 41 passages</span><button class="btn-p">SEND ⌘↵</button></div>
+      </div>
+    </section>
+
+    <!-- ============ DRAFT REVIEW ============ -->
+    <section id="draft-review" class="screen">
+      <div class="hdr"><h1>Review Queue</h1><span class="k">draft 1 of 3</span><span class="req">REQ-007 · 011 · 015</span></div>
+
+      <div class="panel">
+        <div class="ph"><span>#4821 · acme corp · SSO on Pro</span><span class="badge warn">AWAITING APPROVAL</span></div>
+        <div class="pb">
+          <div class="k" style="margin-bottom:6px">Draft reply to customer — editable</div>
+          <textarea class="draft">Hi Dana,
+
+Yes — SSO via SAML 2.0 is included on the Pro plan, and you can set it up yourself: go to Settings → Security → Identity provider and upload your IdP metadata XML. Existing members pick up the change within about 15 minutes.
+
+— Sent by an automated assistant, reviewed by a support analyst before sending.</textarea>
+          <div class="actions">
+            <button class="btn-p" data-decide="APPROVED &amp; SENT">APPROVE &amp; SEND</button>
+            <button class="btn-s" data-decide="EDITED · APPROVED">SAVE EDIT &amp; APPROVE</button>
+            <button class="btn-d" data-decide="REJECTED">REJECT</button>
+            <span class="note" id="o1-status">no decision recorded yet</span>
+          </div>
+          <div class="audit">
+            AUDIT · nothing leaves the system unapproved. Recorded on decision:
+            approver <b>r.okafor</b> · decision · timestamp · edited-flag · draft hash.
+            <br>Automated-sender disclosure line is locked into the template (REQ-003).
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="ph"><span>CITED SOURCES — verify before approving</span><span class="badge dim">REQ-004</span></div>
+        <div class="pb note">
+          [S1] product-guide.md §2.3 “Plan entitlements” — <i>“SAML 2.0 single sign-on is available on Pro and Enterprise.”</i><br>
+          [S2] sso-setup.md §1 “Self-serve configuration” — <i>“Owners upload IdP metadata under Settings → Security.”</i>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ HISTORY ============ -->
+    <section id="history" class="screen">
+      <div class="hdr"><h1>History</h1><span class="k">reviewable record</span><span class="req">REQ-008 · 010 · 012 · 013</span></div>
+      <div class="toolbar">
+        <input placeholder="filter conversations… (topic, customer, status)" value="sso">
+        <button class="btn-s">STATUS: ALL</button><button class="btn-s">LAST 30D</button>
+      </div>
+      <table>
+        <thead><tr><th>opened</th><th>ticket</th><th>topic</th><th>status</th><th>sources</th><th></th></tr></thead>
+        <tbody>
+          <tr><td>07-26 09:14</td><td>#4821</td><td>SSO included on Pro / self-serve setup</td><td><span class="badge warn">awaiting</span></td><td>2</td><td><button class="btn-s" data-screen="draft-review">open</button></td></tr>
+          <tr><td>07-25 16:02</td><td>#4795</td><td>SCIM provisioning limits</td><td><span class="badge">approved</span></td><td>1</td><td><button class="btn-s" data-copy>reuse answer</button></td></tr>
+          <tr><td>07-25 11:48</td><td>#4788</td><td>Export retention window</td><td><span class="badge">edited · approved</span></td><td>3</td><td><button class="btn-s" data-copy>reuse answer</button></td></tr>
+          <tr><td>07-24 14:20</td><td>#4771</td><td>Mid-cycle refund policy</td><td><span class="badge dim">rejected — not in corpus</span></td><td>0</td><td><button class="btn-s" data-copy>reuse answer</button></td></tr>
+          <tr><td>07-24 10:05</td><td>#4762</td><td>API rate limits per plan</td><td><span class="badge">approved</span></td><td>2</td><td><button class="btn-s" data-copy>reuse answer</button></td></tr>
+        </tbody>
+      </table>
+      <p class="note" id="o1-copy">Select a row to read the full thread; “reuse answer” copies the approved text into a new draft.</p>
+    </section>
+
+    <!-- ============ SOURCES ============ -->
+    <section id="sources" class="screen">
+      <div class="hdr"><h1>Knowledge</h1><span class="k">fixtures/sample-docs</span><span class="req">REQ-002 · 004 · 016</span></div>
+      <div class="grid2">
+        <div>
+          <div class="doc"><b>[S1] product-guide.md</b> · 24 passages · ingested 07-26 08:02
+            <div class="note">cited by 14 answers · last cited 09:14 today</div>
+            <div class="bar-meter"><i style="width:72%"></i></div>
+          </div>
+          <div class="doc"><b>[S2] sso-setup.md</b> · 11 passages · ingested 07-26 08:02
+            <div class="note">cited by 6 answers · last cited 09:14 today</div>
+            <div class="bar-meter"><i style="width:41%"></i></div>
+          </div>
+          <div class="doc"><b>[S3] process.html</b> · 6 passages · ingested 07-26 08:02
+            <div class="note">cited by 2 answers</div>
+            <div class="bar-meter"><i style="width:18%"></i></div>
+          </div>
+          <p class="note">Gaps detected: “refund / billing cycle” — 3 questions in the last 7 days had no covering passage. Assistant deferred each time.</p>
+        </div>
+        <div>
+          <div class="panel"><div class="ph"><span>PASSAGE</span><span class="badge dim">S1 §2.3</span></div>
+            <div class="pb note">“SAML 2.0 single sign-on is available on <b>Pro</b> and Enterprise plans. Workspace owners configure the identity provider from the security settings; support intervention is not required.”</div>
+          </div>
+          <p class="note">Answers are constrained to these passages. Anything outside them returns <span class="badge warn">NOT IN CORPUS</span>.</p>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+<script>
+document.addEventListener('click', function (e) {
+  var nav = e.target.closest('[data-screen]');
+  if (nav) {
+    e.preventDefault();
+    var id = nav.dataset.screen;
+    document.querySelectorAll('.screen').forEach(function (s) { s.classList.toggle('active', s.id === id); });
+    document.querySelectorAll('.rail a').forEach(function (a) { a.classList.toggle('is-on', a.dataset.screen === id); });
+    window.scrollTo(0, 0);
+    return;
+  }
+  var d = e.target.closest('[data-decide]');
+  if (d) {
+    var s = document.getElementById('o1-status');
+    s.innerHTML = 'recorded: <b>' + d.dataset.decide + '</b> · r.okafor · 2026-07-26 09:17:31';
+    d.closest('.panel').querySelector('.badge').textContent = d.dataset.decide;
+    return;
+  }
+  if (e.target.closest('[data-copy]')) {
+    document.getElementById('o1-copy').innerHTML = 'copied approved answer into a new draft → <b>review queue</b>';
+  }
+});
+</script>
+</body>
+</html>

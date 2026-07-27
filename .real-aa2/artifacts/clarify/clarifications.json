@@ -1,0 +1,5 @@
+{
+  "req-019": "Local username + password accounts held by the app itself; the signed-in analyst's identity is recorded on every approval.",
+  "req-020": "Retain conversations for 90 days, then purge; store customer content as written with no automated PII redaction.",
+  "req-021": "The app does not send anything; on approval it marks the reply approved and the analyst copies it into the existing email tool."
+}
