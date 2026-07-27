@@ -1,0 +1,11 @@
+name: agent-router
+version: 0.1.0
+description: "Multi-agent apps need 'which agent handles this' as data, not nested ifs sprinkled by build agents."
+provides:
+  - "python: agent_router.route(message, rules, default) -> agent name via ordered keyword/regex rules"
+requires:
+  - "agent-runtime"
+compose:
+  overlay: compose/
+certify:
+  tests: test/

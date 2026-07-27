@@ -1,0 +1,11 @@
+name: row-history
+version: 0.1.0
+description: "Field-level change history for regulated data — pairs with audit-log to answer 'what changed, from what, to what'."
+provides:
+  - "python: row_history.track(table, id, before, after, actor) / history(table, id)"
+requires:
+  - "persistence-core"
+compose:
+  overlay: compose/
+certify:
+  tests: test/

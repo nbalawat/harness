@@ -1,0 +1,11 @@
+name: doc-extract
+version: 0.1.0
+description: "PDF/docx/HTML/text to clean text+structure — the intake path of most business apps, done once with honest fallbacks."
+provides:
+  - "python: doc_extract.extract(path) -> {text, format, warnings} for .txt/.md/.html/.docx (+ .pdf via pdftotext when present)"
+requires:
+  - "nothing beyond the base app"
+compose:
+  overlay: compose/
+certify:
+  tests: test/

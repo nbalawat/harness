@@ -1,0 +1,11 @@
+name: postgres-adapter
+version: 0.1.0
+description: "Production Store implementing the persistence-core contract against Postgres — the local-to-production step is a compose choice, not a rewrite."
+provides:
+  - "python: pg_store.PgStore(connection) — insert/list, same contract as db.store"
+requires:
+  - "a Postgres connection (injected; DSN in production via env-config)"
+compose:
+  overlay: compose/
+certify:
+  tests: test/

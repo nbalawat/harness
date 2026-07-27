@@ -1,0 +1,11 @@
+name: sla-timers
+version: 0.1.0
+description: "Due dates, breach flags, escalations — ops apps are judged on these, and clock math is where bugs hide."
+provides:
+  - "python: sla.due_at(start_iso, hours) / status(start_iso, hours, now) -> ok|at_risk|breached"
+requires:
+  - "nothing beyond the base app"
+compose:
+  overlay: compose/
+certify:
+  tests: test/

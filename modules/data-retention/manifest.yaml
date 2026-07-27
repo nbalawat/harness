@@ -1,0 +1,12 @@
+name: data-retention
+version: 0.1.0
+description: "TTL/purge honoring the retention answers users give at clarify — the requirement appears in almost every intake."
+provides:
+  - "python: retention.purge(policies, now) — removes expired rows via soft-delete, returns report"
+requires:
+  - "persistence-core"
+  - "soft-delete"
+compose:
+  overlay: compose/
+certify:
+  tests: test/

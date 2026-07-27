@@ -1,0 +1,11 @@
+name: guardrails-io
+version: 0.1.0
+description: "Input/output filters (PII, injection heuristics, topic fences) as composable policy instead of scattered regexes."
+provides:
+  - "python: guardrails.check_input(text, fences) / check_output(text) -> {ok, flags}"
+requires:
+  - "pii-redaction"
+compose:
+  overlay: compose/
+certify:
+  tests: test/

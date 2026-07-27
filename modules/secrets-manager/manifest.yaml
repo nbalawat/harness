@@ -1,0 +1,12 @@
+name: secrets-manager
+version: 0.1.0
+description: "App secrets via environment with loud failures — never in code, never in the store; enforced by a scanner, not advised."
+provides:
+  - "python: secrets_mgr.get(name, required=True) env-backed"
+  - "python: secrets_mgr.scan_source(dir) flags hardcoded secrets"
+requires:
+  - "nothing beyond the base app"
+compose:
+  overlay: compose/
+certify:
+  tests: test/

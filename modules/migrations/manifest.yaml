@@ -1,0 +1,11 @@
+name: migrations
+version: 0.1.0
+description: "Ordered, tracked, idempotent schema/data migrations — ad-hoc ALTERs by agents are how data gets destroyed."
+provides:
+  - "python: migrations.apply_all(dir, store) — runs pending .py migrations in order, records applied"
+requires:
+  - "persistence-core (tracking table)"
+compose:
+  overlay: compose/
+certify:
+  tests: test/

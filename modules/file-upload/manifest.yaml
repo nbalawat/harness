@@ -1,0 +1,11 @@
+name: file-upload
+version: 0.1.0
+description: "Safe upload endpoint with type/size allowlists — security-sensitive enough that agents must never improvise it."
+provides:
+  - "http: PUT /uploads/{name} (raw body) with extension allowlist + size caps, stored via blob-store"
+requires:
+  - "blob-store"
+compose:
+  overlay: compose/
+certify:
+  tests: test/

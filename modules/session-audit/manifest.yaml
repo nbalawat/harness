@@ -1,0 +1,11 @@
+name: session-audit
+version: 0.1.0
+description: "Login/logout/denied-access trail — identity events feed the same audit stream as business actions."
+provides:
+  - "python: session_audit.login(user) / logout(user) / denied(user, what) — records via audit-log"
+requires:
+  - "audit-log"
+compose:
+  overlay: compose/
+certify:
+  tests: test/

@@ -1,0 +1,11 @@
+name: citation-tracker
+version: 0.1.0
+description: "Source attribution structure for grounded answers — trust requires 'says who' on every claim."
+provides:
+  - "python: citations.attach(answer, sources) / render(cited) -> answer text with [n] markers + source list"
+requires:
+  - "rag-core"
+compose:
+  overlay: compose/
+certify:
+  tests: test/

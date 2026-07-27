@@ -23,10 +23,16 @@ interface Manifest {
   name?: string;
   version?: string;
   description?: string;
+  /** app (default): composes into generated apps. tool: certifier/generator utilities. pack: curated module bundle. */
+  kind?: "app" | "tool" | "pack";
   provides?: unknown[];
   requires?: unknown[];
   compose?: { overlay?: string };
   certify?: { tests?: string; command?: string };
+  /** pack only: the modules the pack composes. */
+  modules?: string[];
+  /** app only: modules this one cannot be composed with. */
+  conflicts?: string[];
 }
 
 function overlay(moduleDir: string, appDir: string): void {
@@ -35,11 +41,33 @@ function overlay(moduleDir: string, appDir: string): void {
   fs.cpSync(composeDir, appDir, { recursive: true });
 }
 
-/** A minimal but REAL composed app: base template + substrate + generated glue. */
+/** requires entries that exactly name sibling modules are composable dependencies. */
+function moduleDeps(modulesDir: string, name: string, seen = new Set<string>()): string[] {
+  if (seen.has(name)) return [];
+  seen.add(name);
+  const manifestPath = path.join(modulesDir, name, "manifest.yaml");
+  if (!fs.existsSync(manifestPath)) return [];
+  let manifest: Manifest = {};
+  try {
+    manifest = parse(fs.readFileSync(manifestPath, "utf8")) as Manifest;
+  } catch {
+    return [];
+  }
+  const out: string[] = [];
+  for (const req of manifest.requires ?? []) {
+    if (typeof req === "string" && fs.existsSync(path.join(modulesDir, req, "manifest.yaml"))) {
+      out.push(...moduleDeps(modulesDir, req, seen), req);
+    }
+  }
+  return [...new Set(out)];
+}
+
+/** A minimal but REAL composed app: base template + substrate + declared module deps + generated glue. */
 function makeScratchApp(modulesDir: string, projectTypeDir: string, moduleDir: string): string {
   const app = fs.mkdtempSync(path.join(os.tmpdir(), "harness-module-"));
   fs.cpSync(path.join(projectTypeDir, "templates", "base"), app, { recursive: true });
   for (const name of SUBSTRATE) overlay(path.join(modulesDir, name), app);
+  for (const dep of moduleDeps(modulesDir, path.basename(moduleDir))) overlay(path.join(modulesDir, dep), app);
   overlay(moduleDir, app);
   fs.writeFileSync(
     path.join(app, "backend", "models.py"),
@@ -91,7 +119,22 @@ function certifyOne(modulesDir: string, projectTypeDir: string, name: string): M
     }
     if (!Array.isArray(manifest.provides) || manifest.provides.length === 0) problems.push("manifest must declare provides");
     if (!Array.isArray(manifest.requires)) problems.push("manifest must declare requires (empty list is fine)");
-    if (manifest.compose?.overlay !== "compose/") problems.push("manifest compose.overlay must be 'compose/'");
+    if (manifest.kind && !["app", "tool", "pack"].includes(manifest.kind)) problems.push(`unknown kind '${manifest.kind}'`);
+    if ((manifest.kind ?? "app") === "app" && manifest.compose?.overlay !== "compose/") {
+      problems.push("manifest compose.overlay must be 'compose/'");
+    }
+    if (manifest.kind === "pack") {
+      if (!Array.isArray(manifest.modules) || manifest.modules.length === 0) {
+        problems.push("pack must list the modules it bundles");
+      } else {
+        for (const m of manifest.modules) {
+          if (!fs.existsSync(path.join(modulesDir, m, "manifest.yaml"))) problems.push(`pack references unknown module '${m}'`);
+        }
+      }
+    }
+    for (const c of manifest.conflicts ?? []) {
+      if (!fs.existsSync(path.join(modulesDir, c, "manifest.yaml"))) problems.push(`conflicts references unknown module '${c}'`);
+    }
   }
 
   // 2. Agent guide — the module's law for build agents.
@@ -100,13 +143,36 @@ function certifyOne(modulesDir: string, projectTypeDir: string, name: string): M
     problems.push("agent-guide.md missing or too thin to guide a build agent");
   }
 
-  // 3. Overlay sanity.
-  const composeDir = path.join(moduleDir, "compose");
-  if (!fs.existsSync(composeDir) || fs.readdirSync(composeDir).length === 0) {
-    problems.push("compose/ overlay missing or empty");
+  const kind = manifest.kind ?? "app";
+
+  // 3. Overlay sanity (app modules only — tools/packs don't compose into apps).
+  if (kind === "app") {
+    const composeDir = path.join(moduleDir, "compose");
+    if (!fs.existsSync(composeDir) || fs.readdirSync(composeDir).length === 0) {
+      problems.push("compose/ overlay missing or empty");
+    }
   }
 
   if (problems.length > 0) return { name, ok: false, problems, tested: "none" };
+
+  // Tools and packs are certified by their own command/tests, no scratch app.
+  if (kind !== "app") {
+    const tested: string[] = [];
+    if (manifest.certify?.command) {
+      const cmd = spawnSync(manifest.certify.command, {
+        shell: true,
+        cwd: moduleDir,
+        encoding: "utf8",
+        timeout: 300000,
+        env: { ...process.env, HARNESS_MODULE_DIR: moduleDir, HARNESS_MODULES_DIR: modulesDir },
+      });
+      if (cmd.status !== 0) problems.push(`certify command failed:\n${(cmd.stderr ?? cmd.stdout ?? "").slice(-400)}`);
+      tested.push("command");
+    }
+    if (kind === "pack") tested.push("modules-exist");
+    if (tested.length === 0) problems.push("no certify tests declared — every module must prove its contract");
+    return { name, ok: problems.length === 0, problems, tested: tested.join("+") || "none" };
+  }
 
   // 4. Compose a real app and prove the module lives in it.
   const app = makeScratchApp(modulesDir, projectTypeDir, moduleDir);

@@ -1,0 +1,11 @@
+name: feed-poller
+version: 0.1.0
+description: "Scheduled pulls from URLs/APIs with dedupe — background ingestion written once, injectable for tests."
+provides:
+  - "python: feed_poller.poll(url, store, fetcher) — dedupes by content hash, records provenance"
+requires:
+  - "persistence-core"
+compose:
+  overlay: compose/
+certify:
+  tests: test/

@@ -1,0 +1,11 @@
+name: soft-delete
+version: 0.1.0
+description: "'Deleted' rows auditors can still see — deletion is a policy, so it must be uniform, not per-endpoint improvisation."
+provides:
+  - "python: soft_delete.delete(table, id) / active(table) / deleted(table) / restore(table, id)"
+requires:
+  - "persistence-core"
+compose:
+  overlay: compose/
+certify:
+  tests: test/

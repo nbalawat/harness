@@ -1,0 +1,11 @@
+name: assignment
+version: 0.1.0
+description: "Route work items to people/queues — fairness rules are policy, not whoever the agent thought of."
+provides:
+  - "python: assignment.round_robin(workers) stateful picker / least_loaded(workers, load_fn)"
+requires:
+  - "nothing beyond the base app"
+compose:
+  overlay: compose/
+certify:
+  tests: test/

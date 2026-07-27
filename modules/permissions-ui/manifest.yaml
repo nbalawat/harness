@@ -1,0 +1,11 @@
+name: permissions-ui
+version: 0.1.0
+description: "The admin screen for rbac — role assignment rendered uniformly instead of re-drawn per app."
+provides:
+  - "js: mod_permissions.js — renders role management into #admin-permissions, pure logic exported for tests"
+requires:
+  - "rbac"
+compose:
+  overlay: compose/
+certify:
+  command: node --check "$HARNESS_MODULE_DIR/compose/frontend/mod_permissions.js" && node "$HARNESS_MODULE_DIR/test/test_permissions_ui.mjs"

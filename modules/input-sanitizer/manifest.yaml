@@ -1,0 +1,11 @@
+name: input-sanitizer
+version: 0.1.0
+description: "Central request-text hardening beyond schema types — control chars, length caps, and HTML escaping in one place."
+provides:
+  - "python: sanitizer.clean(text, max_len) / escape_html(text)"
+requires:
+  - "nothing beyond the base app"
+compose:
+  overlay: compose/
+certify:
+  tests: test/

@@ -1,0 +1,11 @@
+name: table-extract
+version: 0.1.0
+description: "Tables inside documents are where the numbers live — naive text extraction destroys them."
+provides:
+  - "python: table_extract.from_html(html) -> [table rows] / from_csv(text) -> rows"
+requires:
+  - "doc-extract"
+compose:
+  overlay: compose/
+certify:
+  tests: test/

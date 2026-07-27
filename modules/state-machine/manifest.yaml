@@ -1,0 +1,11 @@
+name: state-machine
+version: 0.1.0
+description: "Declarative status transitions — scattered ifs are how QA dies; transitions must be data."
+provides:
+  - "python: statemachine.Machine(transitions) — advance(current, event) or IllegalTransition"
+requires:
+  - "nothing beyond the base app"
+compose:
+  overlay: compose/
+certify:
+  tests: test/

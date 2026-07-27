@@ -1,0 +1,12 @@
+name: search-index
+version: 0.1.0
+description: "Text search over stored rows — every 'find past X' feature reinvents it worse."
+provides:
+  - "python: search_index.Index — add(id, text), search(query) ranked"
+  - "http: GET /search?q= over registered tables"
+requires:
+  - "persistence-core"
+compose:
+  overlay: compose/
+certify:
+  tests: test/

@@ -1,0 +1,11 @@
+name: spreadsheet-io
+version: 0.1.0
+description: "CSV/TSV in and out with type coercion — the lingua franca of analysts, parsed one way."
+provides:
+  - "python: spreadsheet_io.read_rows(text, delimiter) with numeric coercion / write_csv(rows, columns)"
+requires:
+  - "nothing beyond the base app"
+compose:
+  overlay: compose/
+certify:
+  tests: test/

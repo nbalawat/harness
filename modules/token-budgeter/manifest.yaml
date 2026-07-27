@@ -1,0 +1,11 @@
+name: token-budgeter
+version: 0.1.0
+description: "Per-conversation/user spend caps inside the generated app — the app-level version of the harness's own cost discipline."
+provides:
+  - "python: budgeter.Budgeter(cap_usd) — spend(key, usd) raising BudgetExceeded, remaining(key)"
+requires:
+  - "nothing beyond the base app"
+compose:
+  overlay: compose/
+certify:
+  tests: test/

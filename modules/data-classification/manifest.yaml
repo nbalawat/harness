@@ -1,0 +1,11 @@
+name: data-classification
+version: 0.1.0
+description: "Sensitivity tags per table/column driving retention, redaction, and export rules — policy attached to the data model itself."
+provides:
+  - "python: classify.set_level(table, column, level) / level_of / restrict(table, rows) masking restricted columns"
+requires:
+  - "nothing beyond the base app"
+compose:
+  overlay: compose/
+certify:
+  tests: test/

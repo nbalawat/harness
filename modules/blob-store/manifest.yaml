@@ -1,0 +1,12 @@
+name: blob-store
+version: 0.1.0
+description: "Files and attachments with the same discipline as rows — local dir now, GCS behind the same interface later."
+provides:
+  - "python: blob_store.save(name, data) / get(name) / list_blobs()"
+  - "http: PUT /files/{name} (raw bytes), GET /files/{name}"
+requires:
+  - "nothing beyond the base app"
+compose:
+  overlay: compose/
+certify:
+  tests: test/

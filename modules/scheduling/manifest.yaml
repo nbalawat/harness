@@ -1,0 +1,11 @@
+name: scheduling
+version: 0.1.0
+description: "Cron-style in-app jobs with visibility and no threads — run_due is called by the host, everything is observable."
+provides:
+  - "python: sched.register(name, every_seconds, fn) / run_due(now) -> ran list / jobs() status"
+requires:
+  - "nothing beyond the base app"
+compose:
+  overlay: compose/
+certify:
+  tests: test/
