@@ -84,17 +84,42 @@ async function main() {
     }
 
     // Progress screenshot (best-effort): ships inside the app artifact so the
-    // dashboard can show the app evolving slice by slice.
+    // dashboard can show the app evolving slice by slice. FULL PAGE, after a
+    // demo interaction — a fixed top-of-page viewport would show the same
+    // header for every slice and hide exactly the growth we want to show.
     try {
       const { chromium } = require("playwright-core");
       const browser = await chromium.launch({ channel: "chrome" });
       const page = await browser.newPage({ viewport: { width: 1180, height: 780 } });
       await page.goto(`http://127.0.0.1:${port}`, { waitUntil: "load", timeout: 15000 });
-      await page.waitForTimeout(500);
+      await page.waitForTimeout(700); // let app.js populate agents/history panels
+      try {
+        // Exercise the chat so the thread shows real content in every shot.
+        await page.fill("#input", "How do I reset a user's access?");
+        await page.locator("#composer button[type=submit], #composer button").first().click();
+        await page.waitForTimeout(1200);
+      } catch {
+        /* demo interaction is best-effort — layout may vary */
+      }
+      // Reload so panels re-render with the DATA the acceptance checks and the
+      // demo chat just created — state growth is the visible slice progress.
+      await page.reload({ waitUntil: "load" });
+      await page.waitForTimeout(900);
+      // Designs often show one screen at a time (tabs). The progress shot is a
+      // COMPOSITE: force every screen section visible so what each slice added
+      // (approvals, history, roster...) is actually in the picture.
+      await page.evaluate(() => {
+        for (const s of document.querySelectorAll('[id^="screen-"]')) {
+          s.style.display = "block";
+          s.style.visibility = "visible";
+          s.removeAttribute("hidden");
+        }
+      });
+      await page.waitForTimeout(300);
       fs.mkdirSync(path.join(app, "screenshots"), { recursive: true });
-      await page.screenshot({ path: path.join(app, "screenshots", `slice-${sliceIndex}.png`) });
+      await page.screenshot({ path: path.join(app, "screenshots", `slice-${sliceIndex}.png`), fullPage: true });
       await browser.close();
-      console.log(`progress screenshot captured for slice ${sliceIndex}`);
+      console.log(`progress screenshot captured for slice ${sliceIndex} (full page)`);
     } catch (e) {
       console.log("progress screenshot skipped: " + String(e).slice(0, 120));
     }

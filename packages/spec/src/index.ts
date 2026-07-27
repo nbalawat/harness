@@ -128,6 +128,16 @@ export interface PreviewSpec {
   health?: string;
 }
 
+/** What `harness certify` exercises beyond golden scenarios. */
+export interface CertificationSpec {
+  /**
+   * Revision drill: after the first golden scenario completes, revise this
+   * node with the given feedback and require the run to re-derive to green.
+   * Certifies the feedback loop, cascade, and memoization for this type.
+   */
+  revision_drill?: { node: string; feedback: string };
+}
+
 export interface ProjectTypeDef {
   name: string;
   version: string;
@@ -136,6 +146,7 @@ export interface ProjectTypeDef {
   cost?: CostSpec;
   interaction?: InteractionSpec;
   preview?: PreviewSpec;
+  certification?: CertificationSpec;
   nodes: NodeDef[];
 }
 

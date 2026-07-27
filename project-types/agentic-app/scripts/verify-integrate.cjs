@@ -85,7 +85,8 @@ fs.writeFileSync(
       js_check: "pass",
       compose_config: composeStatus,
       compose_smoke: composeSmoke,
-      backend_tests: { status: "pass", summary: (pytest.stdout ?? "").trim().split("\n").pop() },
+      // Timing stripped: certified artifacts must be byte-deterministic.
+      backend_tests: { status: "pass", summary: ((pytest.stdout ?? "").trim().split("\n").pop() ?? "").replace(/ in [0-9.]+s$/, "") },
       evals: { status: "pass", passed: evalResults.passed, total: evalResults.total },
     },
     null,

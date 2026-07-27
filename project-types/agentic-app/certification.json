@@ -1,0 +1,29 @@
+{
+  "name": "agentic-app",
+  "version": "0.4.0",
+  "ok": true,
+  "problems": [],
+  "scenarios": [
+    {
+      "scenario": "answers-cloudrun.json",
+      "status": "completed",
+      "totalCostUsd": 10.599999999999998,
+      "nodeCount": 27,
+      "digest": "16f909fa7bfff84d"
+    },
+    {
+      "scenario": "answers.json",
+      "status": "completed",
+      "totalCostUsd": 10.599999999999998,
+      "nodeCount": 27,
+      "digest": "9c2f52f21916816e"
+    }
+  ],
+  "revisionDrill": {
+    "node": "requirements-synthesis",
+    "status": "completed",
+    "cachedReuses": 3
+  },
+  "packageDigest": "7950ee7b64f4e86bdd6ab86e78d0bd1807da1d1718470841dae945645a8a10cd",
+  "certifiedAt": "2026-07-27T06:19:29.270Z"
+}

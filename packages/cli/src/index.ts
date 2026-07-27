@@ -166,6 +166,26 @@ async function main(): Promise<void> {
     case "revise":
       code = await cmdRevise(rest);
       break;
+    case "certify": {
+      const { positional, flags } = parseFlags(rest);
+      const { certify } = await import("./certify.js");
+      const report = await certify(positional[0] ?? ".", { updateGolden: flags["update-golden"] === true });
+      console.log(`certifying ${report.name}@${report.version}`);
+      for (const s of report.scenarios) {
+        console.log(
+          `  scenario ${s.scenario.padEnd(24)} ${s.status.padEnd(10)} $${s.totalCostUsd.toFixed(2)} digest ${s.digest || "-"}`,
+        );
+      }
+      if (report.revisionDrill) {
+        console.log(
+          `  revision drill (${report.revisionDrill.node}): ${report.revisionDrill.status}, ${report.revisionDrill.cachedReuses} cached re-use(s)`,
+        );
+      }
+      for (const p of report.problems) console.log(`  PROBLEM: ${p}`);
+      console.log(report.ok ? `CERTIFIED ${report.name}@${report.version} (${report.packageDigest.slice(0, 12)})` : "NOT CERTIFIED");
+      code = report.ok ? 0 : 1;
+      break;
+    }
     case "status":
       code = cmdStatus(rest);
       break;

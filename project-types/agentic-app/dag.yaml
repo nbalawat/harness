@@ -37,6 +37,14 @@ cost:
 interaction:
   max_questions_per_gate: 6
 
+certification:
+  # The feedback loop is part of the certified promise: after the golden run,
+  # this change request must flow into requirements (with provenance), cascade,
+  # and re-derive to green with memoization re-using untouched steps.
+  revision_drill:
+    node: requirements-synthesis
+    feedback: "User change request CR-99: analysts must be able to see which agent produced each reply. Add this as a NEW requirement with provenance source \"user-feedback\" referencing CR-99, confidence \"stated\"."
+
 # How the dashboard launches the built product for live preview.
 preview:
   artifact: app
