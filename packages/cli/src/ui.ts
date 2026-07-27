@@ -556,6 +556,24 @@ export function startUiServer(target: string, port: number): Promise<http.Server
   const artifactsRoot = () => path.join(workspace ?? target, "artifacts");
   const app: AppPreview = { status: "stopped", port: null, node: null, pid: null };
 
+  /** Certified project types the storefront can start a new build from. */
+  function availableProjectTypes(): { name: string; version: string; dir: string; description: string }[] {
+    const out: { name: string; version: string; dir: string; description: string }[] = [];
+    const ptRoot = path.join(root, "project-types");
+    if (!fs.existsSync(ptRoot)) return out;
+    for (const entry of fs.readdirSync(ptRoot)) {
+      const dir = path.join(ptRoot, entry);
+      if (!fs.existsSync(path.join(dir, "dag.yaml"))) continue;
+      try {
+        const def = loadProjectType(dir);
+        out.push({ name: def.name, version: def.version, dir, description: def.description ?? "" });
+      } catch {
+        /* uncertifiable package — not offered */
+      }
+    }
+    return out;
+  }
+
   /** Minimal RunContext for revision bookkeeping (never dispatches nodes itself). */
   function revisionCtx(ws: string): RunContext {
     const config = readConfig(ws);
@@ -685,7 +703,40 @@ export function startUiServer(target: string, port: number): Promise<http.Server
         res.end(PAGE);
       } else if (url.pathname === "/api/runs") {
         res.writeHead(200, { "content-type": "application/json" });
-        res.end(JSON.stringify({ root, runs: scanRuns(root), selected: workspace }));
+        res.end(JSON.stringify({ root, runs: scanRuns(root), selected: workspace, projectTypes: availableProjectTypes() }));
+      } else if (url.pathname === "/api/new-run" && req.method === "POST") {
+        let body = "";
+        req.on("data", (chunk) => (body += chunk));
+        req.on("end", async () => {
+          try {
+            const { name, projectTypeDir } = JSON.parse(body) as { name: string; projectTypeDir: string };
+            if (!/^[a-z0-9][a-z0-9-]{0,40}$/.test(name)) {
+              res.writeHead(400).end(JSON.stringify({ error: "name must be lowercase letters/digits/hyphens" }));
+              return;
+            }
+            const ptAbs = path.resolve(projectTypeDir);
+            if (!availableProjectTypes().some((p) => path.resolve(p.dir) === ptAbs)) {
+              res.writeHead(400).end(JSON.stringify({ error: "unknown project type" }));
+              return;
+            }
+            const ws = path.join(root, name);
+            if (fs.existsSync(ws)) {
+              res.writeHead(400).end(JSON.stringify({ error: `'${name}' already exists — pick another name` }));
+              return;
+            }
+            // Live agents, no recorded answers: the run parks at intake and the
+            // dashboard walks the user through the whole Q&A from there.
+            const cliEntry = fileURLToPath(new URL("./index.js", import.meta.url));
+            spawn(process.execPath, [cliEntry, "run", ptAbs, "--workspace", ws], { stdio: "ignore", detached: false });
+            for (let i = 0; i < 40 && !fs.existsSync(path.join(ws, "journal.jsonl")); i++) {
+              await new Promise((r) => setTimeout(r, 250));
+            }
+            res.writeHead(200, { "content-type": "application/json" });
+            res.end(JSON.stringify({ ok: true, dir: ws }));
+          } catch (e) {
+            res.writeHead(500).end(JSON.stringify({ error: String(e) }));
+          }
+        });
       } else if (url.pathname === "/api/select" && req.method === "POST") {
         let body = "";
         req.on("data", (chunk) => (body += chunk));
@@ -1364,8 +1415,24 @@ function renderStorefront(data) {
     '<span class="chip ' + (r.runMode === 'live' ? 'ok' : '') + '">' + (r.runMode === 'live' ? 'live agents' : 'replay') + '</span>' +
     '<span>$' + Number(r.costUsd).toFixed(2) + '</span><span>' + esc(String(r.updatedAt).slice(0, 10)) + '</span></div></button>'
   ).join('') +
-  '<div class="runcard newrun"><b>Build a new app</b><div class="meta">Run from this directory, then refresh:</div>' +
-  '<code>node packages/cli/dist/index.js run project-types/agentic-app \\\\\\n  --workspace my-new-app</code></div>');
+  '<div class="runcard newrun"><b>Build a new app</b><div class="meta">Name it, pick a certified project type, and the intake questions come to you right here.</div>' +
+  '<div style="display:flex;flex-direction:column;gap:.5rem;margin-top:.7rem">' +
+  '<input id="newName" placeholder="my-new-app (lowercase, hyphens)" style="padding:.55rem .7rem;border:1px solid var(--grid);border-radius:8px;background:var(--page);color:inherit;font:inherit">' +
+  '<select id="newType" style="padding:.55rem .7rem;border:1px solid var(--grid);border-radius:8px;background:var(--page);color:inherit;font:inherit">' +
+  (data.projectTypes || []).map(p => '<option value="' + esc(p.dir) + '">' + esc(p.name) + '@' + esc(p.version) + '</option>').join('') +
+  '</select>' +
+  '<button class="primary" onclick="startNewApp()">Start building</button>' +
+  '<div class="hint" id="newErr"></div></div></div>');
+}
+
+async function startNewApp() {
+  const name = document.getElementById('newName').value.trim();
+  const projectTypeDir = document.getElementById('newType').value;
+  if (!name) { setText('newErr', 'Give your app a name first.'); return; }
+  const r = await fetch('/api/new-run', { method:'POST', body: JSON.stringify({ name, projectTypeDir }) });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) { setText('newErr', data.error || 'could not start'); return; }
+  await openRun(data.dir); // lands on Overview with the intake form waiting
 }
 
 async function tick() {

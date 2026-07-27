@@ -303,3 +303,32 @@ test("dashboard page script is valid JavaScript (template-literal escaping regre
     }
   });
 });
+
+test("storefront: Build-a-new-app starts a run that parks at intake, ready for Q&A", async () => {
+  const root = tmpDir("newapp-root");
+  fs.cpSync(DEMO_DIR, path.join(root, "project-types", "demo"), { recursive: true });
+
+  await withServer(root, async (base) => {
+    const runs = await (await fetch(`${base}/api/runs`)).json();
+    assert.ok(runs.projectTypes.some((p) => p.name === "demo-pipeline"), "project types offered");
+
+    const bad = await fetch(`${base}/api/new-run`, { method: "POST", body: JSON.stringify({ name: "Bad Name!", projectTypeDir: runs.projectTypes[0].dir }) });
+    assert.equal(bad.status, 400);
+
+    const start = await fetch(`${base}/api/new-run`, { method: "POST", body: JSON.stringify({ name: "my-demo-app", projectTypeDir: runs.projectTypes[0].dir }) });
+    const started = await start.json();
+    assert.equal(start.status, 200, JSON.stringify(started));
+    const { dir } = started;
+
+    // The new run parks at intake; selecting it surfaces the Q&A immediately.
+    for (let i = 0; i < 40; i++) {
+      await new Promise((r) => setTimeout(r, 250));
+      if (fs.readFileSync(path.join(dir, "journal.jsonl"), "utf8").includes("run.parked")) break;
+    }
+    await fetch(`${base}/api/select`, { method: "POST", body: JSON.stringify({ dir }) });
+    const state = await (await fetch(`${base}/api/state`)).json();
+    assert.equal(state.status, "parked");
+    assert.equal(state.parkedGate.nodeId, "intake");
+    assert.ok(state.parkedGate.questions.length >= 1, "intake questions ready to answer");
+  });
+});
