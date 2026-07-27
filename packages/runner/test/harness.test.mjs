@@ -775,3 +775,26 @@ test("reopen-on-resume: a failed node retries after the environment is fixed", a
   const attempts = events(second, "node.running").map((e) => e.attempt);
   assert.deepEqual(attempts, [1, 2]);
 });
+
+test("askUserViaWorkspace: resolves when the dashboard writes the matching answer", async () => {
+  const { askUserViaWorkspace, Journal } = await import("../dist/index.js");
+  const workspace = tmpDir("askuser");
+  const ctx = { workspace, journal: new Journal(workspace), acceptDefaults: false, mockAgents: false };
+
+  const waiter = askUserViaWorkspace(ctx, "build", 1, { questions: [{ question: "Proceed?" }] }, 8000, 100);
+  // Simulate the dashboard: read the pending file, write the answer.
+  await new Promise((r) => setTimeout(r, 300));
+  const pending = JSON.parse(fs.readFileSync(path.join(workspace, "pending-question.json"), "utf8"));
+  assert.equal(pending.nodeId, "build");
+  fs.writeFileSync(
+    path.join(workspace, "pending-answer.json"),
+    JSON.stringify({ id: pending.id, answers: { "Proceed?": "yes" } }),
+  );
+  const answers = await waiter;
+  assert.deepEqual(answers, { "Proceed?": "yes" });
+  assert.ok(!fs.existsSync(path.join(workspace, "pending-question.json")), "pending file cleaned up");
+
+  // Unattended contexts never wait.
+  const none = await askUserViaWorkspace({ ...ctx, acceptDefaults: true }, "x", 1, {}, 500, 50);
+  assert.equal(none, null);
+});

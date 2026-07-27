@@ -78,6 +78,8 @@ export interface NodeDef {
   escalateModel?: string;
   maxTurns?: number;
   allowedTools?: string[];
+  /** Subagent definitions passed through to the Agent SDK (name -> config). */
+  agents?: Record<string, unknown>;
 
   // deterministic + verifier nodes
   /** Shell command; runs with cwd = attempt dir. $HARNESS_PROJECT_DIR available. */
@@ -129,6 +131,8 @@ export interface PreviewSpec {
 export interface ProjectTypeDef {
   name: string;
   version: string;
+  /** Plain-language description of what this project type builds. */
+  description?: string;
   cost?: CostSpec;
   interaction?: InteractionSpec;
   preview?: PreviewSpec;
@@ -164,7 +168,10 @@ export interface LedgerEvent {
     | "node.reopened"
     | "gate.answered"
     | "agent.message"
+    | "agent.question_asked"
+    | "agent.question_answered"
     | "agent.question_denied"
+    | "agent.session_info"
     | "cost.recorded"
     | "budget.exceeded";
   ts?: string;

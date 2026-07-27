@@ -249,6 +249,45 @@ export function modelForAttempt(node: NodeDef, attempt: number): string | undefi
   return attempt > 1 && node.escalateModel ? node.escalateModel : node.model;
 }
 
+/**
+ * Mid-step question bridge: the agent's AskUserQuestion surfaces in the
+ * dashboard; the runner waits (bounded) for the human's answer via the
+ * workspace filesystem. Unattended runs skip straight to assumptions.
+ */
+export async function askUserViaWorkspace(
+  ctx: RunContext,
+  nodeId: string,
+  attempt: number,
+  input: Record<string, unknown>,
+  timeoutMs = 15 * 60 * 1000,
+  pollMs = 1500,
+): Promise<Record<string, unknown> | null> {
+  if (ctx.acceptDefaults || ctx.mockAgents) return null; // unattended: no human to ask
+  const id = `${nodeId}-${attempt}-${Date.now()}`;
+  const pendingFile = path.join(ctx.workspace, "pending-question.json");
+  const answerFile = path.join(ctx.workspace, "pending-answer.json");
+  fs.rmSync(answerFile, { force: true });
+  fs.writeFileSync(pendingFile, JSON.stringify({ id, nodeId, attempt, questions: input.questions ?? input }, null, 2));
+  ctx.journal.append({ type: "agent.question_asked", nodeId, attempt, question: JSON.stringify(input).slice(0, 500) });
+  const deadline = Date.now() + timeoutMs;
+  try {
+    while (Date.now() < deadline) {
+      await new Promise((r) => setTimeout(r, pollMs));
+      if (!fs.existsSync(answerFile)) continue;
+      try {
+        const parsed = JSON.parse(fs.readFileSync(answerFile, "utf8")) as { id: string; answers: Record<string, unknown> };
+        if (parsed.id === id) return parsed.answers;
+      } catch {
+        /* partial write — retry next poll */
+      }
+    }
+    return null;
+  } finally {
+    fs.rmSync(pendingFile, { force: true });
+    fs.rmSync(answerFile, { force: true });
+  }
+}
+
 async function runAgent(
   ctx: RunContext,
   node: NodeDef,
@@ -308,6 +347,7 @@ async function runAgent(
       model,
       maxTurns: node.maxTurns ?? 30,
       allowedTools: node.allowedTools ?? ["Read", "Write", "Edit", "Bash", "Glob", "Grep"],
+      ...(node.agents ? { agents: node.agents } : {}),
       permissionMode: "acceptEdits",
       settingSources: [], // hermetic: no user/global settings leak into certified runs
       // Agents never get a free channel to interrupt users mid-node: questions
@@ -315,6 +355,17 @@ async function runAgent(
       // Everything else is allowed — the workspace itself is the sandbox.
       canUseTool: async (toolName: string, input: Record<string, unknown>) => {
         if (toolName === "AskUserQuestion") {
+          const answers = await askUserViaWorkspace(ctx, node.id, attempt, input);
+          if (answers) {
+            ctx.journal.append({ type: "agent.question_answered", nodeId: node.id, attempt, answers });
+            return {
+              behavior: "deny" as const,
+              message:
+                "The user answered your question: " +
+                JSON.stringify(answers) +
+                " — continue using this answer; do not ask again.",
+            };
+          }
           ctx.journal.append({
             type: "agent.question_denied",
             nodeId: node.id,
@@ -324,7 +375,7 @@ async function runAgent(
           return {
             behavior: "deny" as const,
             message:
-              "This run is autonomous — no human is available mid-node. Make a reasonable assumption, record it in your output artifact, and continue. Materially-branching questions belong to the gap-questions stage.",
+              "No human answer is available. Make a reasonable assumption, record it in your output artifact, and continue.",
           };
         }
         return { behavior: "allow" as const, updatedInput: input };
@@ -333,6 +384,17 @@ async function runAgent(
   });
 
   for await (const msg of session) {
+    if (msg.type === "system" && (msg as { subtype?: string }).subtype === "init") {
+      const init = msg as { tools?: unknown; agents?: unknown; model?: unknown; slash_commands?: unknown };
+      ctx.journal.append({
+        type: "agent.session_info",
+        nodeId: node.id,
+        attempt,
+        tools: init.tools ?? [],
+        agents: init.agents ?? [],
+        model: init.model ?? null,
+      });
+    }
     ctx.journal.append({ type: "agent.message", nodeId: node.id, attempt, message: summarize(msg) });
     if (msg.type === "result") {
       const u = (msg.usage ?? {}) as Record<string, number>;

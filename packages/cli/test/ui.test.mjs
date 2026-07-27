@@ -64,7 +64,7 @@ test("ui: state API reflects a completed run with costs and artifacts", async ()
 
     // The dashboard page itself renders.
     const page = await (await fetch(`${base}/`)).text();
-    assert.match(page, /harness run/);
+    assert.match(page, /<title>harness<\/title>/);
   });
 });
 
@@ -174,4 +174,72 @@ test("runs are pinned to their DAG snapshot even if the project type evolves", a
   assert.match(pinned, /name: demo-pipeline/);
   const state = buildState(workspace);
   assert.equal(state.projectType, "demo-pipeline@0.1.0", "state reflects the pinned snapshot");
+});
+
+test("storefront: scanning root lists runs; select/deselect switches the workspace", async () => {
+  const root = tmpDir("storeroot");
+  const ws = path.join(root, "app-one");
+  const run = runCli([
+    "run", DEMO_DIR,
+    "--workspace", ws,
+    "--answers", path.join(DEMO_DIR, "fixtures/answers.json"),
+    "--mock-agents",
+  ]);
+  assert.equal(run.status, 0, run.stderr);
+
+  await withServer(root, async (base) => {
+    let runs = await (await fetch(`${base}/api/runs`)).json();
+    assert.equal(runs.selected, null);
+    assert.equal(runs.runs.length, 1);
+    assert.equal(runs.runs[0].name, "app-one");
+    assert.equal(runs.runs[0].status, "completed");
+    assert.equal(runs.runs[0].runMode, "replay");
+
+    // Unselected: state APIs respond gracefully.
+    const unsel = await (await fetch(`${base}/api/state`)).json();
+    assert.equal(unsel.selected, false);
+
+    // Select the run -> full state.
+    await fetch(`${base}/api/select`, { method: "POST", body: JSON.stringify({ dir: ws }) });
+    const state = await (await fetch(`${base}/api/state`)).json();
+    assert.equal(state.selected, true);
+    assert.equal(state.projectType, "demo-pipeline@0.1.0");
+    assert.equal(state.runMode, "replay");
+
+    // Escaping the root is rejected.
+    const evil = await fetch(`${base}/api/select`, { method: "POST", body: JSON.stringify({ dir: "/etc" }) });
+    assert.equal(evil.status, 400);
+
+    await fetch(`${base}/api/deselect`, { method: "POST" });
+    runs = await (await fetch(`${base}/api/runs`)).json();
+    assert.equal(runs.selected, null);
+  });
+});
+
+test("agent question bridge: pending question surfaces and the answer reaches the file", async () => {
+  const workspace = tmpDir("aq");
+  runCli([
+    "run", DEMO_DIR,
+    "--workspace", workspace,
+    "--answers", path.join(DEMO_DIR, "fixtures/answers.json"),
+    "--mock-agents",
+  ]);
+  fs.writeFileSync(
+    path.join(workspace, "pending-question.json"),
+    JSON.stringify({ id: "plan-1-123", nodeId: "plan", questions: [{ question: "Which flavor?", options: [{ label: "vanilla" }] }] }),
+  );
+
+  await withServer(workspace, async (base) => {
+    const state = await (await fetch(`${base}/api/state`)).json();
+    assert.equal(state.pendingQuestion.id, "plan-1-123");
+    assert.equal(state.pendingQuestion.questions[0].question, "Which flavor?");
+
+    await fetch(`${base}/api/agent-answer`, {
+      method: "POST",
+      body: JSON.stringify({ id: "plan-1-123", answers: { "Which flavor?": "vanilla" } }),
+    });
+    const written = JSON.parse(fs.readFileSync(path.join(workspace, "pending-answer.json"), "utf8"));
+    assert.equal(written.id, "plan-1-123");
+    assert.equal(written.answers["Which flavor?"], "vanilla");
+  });
 });

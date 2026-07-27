@@ -73,6 +73,22 @@ async function main() {
       }
       console.log(`acceptance passed: ${slice.id}`);
     }
+
+    // Progress screenshot (best-effort): ships inside the app artifact so the
+    // dashboard can show the app evolving slice by slice.
+    try {
+      const { chromium } = require("playwright-core");
+      const browser = await chromium.launch({ channel: "chrome" });
+      const page = await browser.newPage({ viewport: { width: 1180, height: 780 } });
+      await page.goto(`http://127.0.0.1:${port}`, { waitUntil: "load", timeout: 15000 });
+      await page.waitForTimeout(500);
+      fs.mkdirSync(path.join(app, "screenshots"), { recursive: true });
+      await page.screenshot({ path: path.join(app, "screenshots", `slice-${sliceIndex}.png`) });
+      await browser.close();
+      console.log(`progress screenshot captured for slice ${sliceIndex}`);
+    } catch (e) {
+      console.log("progress screenshot skipped: " + String(e).slice(0, 120));
+    }
   } finally {
     kill();
   }
