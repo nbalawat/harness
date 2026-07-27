@@ -1,0 +1,15 @@
+{
+  "python_compile": "pass",
+  "js_check": "pass",
+  "compose_config": "pass",
+  "compose_smoke": "skipped",
+  "backend_tests": {
+    "status": "pass",
+    "summary": "8 passed, 1 warning in 0.40s"
+  },
+  "evals": {
+    "status": "pass",
+    "passed": 8,
+    "total": 8
+  }
+}

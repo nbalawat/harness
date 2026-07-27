@@ -1,0 +1,23 @@
+/* Option 2 — Dossier
+   Light editorial print: warm paper, oxblood accent, serif text set in a
+   single measured column. Reads like a reviewed document, not a dashboard. */
+:root {
+  --primary: #7b2d26;
+  --on-primary: #fdfaf3;
+  --bg: #f6f2e9;
+  --fg: #211e19;
+  --surface: #fffdf7;
+  --border: #ddd2bd;
+  --font: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, "Times New Roman", serif;
+
+  /* direction-specific extensions */
+  --font-sans: "Optima", "Gill Sans", "Avenir Next", system-ui, sans-serif;
+  --font-mono: "Courier New", ui-monospace, monospace;
+  --ink-soft: #57503f;
+  --ink-faint: #8a8170;
+  --rule: #cdc0a6;
+  --highlight: #f0e6cf;
+  --ok: #3f6b3a;
+  --danger: #9c3b2c;
+  --measure: 42rem;
+}

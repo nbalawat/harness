@@ -1,0 +1,29 @@
+/* Option 3 — Helpdesk Board
+   Bright modern SaaS: white cards on cool blue-grey, indigo primary, top tab
+   navigation, soft shadows and rounded geometry. Familiar and scannable. */
+:root {
+  --primary: #5b5bd6;
+  --on-primary: #ffffff;
+  --bg: #f3f5fb;
+  --fg: #101a3a;
+  --surface: #ffffff;
+  --border: #e3e8f4;
+  --font: "Inter", "Segoe UI Variable", system-ui, -apple-system, sans-serif;
+
+  /* direction-specific extensions */
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+  --primary-soft: #ececfb;
+  --primary-deep: #3f3fb0;
+  --muted: #5b6684;
+  --faint: #8d97b0;
+  --ok: #12855f;
+  --ok-soft: #e2f6ee;
+  --warn: #a1660a;
+  --warn-soft: #fdf1dc;
+  --danger: #c8365a;
+  --danger-soft: #fdeaef;
+  --radius: 14px;
+  --radius-sm: 9px;
+  --shadow: 0 1px 2px rgba(16, 26, 58, .06), 0 8px 24px rgba(16, 26, 58, .06);
+  --shadow-sm: 0 1px 2px rgba(16, 26, 58, .08);
+}

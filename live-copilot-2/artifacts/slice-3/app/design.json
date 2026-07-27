@@ -1,0 +1,22 @@
+{
+  "chosen_option": "option-2",
+  "name": "Dossier",
+  "screens": [
+    "chat",
+    "review",
+    "history",
+    "agents"
+  ],
+  "addresses": [
+    "REQ-001",
+    "REQ-002",
+    "REQ-005",
+    "REQ-006",
+    "REQ-007",
+    "REQ-008",
+    "REQ-009",
+    "REQ-011",
+    "REQ-012",
+    "REQ-013"
+  ]
+}

@@ -1,0 +1,1 @@
+In the Conversation screen, the composer's submit button should read 'Draft reply' instead of 'Ask' — analysts found 'Ask' ambiguous. Keep everything else exactly as is.

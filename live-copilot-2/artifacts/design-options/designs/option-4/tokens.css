@@ -1,0 +1,22 @@
+/* Option 4 — Paper Terminal
+   Keyboard-first TUI rendered on warm paper: monospace throughout, hard 1px
+   rules, zero radius, bracketed navigation and a persistent status line. */
+:root {
+  --primary: #1d6b45;
+  --on-primary: #f4f1e6;
+  --bg: #edeae0;
+  --fg: #191b15;
+  --surface: #f7f5ed;
+  --border: #b4ae9c;
+  --font: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Courier New", monospace;
+
+  /* direction-specific extensions */
+  --dim: #6d6959;
+  --faint: #918c7a;
+  --rule-hard: #191b15;
+  --select: #dfe7d9;
+  --ok: #1d6b45;
+  --warn: #8a5a05;
+  --danger: #9a2d1f;
+  --status-h: 30px;
+}

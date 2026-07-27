@@ -1,0 +1,408 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Support Copilot — Helpdesk Board</title>
+<link rel="stylesheet" href="tokens.css" />
+<style>
+  /* ============================================================
+     OPTION 3 — HELPDESK BOARD
+     Structure: top app bar with pill tabs, a stats strip, and a
+     two-column card canvas. Bright, rounded, shadowed — the
+     familiar modern SaaS product. Screen routing is pure CSS.
+     ============================================================ */
+  *, *::before, *::after { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: var(--font);
+    font-size: 15px;
+    line-height: 1.6;
+    background: var(--bg);
+    color: var(--fg);
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: inherit; text-decoration: none; }
+
+  /* ---------- app bar ---------- */
+  .appbar {
+    position: sticky; top: 0; z-index: 10;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+  }
+  .appbar-inner {
+    max-width: 1180px; margin: 0 auto;
+    padding: 0 24px;
+    height: 64px;
+    display: flex; align-items: center; gap: 18px;
+  }
+  .logo { display: flex; align-items: center; gap: 11px; }
+  .logo .mark {
+    width: 34px; height: 34px; border-radius: 10px;
+    background: linear-gradient(135deg, var(--primary), #8b6ce8);
+    color: var(--on-primary);
+    display: grid; place-items: center;
+    font-weight: 800; font-size: 14px; letter-spacing: -.02em;
+    box-shadow: var(--shadow-sm);
+  }
+  .logo h1 { margin: 0; font-size: 17px; font-weight: 700; letter-spacing: -.02em; }
+  .logo .sub { display: block; font-size: 11.5px; font-weight: 500; color: var(--faint); letter-spacing: 0; }
+  .appbar .spacer { flex: 1; }
+
+  #agent-mode {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 7px 14px 7px 11px;
+    border-radius: 999px;
+    background: var(--ok-soft);
+    color: var(--ok);
+    font-size: 12.5px; font-weight: 600;
+  }
+  #agent-mode::before {
+    content: ""; width: 7px; height: 7px; border-radius: 50%;
+    background: currentColor;
+  }
+  #agent-mode:empty::after { content: "connecting to responder"; }
+  .avatar {
+    width: 34px; height: 34px; border-radius: 50%;
+    background: var(--primary-soft); color: var(--primary-deep);
+    display: grid; place-items: center;
+    font-size: 12.5px; font-weight: 700;
+    border: 1px solid var(--border);
+  }
+
+  /* ---------- tabs ---------- */
+  .tabs {
+    max-width: 1180px; margin: 0 auto;
+    padding: 0 24px 0;
+    display: flex; gap: 8px;
+    overflow-x: auto;
+  }
+  .tabs a {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 10px 16px;
+    margin-bottom: -1px;
+    border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+    font-size: 14px; font-weight: 600;
+    color: var(--muted);
+    border: 1px solid transparent; border-bottom: 0;
+    white-space: nowrap;
+  }
+  .tabs a:hover { color: var(--fg); background: var(--bg); }
+  .tabs a .pill {
+    font-size: 11px; font-weight: 700;
+    padding: 1px 7px; border-radius: 999px;
+    background: var(--primary-soft); color: var(--primary-deep);
+  }
+  body:not(:has(.screen:target)) .tabs a[href="#screen-chat"],
+  body:has(#screen-review:target)  .tabs a[href="#screen-review"],
+  body:has(#screen-history:target) .tabs a[href="#screen-history"],
+  body:has(#screen-agents:target)  .tabs a[href="#screen-agents"] {
+    background: var(--surface);
+    color: var(--primary-deep);
+    border-color: var(--border);
+    box-shadow: inset 0 3px 0 var(--primary);
+  }
+
+  /* ---------- canvas ---------- */
+  .canvas { max-width: 1180px; margin: 0 auto; padding: 26px 24px 60px; }
+  .screen { display: none; }
+  .screen:target { display: block; }
+  #screen-chat { display: block; }
+  body:has(.screen:target) #screen-chat:not(:target) { display: none; }
+
+  .page-head { display: flex; align-items: flex-end; gap: 16px; margin-bottom: 18px; flex-wrap: wrap; }
+  .page-head h2 { margin: 0; font-size: 24px; font-weight: 750; letter-spacing: -.025em; }
+  .page-head p { margin: 0; color: var(--muted); font-size: 14px; flex: 1; min-width: 16rem; }
+
+  /* stats strip */
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 20px; }
+  .stat {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 14px 16px; box-shadow: var(--shadow-sm);
+  }
+  .stat .k { font-size: 11.5px; font-weight: 650; letter-spacing: .06em; text-transform: uppercase; color: var(--faint); }
+  .stat .v { font-size: 25px; font-weight: 750; letter-spacing: -.03em; margin-top: 2px; }
+  .stat .v small { font-size: 13px; font-weight: 600; color: var(--muted); letter-spacing: 0; }
+
+  .split { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 18px; align-items: start; }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+  }
+  .card > header {
+    display: flex; align-items: center; gap: 10px;
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--border);
+  }
+  .card > header h3 { margin: 0; font-size: 14.5px; font-weight: 700; }
+  .card > header .tag {
+    margin-left: auto;
+    font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 999px;
+    background: var(--warn-soft); color: var(--warn);
+  }
+  .card .card-body { padding: 18px; }
+
+  /* ---------- chat ---------- */
+  .messages { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 16px; min-height: 260px; }
+  .messages:empty::before {
+    content: "Start the thread — ask a product question and the assistant searches the indexed knowledge before drafting.";
+    display: block; margin: auto; max-width: 34ch; text-align: center;
+    color: var(--faint); font-size: 14px;
+  }
+  .message {
+    position: relative;
+    padding: 13px 16px;
+    border-radius: var(--radius-sm);
+    max-width: 82%;
+    white-space: pre-wrap;
+  }
+  .message.user {
+    align-self: flex-end;
+    background: var(--primary); color: var(--on-primary);
+    border-bottom-right-radius: 3px;
+    box-shadow: var(--shadow-sm);
+  }
+  .message.assistant {
+    align-self: flex-start;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-bottom-left-radius: 3px;
+  }
+  /* REQ-007: non-removable automated-assistant disclosure on every reply. */
+  .message.assistant::before {
+    content: "🤖 AI-generated · analyst approval required";
+    display: block; margin-bottom: 8px;
+    font-size: 11.5px; font-weight: 700; color: var(--primary-deep);
+  }
+  .message.error {
+    align-self: flex-start;
+    background: var(--danger-soft); color: var(--danger);
+    border: 1px solid var(--danger);
+    font-weight: 600; font-size: 14px;
+  }
+
+  .composer-bar { border-top: 1px solid var(--border); padding: 14px 18px 16px; background: var(--surface); }
+  .composer { display: flex; gap: 10px; }
+  #input {
+    flex: 1; min-width: 0;
+    padding: 12px 16px;
+    border: 1px solid var(--border); border-radius: 999px;
+    background: var(--bg); color: var(--fg);
+    font-family: var(--font); font-size: 14.5px;
+    outline: none;
+  }
+  #input::placeholder { color: var(--faint); }
+  #input:focus { border-color: var(--primary); background: var(--surface); box-shadow: 0 0 0 4px var(--primary-soft); }
+  .composer button {
+    padding: 0 22px; border-radius: 999px;
+    background: var(--primary); color: var(--on-primary);
+    border: 0; cursor: pointer;
+    font-family: var(--font); font-size: 14px; font-weight: 700;
+    box-shadow: var(--shadow-sm);
+  }
+  .composer button:hover { background: var(--primary-deep); }
+  .composer-note {
+    margin: 11px 2px 0;
+    font-size: 12px; color: var(--muted);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .composer-note .badge {
+    font-size: 10.5px; font-weight: 800; letter-spacing: .05em;
+    padding: 2px 8px; border-radius: 999px;
+    background: var(--warn-soft); color: var(--warn);
+  }
+
+  /* ---------- side rail cards ---------- */
+  .side { display: flex; flex-direction: column; gap: 16px; }
+  .side .card .card-body { font-size: 13.5px; color: var(--muted); }
+  #citations:empty::before {
+    content: "No sources yet. Once a draft is produced, the passages it was built from are listed here and saved with the record.";
+    color: var(--faint);
+  }
+  .check { display: flex; gap: 9px; align-items: flex-start; padding: 7px 0; font-size: 13.5px; }
+  .check + .check { border-top: 1px solid var(--border); }
+  .check::before { content: "✓"; color: var(--ok); font-weight: 800; }
+
+  /* ---------- lists ---------- */
+  #review-queue, #history-list { display: grid; gap: 14px; }
+  #agents-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
+  .draft-card, .history-item, .agent-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); box-shadow: var(--shadow-sm);
+    padding: 16px 18px;
+  }
+  #review-queue:empty::before,
+  #history-list:empty::before,
+  #agents-list:empty::before {
+    display: block;
+    background: var(--surface);
+    border: 1px dashed var(--border);
+    border-radius: var(--radius);
+    padding: 34px 24px;
+    text-align: center;
+    color: var(--faint); font-size: 14px;
+  }
+  #review-queue:empty::before { content: "Nothing to approve right now. Inbound questions are drafted by the assistant first and appear here as cards."; }
+  #history-list:empty::before { content: "No saved conversations yet. Each one keeps the question, the draft, the decision, its citations and timestamps."; }
+  #agents-list:empty::before { content: "Loading the agent roster…"; }
+  .history-item { font-size: 13.5px; color: var(--muted); word-break: break-word; }
+  .agent-card strong { display: block; font-size: 15.5px; font-weight: 750; color: var(--primary-deep); }
+  .agent-card p { margin: 7px 0 0; font-size: 13.5px; }
+  .agent-tools, .agent-evals {
+    font-family: var(--font-mono); font-size: 11.5px; color: var(--muted);
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: var(--radius-sm); padding: 7px 10px;
+  }
+
+  /* ---------- buttons ---------- */
+  .actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 18px; }
+  .btn {
+    padding: 9px 16px; border-radius: var(--radius-sm);
+    border: 1px solid var(--border); background: var(--surface); color: var(--fg);
+    font-family: var(--font); font-size: 13.5px; font-weight: 650; cursor: pointer;
+    box-shadow: var(--shadow-sm);
+  }
+  .btn:hover { border-color: var(--primary); color: var(--primary-deep); }
+  .btn-approve { background: var(--ok); border-color: var(--ok); color: #fff; }
+  .btn-approve:hover { filter: brightness(1.06); color: #fff; }
+  .btn-reject { color: var(--danger); border-color: var(--danger-soft); background: var(--danger-soft); }
+  .actions .hint { color: var(--muted); font-size: 12.5px; }
+
+  .search-bar { display: flex; gap: 10px; margin-bottom: 18px; }
+  #history-search {
+    flex: 1; padding: 11px 16px;
+    border: 1px solid var(--border); border-radius: var(--radius-sm);
+    background: var(--surface); color: var(--fg);
+    font-family: var(--font); font-size: 14px; outline: none;
+    box-shadow: var(--shadow-sm);
+  }
+  #history-search:focus { border-color: var(--primary); box-shadow: 0 0 0 4px var(--primary-soft); }
+
+  @media (max-width: 940px) {
+    .split { grid-template-columns: minmax(0, 1fr); }
+    .stats { grid-template-columns: repeat(2, 1fr); }
+  }
+</style>
+</head>
+<body>
+  <div class="appbar">
+    <div class="appbar-inner">
+      <div class="logo">
+        <span class="mark">SC</span>
+        <div>
+          <h1>Support Copilot</h1>
+          <span class="sub">Product answers, reviewed before they ship</span>
+        </div>
+      </div>
+      <div class="spacer"></div>
+      <span id="agent-mode"></span>
+      <span class="avatar">AN</span>
+    </div>
+    <nav class="tabs">
+      <a href="#screen-chat">Chat</a>
+      <a href="#screen-review">Review queue <span class="pill">0</span></a>
+      <a href="#screen-history">History</a>
+      <a href="#screen-agents">Agents</a>
+    </nav>
+  </div>
+
+  <main class="canvas">
+    <!-- ===================== CHAT ===================== -->
+    <section id="screen-chat" class="screen">
+      <div class="page-head">
+        <h2>Chat</h2>
+        <p>Ask in plain language and follow up — the thread keeps its context, and every answer is retrieved from your product knowledge first.</p>
+      </div>
+
+      <div class="stats">
+        <div class="stat"><div class="k">Turns today</div><div class="v">0</div></div>
+        <div class="stat"><div class="k">Awaiting approval</div><div class="v">0</div></div>
+        <div class="stat"><div class="k">Approved</div><div class="v">0</div></div>
+        <div class="stat"><div class="k">Knowledge</div><div class="v">indexed <small>corpus</small></div></div>
+      </div>
+
+      <div class="split">
+        <div class="card">
+          <header>
+            <h3>Conversation</h3>
+            <span class="tag">draft mode</span>
+          </header>
+          <div class="card-body">
+            <ul id="messages" class="messages"></ul>
+          </div>
+          <div class="composer-bar">
+            <form id="composer" class="composer" autocomplete="off">
+              <input id="input" type="text" placeholder="Ask about a product, a limit, a known issue…" autocomplete="off" />
+              <button type="submit">Send</button>
+            </form>
+            <p class="composer-note">
+              <span class="badge">AI DISCLOSED</span>
+              Replies are labelled as automated and cannot be sent to a customer until an analyst approves them.
+            </p>
+          </div>
+        </div>
+
+        <div class="side">
+          <div class="card">
+            <header><h3>Sources</h3></header>
+            <div class="card-body" id="citations"></div>
+          </div>
+          <div class="card">
+            <header><h3>Guardrails</h3></header>
+            <div class="card-body">
+              <div class="check">Answers grounded in the indexed corpus</div>
+              <div class="check">AI disclosure on every reply</div>
+              <div class="check">Approval required before sending</div>
+              <div class="check">Decisions written to the audit trail</div>
+              <div class="check">Runs locally — data stays on this host</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== REVIEW ===================== -->
+    <section id="screen-review" class="screen">
+      <div class="page-head">
+        <h2>Review queue</h2>
+        <p>Drafts wait here until an analyst decides. Approve as-is, edit then approve, or reject.</p>
+      </div>
+      <div class="actions">
+        <button id="approve-btn" class="btn btn-approve" type="button">Approve</button>
+        <button id="edit-btn" class="btn" type="button">Edit &amp; approve</button>
+        <button id="reject-btn" class="btn btn-reject" type="button">Reject</button>
+        <span class="hint">Who decided, when, and whether the draft was edited is recorded automatically.</span>
+      </div>
+      <div id="review-queue"></div>
+    </section>
+
+    <!-- ===================== HISTORY ===================== -->
+    <section id="screen-history" class="screen">
+      <div class="page-head">
+        <h2>History</h2>
+        <p>Search everything that has been asked and answered — then lift a good answer straight into a new reply.</p>
+      </div>
+      <div class="search-bar">
+        <input id="history-search" type="search" placeholder="Search questions, answers, and cited sources…" />
+        <button class="btn" type="button">Search</button>
+        <button class="btn" type="button">Reuse answer</button>
+      </div>
+      <div id="history-list"></div>
+    </section>
+
+    <!-- ===================== AGENTS ===================== -->
+    <section id="screen-agents" class="screen">
+      <div class="page-head">
+        <h2>Agents</h2>
+        <p>Every agent this app runs, the tools it is allowed and denied, and the criteria it is evaluated against.</p>
+      </div>
+      <div id="agents-list"></div>
+    </section>
+  </main>
+  <script src="app.js" defer></script>
+</body>
+</html>

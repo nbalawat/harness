@@ -1,0 +1,51 @@
+INFO:     Started server process [17558]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:55779 (Press CTRL+C to quit)
+INFO:     127.0.0.1:55782 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55783 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55782 - "GET /agent/mode HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55783 - "GET /corpus HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55782 - "POST /chat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55783 - "POST /chat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55782 - "POST /chat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55783 - "POST /chat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55782 - "POST /chat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55783 - "POST /chat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55782 - "GET /conversations/conv-gate-1/approved-reply HTTP/1.1" 409 Conflict
+INFO:     127.0.0.1:55783 - "POST /approvals HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55782 - "GET /conversations/conv-gate-1/approved-reply HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55783 - "POST /chat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55782 - "POST /approvals HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55783 - "GET /conversations/conv-edit-1/approved-reply HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55782 - "POST /chat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55783 - "POST /approvals HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55782 - "GET /conversations/conv-reject-1/approved-reply HTTP/1.1" 409 Conflict
+INFO:     127.0.0.1:55783 - "GET /api/approvals HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55782 - "POST /chat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55783 - "POST /approvals HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55782 - "GET /conversations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55783 - "GET /conversations/conv-hist-1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55782 - "GET /conversations/conv-does-not-exist HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:55783 - "GET /api/messages HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55782 - "GET /api/citations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55783 - "POST /chat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55782 - "POST /approvals HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55783 - "GET /history/search?q=portal HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55782 - "POST /chat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55783 - "GET /history/search?q=grommets HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55782 - "GET /history/search?q=teleportation HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55783 - "POST /history/reuse HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55782 - "POST /history/reuse HTTP/1.1" 409 Conflict
+INFO:     127.0.0.1:55783 - "GET /conversations/conv-reuse-1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55792 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55792 - "GET /tokens.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55793 - "GET /app.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55793 - "GET /agent/mode HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55793 - "GET /conversations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55792 - "GET /agents HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55792 - "GET /favicon.ico HTTP/1.1" 404 Not Found
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [17558]

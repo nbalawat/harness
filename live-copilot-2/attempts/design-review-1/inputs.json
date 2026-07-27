@@ -1,0 +1,534 @@
+{
+  "rtm": {
+    "path": "/Users/nbalawat/development/harness/live-copilot-2/artifacts/traceability/rtm.json",
+    "data": {
+      "requirements_total": 16,
+      "covered_count": 16,
+      "uncovered": [],
+      "coverage": [
+        {
+          "id": "REQ-001",
+          "text": "The system provides support analysts an assistant that answers product questions using the organization's own product knowledge.",
+          "category": "functional",
+          "confidence": "stated",
+          "addressed_by": [
+            {
+              "via": "module",
+              "item": "chat-shell"
+            },
+            {
+              "via": "module",
+              "item": "agent-runtime"
+            },
+            {
+              "via": "agent",
+              "item": "Reply Drafting Assistant"
+            },
+            {
+              "via": "design",
+              "item": "option-1"
+            },
+            {
+              "via": "design",
+              "item": "option-2"
+            },
+            {
+              "via": "design",
+              "item": "option-3"
+            },
+            {
+              "via": "design",
+              "item": "option-4"
+            }
+          ]
+        },
+        {
+          "id": "REQ-002",
+          "text": "Analysts interact with the assistant through a conversational chat interface: a turn-by-turn message thread where they can ask follow-up questions in context.",
+          "category": "ux",
+          "confidence": "stated",
+          "addressed_by": [
+            {
+              "via": "module",
+              "item": "chat-shell"
+            },
+            {
+              "via": "table",
+              "item": "messages"
+            },
+            {
+              "via": "agent",
+              "item": "Reply Drafting Assistant"
+            },
+            {
+              "via": "design",
+              "item": "option-1"
+            },
+            {
+              "via": "design",
+              "item": "option-2"
+            },
+            {
+              "via": "design",
+              "item": "option-3"
+            },
+            {
+              "via": "design",
+              "item": "option-4"
+            }
+          ]
+        },
+        {
+          "id": "REQ-003",
+          "text": "Assistant answers must be grounded in an indexed corpus of product knowledge — retrieval over that corpus runs before generation, and the answer is composed from retrieved passages rather than the model's general knowledge.",
+          "category": "agent",
+          "confidence": "stated",
+          "addressed_by": [
+            {
+              "via": "module",
+              "item": "agent-runtime"
+            },
+            {
+              "via": "agent",
+              "item": "Reply Drafting Assistant"
+            }
+          ]
+        },
+        {
+          "id": "REQ-004",
+          "text": "Conversation history is persisted beyond the active session and remains reviewable afterwards.",
+          "category": "data",
+          "confidence": "stated",
+          "addressed_by": [
+            {
+              "via": "module",
+              "item": "persistence-core"
+            },
+            {
+              "via": "table",
+              "item": "conversations"
+            },
+            {
+              "via": "table",
+              "item": "messages"
+            },
+            {
+              "via": "agent",
+              "item": "Conversation History Assistant"
+            }
+          ]
+        },
+        {
+          "id": "REQ-005",
+          "text": "Each stored conversation record captures the analyst's question, the assistant's draft answer, the approval decision, and timestamps, so the conversation can be assessed in a quality review.",
+          "category": "data",
+          "confidence": "stated",
+          "addressed_by": [
+            {
+              "via": "module",
+              "item": "persistence-core"
+            },
+            {
+              "via": "table",
+              "item": "messages"
+            },
+            {
+              "via": "agent",
+              "item": "Conversation History Assistant"
+            },
+            {
+              "via": "design",
+              "item": "option-1"
+            },
+            {
+              "via": "design",
+              "item": "option-2"
+            },
+            {
+              "via": "design",
+              "item": "option-3"
+            },
+            {
+              "via": "design",
+              "item": "option-4"
+            }
+          ]
+        },
+        {
+          "id": "REQ-006",
+          "text": "Analysts can list, open, and search past conversations and reuse a previous good answer in a new reply.",
+          "category": "ux",
+          "confidence": "stated",
+          "addressed_by": [
+            {
+              "via": "module",
+              "item": "persistence-core"
+            },
+            {
+              "via": "module",
+              "item": "chat-shell"
+            },
+            {
+              "via": "table",
+              "item": "conversations"
+            },
+            {
+              "via": "agent",
+              "item": "Conversation History Assistant"
+            },
+            {
+              "via": "design",
+              "item": "option-1"
+            },
+            {
+              "via": "design",
+              "item": "option-2"
+            },
+            {
+              "via": "design",
+              "item": "option-3"
+            },
+            {
+              "via": "design",
+              "item": "option-4"
+            }
+          ]
+        },
+        {
+          "id": "REQ-007",
+          "text": "Every reply the assistant produces carries a clear, non-removable disclosure that it was generated by an automated assistant, so the customer knows it is not a human-written reply.",
+          "category": "agent",
+          "confidence": "stated",
+          "addressed_by": [
+            {
+              "via": "module",
+              "item": "chat-shell"
+            },
+            {
+              "via": "module",
+              "item": "agent-runtime"
+            },
+            {
+              "via": "agent",
+              "item": "Reply Drafting Assistant"
+            },
+            {
+              "via": "design",
+              "item": "option-1"
+            },
+            {
+              "via": "design",
+              "item": "option-2"
+            },
+            {
+              "via": "design",
+              "item": "option-3"
+            },
+            {
+              "via": "design",
+              "item": "option-4"
+            }
+          ]
+        },
+        {
+          "id": "REQ-008",
+          "text": "Each incoming support question is routed to the assistant first, producing a draft reply before any manual analyst work begins.",
+          "category": "functional",
+          "confidence": "stated",
+          "addressed_by": [
+            {
+              "via": "module",
+              "item": "chat-shell"
+            },
+            {
+              "via": "agent",
+              "item": "Reply Drafting Assistant"
+            },
+            {
+              "via": "design",
+              "item": "option-1"
+            },
+            {
+              "via": "design",
+              "item": "option-2"
+            },
+            {
+              "via": "design",
+              "item": "option-3"
+            },
+            {
+              "via": "design",
+              "item": "option-4"
+            }
+          ]
+        },
+        {
+          "id": "REQ-009",
+          "text": "An analyst must explicitly approve a draft reply before it can be sent; the system must make it impossible for an unapproved draft to leave the application.",
+          "category": "functional",
+          "confidence": "stated",
+          "addressed_by": [
+            {
+              "via": "module",
+              "item": "chat-shell"
+            },
+            {
+              "via": "table",
+              "item": "approvals"
+            },
+            {
+              "via": "agent",
+              "item": "Reply Drafting Assistant"
+            },
+            {
+              "via": "agent",
+              "item": "Conversation History Assistant"
+            },
+            {
+              "via": "design",
+              "item": "option-1"
+            },
+            {
+              "via": "design",
+              "item": "option-2"
+            },
+            {
+              "via": "design",
+              "item": "option-3"
+            },
+            {
+              "via": "design",
+              "item": "option-4"
+            }
+          ]
+        },
+        {
+          "id": "REQ-010",
+          "text": "The application must be deployable and fully runnable on a local deploy target with a single documented command, with no cloud service required for core function.",
+          "category": "ops",
+          "confidence": "stated",
+          "addressed_by": [
+            {
+              "via": "pipeline",
+              "item": "integrate + deploy (pipeline stages)"
+            }
+          ]
+        },
+        {
+          "id": "REQ-011",
+          "text": "Assistant answers cite the knowledge sources they were drawn from, and those citations are shown to the analyst and stored with the conversation record so a reviewer can verify the answer was grounded.",
+          "category": "agent",
+          "confidence": "inferred",
+          "addressed_by": [
+            {
+              "via": "module",
+              "item": "chat-shell"
+            },
+            {
+              "via": "module",
+              "item": "agent-runtime"
+            },
+            {
+              "via": "table",
+              "item": "citations"
+            },
+            {
+              "via": "agent",
+              "item": "Reply Drafting Assistant"
+            },
+            {
+              "via": "design",
+              "item": "option-1"
+            },
+            {
+              "via": "design",
+              "item": "option-2"
+            },
+            {
+              "via": "design",
+              "item": "option-3"
+            },
+            {
+              "via": "design",
+              "item": "option-4"
+            }
+          ]
+        },
+        {
+          "id": "REQ-012",
+          "text": "The analyst can edit a draft reply before approving it; the approval step supports approve-as-is, edit-then-approve, and reject.",
+          "category": "ux",
+          "confidence": "inferred",
+          "addressed_by": [
+            {
+              "via": "module",
+              "item": "chat-shell"
+            },
+            {
+              "via": "table",
+              "item": "approvals"
+            },
+            {
+              "via": "agent",
+              "item": "Reply Drafting Assistant"
+            },
+            {
+              "via": "design",
+              "item": "option-1"
+            },
+            {
+              "via": "design",
+              "item": "option-2"
+            },
+            {
+              "via": "design",
+              "item": "option-3"
+            },
+            {
+              "via": "design",
+              "item": "option-4"
+            }
+          ]
+        },
+        {
+          "id": "REQ-013",
+          "text": "Approval events are recorded as an audit trail: which analyst approved or rejected, when, and whether the draft was edited before sending.",
+          "category": "data",
+          "confidence": "inferred",
+          "addressed_by": [
+            {
+              "via": "module",
+              "item": "persistence-core"
+            },
+            {
+              "via": "table",
+              "item": "approvals"
+            },
+            {
+              "via": "agent",
+              "item": "Conversation History Assistant"
+            },
+            {
+              "via": "design",
+              "item": "option-1"
+            },
+            {
+              "via": "design",
+              "item": "option-2"
+            },
+            {
+              "via": "design",
+              "item": "option-3"
+            },
+            {
+              "via": "design",
+              "item": "option-4"
+            }
+          ]
+        },
+        {
+          "id": "REQ-014",
+          "text": "Conversation records are retained indefinitely in v1 with manual deletion only; no automated purge or retention schedule is implemented.",
+          "category": "data",
+          "confidence": "inferred",
+          "addressed_by": [
+            {
+              "via": "module",
+              "item": "persistence-core"
+            },
+            {
+              "via": "agent",
+              "item": "Conversation History Assistant"
+            }
+          ]
+        },
+        {
+          "id": "REQ-015",
+          "text": "Product knowledge and conversation records are internal data: the application must not transmit them anywhere beyond the configured model provider, and model API credentials must be supplied by environment configuration rather than committed to the repository.",
+          "category": "security",
+          "confidence": "inferred",
+          "addressed_by": [
+            {
+              "via": "agent",
+              "item": "Reply Drafting Assistant"
+            }
+          ]
+        },
+        {
+          "id": "REQ-016",
+          "text": "The application targets a single support team on one local instance with a small number of concurrent analysts; horizontal scaling and multi-tenancy are out of scope for v1.",
+          "category": "ops",
+          "confidence": "inferred",
+          "addressed_by": [
+            {
+              "via": "pipeline",
+              "item": "integrate + deploy (pipeline stages)"
+            }
+          ]
+        }
+      ],
+      "assumptions": [
+        {
+          "question": "How should the product-knowledge corpus be supplied to the application?",
+          "answer": "A folder of documents loaded at startup",
+          "source": "default",
+          "why": "This determines the data-ingestion layer architecture: startup loading (simpler, single-file config) vs. in-app upload UI (requires document management views and persistence) vs. external sync (requires integration point and polling/webhook logic). The choice cascades to storage schema, indexing strategy, and UX complexity."
+        },
+        {
+          "question": "After an analyst approves a reply, who is responsible for delivering it to the customer?",
+          "answer": "The analyst manually copies the approved reply into their existing email tool",
+          "source": "default",
+          "why": "Determines whether the application needs email/ticketing integration, OAuth/API credentials for external systems, message delivery retry logic, and delivery status tracking. Affects infrastructure dependencies and security scope."
+        },
+        {
+          "question": "Should analysts authenticate individually or is the local instance untrusted-environment aware?",
+          "answer": "No authentication: the local instance is trusted, and all analysts are treated as the same user",
+          "source": "default",
+          "why": "Determines whether the app needs user accounts, per-analyst audit trails, SSO/LDAP integration, session management, and role-based access control. Directly affects data-model design (analyst attribution on approvals) and auth infrastructure scope."
+        },
+        {
+          "question": "Inferred requirement: Assistant answers cite the knowledge sources they were drawn from, and those citations are shown to the analyst and stored with the conversation record so a reviewer can verify the answer was grounded.",
+          "answer": "assumed true",
+          "source": "inferred",
+          "why": "REQ-011"
+        },
+        {
+          "question": "Inferred requirement: The analyst can edit a draft reply before approving it; the approval step supports approve-as-is, edit-then-approve, and reject.",
+          "answer": "assumed true",
+          "source": "inferred",
+          "why": "REQ-012"
+        },
+        {
+          "question": "Inferred requirement: Approval events are recorded as an audit trail: which analyst approved or rejected, when, and whether the draft was edited before sending.",
+          "answer": "assumed true",
+          "source": "inferred",
+          "why": "REQ-013"
+        },
+        {
+          "question": "Inferred requirement: Conversation records are retained indefinitely in v1 with manual deletion only; no automated purge or retention schedule is implemented.",
+          "answer": "assumed true",
+          "source": "inferred",
+          "why": "REQ-014"
+        },
+        {
+          "question": "Inferred requirement: Product knowledge and conversation records are internal data: the application must not transmit them anywhere beyond the configured model provider, and model API credentials must be supplied by environment configuration rather than committed to the repository.",
+          "answer": "assumed true",
+          "source": "inferred",
+          "why": "REQ-015"
+        },
+        {
+          "question": "Inferred requirement: The application targets a single support team on one local instance with a small number of concurrent analysts; horizontal scaling and multi-tenancy are out of scope for v1.",
+          "answer": "assumed true",
+          "source": "inferred",
+          "why": "REQ-016"
+        }
+      ]
+    }
+  },
+  "design_choice": {
+    "path": "/Users/nbalawat/development/harness/live-copilot-2/artifacts/design-select/design_choice.json",
+    "data": {
+      "chosen_option": "option-2"
+    }
+  }
+}

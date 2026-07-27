@@ -1,0 +1,35 @@
+{
+  "governance": {
+    "path": "/Users/nbalawat/development/harness/live-copilot-2/artifacts/governance-report/governance.json",
+    "data": {
+      "standards_profile": "firm-baseline-v0",
+      "security": {
+        "high_findings": 0,
+        "total_findings": 0,
+        "files_scanned": 22,
+        "evidence": "security_report.json"
+      },
+      "validation": {
+        "backend_tests": "pass",
+        "agent_evals": "pass",
+        "compose_config": "pass",
+        "evidence": "integration_report.json"
+      },
+      "requirements": {
+        "total": 16,
+        "covered": 16,
+        "uncovered": 0,
+        "assumptions": 9,
+        "evidence": "rtm.json"
+      },
+      "agents": {
+        "count": 2,
+        "names": [
+          "Reply Drafting Assistant",
+          "Conversation History Assistant"
+        ],
+        "eval_criteria_total": 16
+      }
+    }
+  }
+}

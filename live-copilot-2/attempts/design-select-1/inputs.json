@@ -1,0 +1,108 @@
+{
+  "designs_dir": {
+    "path": "/Users/nbalawat/development/harness/live-copilot-2/artifacts/design-options/designs"
+  },
+  "designs": {
+    "path": "/Users/nbalawat/development/harness/live-copilot-2/artifacts/design-options/designs.json",
+    "data": {
+      "options": [
+        {
+          "id": "option-1",
+          "name": "Operator Console",
+          "screens": [
+            "chat",
+            "review",
+            "history",
+            "agents"
+          ],
+          "tokens_file": "designs/option-1/tokens.css",
+          "preview_file": "designs/option-1/index.html",
+          "addresses": [
+            "REQ-001",
+            "REQ-002",
+            "REQ-005",
+            "REQ-006",
+            "REQ-007",
+            "REQ-008",
+            "REQ-009",
+            "REQ-011",
+            "REQ-012",
+            "REQ-013"
+          ]
+        },
+        {
+          "id": "option-2",
+          "name": "Dossier",
+          "screens": [
+            "chat",
+            "review",
+            "history",
+            "agents"
+          ],
+          "tokens_file": "designs/option-2/tokens.css",
+          "preview_file": "designs/option-2/index.html",
+          "addresses": [
+            "REQ-001",
+            "REQ-002",
+            "REQ-005",
+            "REQ-006",
+            "REQ-007",
+            "REQ-008",
+            "REQ-009",
+            "REQ-011",
+            "REQ-012",
+            "REQ-013"
+          ]
+        },
+        {
+          "id": "option-3",
+          "name": "Helpdesk Board",
+          "screens": [
+            "chat",
+            "review",
+            "history",
+            "agents"
+          ],
+          "tokens_file": "designs/option-3/tokens.css",
+          "preview_file": "designs/option-3/index.html",
+          "addresses": [
+            "REQ-001",
+            "REQ-002",
+            "REQ-005",
+            "REQ-006",
+            "REQ-007",
+            "REQ-008",
+            "REQ-009",
+            "REQ-011",
+            "REQ-012",
+            "REQ-013"
+          ]
+        },
+        {
+          "id": "option-4",
+          "name": "Paper Terminal",
+          "screens": [
+            "chat",
+            "review",
+            "history",
+            "agents"
+          ],
+          "tokens_file": "designs/option-4/tokens.css",
+          "preview_file": "designs/option-4/index.html",
+          "addresses": [
+            "REQ-001",
+            "REQ-002",
+            "REQ-005",
+            "REQ-006",
+            "REQ-007",
+            "REQ-008",
+            "REQ-009",
+            "REQ-011",
+            "REQ-012",
+            "REQ-013"
+          ]
+        }
+      ]
+    }
+  }
+}

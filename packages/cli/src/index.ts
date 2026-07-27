@@ -127,6 +127,8 @@ async function cmdRevise(args: string[]): Promise<number> {
     return 1;
   }
   const config = JSON.parse(fs.readFileSync(path.join(workspace, "run.json"), "utf8")) as RunConfig;
+  if (flags.answers) config.answersFile = path.resolve(flags.answers as string);
+  if (flags["accept-defaults"] === true) config.acceptDefaults = true;
   const ctx = buildContext(workspace, config);
   const { reopened } = reviseNode(ctx, nodeId, feedback);
   console.log(`revising '${nodeId}' — reopened ${reopened.length} step(s): ${reopened.join(", ")}`);

@@ -1,0 +1,25 @@
+/* Option 1 — Operator Console
+   Dark, dense, three-column mission-control workspace for analysts who live
+   in the tool all day. Cool near-black surfaces, one electric sky accent. */
+:root {
+  --primary: #38bdf8;
+  --on-primary: #04131d;
+  --bg: #0a0e13;
+  --fg: #e6edf3;
+  --surface: #131a23;
+  --border: #26313f;
+  --font: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+
+  /* direction-specific extensions */
+  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+  --surface-2: #182130;
+  --surface-3: #0e141b;
+  --muted: #8b9bb0;
+  --faint: #5d6b7d;
+  --ok: #34d399;
+  --warn: #fbbf24;
+  --danger: #f87171;
+  --radius: 6px;
+  --rail: 236px;
+  --context: 320px;
+}

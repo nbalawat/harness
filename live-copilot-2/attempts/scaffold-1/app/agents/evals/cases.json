@@ -1,0 +1,18 @@
+{
+  "cases": [
+    {
+      "id": "greeting",
+      "input": "hello there",
+      "expect_contains": [
+        "help"
+      ]
+    },
+    {
+      "id": "identity",
+      "input": "who am I talking to?",
+      "expect_contains": [
+        "Reply Drafting Assistant"
+      ]
+    }
+  ]
+}

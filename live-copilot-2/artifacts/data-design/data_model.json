@@ -1,0 +1,133 @@
+{
+  "tables": [
+    {
+      "name": "conversations",
+      "addresses": [
+        "REQ-004",
+        "REQ-006"
+      ],
+      "columns": [
+        {
+          "name": "id",
+          "type": "TEXT PRIMARY KEY"
+        },
+        {
+          "name": "created_at",
+          "type": "DATETIME"
+        },
+        {
+          "name": "updated_at",
+          "type": "DATETIME"
+        },
+        {
+          "name": "subject",
+          "type": "TEXT"
+        }
+      ]
+    },
+    {
+      "name": "messages",
+      "addresses": [
+        "REQ-002",
+        "REQ-004",
+        "REQ-005"
+      ],
+      "columns": [
+        {
+          "name": "id",
+          "type": "TEXT PRIMARY KEY"
+        },
+        {
+          "name": "conversation_id",
+          "type": "TEXT FOREIGN KEY"
+        },
+        {
+          "name": "sequence",
+          "type": "INTEGER"
+        },
+        {
+          "name": "role",
+          "type": "TEXT"
+        },
+        {
+          "name": "analyst_question",
+          "type": "TEXT"
+        },
+        {
+          "name": "assistant_draft",
+          "type": "TEXT"
+        },
+        {
+          "name": "created_at",
+          "type": "DATETIME"
+        }
+      ]
+    },
+    {
+      "name": "approvals",
+      "addresses": [
+        "REQ-009",
+        "REQ-012",
+        "REQ-013"
+      ],
+      "columns": [
+        {
+          "name": "id",
+          "type": "TEXT PRIMARY KEY"
+        },
+        {
+          "name": "message_id",
+          "type": "TEXT FOREIGN KEY"
+        },
+        {
+          "name": "decision",
+          "type": "TEXT"
+        },
+        {
+          "name": "analyst_id",
+          "type": "TEXT"
+        },
+        {
+          "name": "edited_draft",
+          "type": "TEXT"
+        },
+        {
+          "name": "was_edited",
+          "type": "BOOLEAN"
+        },
+        {
+          "name": "approved_at",
+          "type": "DATETIME"
+        }
+      ]
+    },
+    {
+      "name": "citations",
+      "addresses": [
+        "REQ-011"
+      ],
+      "columns": [
+        {
+          "name": "id",
+          "type": "TEXT PRIMARY KEY"
+        },
+        {
+          "name": "message_id",
+          "type": "TEXT FOREIGN KEY"
+        },
+        {
+          "name": "source_title",
+          "type": "TEXT"
+        },
+        {
+          "name": "source_passage",
+          "type": "TEXT"
+        },
+        {
+          "name": "source_url",
+          "type": "TEXT"
+        }
+      ]
+    }
+  ]
+}

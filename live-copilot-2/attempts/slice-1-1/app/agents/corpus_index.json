@@ -1,0 +1,46 @@
+{
+  "corpus": "Product-knowledge documents loaded from the local documents folder at startup (REQ-017) — the sole grounding source for every draft reply.",
+  "documents": [
+    {
+      "id": "doc-problem-statement",
+      "title": "Problem Statement (Intake)",
+      "keywords": [
+        "deploy target",
+        "local deploy",
+        "deployable to a local",
+        "project name",
+        "support copilot project"
+      ],
+      "text": "Support analysts need an assistant that answers product questions from our knowledge and keeps reviewable conversation history. The application must be deployable to a local target with no cloud service required for core function."
+    },
+    {
+      "id": "doc-brief",
+      "title": "Support Copilot — Discovery Brief",
+      "keywords": [
+        "repetitive product questions",
+        "review past conversations",
+        "reuse good answers",
+        "identify itself",
+        "clearly so customers",
+        "quality review",
+        "conversation records need to be stored"
+      ],
+      "text": "Our support team spends hours answering repetitive product questions. The application must let a support analyst chat with an assistant that answers from our product knowledge. Analysts should be able to review past conversations to reuse good answers. The assistant must identify itself clearly so customers know it is automated. Conversation records need to be stored for quality review."
+    },
+    {
+      "id": "doc-process",
+      "title": "Current Support Process",
+      "keywords": [
+        "tickets arrive",
+        "arrive by email",
+        "current support process",
+        "future process",
+        "route each question",
+        "approve the reply",
+        "searches old threads",
+        "ticket"
+      ],
+      "text": "Tickets arrive by email. An analyst reads the ticket and searches old threads manually. The future process should route each question to the assistant first, and the analyst must approve the reply before it is sent."
+    }
+  ]
+}
