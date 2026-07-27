@@ -349,8 +349,32 @@ async function runAgent(
 }
 
 function summarize(msg: Record<string, unknown>): Record<string, unknown> {
-  // Keep the journal readable: store type + a short preview, not full payloads.
-  return { type: msg.type, preview: JSON.stringify(msg).slice(0, 400) };
+  // Structured transcript for the dashboard's step inspector: what the agent
+  // said, which tools it used, and the final result — no raw payload dumps.
+  try {
+    const inner = (msg as { message?: { content?: unknown } }).message;
+    if ((msg.type === "assistant" || msg.type === "user") && Array.isArray(inner?.content)) {
+      const parts = (inner.content as Array<Record<string, unknown>>).map((b) =>
+        b.type === "text"
+          ? { kind: "text", preview: String(b.text).slice(0, 400) }
+          : b.type === "tool_use"
+            ? { kind: "tool", label: String(b.name), preview: JSON.stringify(b.input).slice(0, 240) }
+            : b.type === "tool_result"
+              ? { kind: "tool_result", preview: JSON.stringify(b.content).slice(0, 240) }
+              : { kind: String(b.type ?? "other"), preview: "" },
+      );
+      return { type: msg.type, parts };
+    }
+    if (msg.type === "result") {
+      return { type: "result", preview: String((msg as { result?: unknown }).result ?? "").slice(0, 400) };
+    }
+    if (msg.type === "system") {
+      return { type: "system", preview: String((msg as { subtype?: unknown }).subtype ?? "") };
+    }
+  } catch {
+    /* fall through to generic preview */
+  }
+  return { type: msg.type, preview: JSON.stringify(msg).slice(0, 240) };
 }
 
 function validateOutputs(ctx: RunContext, node: NodeDef, attemptDir: string): string | undefined {

@@ -1,0 +1,11 @@
+{
+  "intake": {
+    "path": "/Users/nbalawat/development/harness/.live-app/artifacts/intake/intake.json",
+    "data": {
+      "project_name": "Support Copilot",
+      "problem_statement": "Support analysts need an assistant that answers product questions from our knowledge and keeps reviewable conversation history.",
+      "documents_dir": "fixtures/sample-docs",
+      "deploy_target": "local"
+    }
+  }
+}

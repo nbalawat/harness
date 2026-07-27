@@ -59,6 +59,8 @@ export interface InteractionSpec {
 export interface NodeDef {
   id: string;
   kind: NodeKind;
+  /** Plain-language explanation of what this step does — shown to users. */
+  description?: string;
   deps?: string[];
   outputs?: ArtifactDecl[];
   /** Extra payload attempts after the first failure (default 1). */

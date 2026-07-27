@@ -1,0 +1,95 @@
+{
+  "_params": {
+    "path": "",
+    "data": {
+      "slice": 2
+    }
+  },
+  "app": {
+    "path": "/Users/nbalawat/development/harness/.live-app/artifacts/slice-1/app"
+  },
+  "slice_plan": {
+    "path": "/Users/nbalawat/development/harness/.live-app/artifacts/slice-plan/slice_plan.json",
+    "data": {
+      "slices": [
+        {
+          "id": "core-chat",
+          "name": "Core chat",
+          "story": "An analyst asks the assistant a question and gets an answer end to end.",
+          "addresses": [
+            "REQ-001",
+            "REQ-002",
+            "REQ-003",
+            "REQ-005"
+          ],
+          "acceptance": [
+            {
+              "method": "GET",
+              "path": "/health",
+              "expect_contains": [
+                "ok"
+              ]
+            },
+            {
+              "method": "POST",
+              "path": "/chat",
+              "body": {
+                "message": "hello"
+              },
+              "expect_contains": [
+                "help"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "conversation-history",
+          "name": "Conversation history",
+          "story": "Conversations are stored and an analyst can review past ones.",
+          "addresses": [
+            "REQ-004",
+            "REQ-006",
+            "REQ-007"
+          ],
+          "acceptance": [
+            {
+              "method": "POST",
+              "path": "/api/conversations",
+              "body": {
+                "user": "analyst-1"
+              },
+              "expect_status": 200
+            },
+            {
+              "method": "GET",
+              "path": "/api/conversations",
+              "expect_contains": [
+                "analyst-1"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "reply-approval",
+          "name": "Reply approval",
+          "story": "An analyst approves an assistant draft before it is used.",
+          "addresses": [
+            "REQ-001"
+          ],
+          "acceptance": [
+            {
+              "method": "POST",
+              "path": "/approvals",
+              "body": {
+                "message": "draft reply"
+              },
+              "expect_contains": [
+                "approved"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

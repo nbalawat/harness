@@ -6,7 +6,7 @@ models.TABLES (generated from the approved data model).
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
-from agent_runtime import respond
+from agent_runtime import mode, respond
 from db import store
 from models import TABLES
 
@@ -20,6 +20,11 @@ class ChatRequest(BaseModel):
 @app.get("/health")
 def health():
     return {"status": "ok"}
+
+
+@app.get("/agent/mode")
+def agent_mode():
+    return mode()
 
 
 @app.post("/chat")

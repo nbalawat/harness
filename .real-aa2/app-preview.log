@@ -1,40 +1,47 @@
-INFO:     Started server process [67306]
-INFO:     Waiting for application startup.
-INFO:     Application startup complete.
-INFO:     Uvicorn running on http://127.0.0.1:63765 (Press CTRL+C to quit)
-INFO:     127.0.0.1:63767 - "GET /health HTTP/1.1" 200 OK
-INFO:     127.0.0.1:63768 - "POST /chat HTTP/1.1" 200 OK
-INFO:     127.0.0.1:63867 - "GET /health HTTP/1.1" 200 OK
-INFO:     127.0.0.1:63929 - "GET / HTTP/1.1" 200 OK
-INFO:     127.0.0.1:63929 - "GET /tokens.css HTTP/1.1" 200 OK
-INFO:     127.0.0.1:63930 - "GET /style.css HTTP/1.1" 200 OK
-INFO:     127.0.0.1:63929 - "GET /app.js HTTP/1.1" 200 OK
-INFO:     127.0.0.1:63929 - "GET /api/conversations HTTP/1.1" 200 OK
-INFO:     127.0.0.1:63929 - "GET /api/approvals HTTP/1.1" 200 OK
-INFO:     127.0.0.1:63929 - "GET /api/knowledge_documents HTTP/1.1" 200 OK
-INFO:     127.0.0.1:63929 - "GET /favicon.ico HTTP/1.1" 404 Not Found
-INFO:     127.0.0.1:63950 - "POST /chat HTTP/1.1" 200 OK
-INFO:     127.0.0.1:63950 - "POST /api/conversations HTTP/1.1" 200 OK
-INFO:     127.0.0.1:63950 - "POST /api/messages HTTP/1.1" 200 OK
-INFO:     127.0.0.1:63950 - "POST /api/messages HTTP/1.1" 200 OK
-INFO:     127.0.0.1:63963 - "POST /chat HTTP/1.1" 200 OK
-INFO:     127.0.0.1:63965 - "POST /chat HTTP/1.1" 200 OK
-INFO:     127.0.0.1:63967 - "POST /chat HTTP/1.1" 200 OK
-INFO:     127.0.0.1:63970 - "POST /chat HTTP/1.1" 200 OK
-INFO:     127.0.0.1:63982 - "POST /chat HTTP/1.1" 200 OK
-INFO:     127.0.0.1:63982 - "POST /api/conversations HTTP/1.1" 200 OK
-INFO:     127.0.0.1:63982 - "POST /api/messages HTTP/1.1" 200 OK
-INFO:     127.0.0.1:63982 - "POST /api/messages HTTP/1.1" 200 OK
-INFO:     127.0.0.1:63982 - "POST /api/message_citations HTTP/1.1" 200 OK
-INFO:     127.0.0.1:63998 - "POST /chat HTTP/1.1" 200 OK
-INFO:     127.0.0.1:63998 - "POST /api/conversations HTTP/1.1" 200 OK
-INFO:     127.0.0.1:63998 - "POST /api/messages HTTP/1.1" 200 OK
-INFO:     127.0.0.1:63998 - "POST /api/messages HTTP/1.1" 200 OK
-INFO:     127.0.0.1:63998 - "POST /api/message_citations HTTP/1.1" 200 OK
-INFO:     127.0.0.1:64011 - "GET / HTTP/1.1" 200 OK
-INFO:     127.0.0.1:64011 - "GET /tokens.css HTTP/1.1" 304 Not Modified
-INFO:     127.0.0.1:64011 - "GET /style.css HTTP/1.1" 304 Not Modified
-INFO:     127.0.0.1:64013 - "GET /app.js HTTP/1.1" 304 Not Modified
-INFO:     127.0.0.1:64013 - "GET /api/conversations HTTP/1.1" 200 OK
-INFO:     127.0.0.1:64013 - "GET /api/approvals HTTP/1.1" 200 OK
-INFO:     127.0.0.1:64013 - "GET /api/knowledge_documents HTTP/1.1" 200 OK
+Traceback (most recent call last):
+  File "/Users/nbalawat/.cache/uv/builds-v0/.tmpaWdKYy/bin/uvicorn", line 10, in <module>
+    sys.exit(main())
+             ~~~~^^
+  File "/Users/nbalawat/.cache/uv/archive-v0/L5LPjEOeOKGQTnZc5B6Og/lib/python3.13/site-packages/click/core.py", line 1569, in __call__
+    return self.main(*args, **kwargs)
+           ~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/Users/nbalawat/.cache/uv/archive-v0/L5LPjEOeOKGQTnZc5B6Og/lib/python3.13/site-packages/click/core.py", line 1490, in main
+    rv = self.invoke(ctx)
+  File "/Users/nbalawat/.cache/uv/archive-v0/L5LPjEOeOKGQTnZc5B6Og/lib/python3.13/site-packages/click/core.py", line 1353, in invoke
+    return ctx.invoke(self.callback, **ctx.params)
+           ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/nbalawat/.cache/uv/archive-v0/L5LPjEOeOKGQTnZc5B6Og/lib/python3.13/site-packages/click/core.py", line 907, in invoke
+    return callback(*args, **kwargs)
+  File "/Users/nbalawat/.cache/uv/archive-v0/L5LPjEOeOKGQTnZc5B6Og/lib/python3.13/site-packages/uvicorn/main.py", line 440, in main
+    run(
+    ~~~^
+        app,
+        ^^^^
+    ...<48 lines>...
+        reset_contextvars=reset_contextvars,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/nbalawat/.cache/uv/archive-v0/L5LPjEOeOKGQTnZc5B6Og/lib/python3.13/site-packages/uvicorn/main.py", line 609, in run
+    config.load_app()
+    ~~~~~~~~~~~~~~~^^
+  File "/Users/nbalawat/.cache/uv/archive-v0/L5LPjEOeOKGQTnZc5B6Og/lib/python3.13/site-packages/uvicorn/config.py", line 427, in load_app
+    return import_from_string(self.app)
+  File "/Users/nbalawat/.cache/uv/archive-v0/L5LPjEOeOKGQTnZc5B6Og/lib/python3.13/site-packages/uvicorn/importer.py", line 22, in import_from_string
+    raise exc from None
+  File "/Users/nbalawat/.cache/uv/archive-v0/L5LPjEOeOKGQTnZc5B6Og/lib/python3.13/site-packages/uvicorn/importer.py", line 19, in import_from_string
+    module = importlib.import_module(module_str)
+  File "/Users/nbalawat/.local/share/uv/python/cpython-3.13.1-macos-x86_64-none/lib/python3.13/importlib/__init__.py", line 88, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1387, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1331, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 935, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 1026, in exec_module
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+  File "/Users/nbalawat/development/harness/.real-aa2/app-preview/backend/dev.py", line 10, in <module>
+    from main import app
+  File "/Users/nbalawat/development/harness/.real-aa2/app-preview/backend/main.py", line 11, in <module>
+    from models import TABLES
+ModuleNotFoundError: No module named 'models'

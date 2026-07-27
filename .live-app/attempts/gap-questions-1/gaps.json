@@ -1,0 +1,16 @@
+{
+  "questions": [
+    {
+      "id": "req-008",
+      "prompt": "Does the app need user authentication for the pilot?",
+      "default": "no",
+      "why": "Decides whether the auth module is composed now or deferred."
+    },
+    {
+      "id": "req-009",
+      "prompt": "How long should conversation data be retained?",
+      "default": "90 days",
+      "why": "Sets the retention config in the data layer and governance report."
+    }
+  ]
+}

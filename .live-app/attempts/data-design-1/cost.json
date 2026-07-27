@@ -1,0 +1,6 @@
+{
+  "costUsd": 0.5,
+  "inputTokens": 15000,
+  "outputTokens": 1200,
+  "model": "mock"
+}

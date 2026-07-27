@@ -36,7 +36,7 @@ async function main() {
   const log = fs.openSync("slice-app.log", "w");
   const child = spawn(
     `uv run --with fastapi --with uvicorn uvicorn dev:app --host 127.0.0.1 --port ${port}`,
-    { shell: true, detached: true, cwd: path.join(app, "backend"), stdio: ["ignore", log, log] },
+    { shell: true, detached: true, cwd: path.join(app, "backend"), env: { ...process.env, HARNESS_AGENT_MODE: "stub" }, stdio: ["ignore", log, log] },
   );
   fs.closeSync(log);
   const kill = () => {

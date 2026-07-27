@@ -73,7 +73,7 @@ const pytest = run(
 if (pytest.status !== 0) fail("backend tests", pytest);
 
 // 5. Agent evals — executable exit criteria for agent behavior
-const evals = run("python3", [path.join(app, "agents", "run_evals.py")]);
+const evals = run("python3", [path.join(app, "agents", "run_evals.py")], { env: { ...process.env, HARNESS_AGENT_MODE: "stub" } });
 if (evals.status !== 0) fail("agent evals", evals);
 
 const evalResults = JSON.parse(fs.readFileSync(path.join(app, "agents", "eval_results.json"), "utf8"));

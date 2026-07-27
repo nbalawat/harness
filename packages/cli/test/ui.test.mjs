@@ -48,7 +48,7 @@ test("ui: state API reflects a completed run with costs and artifacts", async ()
     assert.equal(state.projectType, "demo-pipeline@0.1.0");
     assert.equal(state.nodes.length, 4);
     assert.ok(state.nodes.every((n) => n.state === "committed"));
-    assert.ok(state.artifacts.includes("render/README.md"));
+    assert.ok(state.rawArtifacts.includes("render/README.md"));
     assert.ok(state.events.length > 0);
 
     // Artifact serving works...
@@ -113,6 +113,7 @@ test("ui: buildState tolerates an in-flight journal (live tailing)", async () =>
 });
 
 test("ui: launch-the-app lifecycle against a built agentic-app workspace", async () => {
+  process.env.HARNESS_AGENT_MODE = "stub"; // deterministic in CI; live modes are exercised manually
   const workspace = tmpDir("app");
   const AA_DIR = path.join(REPO_ROOT, "project-types", "agentic-app");
   const run = runCli([
