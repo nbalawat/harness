@@ -287,3 +287,19 @@ test("revision API: dry-run previews the closure; a real revise reopens, resumes
   const consumed = fs.readdirSync(path.join(workspace, "revisions"));
   assert.ok(consumed.some((f) => f.startsWith("plan-consumed")), "revision feedback was consumed");
 });
+
+test("dashboard page script is valid JavaScript (template-literal escaping regression)", async () => {
+  const workspace = tmpDir("pagejs");
+  runCli(["run", DEMO_DIR, "--workspace", workspace, "--answers", path.join(DEMO_DIR, "fixtures/answers.json"), "--mock-agents"]);
+  await withServer(workspace, async (base) => {
+    const html = await (await fetch(`${base}/`)).text();
+    const scripts = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map((m) => m[1]);
+    assert.ok(scripts.length >= 1, "page has an inline script");
+    for (const [i, js] of scripts.entries()) {
+      const f = path.join(workspace, `page-${i}.js`);
+      fs.writeFileSync(f, js);
+      const check = spawnSync(process.execPath, ["--check", f], { encoding: "utf8" });
+      assert.equal(check.status, 0, `page script ${i} has a syntax error:\n${check.stderr}`);
+    }
+  });
+});

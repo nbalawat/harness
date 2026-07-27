@@ -1,0 +1,54 @@
+/* ============================================================
+   Support Copilot — Design Option 2: "CASEFILE"
+   Direction: warm editorial print. A typeset case record —
+   ivory paper, deep ink, oxblood rules, olive annotation.
+   Serif-led, reading first. No cool greys, no blue, no shadows;
+   depth comes from rules, paper tone and vertical rhythm.
+   ============================================================ */
+
+:root {
+  /* --- required seven --- */
+  --primary: #8c2f39;          /* oxblood */
+  --on-primary: #fdfaf4;       /* paper white on oxblood */
+  --bg: #faf7f0;               /* warm ivory canvas */
+  --fg: #241f1a;               /* deep ink brown-black */
+  --surface: #f5f0e6;          /* slightly warmer card stock */
+  --border: #d8cfbe;           /* hairline warm-grey rule */
+  --font: Georgia, "Iowan Old Style", Palatino, "Palatino Linotype",
+          "Book Antiqua", "Times New Roman", serif;
+
+  /* --- ink scale --- */
+  --ink-strong: #17130f;       /* masthead / rules at full weight */
+  --ink-muted: #6b5f52;        /* secondary prose, metadata */
+  --ink-faint: #8f8272;        /* folio marks, empty states */
+
+  /* --- oxblood family --- */
+  --primary-deep: #6d222b;     /* hover / pressed */
+  --primary-tint: #f2e4e2;     /* wash behind disposition emphasis */
+
+  /* --- annotation colours --- */
+  --accent-olive: #5f6335;     /* marginal notes, "edited" status */
+  --accent-ochre: #a06a1f;     /* pending status, ornaments */
+
+  /* --- paper & rules --- */
+  --paper-deep: #f0e9db;       /* recessed panels, legends */
+  --paper-edge: #efe7d6;       /* input wells */
+  --rule: #cec4af;             /* standard hairline */
+  --rule-hair: #e0d7c6;        /* faintest divider */
+  --rule-strong: #2b2620;      /* masthead double rules */
+
+  /* --- typography --- */
+  --font-display: Georgia, "Iowan Old Style", Palatino,
+                  "Palatino Linotype", "Times New Roman", serif;
+  --font-meta: "Seravek", "Gill Sans Nova", "Gill Sans", Ubuntu, Calibri,
+               "Segoe UI", -apple-system, system-ui, sans-serif;
+
+  --measure: 49rem;            /* the reading column */
+  --leading: 1.68;
+  --tracking-caps: 0.14em;
+
+  /* --- rhythm --- */
+  --step: 0.5rem;
+  --rhythm: 1.55rem;
+  --radius: 2px;
+}

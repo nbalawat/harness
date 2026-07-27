@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Support Copilot</title>
+<link rel="stylesheet" href="tokens.css">
+<style>
+/* ===== base ============================================================= */
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0;min-height:100vh;font-family:var(--font);color:var(--fg);
+  background-color:var(--bg);background-image:var(--canvas-glow);
+  background-repeat:no-repeat;font-size:15px;line-height:1.55;
+  -webkit-font-smoothing:antialiased;letter-spacing:-0.005em;
+}
+h1,h2,h3,p,ul{margin:0}
+button,input{font:inherit;color:inherit}
+:focus-visible{outline:none;box-shadow:var(--ring)}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+/* ===== screen switching (CSS only) ===================================== */
+.nav-radio{position:fixed;top:0;left:0;width:1px;height:1px;opacity:0;margin:0}
+.screen{display:none}
+body:has(#nav-chat:checked) #screen-chat{display:flex}
+body:has(#nav-history:checked) #screen-history{display:flex}
+body:has(#nav-agents:checked) #screen-agents{display:flex}
+body:has(#nav-approvals:checked) #screen-approvals{display:flex}
+
+/* ===== floating pill navigation ======================================== */
+.topbar{position:sticky;top:0;z-index:40;padding:20px 20px 8px;display:flex;justify-content:center}
+.navpill{
+  display:flex;align-items:center;gap:18px;width:100%;max-width:var(--canvas-max);
+  padding:10px 12px 10px 22px;background:rgba(255,255,255,.88);
+  backdrop-filter:saturate(180%) blur(14px);
+  border:1px solid var(--border);border-radius:var(--radius-pill);box-shadow:var(--shadow-md);
+}
+.brand{display:flex;align-items:center;gap:10px;font-size:15.5px;font-weight:650;letter-spacing:-0.02em;white-space:nowrap}
+.brand-mark{
+  width:26px;height:26px;border-radius:9px;background:var(--primary-gradient);
+  box-shadow:var(--shadow-primary);display:grid;place-items:center;
+  color:var(--on-primary);font-size:13px;font-weight:700;letter-spacing:-0.04em;
+}
+.navlinks{display:flex;align-items:center;gap:4px;margin:0 auto}
+.navlinks label{
+  display:block;padding:7px 16px;border-radius:var(--radius-pill);
+  font-size:14px;font-weight:500;color:var(--fg-muted);cursor:pointer;white-space:nowrap;
+  transition:background var(--speed) var(--ease),color var(--speed) var(--ease),transform var(--speed) var(--ease);
+}
+.navlinks label:hover{background:var(--primary-tint);color:var(--fg);transform:translateY(-1px)}
+body:has(#nav-chat:checked) label[for="nav-chat"],
+body:has(#nav-history:checked) label[for="nav-history"],
+body:has(#nav-agents:checked) label[for="nav-agents"],
+body:has(#nav-approvals:checked) label[for="nav-approvals"]{
+  background:var(--primary-soft);color:var(--primary-strong);font-weight:600;box-shadow:inset 0 0 0 1px #dedcfa;
+}
+body:has(#nav-chat:focus-visible) label[for="nav-chat"],
+body:has(#nav-history:focus-visible) label[for="nav-history"],
+body:has(#nav-agents:focus-visible) label[for="nav-agents"],
+body:has(#nav-approvals:focus-visible) label[for="nav-approvals"]{box-shadow:var(--ring)}
+
+/* ===== agent status badge ============================================== */
+#agent-mode{
+  display:inline-flex;align-items:center;gap:7px;padding:7px 15px 7px 12px;
+  border-radius:var(--radius-pill);background:var(--success-soft);
+  border:1px solid var(--success-border);color:var(--success);
+  font-size:12.5px;font-weight:600;letter-spacing:-0.01em;white-space:nowrap;max-width:15rem;
+  overflow:hidden;text-overflow:ellipsis;
+}
+#agent-mode::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor;flex:none;box-shadow:0 0 0 3px rgba(23,132,92,.15)}
+#agent-mode:empty::after{content:"connecting…";color:var(--fg-subtle)}
+#agent-mode:empty{background:var(--bg);border-color:var(--border);color:var(--fg-subtle)}
+
+/* ===== canvas + cards ================================================== */
+.canvas{max-width:var(--canvas-max);margin:0 auto;padding:16px 20px 40px}
+.screen{flex-direction:column;gap:20px}
+.card{
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);
+  box-shadow:var(--shadow-md);padding:var(--pad-lg);
+}
+.card-head{display:flex;align-items:flex-start;gap:16px;flex-wrap:wrap}
+.card-head .grow{flex:1 1 16rem;min-width:0}
+h1{font-size:30px;font-weight:650;letter-spacing:-0.032em;line-height:1.2}
+h2{font-size:17px;font-weight:600;letter-spacing:-0.018em}
+.lede{margin-top:8px;color:var(--fg-muted);font-size:15px;max-width:46rem}
+.hint{color:var(--fg-subtle);font-size:13px}
+
+/* ===== chips, pills, meta ============================================== */
+.chip{
+  display:inline-flex;align-items:center;gap:7px;padding:5px 13px;border-radius:var(--radius-pill);
+  background:var(--bg);border:1px solid var(--border);color:var(--fg-muted);
+  font-size:12.5px;font-weight:500;white-space:nowrap;
+}
+.chip .dot{width:7px;height:7px;border-radius:50%;background:var(--fg-faint);flex:none}
+.chip-row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.chip.is-pending{background:var(--warn-soft);border-color:var(--warn-border);color:var(--warn)}
+.chip.is-pending .dot{background:var(--warn)}
+.chip.is-approved{background:var(--success-soft);border-color:var(--success-border);color:var(--success)}
+.chip.is-approved .dot{background:var(--success)}
+.chip.is-edited{background:var(--info-soft);border-color:var(--info-border);color:var(--info)}
+.chip.is-edited .dot{background:var(--info)}
+.chip.is-rejected{background:var(--danger-soft);border-color:var(--danger-border);color:var(--danger)}
+.chip.is-rejected .dot{background:var(--danger)}
+.source-chip{background:var(--primary-tint);border-color:#e4e2fb;color:var(--primary-strong);font-weight:500}
+.source-chip .dot{background:var(--violet)}
+.legend{
+  display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:14px 18px;margin-top:20px;
+  background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);
+}
+.legend-label{font-size:12px;font-weight:600;color:var(--fg-subtle);letter-spacing:-0.005em}
+.legend-fields{color:var(--fg-muted);font-size:13px}
+.legend-fields b{font-weight:600;color:var(--fg)}
+
+/* ===== permanent AI disclosure ========================================= */
+.disclosure{
+  display:flex;align-items:flex-start;gap:14px;margin-top:24px;padding:16px 20px;
+  border-radius:var(--radius);background:linear-gradient(180deg,var(--primary-tint),#fbfbff);
+  border:1px solid #e6e4fb;
+}
+.disclosure .seal{
+  flex:none;width:30px;height:30px;border-radius:10px;background:var(--surface);
+  border:1px solid #e0ddf8;display:grid;place-items:center;font-size:14px;box-shadow:var(--shadow-sm);
+}
+.disclosure p{font-size:13.5px;color:var(--fg-muted)}
+.disclosure b{color:var(--fg);font-weight:600}
+.disclosure .locked{
+  margin-top:6px;display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:600;
+  color:var(--primary-strong);background:var(--surface);border:1px solid #e0ddf8;
+  padding:3px 10px;border-radius:var(--radius-pill);
+}
+
+/* ===== chat screen ===================================================== */
+.thread-card{min-height:44vh}
+#messages{list-style:none;padding:0;margin:22px 0 0;display:flex;flex-direction:column;gap:14px}
+#messages:empty{
+  min-height:200px;display:grid;place-items:center;border:1px dashed #e2e0f2;
+  border-radius:var(--radius);background:linear-gradient(180deg,#fcfcff,var(--surface));
+}
+#messages:empty::after{
+  content:"Ask a product question to start a grounded draft. Nothing is sent until you approve it.";
+  color:var(--fg-subtle);font-size:14px;max-width:30rem;text-align:center;padding:0 24px;
+}
+.message{
+  max-width:76%;padding:14px 18px;font-size:15px;line-height:1.6;white-space:pre-wrap;
+  box-shadow:var(--shadow-sm);animation:rise 200ms var(--ease) both;
+}
+@keyframes rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.message.user{
+  align-self:flex-end;background:var(--primary-gradient);color:var(--on-primary);
+  border-radius:20px 20px 6px 20px;box-shadow:var(--shadow-primary);
+}
+.message.assistant{
+  align-self:flex-start;background:var(--surface);border:1px solid var(--border);
+  border-radius:20px 20px 20px 6px;color:var(--fg);
+}
+.message.assistant::after{
+  content:"Generated by an automated assistant · draft, not yet approved";
+  display:block;margin-top:10px;padding-top:10px;border-top:1px solid var(--border);
+  font-size:11.5px;color:var(--fg-subtle);font-weight:500;
+}
+.message.error{
+  align-self:flex-start;max-width:100%;background:var(--danger-soft);border:1px solid var(--danger-border);
+  color:var(--danger);border-radius:var(--radius);font-size:14px;font-weight:500;
+}
+.message.error::before{content:"Something went wrong — ";font-weight:600}
+
+/* citation source chips rendered under assistant replies */
+.message .citations,.citations{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.citations a,.citations .source-chip{
+  display:inline-flex;align-items:center;gap:7px;padding:5px 13px;border-radius:var(--radius-pill);
+  background:var(--primary-tint);border:1px solid #e4e2fb;color:var(--primary-strong);
+  font-size:12.5px;font-weight:500;text-decoration:none;transition:transform var(--speed) var(--ease);
+}
+.citations a:hover{transform:translateY(-1px);box-shadow:var(--shadow-sm)}
+
+/* ===== bottom dock: approval bar + composer ============================ */
+.dock{
+  position:fixed;left:0;right:0;bottom:0;z-index:30;padding:36px 20px 20px;
+  display:flex;justify-content:center;pointer-events:none;
+  background:linear-gradient(180deg,rgba(247,247,251,0) 0%,rgba(247,247,251,.92) 46%,var(--bg) 78%);
+}
+.dock-inner{width:100%;max-width:var(--canvas-max);display:flex;flex-direction:column;gap:12px;pointer-events:auto}
+.approval-bar{
+  display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:12px 12px 12px 20px;
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);
+  box-shadow:var(--shadow-md);
+}
+.approval-bar .label{font-size:13px;font-weight:600;color:var(--fg)}
+.approval-bar .state{font-size:12.5px;color:var(--fg-subtle)}
+.approval-actions{display:flex;gap:8px;margin-left:auto;flex-wrap:wrap}
+.btn{
+  border:1px solid var(--border);background:var(--surface);color:var(--fg);
+  padding:9px 18px;border-radius:var(--radius-pill);font-size:13.5px;font-weight:600;cursor:pointer;
+  transition:transform var(--speed) var(--ease),box-shadow var(--speed) var(--ease),background var(--speed) var(--ease);
+}
+.btn:hover{transform:translateY(-1px);box-shadow:var(--shadow-sm)}
+.btn:active{transform:translateY(0)}
+.btn-approve{background:var(--success-soft);border-color:var(--success-border);color:var(--success)}
+.btn-edit{background:var(--bg)}
+.btn-reject{background:var(--danger-soft);border-color:var(--danger-border);color:var(--danger)}
+#composer{
+  display:flex;align-items:center;gap:10px;padding:8px 8px 8px 10px;background:var(--surface);
+  border:1px solid var(--border);border-radius:var(--radius-pill);box-shadow:var(--shadow-lg);
+  transition:box-shadow var(--speed) var(--ease),border-color var(--speed) var(--ease);
+}
+#composer:focus-within{border-color:#cbc8f6;box-shadow:var(--shadow-lg),var(--ring)}
+#composer .glyph{flex:none;width:34px;height:34px;border-radius:var(--radius-pill);display:grid;place-items:center;background:var(--primary-tint);font-size:14px}
+#input{
+  flex:1;min-width:0;border:0;background:transparent;padding:10px 4px;font-size:15.5px;letter-spacing:-0.01em;
+}
+#input::placeholder{color:var(--fg-faint)}
+#input:focus{outline:none}
+#composer button[type="submit"]{
+  flex:none;border:0;background:var(--primary-gradient);color:var(--on-primary);
+  padding:11px 24px;border-radius:var(--radius-pill);font-size:14px;font-weight:600;cursor:pointer;
+  box-shadow:var(--shadow-primary);transition:transform var(--speed) var(--ease),filter var(--speed) var(--ease);
+}
+#composer button[type="submit"]:hover{transform:translateY(-1px);filter:brightness(1.05)}
+.dock-note{
+  display:flex;align-items:center;justify-content:center;gap:8px;text-align:center;
+  font-size:11.5px;color:var(--fg-subtle);padding:0 8px;
+}
+.dock-note .pin{color:var(--primary-strong);font-weight:600}
+.chat-spacer{height:210px;flex:none}
+
+/* ===== history screen ================================================== */
+.search{
+  display:flex;align-items:center;gap:10px;margin-top:22px;padding:6px 8px 6px 16px;
+  background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-pill);
+  transition:background var(--speed) var(--ease),box-shadow var(--speed) var(--ease);
+}
+.search:focus-within{background:var(--surface);box-shadow:var(--shadow-sm),var(--ring)}
+.search .glyph{color:var(--fg-faint);font-size:14px}
+.search input{flex:1;min-width:0;border:0;background:transparent;padding:9px 0;font-size:14.5px}
+.search input:focus{outline:none}
+.search input::placeholder{color:var(--fg-faint)}
+.search .kbd{
+  flex:none;border:1px solid var(--border);background:var(--surface);border-radius:var(--radius-xs);
+  padding:3px 9px;font-size:11px;color:var(--fg-subtle);font-weight:600;
+}
+.filter-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}
+.filter-radio{position:absolute;width:1px;height:1px;opacity:0}
+.filter-row label{
+  display:block;padding:7px 15px;border-radius:var(--radius-pill);border:1px solid var(--border);
+  background:var(--surface);color:var(--fg-muted);font-size:13px;font-weight:500;cursor:pointer;
+  transition:all var(--speed) var(--ease);
+}
+.filter-row label:hover{border-color:#dedcfa;color:var(--fg);transform:translateY(-1px)}
+.filter-radio:checked + label{background:var(--primary-soft);border-color:#dedcfa;color:var(--primary-strong);font-weight:600}
+.filter-radio:focus-visible + label{box-shadow:var(--ring)}
+#history-list{margin-top:20px;display:flex;flex-direction:column;gap:10px}
+#history-list:empty{
+  min-height:170px;display:grid;place-items:center;border:1px dashed #e2e0f2;border-radius:var(--radius);
+  background:linear-gradient(180deg,#fcfcff,var(--surface));
+}
+#history-list:empty::after{
+  content:"No conversations match yet. Approved and rejected drafts are kept here permanently for review.";
+  color:var(--fg-subtle);font-size:14px;text-align:center;max-width:28rem;padding:0 24px;
+}
+.history-item{
+  padding:16px 20px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+  box-shadow:var(--shadow-sm);font-size:14.5px;color:var(--fg);cursor:pointer;
+  transition:transform var(--speed) var(--ease),box-shadow var(--speed) var(--ease),border-color var(--speed) var(--ease);
+}
+.history-item:hover{transform:translateY(-2px);box-shadow:var(--shadow-md);border-color:#dedcfa}
+
+/* ===== approvals screen ================================================ */
+#approval-queue{margin-top:20px;display:flex;flex-direction:column;gap:12px}
+#approval-queue:empty{
+  min-height:190px;display:grid;place-items:center;border:1px dashed #e2e0f2;border-radius:var(--radius);
+  background:linear-gradient(180deg,#fcfcff,var(--surface));
+}
+#approval-queue:empty::after{
+  content:"The queue is clear. Drafts waiting on a human decision land here — nothing leaves the app without one.";
+  color:var(--fg-subtle);font-size:14px;text-align:center;max-width:30rem;padding:0 24px;
+}
+.rule-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(15rem,1fr));gap:12px;margin-top:20px}
+.rule{padding:18px 20px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius)}
+.rule h3{margin:0 0 6px;font-size:13.5px;font-weight:650;letter-spacing:-0.015em}
+.rule p{font-size:13px;color:var(--fg-muted)}
+
+/* ===== agents screen =================================================== */
+#agents-list{margin-top:20px;display:grid;grid-template-columns:repeat(auto-fit,minmax(17rem,1fr));gap:14px}
+#agents-list:empty{
+  min-height:170px;display:grid;place-items:center;border:1px dashed #e2e0f2;border-radius:var(--radius);
+  background:linear-gradient(180deg,#fcfcff,var(--surface));
+}
+#agents-list:empty::after{
+  content:"Agent roster loading — every agent, its tools and its evaluations will be listed here.";
+  color:var(--fg-subtle);font-size:14px;text-align:center;max-width:28rem;padding:0 24px;
+}
+.agent-card{
+  padding:20px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+  box-shadow:var(--shadow-sm);transition:transform var(--speed) var(--ease),box-shadow var(--speed) var(--ease);
+}
+.agent-card:hover{transform:translateY(-2px);box-shadow:var(--shadow-md)}
+.agent-card strong{display:block;font-size:15px;font-weight:650;letter-spacing:-0.018em;margin-bottom:6px}
+.agent-card p{font-size:13.5px;color:var(--fg-muted);margin:0}
+.agent-card p + p{margin-top:10px}
+.agent-card .agent-tools,.agent-card .agent-evals{
+  font-size:12.5px;color:var(--fg-muted);background:var(--bg);border:1px solid var(--border);
+  border-radius:var(--radius-sm);padding:8px 12px;
+}
+.agent-card .agent-tools::before{content:"Tools · ";font-weight:600;color:var(--fg-subtle)}
+.agent-card .agent-evals::before{content:"Evaluations · ";font-weight:600;color:var(--fg-subtle)}
+
+/* ===== footer ========================================================== */
+.page-foot{
+  display:flex;flex-wrap:wrap;gap:8px 18px;align-items:center;justify-content:center;
+  padding:4px 8px 8px;font-size:12px;color:var(--fg-faint);
+}
+.page-foot span{white-space:nowrap}
+.id-tag{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;color:var(--fg-subtle)}
+
+/* ===== responsive ====================================================== */
+@media (max-width:760px){
+  .navpill{flex-wrap:wrap;border-radius:var(--radius-lg);padding:12px 14px;gap:12px}
+  .navlinks{order:3;width:100%;margin:0;overflow-x:auto}
+  #agent-mode{margin-left:auto}
+  .card{padding:22px}
+  h1{font-size:25px}
+  .message{max-width:90%}
+  .chat-spacer{height:250px}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<input type="radio" name="nav" id="nav-chat" class="nav-radio" checked>
+<input type="radio" name="nav" id="nav-history" class="nav-radio">
+<input type="radio" name="nav" id="nav-agents" class="nav-radio">
+<input type="radio" name="nav" id="nav-approvals" class="nav-radio">
+
+<header class="topbar">
+  <nav class="navpill" aria-label="Primary">
+    <span class="brand"><span class="brand-mark" aria-hidden="true">S</span>Support Copilot</span>
+    <span class="navlinks">
+      <label for="nav-chat">Chat</label>
+      <label for="nav-approvals">Approvals</label>
+      <label for="nav-history">History</label>
+      <label for="nav-agents">Agents</label>
+    </span>
+    <span id="agent-mode" aria-live="polite" aria-label="Assistant status"></span>
+  </nav>
+</header>
+
+<main class="canvas">
+
+  <!-- ============================ CHAT ============================ -->
+  <section class="screen" id="screen-chat" aria-label="Chat">
+    <div class="card thread-card">
+      <div class="card-head">
+        <div class="grow">
+          <h1>Ask the knowledge base</h1>
+          <p class="lede">Every answer is retrieved from your indexed product corpus before it is written, and every draft waits for your decision.</p>
+        </div>
+        <div class="chip-row">
+          <span class="chip"><span class="dot"></span>Retrieval-grounded</span>
+          <span class="chip"><span class="dot"></span>Draft only</span>
+        </div>
+      </div>
+
+      <div class="disclosure">
+        <span class="seal" aria-hidden="true">◈</span>
+        <div>
+          <p><b>Generated by an automated assistant.</b> This disclosure is attached to every reply this app produces and travels with it when the reply is sent. It cannot be edited or removed.</p>
+          <span class="locked" aria-hidden="true">Permanent · built in</span>
+        </div>
+      </div>
+
+      <ul id="messages" aria-live="polite" aria-label="Conversation"></ul>
+
+      <div class="legend" aria-label="Citation source types">
+        <span class="legend-label">Sources appear as chips under each reply</span>
+        <span class="chip source-chip"><span class="dot"></span>Knowledge article</span>
+        <span class="chip source-chip"><span class="dot"></span>Release note</span>
+        <span class="chip source-chip"><span class="dot"></span>Runbook</span>
+        <span class="chip source-chip"><span class="dot"></span>Policy doc</span>
+      </div>
+    </div>
+
+    <div class="chat-spacer" aria-hidden="true"></div>
+
+    <div class="dock">
+      <div class="dock-inner">
+        <div class="approval-bar" aria-label="Draft decision">
+          <span class="label">Current draft</span>
+          <span class="state">Waiting for a draft to review</span>
+          <span class="approval-actions">
+            <button type="button" class="btn btn-approve" aria-label="Approve the current draft as written">Approve</button>
+            <button type="button" class="btn btn-edit" aria-label="Edit the current draft, then approve it">Edit &amp; approve</button>
+            <button type="button" class="btn btn-reject" aria-label="Reject the current draft">Reject</button>
+          </span>
+        </div>
+
+        <form id="composer" autocomplete="off">
+          <span class="glyph" aria-hidden="true">✳</span>
+          <label class="sr-only" for="input">Ask a product question</label>
+          <input id="input" type="text" autocomplete="off" placeholder="Ask about a product behaviour, policy or workaround…">
+          <button type="submit">Ask</button>
+        </form>
+
+        <p class="dock-note"><span class="pin">Nothing sends without approval</span> · every decision is recorded with your name, the time, and whether you edited the draft</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========================== APPROVALS ========================= -->
+  <section class="screen" id="screen-approvals" aria-label="Approvals">
+    <div class="card">
+      <div class="card-head">
+        <div class="grow">
+          <h1>Approval queue</h1>
+          <p class="lede">Drafts sit here until a human decides. Approve as written, edit then approve, or reject — each outcome is written to the audit trail.</p>
+        </div>
+        <span class="chip"><span class="dot"></span>Human decision required</span>
+      </div>
+
+      <div class="legend" aria-label="Status legend">
+        <span class="legend-label">Status</span>
+        <span class="chip is-pending"><span class="dot"></span>Pending</span>
+        <span class="chip is-approved"><span class="dot"></span>Approved</span>
+        <span class="chip is-edited"><span class="dot"></span>Edited then approved</span>
+        <span class="chip is-rejected"><span class="dot"></span>Rejected</span>
+      </div>
+
+      <div id="approval-queue" aria-live="polite"></div>
+
+      <div class="rule-grid">
+        <div class="rule">
+          <h3>Approve as written</h3>
+          <p>The draft is sent unchanged, with its citations and the automated-assistant disclosure intact.</p>
+        </div>
+        <div class="rule">
+          <h3>Edit then approve</h3>
+          <p>Your edited text replaces the draft. The record keeps both versions and flags that it was edited.</p>
+        </div>
+        <div class="rule">
+          <h3>Reject</h3>
+          <p>Nothing is sent. The rejected draft stays in history so quality reviews can see what was declined.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- =========================== HISTORY ========================== -->
+  <section class="screen" id="screen-history" aria-label="History">
+    <div class="card">
+      <div class="card-head">
+        <div class="grow">
+          <h1>Conversation history</h1>
+          <p class="lede">Every conversation is kept, searchable, and reviewable — question, draft, decision and timestamp together. Open one to reuse a good answer.</p>
+        </div>
+        <span class="chip"><span class="dot"></span>Retained indefinitely</span>
+      </div>
+
+      <div class="search">
+        <span class="glyph" aria-hidden="true">⌕</span>
+        <label class="sr-only" for="history-search">Search past conversations</label>
+        <input id="history-search" type="search" autocomplete="off" placeholder="Search questions, drafts and cited sources…">
+        <span class="kbd" aria-hidden="true">/</span>
+      </div>
+
+      <div class="filter-row" role="group" aria-label="Filter by decision">
+        <input type="radio" name="hfilter" id="hf-all" class="filter-radio" checked><label for="hf-all">All</label>
+        <input type="radio" name="hfilter" id="hf-pending" class="filter-radio"><label for="hf-pending">Pending</label>
+        <input type="radio" name="hfilter" id="hf-approved" class="filter-radio"><label for="hf-approved">Approved</label>
+        <input type="radio" name="hfilter" id="hf-edited" class="filter-radio"><label for="hf-edited">Edited</label>
+        <input type="radio" name="hfilter" id="hf-rejected" class="filter-radio"><label for="hf-rejected">Rejected</label>
+      </div>
+
+      <div class="legend" aria-label="Record fields">
+        <span class="legend-label">Each record</span>
+        <span class="legend-fields"><b>question</b> · <b>draft</b> · <b>decision</b> · <b>timestamp</b> · approver &amp; whether it was edited</span>
+      </div>
+
+      <div id="history-list" aria-live="polite"></div>
+    </div>
+  </section>
+
+  <!-- ============================ AGENTS ========================== -->
+  <section class="screen" id="screen-agents" aria-label="Agents">
+    <div class="card">
+      <div class="card-head">
+        <div class="grow">
+          <h1>What is working for you</h1>
+          <p class="lede">No hidden machinery. This is the full roster of agents behind your drafts — what each one is for, the tools it may call, and the evaluations it has to pass before it ships.</p>
+        </div>
+        <span class="chip"><span class="dot"></span>Transparency by default</span>
+      </div>
+
+      <div id="agents-list" aria-live="polite"></div>
+
+      <div class="rule-grid">
+        <div class="rule">
+          <h3>Grounded, not guessed</h3>
+          <p>Retrieval runs over your indexed corpus before any answer is composed, and the passages used become the citations you see.</p>
+        </div>
+        <div class="rule">
+          <h3>Your data stays put</h3>
+          <p>Knowledge and conversations never leave this instance except to the configured model provider, which is set through environment configuration.</p>
+        </div>
+        <div class="rule">
+          <h3>Always a human in the loop</h3>
+          <p>An agent can draft, cite and explain. Only you can approve, and only an approved reply can be sent.</p>
+        </div>
+      </div>
+    </div>
+
+    <p class="page-foot">
+      <span>Support Copilot — local instance</span>
+      <span class="id-tag">build: support-copilot/v1</span>
+      <span>Replies always disclose automated assistance</span>
+    </p>
+  </section>
+
+</main>
+
+<script src="app.js" defer></script>
+</body>
+</html>

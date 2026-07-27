@@ -1,0 +1,64 @@
+/* ============================================================
+   Support Copilot — Design Option 1: "OPERATIONS CONSOLE"
+   Dark, dense, technical, mission-control.
+   Low-chroma slate carries the interface; a single cyan-teal
+   signal color means "system / action", amber means "pending",
+   red means "rejected". Color is never decoration here.
+   ============================================================ */
+
+:root {
+  /* --- required seven --- */
+  --primary: #2dd4bf;
+  --on-primary: #04231f;
+  --bg: #0d1117;
+  --fg: #e6edf3;
+  --surface: #141a22;
+  --border: #232c38;
+  --font: ui-sans-serif, "Inter", "SF Pro Text", system-ui, -apple-system,
+    "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+
+  /* --- elevation ladder (each step one notch lighter) --- */
+  --surface-2: #19212b;
+  --surface-3: #202935;
+  --surface-inset: #0a0e14;
+  --border-strong: #33405180;
+  --border-hair: #1e2631;
+
+  /* --- signal color, dimmed + glow variants --- */
+  --primary-dim: #1c8378;
+  --primary-soft: rgba(45, 212, 191, 0.12);
+  --primary-line: rgba(45, 212, 191, 0.32);
+
+  /* --- state accents --- */
+  --accent-warn: #e2a75c;
+  --accent-warn-soft: rgba(226, 167, 92, 0.13);
+  --accent-danger: #f0736a;
+  --accent-danger-soft: rgba(240, 115, 106, 0.13);
+  --accent-info: #7aa2f7;
+
+  /* --- text ramp --- */
+  --muted: #93a1b3;
+  --muted-2: #6b7a8d;
+  --muted-3: #4d5a6b;
+
+  /* --- type --- */
+  --font-mono: ui-monospace, "JetBrains Mono", "SF Mono", "SFMono-Regular",
+    Menlo, Consolas, "Liberation Mono", monospace;
+  --fs-micro: 11px;
+  --ls-micro: 0.09em;
+
+  /* --- geometry --- */
+  --radius: 6px;
+  --radius-sm: 4px;
+  --radius-pill: 999px;
+  --rail-w: 92px;
+  --inspector-w: 320px;
+
+  /* --- depth: inner glows, not drop shadows --- */
+  --elev: inset 0 1px 0 rgba(255, 255, 255, 0.035);
+  --elev-raised: inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 0 0 1px rgba(0, 0, 0, 0.35);
+  --elev-glow: inset 0 0 0 1px var(--primary-line),
+    0 0 22px -8px rgba(45, 212, 191, 0.45);
+  --focus-ring: 0 0 0 2px var(--bg), 0 0 0 4px var(--primary);
+}

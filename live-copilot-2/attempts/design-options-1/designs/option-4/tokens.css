@@ -1,0 +1,48 @@
+/* =============================================================
+   SUPPORT COPILOT — DESIGN DIRECTION 04: "LEDGER"
+   High-contrast monospace brutalism. Flat, gridded, audit-first.
+   Paper-white canvas, near-black ink, 2px rules, zero radius,
+   zero shadow, zero gradient. Exactly one hot signal colour
+   (vermilion) reserved for: primary action, active nav marker,
+   and the UNAPPROVED state. Colour is data, never decoration.
+   ============================================================= */
+
+:root {
+  /* --- contract tokens ------------------------------------- */
+  --primary: #e4322b;
+  --on-primary: #fffdf9;
+  --bg: #fffdf9;
+  --fg: #0a0a0a;
+  --surface: #f1efe9;
+  --border: #0a0a0a;
+  --font: ui-monospace, "SF Mono", "JetBrains Mono", "Menlo", "Consolas",
+          "Liberation Mono", monospace;
+
+  /* --- signal / state -------------------------------------- */
+  --signal: #e4322b;        /* unapproved · primary action · active tab */
+  --signal-ink: #a81f19;    /* signal at text contrast on paper        */
+  --ok: #1f7a4d;            /* approved                                */
+  --edited: #0a0a0a;        /* edited-then-approved                    */
+  --rejected: #6b6862;      /* rejected                                */
+
+  /* --- neutrals -------------------------------------------- */
+  --muted: #57544e;
+  --faint: #8a867e;
+  --cell: #e8e5de;          /* flat panel fill                         */
+  --cell-alt: #f6f4ee;      /* zebra / secondary fill                  */
+  --dot: #b3afa6;           /* dotted leaders + hairlines              */
+
+  /* --- rules ----------------------------------------------- */
+  --rule: 2px solid var(--border);
+  --rule-thin: 1px solid var(--border);
+  --rule-dotted: 1px dotted var(--dot);
+  --rule-signal: 2px solid var(--signal);
+
+  /* --- metrics (strict 4px grid) --------------------------- */
+  --u: 4px;
+  --bar-h: 40px;
+  --strip-h: 28px;
+  --col-sources: 34ch;
+  --track: 0.14em;          /* heading letterspacing                   */
+  --track-micro: 0.16em;    /* micro-label letterspacing               */
+}

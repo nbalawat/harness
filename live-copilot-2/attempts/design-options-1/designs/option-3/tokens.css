@@ -1,0 +1,72 @@
+/* ==========================================================================
+   Support Copilot — design direction "Daylight"
+   Soft modern product shell: airy cool-neutral canvas, pure-white raised
+   cards, friendly indigo→violet primary, mint approvals, coral rejections.
+   Low-contrast chrome, high-contrast text, generous radii and soft shadows.
+   ========================================================================== */
+
+:root {
+  /* --- required seven --------------------------------------------------- */
+  --primary: #5b5bd6;
+  --on-primary: #ffffff;
+  --bg: #f7f7fb;
+  --fg: #16162b;
+  --surface: #ffffff;
+  --border: #e7e7f0;
+  --font: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+
+  /* --- extended palette ------------------------------------------------- */
+  --primary-strong: #4a4ac4;
+  --primary-soft: #eeeefc;
+  --primary-tint: #f5f4fe;
+  --primary-gradient: linear-gradient(135deg, #6a63e0 0%, #5b5bd6 55%, #7a5be0 100%);
+  --violet: #7a5be0;
+
+  --fg-muted: #5b5b78;
+  --fg-subtle: #8a8aa6;
+  --fg-faint: #a6a6bd;
+
+  --canvas-glow: radial-gradient(
+      1100px 460px at 50% -180px,
+      #ecebfd 0%,
+      rgba(236, 235, 253, 0) 70%
+    );
+
+  --success: #17845c;
+  --success-soft: #e5f7ef;
+  --success-border: #bfe9d6;
+
+  --danger: #c04a52;
+  --danger-soft: #fdeceb;
+  --danger-border: #f6cfcd;
+
+  --warn: #9a6b12;
+  --warn-soft: #fdf3e0;
+  --warn-border: #f0dfba;
+
+  --info-soft: #e9f1fd;
+  --info-border: #cfe0f7;
+  --info: #2f5fa8;
+
+  /* --- shape ------------------------------------------------------------ */
+  --radius-xs: 8px;
+  --radius-sm: 12px;
+  --radius: 16px;
+  --radius-lg: 24px;
+  --radius-pill: 999px;
+
+  /* --- elevation (layered, very low alpha) ------------------------------ */
+  --shadow-sm: 0 1px 2px rgba(30, 27, 75, 0.06), 0 2px 6px rgba(30, 27, 75, 0.04);
+  --shadow-md: 0 1px 2px rgba(30, 27, 75, 0.06), 0 8px 24px rgba(30, 27, 75, 0.07);
+  --shadow-lg: 0 1px 2px rgba(30, 27, 75, 0.06), 0 18px 44px rgba(30, 27, 75, 0.11);
+  --shadow-primary: 0 1px 2px rgba(63, 58, 168, 0.22), 0 8px 20px rgba(91, 91, 214, 0.26);
+  --ring: 0 0 0 3px rgba(91, 91, 214, 0.32);
+
+  /* --- rhythm ----------------------------------------------------------- */
+  --canvas-max: 64rem;
+  --pad: 24px;
+  --pad-lg: 32px;
+  --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+  --speed: 150ms;
+}

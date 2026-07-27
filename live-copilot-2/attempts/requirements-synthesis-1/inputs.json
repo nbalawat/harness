@@ -1,0 +1,86 @@
+{
+  "corpus": {
+    "path": "/Users/nbalawat/development/harness/live-copilot-2/artifacts/ingest/corpus"
+  },
+  "corpus_index": {
+    "path": "/Users/nbalawat/development/harness/live-copilot-2/artifacts/ingest/corpus_index.json",
+    "data": {
+      "sources": [
+        {
+          "id": "source-problem-statement",
+          "original": "/Users/nbalawat/development/harness/live-copilot-2/artifacts/intake/intake.json (fields: problem_statement, project_name, deploy_target)",
+          "extracted": "corpus/problem_statement.md",
+          "type": "intake-json"
+        },
+        {
+          "id": "source-brief",
+          "original": "fixtures/sample-docs/brief.md",
+          "extracted": "corpus/brief.md",
+          "type": "markdown"
+        },
+        {
+          "id": "source-process",
+          "original": "fixtures/sample-docs/process.html",
+          "extracted": "corpus/process.md",
+          "type": "html"
+        }
+      ],
+      "claims": [
+        {
+          "id": "claim-01",
+          "text": "Support analysts need an assistant that answers product questions from our knowledge.",
+          "source": "source-problem-statement"
+        },
+        {
+          "id": "claim-02",
+          "text": "The assistant must keep reviewable conversation history.",
+          "source": "source-problem-statement"
+        },
+        {
+          "id": "claim-03",
+          "text": "The application must be deployable to a local deploy target.",
+          "source": "source-problem-statement"
+        },
+        {
+          "id": "claim-04",
+          "text": "The application must let a support analyst chat with an assistant that answers from our product knowledge.",
+          "source": "source-brief"
+        },
+        {
+          "id": "claim-05",
+          "text": "Analysts should be able to review past conversations to reuse good answers.",
+          "source": "source-brief"
+        },
+        {
+          "id": "claim-06",
+          "text": "The assistant must identify itself clearly so customers know it is automated.",
+          "source": "source-brief"
+        },
+        {
+          "id": "claim-07",
+          "text": "Conversation records need to be stored for quality review.",
+          "source": "source-brief"
+        },
+        {
+          "id": "claim-08",
+          "text": "The future process should route each question to the assistant first.",
+          "source": "source-process"
+        },
+        {
+          "id": "claim-09",
+          "text": "The analyst must approve the reply before it is sent.",
+          "source": "source-process"
+        }
+      ]
+    }
+  },
+  "intake": {
+    "path": "/Users/nbalawat/development/harness/live-copilot-2/artifacts/intake/intake.json",
+    "data": {
+      "project_name": "Support Copilot",
+      "problem_statement": "Support analysts need an assistant that answers product questions from our knowledge and keeps reviewable conversation history.",
+      "documents_dir": "fixtures/sample-docs",
+      "deploy_target": "local"
+    }
+  }
+}

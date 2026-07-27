@@ -1,0 +1,80 @@
+{
+  "options": [
+    {
+      "id": "option-1",
+      "name": "Operations Console",
+      "screens": ["chat", "history", "agents", "approvals"],
+      "tokens_file": "designs/option-1/tokens.css",
+      "preview_file": "designs/option-1/index.html",
+      "addresses": [
+        "REQ-001",
+        "REQ-002",
+        "REQ-004",
+        "REQ-006",
+        "REQ-007",
+        "REQ-008",
+        "REQ-009",
+        "REQ-011",
+        "REQ-012",
+        "REQ-013"
+      ]
+    },
+    {
+      "id": "option-2",
+      "name": "Casefile",
+      "screens": ["chat", "history", "agents", "approvals"],
+      "tokens_file": "designs/option-2/tokens.css",
+      "preview_file": "designs/option-2/index.html",
+      "addresses": [
+        "REQ-001",
+        "REQ-002",
+        "REQ-004",
+        "REQ-006",
+        "REQ-007",
+        "REQ-008",
+        "REQ-009",
+        "REQ-011",
+        "REQ-012",
+        "REQ-013"
+      ]
+    },
+    {
+      "id": "option-3",
+      "name": "Daylight",
+      "screens": ["chat", "history", "agents", "approvals"],
+      "tokens_file": "designs/option-3/tokens.css",
+      "preview_file": "designs/option-3/index.html",
+      "addresses": [
+        "REQ-001",
+        "REQ-002",
+        "REQ-004",
+        "REQ-006",
+        "REQ-007",
+        "REQ-008",
+        "REQ-009",
+        "REQ-011",
+        "REQ-012",
+        "REQ-013"
+      ]
+    },
+    {
+      "id": "option-4",
+      "name": "Ledger",
+      "screens": ["chat", "history", "agents", "approvals"],
+      "tokens_file": "designs/option-4/tokens.css",
+      "preview_file": "designs/option-4/index.html",
+      "addresses": [
+        "REQ-001",
+        "REQ-002",
+        "REQ-004",
+        "REQ-006",
+        "REQ-007",
+        "REQ-008",
+        "REQ-009",
+        "REQ-011",
+        "REQ-012",
+        "REQ-013"
+      ]
+    }
+  ]
+}

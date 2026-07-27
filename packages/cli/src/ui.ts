@@ -1276,8 +1276,9 @@ async function reviseNodeUI() {
   const text = (document.getElementById('reviseText')?.value || '').trim();
   if (!text || !openNode) return;
   const preview = await (await fetch('/api/revise', { method:'POST', body: JSON.stringify({ nodeId: openNode, feedback: text, dryRun: true }) })).json();
-  const msg = 'Your feedback will reopen ' + preview.reopened.length + ' step(s):\n\n' + preview.reopened.join(', ') +
-    '\n\nSteps with unchanged inputs are re-used automatically (no cost). Continue?';
+  const NL = String.fromCharCode(10);
+  const msg = 'Your feedback will reopen ' + preview.reopened.length + ' step(s):' + NL + NL + preview.reopened.join(', ') +
+    NL + NL + 'Steps with unchanged inputs are re-used automatically (no cost). Continue?';
   if (!confirm(msg)) return;
   await fetch('/api/revise', { method:'POST', body: JSON.stringify({ nodeId: openNode, feedback: text }) });
   closeDrawer(); showTab('overview'); tick();
