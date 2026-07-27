@@ -75,3 +75,45 @@ test("certify: missing golden digest is a problem, not a silent pass", () => {
   assert.equal(result.status, 1);
   assert.match(result.stdout, /no golden digest/);
 });
+
+// ---------------------------------------------------------------------------
+// Module certification — each module proves its own contract
+// ---------------------------------------------------------------------------
+
+test("certify-modules: the full catalog certifies against the substrate", () => {
+  const result = runCli(["certify-modules"]);
+  assert.equal(result.status, 0, result.stdout);
+  assert.match(result.stdout, /all \d+ modules certified/);
+  for (const name of ["persistence-core", "agent-runtime", "chat-shell", "auth-basic", "audit-log", "export-csv", "rate-limit", "feedback-inbox"]) {
+    assert.match(result.stdout, new RegExp(`OK\\s+${name}`), `${name} certified`);
+  }
+});
+
+test("certify-modules: an untested or guide-less module fails certification", () => {
+  const dir = tmpDir("mods");
+  fs.cpSync(path.join(REPO_ROOT, "modules"), dir, { recursive: true });
+  // A module with no tests and a thin guide must be rejected.
+  const bad = path.join(dir, "bad-module");
+  fs.mkdirSync(path.join(bad, "compose", "backend"), { recursive: true });
+  fs.writeFileSync(path.join(bad, "manifest.yaml"), "name: bad-module\nversion: 0.0.1\ndescription: x\nprovides: [x]\nrequires: []\ncompose:\n  overlay: compose/\n");
+  fs.writeFileSync(path.join(bad, "agent-guide.md"), "# thin\n");
+  fs.writeFileSync(path.join(bad, "compose", "backend", "ext_bad.py"), "router = None\n");
+
+  const result = runCli(["certify-modules", dir, path.join(REPO_ROOT, "project-types/agentic-app")]);
+  assert.equal(result.status, 1);
+  assert.match(result.stdout, /FAIL\s+bad-module/);
+  assert.match(result.stdout, /agent-guide.md missing or too thin|no certify tests declared/);
+});
+
+test("certify-modules: a module whose tests fail is rejected", () => {
+  const dir = tmpDir("mods2");
+  fs.cpSync(path.join(REPO_ROOT, "modules"), dir, { recursive: true });
+  // Break auth-basic's behavior (empty username accepted) without touching its test.
+  const ext = path.join(dir, "auth-basic", "compose", "backend", "ext_auth.py");
+  fs.writeFileSync(ext, fs.readFileSync(ext, "utf8").replace('if not username:', 'if False:'));
+
+  const result = runCli(["certify-modules", dir, path.join(REPO_ROOT, "project-types/agentic-app")]);
+  assert.equal(result.status, 1);
+  assert.match(result.stdout, /FAIL\s+auth-basic/);
+  assert.match(result.stdout, /module tests failed/);
+});

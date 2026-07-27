@@ -20,7 +20,7 @@ engine into `~/.harness/runtime` if it's missing.
 Then install the project type your platform team certified:
 
 ```bash
-node harness.cjs install agentic-app@0.4.0 --registry <git-url>
+node harness.cjs install agentic-app@0.5.0 --registry <git-url>
 ```
 
 The install is tamper-proof: the package's content digest must match its
@@ -32,7 +32,7 @@ Two equivalent ways:
 
 - **Dashboard (recommended):** `node harness.cjs ui .` → open http://localhost:4400
   → **Build a new app** → name it → Start building.
-- **CLI:** `node harness.cjs run agentic-app@0.4.0 --workspace my-app`, then open
+- **CLI:** `node harness.cjs run agentic-app@0.5.0 --workspace my-app`, then open
   the dashboard.
 
 Either way the run immediately **parks at intake** — nothing runs and nothing is
@@ -92,7 +92,7 @@ costs its blast radius, not the whole pipeline.
 
 ## 6. Cost
 
-Every run has a certified cost envelope (agentic-app@0.4.0: **$40**, which
+Every run has a certified cost envelope (agentic-app@0.5.0: **$40**, which
 includes revision headroom; a typical full build lands at $20–25). Each step has
 its own budget; a step that would exceed it is stopped, not committed. Spend,
 tokens, and per-step cost are live on the dashboard. `node harness.cjs telemetry`

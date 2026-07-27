@@ -1,5 +1,10 @@
 # Capability modules: authoring them, and how runs use them
 
+> The full target catalog (~100 modules, with the reason each must exist) lives
+> in [docs/MODULES.md](../MODULES.md). Every module — shipped or future — must
+> pass `harness certify-modules`: manifest contract, agent guide, clean
+> composition onto the substrate, and its own tests against a real composed app.
+
 Modules are the reuse layer — certified building blocks (persistence, agent
 runtime, chat shell, later auth/RAG/doc-extraction) that project types compose
 instead of letting agents reinvent them per app. They are why two apps built a

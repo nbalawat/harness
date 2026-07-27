@@ -1,0 +1,12 @@
+name: auth-basic
+version: 0.1.0
+description: Minimal session identity — login issues a bearer token, /auth/me resolves it. The Wave-3 sso-oidc module replaces the token issuer without touching callers.
+provides:
+  - http: POST /auth/login (username -> bearer token), GET /auth/me
+  - python: ext_auth.current_user(authorization_header) -> username | None
+requires:
+  - nothing beyond the base app
+compose:
+  overlay: compose/
+certify:
+  tests: test/

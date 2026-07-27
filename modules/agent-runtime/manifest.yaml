@@ -7,3 +7,6 @@ requires:
   - agents/roster.json (from agent-design)
 compose:
   overlay: compose/
+certify:
+  tests: test/
+

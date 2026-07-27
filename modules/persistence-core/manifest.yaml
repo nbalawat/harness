@@ -7,3 +7,6 @@ requires:
   - backend/models.py defining TABLES (generated from data_model.json)
 compose:
   overlay: compose/
+certify:
+  tests: test/
+

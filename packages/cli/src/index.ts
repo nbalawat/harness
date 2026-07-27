@@ -263,6 +263,21 @@ async function main(): Promise<void> {
       }
       break;
     }
+    case "certify-modules": {
+      const { positional } = parseFlags(rest);
+      const { certifyModules } = await import("./certifyModules.js");
+      const modulesDir = path.resolve(positional[0] ?? "modules");
+      const ptDir = path.resolve(positional[1] ?? "project-types/agentic-app");
+      const { ok, modules } = certifyModules(modulesDir, ptDir);
+      console.log(`certifying ${modules.length} module(s) against substrate templates in ${path.basename(ptDir)}\n`);
+      for (const m of modules) {
+        console.log(`  ${m.ok ? "OK " : "FAIL"}  ${m.name.padEnd(20)} ${m.tested}`);
+        for (const prob of m.problems) console.log(`        - ${prob.split("\n")[0]}`);
+      }
+      console.log(ok ? `\nall ${modules.length} modules certified` : "\nMODULE CERTIFICATION FAILED");
+      code = ok ? 0 : 1;
+      break;
+    }
     case "certify": {
       const { positional, flags } = parseFlags(rest);
       const { certify } = await import("./certify.js");
@@ -302,6 +317,7 @@ async function main(): Promise<void> {
       console.log('  harness revise <workspace> <nodeId> --feedback "what to change" [--resume]');
       console.log("  harness status <workspace>");
       console.log("  harness certify <project-type-dir> [--update-golden]");
+      console.log("  harness certify-modules [modules-dir] [project-type-dir]");
       console.log("  harness install <name>@<version> --registry <git-url>");
       console.log("  harness list");
       console.log("  harness setup [--install-sdk]   # verify/provision the live-agent toolchain");

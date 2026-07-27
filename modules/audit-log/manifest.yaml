@@ -1,0 +1,12 @@
+name: audit-log
+version: 0.1.0
+description: Append-only audit trail for app actions — who did what, when. Governance evidence for every generated app.
+provides:
+  - python: ext_audit.record(event, detail) — call from any endpoint that changes state
+  - http: GET /audit (newest first), POST /audit
+requires:
+  - nothing beyond the base app
+compose:
+  overlay: compose/
+certify:
+  tests: test/

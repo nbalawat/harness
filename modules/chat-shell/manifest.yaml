@@ -8,3 +8,6 @@ requires:
   - frontend/tokens.css (from the approved design option)
 compose:
   overlay: compose/
+certify:
+  command: node --check "$HARNESS_MODULE_DIR/compose/frontend/app.js" && ! grep -q ".innerHTML =" "$HARNESS_MODULE_DIR/compose/frontend/app.js"
+

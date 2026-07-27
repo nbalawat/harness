@@ -12,6 +12,20 @@ from models import TABLES
 
 app = FastAPI(title="__APP_NAME__")
 
+# Composed module extensions: any backend/ext_*.py exposing `router` mounts
+# automatically. This is how capability modules add API surface without ever
+# editing this file — the module system's extension point.
+import glob as _glob  # noqa: E402
+import importlib as _importlib  # noqa: E402
+import os as _os  # noqa: E402
+
+for _ext in sorted(_glob.glob(_os.path.join(_os.path.dirname(__file__), "ext_*.py"))):
+    _mod = _importlib.import_module(_os.path.basename(_ext)[:-3])
+    if hasattr(_mod, "router"):
+        app.include_router(_mod.router)
+    if hasattr(_mod, "install"):
+        _mod.install(app)
+
 
 class ChatRequest(BaseModel):
     message: str

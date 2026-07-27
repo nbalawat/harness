@@ -13,6 +13,8 @@ that work every time. Start with the guide that matches your role:
 | [Reporting bugs](guides/reporting-bugs.md) | Everyone | What to attach (the journal!), triage, when feedback beats a bug report |
 | [Reference](guides/reference.md) | Everyone | CLI, environment variables, workspace layout, glossary, FAQ |
 
+The **module catalog** — the heart of the harness, ~100 modules with per-module rationale and certification rules — is [MODULES.md](MODULES.md).
+
 Architecture and rationale live in [DESIGN.md](DESIGN.md) — the three planes,
 reliability mechanisms, the six hard problems and where each is solved, cost
 and observability, and the roadmap.

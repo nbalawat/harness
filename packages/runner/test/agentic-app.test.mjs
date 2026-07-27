@@ -13,7 +13,10 @@ import { Journal, foldState, loadProjectType, reviseNode, runLoop } from "../dis
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
 const PT_DIR = path.join(REPO_ROOT, "project-types", "agentic-app");
-const CATALOG = ["persistence-core", "chat-shell", "agent-runtime"];
+const CATALOG = [
+  "persistence-core", "chat-shell", "agent-runtime",
+  "auth-basic", "audit-log", "export-csv", "rate-limit", "feedback-inbox",
+];
 
 function tmpDir(prefix) {
   return fs.mkdtempSync(path.join(os.tmpdir(), `harness-aa-${prefix}-`));

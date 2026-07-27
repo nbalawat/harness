@@ -1,0 +1,11 @@
+name: rate-limit
+version: 0.1.0
+description: Per-client request throttle — protects agent endpoints (which cost real money per call) from loops and abuse.
+provides:
+  - middleware: sliding-window limit on all endpoints (APP_RATE_LIMIT per minute, default 240)
+requires:
+  - nothing beyond the base app
+compose:
+  overlay: compose/
+certify:
+  tests: test/
