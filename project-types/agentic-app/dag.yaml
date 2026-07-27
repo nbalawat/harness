@@ -41,6 +41,7 @@ nodes:
 
   - id: ingest
     kind: agent
+    maxTurns: 40
     deps: [intake]
     prompt: prompts/ingest.md
     mock: node "$HARNESS_PROJECT_DIR/mocks/ingest.cjs"
@@ -90,6 +91,7 @@ nodes:
   # -- Design options (challenge c) -----------------------------------------
   - id: design-options
     kind: agent
+    maxTurns: 60
     deps: [requirements-synthesis, intake]
     prompt: prompts/design-options.md
     mock: node "$HARNESS_PROJECT_DIR/mocks/design-options.cjs"
@@ -153,6 +155,7 @@ nodes:
 
   - id: build-backend
     kind: agent
+    maxTurns: 60
     deps: [scaffold, data-design]
     prompt: prompts/build-backend.md
     mock: node "$HARNESS_PROJECT_DIR/mocks/build-backend.cjs"
@@ -162,6 +165,7 @@ nodes:
 
   - id: build-agents
     kind: agent
+    maxTurns: 60
     deps: [build-backend, agent-design]
     prompt: prompts/build-agents.md
     mock: node "$HARNESS_PROJECT_DIR/mocks/build-agents.cjs"
@@ -171,6 +175,7 @@ nodes:
 
   - id: build-frontend
     kind: agent
+    maxTurns: 60
     deps: [build-agents, design-select, intake]
     prompt: prompts/build-frontend.md
     mock: node "$HARNESS_PROJECT_DIR/mocks/build-frontend.cjs"

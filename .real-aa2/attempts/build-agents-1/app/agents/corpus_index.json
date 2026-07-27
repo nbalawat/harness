@@ -1,0 +1,62 @@
+{
+  "note": "Runtime product-knowledge index for the agent runtime. Distinct from the requirements-ingest corpus_index.json (src-* / claims) produced by the ingest node. Only doc_ids listed here may be fetched or cited by support_draft_agent (roster tool_policy.knowledge_fetch).",
+  "corpus_source": "documents_dir ingested at intake, plus the seeded product knowledge base",
+  "documents": [
+    {
+      "id": "doc-password-reset",
+      "title": "Resetting a customer password",
+      "path": "corpus/doc-password-reset.md",
+      "source": "seed:product-kb",
+      "keywords": ["password", "reset", "forgot", "credentials", "sign-in", "link", "expired"]
+    },
+    {
+      "id": "doc-account-lockout",
+      "title": "Unlocking an account after failed sign-in attempts",
+      "path": "corpus/doc-account-lockout.md",
+      "source": "seed:product-kb",
+      "keywords": ["locked", "lockout", "unlock", "failed", "attempts", "sign-in"]
+    },
+    {
+      "id": "doc-invoice-download",
+      "title": "Downloading past invoices",
+      "path": "corpus/doc-invoice-download.md",
+      "source": "seed:product-kb",
+      "keywords": ["invoice", "billing", "download", "pdf", "charge", "receipt"]
+    },
+    {
+      "id": "doc-data-export",
+      "title": "Exporting account data",
+      "path": "corpus/doc-data-export.md",
+      "source": "seed:product-kb",
+      "keywords": ["export", "archive", "download", "data", "owner"]
+    },
+    {
+      "id": "doc-supported-browsers",
+      "title": "Supported browsers",
+      "path": "corpus/doc-supported-browsers.md",
+      "source": "seed:product-kb",
+      "keywords": ["browser", "chrome", "edge", "firefox", "safari", "version", "cookies"]
+    },
+    {
+      "id": "doc-escalation-path",
+      "title": "Escalating an issue to engineering",
+      "path": "corpus/doc-escalation-path.md",
+      "source": "seed:product-kb",
+      "keywords": ["escalate", "escalation", "engineering", "severity", "reproduce", "workaround"]
+    },
+    {
+      "id": "doc-discovery-brief",
+      "title": "Support Copilot - discovery brief",
+      "path": "corpus/doc-discovery-brief.md",
+      "source": "documents_dir:fixtures/sample-docs/brief.md",
+      "keywords": ["discovery", "brief", "scope"]
+    },
+    {
+      "id": "doc-current-process",
+      "title": "Current support process",
+      "path": "corpus/doc-current-process.md",
+      "source": "documents_dir:fixtures/sample-docs/process.html",
+      "keywords": ["process", "ticket", "triage", "workflow"]
+    }
+  ]
+}

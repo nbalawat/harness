@@ -1,0 +1,78 @@
+{
+  "note": "Stored conversation records readable by precedent_finder. age_days is an offset from the current date so the 90-day retention window stays meaningful over time instead of ageing out of a hard-coded fixture. Records that are not approved, or whose age_days exceeds retention_days, exist here precisely so the filters in agent_runtime are exercised - they must never reach a reply.",
+  "retention_days": 90,
+  "conversations": [
+    {
+      "id": "conv-2098",
+      "age_days": 12,
+      "approval_status": "approved",
+      "approver": "a.ruiz",
+      "title": "Customer cannot complete a password reset",
+      "topics": ["password", "reset", "link", "expired", "email"],
+      "answer": "The reset link is valid for 60 minutes and can only be used once. Ask the customer to request a fresh link from the Forgot password option on the sign-in screen and to open it in the same browser, then choose a new password of at least 12 characters."
+    },
+    {
+      "id": "conv-2071",
+      "age_days": 27,
+      "approval_status": "approved",
+      "approver": "j.okafor",
+      "title": "Password reset email never arrives",
+      "topics": ["password", "reset", "email", "spam", "delivery"],
+      "answer": "If the reset email has not arrived after 10 minutes, have the customer check the spam folder and confirm the address on the account. If the address is wrong, the account-recovery path has to verify a new address before any reset link will help."
+    },
+    {
+      "id": "conv-2065",
+      "age_days": 33,
+      "approval_status": "approved",
+      "approver": "a.ruiz",
+      "title": "Where do I find my invoices",
+      "topics": ["invoice", "billing", "download", "pdf"],
+      "answer": "Invoices live under Billing > Invoices in account settings, with a PDF link for each of the last 24 billing periods. The tab is only visible to account owners and users with the billing role."
+    },
+    {
+      "id": "conv-2088",
+      "age_days": 19,
+      "approval_status": "approved",
+      "approver": "m.chen",
+      "title": "Requesting a full account data export",
+      "topics": ["export", "data", "archive", "owner"],
+      "answer": "Only the account owner can request an export, from Settings > Data. Large accounts can take up to 24 hours, and the download link in the notification expires after 7 days."
+    },
+    {
+      "id": "conv-2091",
+      "age_days": 8,
+      "approval_status": "approved",
+      "approver": "m.chen",
+      "title": "Which browsers are supported",
+      "topics": ["browser", "chrome", "safari", "version"],
+      "answer": "The two most recent major versions of Chrome, Edge, Firefox and Safari are supported, with JavaScript and cookies enabled. Internet Explorer is not supported."
+    },
+    {
+      "id": "conv-2110",
+      "age_days": 3,
+      "approval_status": "pending",
+      "approver": null,
+      "title": "Password reset for a shared mailbox",
+      "topics": ["password", "reset", "shared", "mailbox"],
+      "answer": "Draft has not been approved by an analyst - must never be surfaced as precedent."
+    },
+    {
+      "id": "conv-2044",
+      "age_days": 40,
+      "approval_status": "rejected",
+      "approver": "j.okafor",
+      "title": "Analyst-set password workaround",
+      "topics": ["password", "reset", "workaround"],
+      "answer": "Draft was turned down in review - must never be surfaced as precedent."
+    },
+    {
+      "id": "conv-1802",
+      "age_days": 210,
+      "approval_status": "approved",
+      "approver": "s.patel",
+      "title": "Legacy password reset guidance",
+      "topics": ["password", "reset", "legacy"],
+      "answer": "Approved, but outside the 90-day retention window - must never be surfaced as precedent."
+    }
+  ]
+}

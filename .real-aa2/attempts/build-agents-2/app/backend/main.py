@@ -6,7 +6,7 @@ models.TABLES (generated from the approved data model).
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
-from agent_runtime import respond_detailed, roster
+from agent_runtime import respond
 from db import store
 from models import TABLES
 
@@ -15,8 +15,6 @@ app = FastAPI(title="Support Copilot")
 
 class ChatRequest(BaseModel):
     message: str
-    agent: str | None = None
-    conversation_id: str | None = None
 
 
 @app.get("/health")
@@ -24,32 +22,9 @@ def health():
     return {"status": "ok"}
 
 
-@app.get("/agents")
-def agents():
-    """The approved roster the UI offers, without the eval scaffolding."""
-    return [
-        {"name": a["name"], "role": a["role"], "tools": a["tools"]}
-        for a in roster()["agents"]
-    ]
-
-
 @app.post("/chat")
 def chat(req: ChatRequest):
-    """One analyst turn. The reply is always a draft: approval is a separate action."""
-    try:
-        result = respond_detailed(
-            req.message, agent=req.agent, conversation_id=req.conversation_id
-        )
-    except KeyError:
-        raise HTTPException(status_code=404, detail="unknown agent")
-    return {
-        "reply": result["reply"],
-        "agent": result["agent"],
-        "citations": result["citations"],
-        "coverage_status": result["coverage"],
-        "is_draft_reply": True,
-        "is_automated": True,
-    }
+    return {"reply": respond(req.message)}
 
 
 @app.get("/api/{table}")
