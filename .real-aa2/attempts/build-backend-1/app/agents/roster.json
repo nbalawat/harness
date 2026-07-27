@@ -1,0 +1,12 @@
+{
+  "placeholder": "Bootstrap roster so the composed agent-runtime module is runnable at build-backend time. The build-agents node overwrites this file with the approved agent_roster.json.",
+  "agents": [
+    {
+      "name": "Support Copilot",
+      "role": "Drafts grounded, citation-backed replies to customer questions for analyst review and approval.",
+      "tools": ["knowledge_search"],
+      "eval_criteria": ["Offers help in response to a greeting", "Identifies itself by name when asked"],
+      "addresses": []
+    }
+  ]
+}

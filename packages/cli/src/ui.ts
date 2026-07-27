@@ -7,6 +7,7 @@
  */
 import * as fs from "node:fs";
 import * as http from "node:http";
+import * as net from "node:net";
 import * as path from "node:path";
 import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
@@ -174,9 +175,116 @@ function mergeAnswers(workspace: string, nodeId: string, answers: Record<string,
   return file;
 }
 
+function getFreePort(): Promise<number> {
+  return new Promise((resolve, reject) => {
+    const probe = net.createServer();
+    probe.listen(0, "127.0.0.1", () => {
+      const addr = probe.address() as net.AddressInfo;
+      probe.close(() => resolve(addr.port));
+    });
+    probe.on("error", reject);
+  });
+}
+
+interface AppPreview {
+  status: "stopped" | "starting" | "running" | "failed";
+  port: number | null;
+  node: string | null;
+  pid: number | null;
+  error?: string;
+}
+
 export function startUiServer(workspace: string, port: number): Promise<http.Server> {
   const artifactsRoot = path.join(workspace, "artifacts");
   let resuming = false;
+  const app: AppPreview = { status: "stopped", port: null, node: null, pid: null };
+
+  /** Latest committed app artifact, in DAG order (the freshest build stage wins). */
+  function latestAppArtifact(): { node: string; dir: string } | null {
+    const config = readConfig(workspace);
+    const def = loadProjectType(config.projectTypeDir);
+    const artifactName = def.preview?.artifact ?? "app";
+    const state = foldState(new Journal(workspace).read());
+    let found: { node: string; dir: string } | null = null;
+    for (const n of def.nodes) {
+      const rel = state.artifacts[n.id]?.[artifactName];
+      if (rel) found = { node: n.id, dir: path.join(workspace, rel) };
+    }
+    return found;
+  }
+
+  function stopApp(): void {
+    if (app.pid) {
+      try {
+        process.kill(-app.pid, "SIGTERM"); // negative pid: kill the shell's process group
+      } catch { /* already gone */ }
+    }
+    app.status = "stopped";
+    app.port = null;
+    app.pid = null;
+  }
+
+  async function startApp(): Promise<void> {
+    stopApp();
+    const config = readConfig(workspace);
+    const def = loadProjectType(config.projectTypeDir);
+    const preview = def.preview;
+    const latest = latestAppArtifact();
+    if (!preview || !latest) {
+      app.status = "failed";
+      app.error = preview ? "no app artifact committed yet" : "project type declares no preview";
+      return;
+    }
+    // Run against a copy — committed artifacts stay immutable.
+    const runDir = path.join(workspace, "app-preview");
+    fs.rmSync(runDir, { recursive: true, force: true });
+    fs.cpSync(latest.dir, runDir, { recursive: true });
+
+    const appPort = await getFreePort();
+    app.status = "starting";
+    app.node = latest.node;
+    app.error = undefined;
+    const logFile = path.join(workspace, "app-preview.log");
+    const log = fs.openSync(logFile, "w");
+    const child = spawn(preview.command, {
+      shell: true,
+      detached: true,
+      cwd: path.join(runDir, preview.cwd ?? "."),
+      env: { ...process.env, PORT: String(appPort) },
+      stdio: ["ignore", log, log],
+    });
+    fs.closeSync(log);
+    app.pid = child.pid ?? null;
+    child.on("exit", () => {
+      if (app.pid === child.pid && app.status !== "stopped") {
+        app.status = app.status === "running" ? "stopped" : "failed";
+        if (app.status === "failed") {
+          let tail = "";
+          try {
+            tail = fs.readFileSync(path.join(workspace, "app-preview.log"), "utf8").split("\n").slice(-6).join(" | ");
+          } catch { /* no log */ }
+          app.error = "app process exited during startup: " + tail.slice(-300);
+        }
+        app.pid = null;
+        app.port = null;
+      }
+    });
+    const healthUrl = "http://127.0.0.1:" + appPort + (preview.health ?? "/");
+    for (let i = 0; i < 120; i++) {
+      await new Promise((r) => setTimeout(r, 500));
+      if (app.pid !== child.pid) return; // superseded or died
+      try {
+        const res = await fetch(healthUrl);
+        if (res.ok) {
+          app.status = "running";
+          app.port = appPort;
+          return;
+        }
+      } catch { /* not up yet */ }
+    }
+    app.status = "failed";
+    app.error = "app did not become healthy within 60s";
+  }
 
   const server = http.createServer((req, res) => {
     const url = new URL(req.url ?? "/", "http://localhost");
@@ -186,7 +294,15 @@ export function startUiServer(workspace: string, port: number): Promise<http.Ser
         res.end(PAGE);
       } else if (url.pathname === "/api/state") {
         res.writeHead(200, { "content-type": "application/json" });
-        res.end(JSON.stringify({ ...buildState(workspace), resuming }));
+        res.end(JSON.stringify({ ...buildState(workspace), resuming, app, appAvailable: latestAppArtifact() !== null }));
+      } else if (url.pathname === "/api/app/start" && req.method === "POST") {
+        void startApp();
+        res.writeHead(200, { "content-type": "application/json" });
+        res.end(JSON.stringify({ ok: true }));
+      } else if (url.pathname === "/api/app/stop" && req.method === "POST") {
+        stopApp();
+        res.writeHead(200, { "content-type": "application/json" });
+        res.end(JSON.stringify({ ok: true }));
       } else if (url.pathname.startsWith("/artifact/")) {
         const rel = decodeURIComponent(url.pathname.slice("/artifact/".length));
         const abs = path.normalize(path.join(artifactsRoot, rel));
@@ -220,6 +336,7 @@ export function startUiServer(workspace: string, port: number): Promise<http.Ser
     }
   });
 
+  server.on("close", stopApp);
   return new Promise((resolve) => {
     server.listen(port, "127.0.0.1", () => resolve(server));
   });
@@ -326,6 +443,21 @@ button.primary:hover { filter:brightness(1.08); }
   <div class="tile"><div class="k">Elapsed</div><div class="v" id="elapsedV"></div><div class="sub">wall clock</div></div>
   <div class="tile"><div class="k">Attention</div><div class="v" id="attnV" style="font-size:1.05rem"></div><div class="sub" id="attnSub"></div></div>
 </div>
+<div class="card" id="appPanel" style="display:none">
+  <div style="display:flex;align-items:center;gap:.8rem;flex-wrap:wrap">
+    <h2 style="margin:0">Your application</h2>
+    <span class="chip" id="appStage"></span>
+    <span class="pill" style="margin-left:0;padding:.2rem .7rem;font-size:.78rem"><span class="dot" id="appDot"></span><span id="appStatus"></span></span>
+    <span style="margin-left:auto;display:flex;gap:.5rem;align-items:center">
+      <a id="appLink" class="mono" target="_blank" style="color:var(--accent);text-decoration:none;display:none"></a>
+      <button class="primary" id="appLaunch">Launch app</button>
+      <button id="appStop" style="background:transparent;border:1px solid var(--border);color:var(--ink2);border-radius:8px;padding:.55rem .9rem;font:inherit;cursor:pointer;display:none">Stop</button>
+    </span>
+  </div>
+  <div id="appFrameWrap" style="display:none;margin-top: .9rem;border:1px solid var(--border);border-radius:10px;overflow:hidden;background:#fff">
+    <iframe id="appFrame" style="width:100%;height:520px;border:0;display:block"></iframe>
+  </div>
+</div>
 <div class="grid">
 <div>
   <div class="card gate" id="gatePanel" style="display:none"><h2>Waiting on you</h2><form id="gateForm"></form></div>
@@ -408,6 +540,34 @@ async function tick() {
     if (input) { input.value = b.dataset.id; input.scrollIntoView({behavior:'smooth'}); input.focus(); }
     else alert('The design-select gate is not waiting right now.');
   });
+
+  const appPanel = document.getElementById('appPanel');
+  appPanel.style.display = s.appAvailable ? '' : 'none';
+  if (s.appAvailable) {
+    const a = s.app;
+    const colors = { running:'var(--good)', starting:'var(--warn)', failed:'var(--crit)', stopped:'var(--muted)' };
+    document.getElementById('appDot').style.background = colors[a.status] || 'var(--muted)';
+    document.getElementById('appStatus').textContent = a.status === 'failed' ? 'failed — ' + (a.error||'') : a.status;
+    document.getElementById('appStage').textContent = a.node ? 'built at: ' + a.node : 'ready to launch';
+    const launch = document.getElementById('appLaunch');
+    launch.textContent = a.status === 'running' ? 'Relaunch latest' : a.status === 'starting' ? 'Starting…' : 'Launch app';
+    launch.disabled = a.status === 'starting';
+    launch.onclick = () => fetch('/api/app/start', { method:'POST' });
+    const stop = document.getElementById('appStop');
+    stop.style.display = a.status === 'running' ? '' : 'none';
+    stop.onclick = () => fetch('/api/app/stop', { method:'POST' });
+    const link = document.getElementById('appLink');
+    const wrap = document.getElementById('appFrameWrap');
+    const frame = document.getElementById('appFrame');
+    if (a.status === 'running' && a.port) {
+      const url = 'http://localhost:' + a.port;
+      link.style.display = ''; link.href = url; link.textContent = url;
+      wrap.style.display = '';
+      if (frame.dataset.url !== url) { frame.dataset.url = url; frame.src = url; }
+    } else {
+      link.style.display = 'none'; wrap.style.display = 'none'; frame.dataset.url = ''; frame.removeAttribute('src');
+    }
+  }
 
   const panel = document.getElementById('gatePanel');
   if (s.parkedGate && !s.resuming) {

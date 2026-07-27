@@ -111,3 +111,45 @@ test("ui: buildState tolerates an in-flight journal (live tailing)", async () =>
   assert.equal(state.status, "running");
   assert.ok(state.nodes.some((n) => n.state === "pending"));
 });
+
+test("ui: launch-the-app lifecycle against a built agentic-app workspace", async () => {
+  const workspace = tmpDir("app");
+  const AA_DIR = path.join(REPO_ROOT, "project-types", "agentic-app");
+  const run = runCli([
+    "run", AA_DIR,
+    "--workspace", workspace,
+    "--answers", path.join(AA_DIR, "fixtures/answers.json"),
+    "--accept-defaults", "--mock-agents",
+  ]);
+  assert.equal(run.status, 0, run.stderr);
+
+  await withServer(workspace, async (base) => {
+    let state = await (await fetch(`${base}/api/state`)).json();
+    assert.equal(state.appAvailable, true, "app artifact detected");
+    assert.equal(state.app.status, "stopped");
+
+    await fetch(`${base}/api/app/start`, { method: "POST" });
+    for (let i = 0; i < 120; i++) {
+      await new Promise((r) => setTimeout(r, 500));
+      state = await (await fetch(`${base}/api/state`)).json();
+      if (state.app.status === "running" || state.app.status === "failed") break;
+    }
+    assert.equal(state.app.status, "running", state.app.error);
+    assert.equal(state.app.node, "build-frontend", "latest build stage wins");
+
+    // The real generated app answers through the preview port.
+    const health = await (await fetch(`http://127.0.0.1:${state.app.port}/health`)).json();
+    assert.deepEqual(health, { status: "ok" });
+    const chat = await (await fetch(`http://127.0.0.1:${state.app.port}/chat`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message: "ping" }),
+    })).json();
+    assert.match(chat.reply, /assistant/);
+
+    await fetch(`${base}/api/app/stop`, { method: "POST" });
+    await new Promise((r) => setTimeout(r, 400));
+    state = await (await fetch(`${base}/api/state`)).json();
+    assert.equal(state.app.status, "stopped");
+  });
+});

@@ -92,11 +92,27 @@ export interface CostSpec {
   nodes?: Record<string, NodeCostSpec>;
 }
 
+/**
+ * How to launch the built product for a live preview. Declared by the
+ * certified project type; the dashboard's "run the app" button uses it.
+ * $PORT in the command is substituted with the assigned port.
+ */
+export interface PreviewSpec {
+  /** Artifact name that contains the app (default "app"; latest committed wins). */
+  artifact?: string;
+  command: string;
+  /** cwd relative to the app artifact root. */
+  cwd?: string;
+  /** Path polled until it responds 200 (default "/"). */
+  health?: string;
+}
+
 export interface ProjectTypeDef {
   name: string;
   version: string;
   cost?: CostSpec;
   interaction?: InteractionSpec;
+  preview?: PreviewSpec;
   nodes: NodeDef[];
 }
 

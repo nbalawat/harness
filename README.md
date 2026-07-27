@@ -58,7 +58,9 @@ node packages/cli/dist/index.js ui my-run --port 4400
 
 Live DAG progress with per-node cost, event feed, artifact browser, the design
 gallery rendered inline, and gate forms — a parked run can be answered and
-resumed from the browser.
+resumed from the browser. **"Your application" panel: one click launches the
+built app (available from the scaffold stage onward) and previews it live
+inside the dashboard** — relaunch after each build stage to watch it evolve.
 
 ### 3. Explore what it produced
 
