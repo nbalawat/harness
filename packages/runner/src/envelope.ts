@@ -1,5 +1,6 @@
 import * as crypto from "node:crypto";
 import * as fs from "node:fs";
+import * as os from "node:os";
 import * as path from "node:path";
 import { spawnSync } from "node:child_process";
 import AjvNS from "ajv";
@@ -275,6 +276,32 @@ async function runGate(
 }
 
 /**
+ * Resolve an MCP server ref to its entry script.
+ *  "./mcp/x"            -> package-local (part of the certified digest)
+ *  "@harness/x[@ver]"   -> HARNESS_MCP_DIR override, repo/store mcp/ dir
+ *                          (travels with registry installs), $HARNESS_HOME/mcp
+ */
+export function resolveMcpServer(ctx: RunContext, ref: string): string {
+  const candidates: string[] = [];
+  if (ref.startsWith("./") || ref.startsWith("../")) {
+    candidates.push(path.resolve(ctx.projectTypeDir, ref));
+  } else {
+    const m = ref.match(/^@harness\/([a-z0-9-]+)(?:@[\w.-]+)?$/);
+    if (!m) throw new Error(`invalid mcp server ref '${ref}'`);
+    const name = m[1];
+    if (process.env.HARNESS_MCP_DIR) candidates.push(path.join(process.env.HARNESS_MCP_DIR, name));
+    candidates.push(path.resolve(ctx.projectTypeDir, "..", "..", "mcp", name));
+    const home = process.env.HARNESS_HOME ?? path.join(os.homedir(), ".harness");
+    candidates.push(path.join(home, "mcp", name));
+  }
+  for (const dir of candidates) {
+    const entry = path.join(dir, "server.mjs");
+    if (fs.existsSync(entry)) return entry;
+  }
+  throw new Error(`mcp server '${ref}' not found (looked in: ${candidates.join(", ")}) — run: harness setup`);
+}
+
+/**
  * The Claude Agent SDK is the harness's EXECUTION ENGINE — every certified
  * agent node runs through it (mocks exist only so certification replay is
  * deterministic). It isn't bundled into harness.cjs, so resolution is:
@@ -399,6 +426,29 @@ async function runAgent(
     }
   }
 
+  // MCP instances: certified capability servers, stdio-only, launched from
+  // harness-controlled code with an explicit env. Resolution mirrors the SDK:
+  // package-local path -> repo/store mcp/ dir -> $HARNESS_HOME/mcp.
+  const mcpServers: Record<string, unknown> = {};
+  for (const name of node.mcp ?? []) {
+    const instance = ctx.def.mcp?.[name];
+    if (!instance) throw new Error(`mcp instance '${name}' not declared`); // load-validated; belt+braces
+    const entry = resolveMcpServer(ctx, instance.server);
+    mcpServers[name] = {
+      type: "stdio",
+      command: process.execPath,
+      args: [entry],
+      env: {
+        PATH: process.env.PATH ?? "",
+        HOME: process.env.HOME ?? "",
+        HARNESS_MCP_CONFIG: JSON.stringify(instance.config ?? {}),
+        HARNESS_ATTEMPT_DIR: attemptDir,
+        HARNESS_WORKSPACE: ctx.workspace,
+        ...((instance.config as { env?: Record<string, string> } | undefined)?.env ?? {}),
+      },
+    };
+  }
+
   const model = modelForAttempt(node, attempt);
   const usage = {
     model,
@@ -417,6 +467,7 @@ async function runAgent(
       maxTurns: node.maxTurns ?? 30,
       allowedTools: node.allowedTools ?? ["Read", "Write", "Edit", "Bash", "Glob", "Grep"],
       ...(node.agents ? { agents: node.agents } : {}),
+      ...(Object.keys(mcpServers).length > 0 ? { mcpServers } : {}),
       permissionMode: "acceptEdits",
       // Hermetic: never user/global settings. "project" resolves to the attempt
       // dir we stage ourselves — enabled only to carry certified skills.

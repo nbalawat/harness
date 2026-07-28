@@ -85,6 +85,8 @@ export interface NodeDef {
    * staged into the session's project settings — never loaded from user machines.
    */
   skills?: string[];
+  /** MCP server instances (names from ProjectTypeDef.mcp) attached to this node's session. */
+  mcp?: string[];
 
   // deterministic + verifier nodes
   /** Shell command; runs with cwd = attempt dir. $HARNESS_PROJECT_DIR available. */
@@ -143,6 +145,14 @@ export interface CertificationSpec {
   revision_drill?: { node: string; feedback: string };
 }
 
+/** An MCP server instance: a versioned server ref + this type's configuration. */
+export interface McpInstanceDef {
+  /** "./mcp/<name>" (package-local) or "@harness/<name>[@version]" (platform/registry). */
+  server: string;
+  /** Type-specific configuration, validated against the server's config schema. */
+  config?: Record<string, unknown>;
+}
+
 export interface ProjectTypeDef {
   name: string;
   version: string;
@@ -152,6 +162,8 @@ export interface ProjectTypeDef {
   interaction?: InteractionSpec;
   preview?: PreviewSpec;
   certification?: CertificationSpec;
+  /** MCP server instances this type defines (nodes attach them by name). */
+  mcp?: Record<string, McpInstanceDef>;
   nodes: NodeDef[];
 }
 

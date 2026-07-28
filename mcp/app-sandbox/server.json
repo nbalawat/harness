@@ -1,0 +1,17 @@
+{
+  "name": "app-sandbox",
+  "version": "0.1.0",
+  "description": "The app-under-build as a managed service: boot, probe, tail logs, run tests — structured results instead of raw shell output.",
+  "config_schema": {
+    "type": "object",
+    "properties": {
+      "boot": { "type": "string", "description": "shell command with $PORT substituted" },
+      "health": { "type": "string" },
+      "app_dir": { "type": "string" },
+      "cwd": { "type": "string" },
+      "env": { "type": "object" }
+    },
+    "required": ["boot"],
+    "additionalProperties": false
+  }
+}

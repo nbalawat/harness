@@ -7,7 +7,7 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import AjvNS from "ajv";
-import { Journal, foldState, loadProjectType, reviseNode, runLoop, type RunContext } from "@harness/runner";
+import { Journal, foldState, loadProjectType, resolveMcpServer, reviseNode, runLoop, type RunContext } from "@harness/runner";
 
 const Ajv: typeof AjvNS.default =
   (AjvNS as unknown as { default?: typeof AjvNS.default }).default ??
@@ -82,6 +82,24 @@ export function packageDigest(dir: string): string {
 function staticChecks(dir: string, problems: string[]): void {
   const def = loadProjectType(dir);
   const ajv = new Ajv({ allErrors: true });
+  // MCP instances: server refs must resolve; config must satisfy the server's schema.
+  for (const [name, instance] of Object.entries(def.mcp ?? {})) {
+    let entry: string;
+    try {
+      entry = resolveMcpServer({ projectTypeDir: dir } as RunContext, instance.server);
+    } catch (e) {
+      problems.push(`mcp '${name}': ${String(e instanceof Error ? e.message : e).slice(0, 160)}`);
+      continue;
+    }
+    const manifestPath = path.join(path.dirname(entry), "server.json");
+    if (fs.existsSync(manifestPath)) {
+      const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8")) as { config_schema?: object };
+      if (manifest.config_schema) {
+        const valid = ajv.validate(manifest.config_schema, instance.config ?? {});
+        if (!valid) problems.push(`mcp '${name}' config invalid: ${ajv.errorsText(ajv.errors)}`);
+      }
+    }
+  }
   for (const node of def.nodes) {
     if (node.kind === "agent") {
       if (!node.mock) problems.push(`agent '${node.id}' has no mock — certification replay impossible`);

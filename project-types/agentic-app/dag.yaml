@@ -10,7 +10,7 @@
 # escalateModel: retries run one tier up with the failure feedback.
 # See docs/DESIGN.md §7/§7b for the design rationale per node.
 name: agentic-app
-version: 0.7.0
+version: 0.8.0
 description: Builds a working agentic AI application from your problem statement and documents — requirements with provenance, approvable designs, certified modules, feature-by-feature build with tests, security scan, and governance evidence.
 
 cost:
@@ -36,6 +36,17 @@ cost:
 
 interaction:
   max_questions_per_gate: 6
+
+mcp:
+  # The app-under-build as a managed service: slices probe cheaply instead of
+  # paying a failed verification boot. Same boot contract as preview/verify.
+  app-sandbox:
+    server: "@harness/app-sandbox"
+    config:
+      boot: uv run --with fastapi --with uvicorn uvicorn dev:app --host 127.0.0.1 --port $PORT
+      health: /health
+      cwd: backend
+      env: { HARNESS_AGENT_MODE: stub }
 
 certification:
   # The feedback loop is part of the certified promise: after the golden run,
@@ -304,7 +315,11 @@ nodes:
     params: { slice: 1 }
     when: { artifact: slice_plan, path: "slices.0", exists: true }
     deps: [scaffold, slice-plan]
-    allowedTools: [Read, Write, Edit, Bash, Glob, Grep, Task, Skill]
+    allowedTools: [Read, Write, Edit, Bash, Glob, Grep, Task, Skill,
+                   mcp__app-sandbox__start_app, mcp__app-sandbox__request,
+                   mcp__app-sandbox__logs, mcp__app-sandbox__run_tests,
+                   mcp__app-sandbox__stop_app]
+    mcp: [app-sandbox]
     skills: [app-conventions]
     agents:
       slice-reviewer:
@@ -341,7 +356,11 @@ nodes:
     params: { slice: 2 }
     when: { artifact: slice_plan, path: "slices.1", exists: true }
     deps: [slice-1, slice-plan]
-    allowedTools: [Read, Write, Edit, Bash, Glob, Grep, Task, Skill]
+    allowedTools: [Read, Write, Edit, Bash, Glob, Grep, Task, Skill,
+                   mcp__app-sandbox__start_app, mcp__app-sandbox__request,
+                   mcp__app-sandbox__logs, mcp__app-sandbox__run_tests,
+                   mcp__app-sandbox__stop_app]
+    mcp: [app-sandbox]
     skills: [app-conventions]
     agents:
       slice-reviewer:
@@ -378,7 +397,11 @@ nodes:
     params: { slice: 3 }
     when: { artifact: slice_plan, path: "slices.2", exists: true }
     deps: [slice-2, slice-plan]
-    allowedTools: [Read, Write, Edit, Bash, Glob, Grep, Task, Skill]
+    allowedTools: [Read, Write, Edit, Bash, Glob, Grep, Task, Skill,
+                   mcp__app-sandbox__start_app, mcp__app-sandbox__request,
+                   mcp__app-sandbox__logs, mcp__app-sandbox__run_tests,
+                   mcp__app-sandbox__stop_app]
+    mcp: [app-sandbox]
     skills: [app-conventions]
     agents:
       slice-reviewer:
@@ -415,7 +438,11 @@ nodes:
     params: { slice: 4 }
     when: { artifact: slice_plan, path: "slices.3", exists: true }
     deps: [slice-3, slice-plan]
-    allowedTools: [Read, Write, Edit, Bash, Glob, Grep, Task, Skill]
+    allowedTools: [Read, Write, Edit, Bash, Glob, Grep, Task, Skill,
+                   mcp__app-sandbox__start_app, mcp__app-sandbox__request,
+                   mcp__app-sandbox__logs, mcp__app-sandbox__run_tests,
+                   mcp__app-sandbox__stop_app]
+    mcp: [app-sandbox]
     skills: [app-conventions]
     agents:
       slice-reviewer:
@@ -452,7 +479,11 @@ nodes:
     params: { slice: 5 }
     when: { artifact: slice_plan, path: "slices.4", exists: true }
     deps: [slice-4, slice-plan]
-    allowedTools: [Read, Write, Edit, Bash, Glob, Grep, Task, Skill]
+    allowedTools: [Read, Write, Edit, Bash, Glob, Grep, Task, Skill,
+                   mcp__app-sandbox__start_app, mcp__app-sandbox__request,
+                   mcp__app-sandbox__logs, mcp__app-sandbox__run_tests,
+                   mcp__app-sandbox__stop_app]
+    mcp: [app-sandbox]
     skills: [app-conventions]
     agents:
       slice-reviewer:
@@ -489,7 +520,11 @@ nodes:
     params: { slice: 6 }
     when: { artifact: slice_plan, path: "slices.5", exists: true }
     deps: [slice-5, slice-plan]
-    allowedTools: [Read, Write, Edit, Bash, Glob, Grep, Task, Skill]
+    allowedTools: [Read, Write, Edit, Bash, Glob, Grep, Task, Skill,
+                   mcp__app-sandbox__start_app, mcp__app-sandbox__request,
+                   mcp__app-sandbox__logs, mcp__app-sandbox__run_tests,
+                   mcp__app-sandbox__stop_app]
+    mcp: [app-sandbox]
     skills: [app-conventions]
     agents:
       slice-reviewer:

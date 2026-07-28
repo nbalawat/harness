@@ -263,6 +263,35 @@ async function main(): Promise<void> {
       }
       break;
     }
+    case "certify-mcp": {
+      const { positional } = parseFlags(rest);
+      const { certifyMcp } = await import("./mcp.js");
+      const { ok, servers } = await certifyMcp(path.resolve(positional[0] ?? "mcp"));
+      for (const s2 of servers) {
+        console.log(`  ${s2.ok ? "OK " : "FAIL"}  ${s2.name.padEnd(20)} tools: ${s2.tools.join(", ") || "-"}`);
+        for (const prob of s2.problems) console.log(`        - ${prob.split("\n")[0]}`);
+      }
+      console.log(ok ? `\nall ${servers.length} mcp server(s) certified` : "\nMCP CERTIFICATION FAILED");
+      code = ok ? 0 : 1;
+      break;
+    }
+    case "new-mcp": {
+      const { positional } = parseFlags(rest);
+      if (!positional[0]) {
+        console.error("usage: harness new-mcp <name> [mcp-dir]");
+        code = 1;
+        break;
+      }
+      const { scaffoldMcp } = await import("./mcp.js");
+      try {
+        const dir = scaffoldMcp(positional[0], path.resolve(positional[1] ?? "mcp"));
+        console.log(`scaffolded ${dir} — implement TOOLS in server.mjs, then: harness certify-mcp`);
+      } catch (e) {
+        console.error(String(e instanceof Error ? e.message : e));
+        code = 1;
+      }
+      break;
+    }
     case "certify-modules": {
       const { positional } = parseFlags(rest);
       const { certifyModules } = await import("./certifyModules.js");
@@ -318,6 +347,8 @@ async function main(): Promise<void> {
       console.log("  harness status <workspace>");
       console.log("  harness certify <project-type-dir> [--update-golden]");
       console.log("  harness certify-modules [modules-dir] [project-type-dir]");
+      console.log("  harness certify-mcp [mcp-dir]");
+      console.log("  harness new-mcp <name> [mcp-dir]   # scaffold a certifiable MCP server");
       console.log("  harness install <name>@<version> --registry <git-url>");
       console.log("  harness list");
       console.log("  harness setup [--install-sdk]   # verify/provision the live-agent toolchain");

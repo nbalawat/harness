@@ -13,6 +13,8 @@
 | `harness status <workspace>` | One-screen node states + spend. |
 | `harness ui <dir> [--port n]` | Dashboard. Pass a folder of runs → storefront; a single workspace → straight into it. |
 | `harness certify <project-type-dir> [--update-golden]` | Certification: static checks, golden replays, digest diffs, cost gates, revision drill. Green writes `certification.json`. |
+| `harness certify-mcp [mcp-dir]` | Certifies every MCP server: manifest, protocol probe (initialize + tools/list), contract tests. |
+| `harness new-mcp <name>` | Scaffolds a certifiable MCP server (working ping tool, protocol loop, contract test). |
 | `harness telemetry` | Aggregates your local run summaries. |
 | `harness self-update --registry <git-url> [--ref x]` | Rebuilds the bundle from the registry and swaps itself (keeps a `.bak`). |
 

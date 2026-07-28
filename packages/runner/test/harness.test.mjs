@@ -970,3 +970,32 @@ test("validation: certified skills without the Skill tool are rejected; well-for
   );
   assert.deepEqual(loadProjectType(ok).nodes[0].skills, ["conventions"]);
 });
+
+// ---------------------------------------------------------------------------
+// MCP instances: declared capability, validated attachment
+// ---------------------------------------------------------------------------
+
+const MCP_BASE = [
+  "name: t",
+  "version: 0.0.1",
+  "mcp:",
+  '  sandbox: {server: "@harness/app-sandbox", config: {boot: "x $PORT"}}',
+  "nodes:",
+  "  - id: a",
+  "    kind: agent",
+  "    prompt: p.md",
+];
+
+test("validation: mcp attachment rules (unknown instance, no tools, orphan tool, dead config)", () => {
+  const load = (extra) =>
+    loadProjectType(writeFixture(tmpDir("mcp-v"), [...MCP_BASE, ...extra].join("\n"), { "p.md": "x" }));
+
+  assert.throws(() => load(["    mcp: [ghost]", "    allowedTools: [mcp__ghost__go]", "    outputs: [{name: x, file: x.json}]"]), /unknown mcp instance 'ghost'/);
+  assert.throws(() => load(["    mcp: [sandbox]", "    allowedTools: [Read]", "    outputs: [{name: x, file: x.json}]"]), /allowlists none of its tools/);
+  assert.throws(() => load(["    allowedTools: [mcp__sandbox__request]", "    outputs: [{name: x, file: x.json}]"]), /without attaching mcp instance/);
+  // declared but never attached = dead config
+  assert.throws(() => load(["    outputs: [{name: x, file: x.json}]"]), /no node attaches it/);
+
+  const def = load(["    mcp: [sandbox]", "    allowedTools: [Read, mcp__sandbox__request]", "    outputs: [{name: x, file: x.json}]"]);
+  assert.deepEqual(def.nodes[0].mcp, ["sandbox"]);
+});

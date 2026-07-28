@@ -80,6 +80,20 @@ package are just more certified data: versioned, digested, identical
 everywhere. Use them for deep reference material agents load on demand
 (agentic-app's `app-conventions` is the model), keeping prompts short.
 
+### MCP server instances
+
+Capability servers agents call as tools. Declared at the package level
+(`mcp: {name: {server, config}}`) and attached per node (`mcp: [name]` + tool
+allowlist `mcp__<name>__<tool>` entries). Server refs resolve package-local
+(`./mcp/x`) or platform (`@harness/x`, travels with registry installs);
+servers are stdio-only, launched from harness-controlled code with an explicit
+env — never network, never user machines. Validation: attaching an undeclared
+instance, allowlisting an unattached server's tools, or declaring an instance
+no node attaches are all load errors; `certify` also resolves every ref and
+validates each instance's config against the server's published schema.
+Authoring is scaffolded: `harness new-mcp <name>` emits a working server that
+passes `harness certify-mcp` immediately — implement your tools in one file.
+
 ### The envelope — what you get for free
 
 Every node runs inside the same wrapper: inputs collected from dependency

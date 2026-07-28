@@ -1,6 +1,6 @@
 {
   "name": "agentic-app",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "ok": true,
   "problems": [],
   "scenarios": [
@@ -24,6 +24,6 @@
     "status": "completed",
     "cachedReuses": 3
   },
-  "packageDigest": "7536fcf482c194235da695af4699d0fa2d5697fc688fc835d0dac0afa26151f7",
-  "certifiedAt": "2026-07-27T23:59:18.225Z"
+  "packageDigest": "425f942df370efdea9441c1e56154540fb51329405b712133a828cb4fc5e5238",
+  "certifiedAt": "2026-07-28T00:55:06.466Z"
 }

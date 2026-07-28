@@ -198,3 +198,48 @@ export function query({ prompt, options }) {
   assert.equal(probe.skillStaged, true, "skill bytes staged from the certified package");
   assert.match(probe.skillContent, /nonce-4c1b/);
 });
+
+test("engine resolution: declared MCP instances reach the engine as stdio server configs", () => {
+  const sdkDir = tmpDir("sdk-mcp");
+  const pkg = path.join(sdkDir, "node_modules", "@anthropic-ai", "claude-agent-sdk");
+  fs.mkdirSync(pkg, { recursive: true });
+  fs.writeFileSync(path.join(pkg, "package.json"), JSON.stringify({ name: "@anthropic-ai/claude-agent-sdk", version: "0.0.0-scripted", type: "module", main: "index.js" }));
+  fs.writeFileSync(path.join(pkg, "index.js"), `
+import * as fs from "node:fs";
+import * as path from "node:path";
+export function query({ prompt, options }) {
+  return (async function* () {
+    fs.writeFileSync(path.join(options.cwd, "probe.json"), JSON.stringify(options.mcpServers ?? null));
+    yield { type: "result", usage: { input_tokens: 1, output_tokens: 1 }, total_cost_usd: 0.001, result: "ok" };
+  })();
+}
+`);
+
+  const pt = tmpDir("mcp-pt");
+  fs.writeFileSync(
+    path.join(pt, "dag.yaml"),
+    [
+      "name: m", "version: 0.0.1",
+      "mcp:",
+      '  sandbox: {server: "@harness/app-sandbox", config: {boot: "python3 -m http.server $PORT", health: "/"}}',
+      "nodes:",
+      "  - id: lead", "    kind: agent", "    prompt: p.md",
+      "    mcp: [sandbox]",
+      "    allowedTools: [Read, Write, mcp__sandbox__request]",
+      "    outputs: [{name: probe, file: probe.json}]",
+    ].join("\n"),
+  );
+  fs.writeFileSync(path.join(pt, "p.md"), "probe");
+
+  const ws = tmpDir("mcp-ws");
+  const run = spawnSync(process.execPath, [BUNDLE, "run", pt, "--workspace", ws], {
+    encoding: "utf8",
+    env: { ...process.env, HARNESS_HOME: tmpDir("mcp-home"), HARNESS_SDK_DIR: sdkDir, HARNESS_MCP_DIR: path.join(REPO_ROOT, "mcp") },
+  });
+  assert.equal(run.status, 0, run.stdout + run.stderr);
+  const probe = JSON.parse(fs.readFileSync(path.join(ws, "artifacts/lead/probe.json"), "utf8"));
+  assert.equal(probe.sandbox.type, "stdio");
+  assert.ok(probe.sandbox.args[0].endsWith("mcp/app-sandbox/server.mjs"), "resolved to the platform server");
+  const config = JSON.parse(probe.sandbox.env.HARNESS_MCP_CONFIG);
+  assert.equal(config.boot, "python3 -m http.server $PORT", "instance config delivered to the server");
+});

@@ -35,8 +35,35 @@ function validate(def: ProjectTypeDef): void {
       }
     }
     requireKindFields(node);
+    validateMcpAttachment(def, node);
+  }
+  // Dead MCP config is a packaging bug: every declared instance must be attached.
+  for (const name of Object.keys(def.mcp ?? {})) {
+    if (!def.nodes.some((n) => (n.mcp ?? []).includes(name))) {
+      throw new Error(`dag.yaml: mcp instance '${name}' is declared but no node attaches it`);
+    }
   }
   assertAcyclic(def);
+}
+
+function validateMcpAttachment(def: ProjectTypeDef, node: NodeDef): void {
+  const declared = def.mcp ?? {};
+  for (const name of node.mcp ?? []) {
+    if (!declared[name]) {
+      throw new Error(`dag.yaml: node '${node.id}' attaches unknown mcp instance '${name}'`);
+    }
+    if (!(node.allowedTools ?? []).some((t) => t.startsWith(`mcp__${name}__`))) {
+      throw new Error(
+        `dag.yaml: node '${node.id}' attaches mcp '${name}' but allowlists none of its tools (mcp__${name}__<tool>)`,
+      );
+    }
+  }
+  for (const tool of node.allowedTools ?? []) {
+    const m = tool.match(/^mcp__([a-z0-9-]+)__/);
+    if (m && !(node.mcp ?? []).includes(m[1])) {
+      throw new Error(`dag.yaml: node '${node.id}' allowlists tool '${tool}' without attaching mcp instance '${m[1]}'`);
+    }
+  }
 }
 
 function requireKindFields(node: NodeDef): void {
