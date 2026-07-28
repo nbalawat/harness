@@ -1306,7 +1306,16 @@ async function openDrawer(id) {
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { closeDrawer(); closeDoc(); } });
 async function refreshDrawer() {
   if (!openNode) return;
-  const d = await (await fetch('/api/node/' + encodeURIComponent(openNode))).json();
+  let d;
+  try {
+    d = await (await fetch('/api/node/' + encodeURIComponent(openNode))).json();
+  } catch (e) {
+    setText('dTitle', openNode);
+    setText('dKind', '');
+    setText('dState', '');
+    setHTML('dBody', '<div class="empty">Cannot reach the harness server — the drawer would show stale data. Restart it with: node packages/cli/dist/index.js ui .</div>');
+    return;
+  }
   setText('dTitle', d.id);
   setText('dKind', d.kind);
   const listNode = window.__nodes?.find(n => n.id === d.id);
@@ -1816,7 +1825,20 @@ async function tick() {
 
   if (openNode) refreshDrawer();
 }
-tick(); setInterval(tick, 2500);
+let offline = false;
+async function safeTick() {
+  try {
+    await tick();
+    if (offline) { offline = false; setText('statusText', ''); }
+  } catch (e) {
+    offline = true;
+    setText('title', document.getElementById('title').textContent || 'harness');
+    setText('statusText', 'server unreachable — restart with: node packages/cli/dist/index.js ui .');
+    document.getElementById('statusDot').style.background = 'var(--crit)';
+    document.getElementById('statusPill').style.display = '';
+  }
+}
+safeTick(); setInterval(safeTick, 2500);
 </script>
 </body>
 </html>`;
