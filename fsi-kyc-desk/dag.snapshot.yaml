@@ -325,7 +325,7 @@ nodes:
     kind: agent
     model: claude-sonnet-5
     escalateModel: claude-opus-5
-    maxTurns: 60
+    maxTurns: 120
     retries: 2
     params: { slice: 1 }
     when: { artifact: slice_plan, path: "slices.0", exists: true }
@@ -366,7 +366,7 @@ nodes:
     kind: agent
     model: claude-sonnet-5
     escalateModel: claude-opus-5
-    maxTurns: 60
+    maxTurns: 120
     retries: 2
     params: { slice: 2 }
     when: { artifact: slice_plan, path: "slices.1", exists: true }
@@ -407,7 +407,7 @@ nodes:
     kind: agent
     model: claude-sonnet-5
     escalateModel: claude-opus-5
-    maxTurns: 60
+    maxTurns: 120
     retries: 2
     params: { slice: 3 }
     when: { artifact: slice_plan, path: "slices.2", exists: true }
@@ -448,7 +448,7 @@ nodes:
     kind: agent
     model: claude-sonnet-5
     escalateModel: claude-opus-5
-    maxTurns: 60
+    maxTurns: 120
     retries: 2
     params: { slice: 4 }
     when: { artifact: slice_plan, path: "slices.3", exists: true }
@@ -489,7 +489,7 @@ nodes:
     kind: agent
     model: claude-sonnet-5
     escalateModel: claude-opus-5
-    maxTurns: 60
+    maxTurns: 120
     retries: 2
     params: { slice: 5 }
     when: { artifact: slice_plan, path: "slices.4", exists: true }
@@ -530,7 +530,7 @@ nodes:
     kind: agent
     model: claude-sonnet-5
     escalateModel: claude-opus-5
-    maxTurns: 60
+    maxTurns: 120
     retries: 2
     params: { slice: 6 }
     when: { artifact: slice_plan, path: "slices.5", exists: true }

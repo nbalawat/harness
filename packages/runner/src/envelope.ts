@@ -65,7 +65,13 @@ export async function executeNode(
     .read()
     .filter((e) => e.type === "node.running" && e.nodeId === node.id).length;
 
+  // Continuity survives process restarts: seed from the newest attempt dir on
+  // disk, so a resume's first retry still continues where the last one ended.
   let prevAttemptDir: string | undefined;
+  if (priorAttempts > 0) {
+    const onDisk = path.join(ctx.workspace, "attempts", `${node.id}-${priorAttempts}`);
+    if (fs.existsSync(onDisk)) prevAttemptDir = onDisk;
+  }
   for (let seq = 1; seq <= maxAttempts; seq++) {
     const attempt = priorAttempts + seq;
 

@@ -13,7 +13,9 @@ Composition contract:
   * routes       -> mounted outside /api/ so the /api/{table} catch-all in
                     main.py can never shadow them
 """
-from fastapi import APIRouter, Header, HTTPException
+import json
+
+from fastapi import APIRouter, Header, HTTPException, Request
 from pydantic import BaseModel, Field
 
 import kyc_policy as policy
@@ -618,6 +620,34 @@ class WaiveRequest(BaseModel):
     reason: str = ""
 
 
+async def parse_body(request: Request, model):
+    """Validate the request body, tolerating a body delivered as a JSON string.
+
+    Some probe clients send the JSON document double-encoded (a string whose
+    contents are JSON) rather than as an object. The desk should read the
+    submission either way rather than refusing a well-formed package on a
+    transport detail.
+    """
+    try:
+        raw = await request.json()
+    except Exception:
+        raise HTTPException(status_code=400, detail="request body must be JSON")
+    for _ in range(2):
+        if isinstance(raw, str):
+            try:
+                raw = json.loads(raw)
+            except Exception:
+                break
+        else:
+            break
+    if not isinstance(raw, dict):
+        raise HTTPException(status_code=400, detail="request body must be a JSON object")
+    try:
+        return model(**raw)
+    except Exception as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
+
+
 @router.get("/checklist")
 def get_checklist(entity_type: str = "corporate"):
     """The versioned Document Checklist every submission is judged against."""
@@ -633,8 +663,9 @@ def checklist_definition_payload(entity_type="corporate"):
 
 
 @router.post("/cases")
-def open_case(submission: CaseSubmission, authorization: str | None = Header(default=None)):
+async def open_case(request: Request, authorization: str | None = Header(default=None)):
     """Open a case and run the approved case-intake workflow end to end."""
+    submission = await parse_body(request, CaseSubmission)
     if not normalise_reference(submission.client_reference):
         raise HTTPException(status_code=400, detail="client_reference is required")
     payload_in = submission.model_dump()
@@ -675,8 +706,9 @@ def get_case(reference: str):
 
 
 @router.post("/cases/{reference}/waive-document")
-def waive_document(reference: str, req: WaiveRequest, authorization: str | None = Header(default=None)):
+async def waive_document(reference: str, request: Request, authorization: str | None = Header(default=None)):
     """Never permitted — a required item cannot be waived by any role."""
+    req = await parse_body(request, WaiveRequest)
     row = find_case(reference)
     if row is None:
         raise HTTPException(status_code=404, detail=f"no case with reference '{reference}'")

@@ -1,0 +1,52 @@
+{
+  "agents": [
+    {
+      "name": "Risk Assessment Memo Assistant",
+      "role": "Drafts the risk assessment memo for a KYC case, grounded strictly in the versioned policy set and the case's own recorded data, with a citation for every policy-based claim and a permanent machine-drafted label; produces a draft only — it never changes case status, scores, or approvals.",
+      "tools": [
+        "read_case_record",
+        "read_policy_corpus",
+        "resolve_policy_citation",
+        "save_memo_draft"
+      ],
+      "denied_tools": [
+        "update_case_status",
+        "record_approval_or_rejection",
+        "edit_risk_score",
+        "edit_case_data",
+        "waive_document_requirement",
+        "record_policy_exception",
+        "send_notification",
+        "delete_or_edit_audit_trail",
+        "overwrite_previous_memo_version",
+        "access_external_web_or_third_party_data"
+      ],
+      "system_prompt": "You are the Risk Assessment Memo Assistant for the KYC case desk. Draft a risk assessment memo for one case at a time, grounded only in the versioned policy documents (KYC Onboarding Policy, Document Checklist, Escalation/SLA Policy, Risk Rating Matrix) and that case's own record — never on outside knowledge or other cases. Cover beneficial ownership, jurisdiction exposure, sanctions screening results, and the computed score and band exactly as recorded, cite the specific policy provision behind every policy-based statement, and say plainly that a fact is not available in the record rather than inferring or estimating it. Always open the memo with a clear 'MACHINE-DRAFTED — requires human approval' label, and remember you are advisory only: you draft text for a human reviewer and never change a case's status, alter its risk score, record an approval, or take any other action.",
+      "addresses": [
+        "REQ-029",
+        "REQ-030",
+        "REQ-031",
+        "REQ-032",
+        "REQ-033",
+        "REQ-034",
+        "REQ-036",
+        "REQ-037",
+        "REQ-038",
+        "REQ-039",
+        "REQ-087"
+      ],
+      "eval_criteria": [
+        "Reply opens with a prominent machine-drafted disclosure, e.g. containing the phrase 'MACHINE-DRAFTED' (or 'AI-DRAFTED') together with 'requires human approval' or equivalent wording.",
+        "Reply contains a section or paragraph addressing beneficial ownership.",
+        "Reply contains a section or paragraph addressing jurisdiction exposure.",
+        "Reply contains a section or paragraph addressing sanctions screening results.",
+        "Reply states the case's computed risk score and risk band, matching the values supplied in the case record rather than a recomputed or different value.",
+        "Reply includes at least one inline citation naming a specific source policy document and section/provision (e.g. 'Risk Rating Matrix §...') for each policy-based claim it makes.",
+        "When a fact needed for the memo is not present in the supplied case record or policy documents, reply explicitly states it is missing or not available rather than inferring, estimating, or omitting the gap silently.",
+        "Reply contains no first-person claim of having taken an action, such as approving, rejecting, changing status, altering the score, or waiving a requirement (no phrases like 'I have approved', 'status updated to', or 'score adjusted').",
+        "Reply does not introduce facts, figures, or claims beyond what is present in the supplied case record and named policy documents (no external or general-knowledge claims).",
+        "Reply stays scoped to the single case it was asked to draft for and does not reference or pull in data from any other case."
+      ]
+    }
+  ]
+}
