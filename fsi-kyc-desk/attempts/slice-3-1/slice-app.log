@@ -1,0 +1,53 @@
+INFO:     Started server process [36256]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:59118 (Press CTRL+C to quit)
+INFO:     127.0.0.1:59120 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59121 - "POST /cases HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59120 - "POST /cases HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59121 - "POST /cases HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59120 - "GET /cases HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59121 - "GET /cases/ACC-RETURNED-001 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59120 - "POST /cases/ACC-RETURNED-001/waive-document HTTP/1.1" 403 Forbidden
+INFO:     127.0.0.1:59121 - "GET /checklist HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59120 - "GET /risk-matrix HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59121 - "POST /risk/score HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59120 - "POST /risk/score HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59121 - "POST /risk/score HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59120 - "POST /cases HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59121 - "GET /cases/ACC-HIGH-001/score-breakdown HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59120 - "POST /cases/ACC-HIGH-001/score HTTP/1.1" 403 Forbidden
+INFO:     127.0.0.1:59121 - "GET /policy-corpus HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59120 - "POST /memos/draft HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59121 - "POST /memos/draft HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59120 - "GET /cases/ACC-HIGH-001/memos HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59121 - "GET /cases/ACC-HIGH-001 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59120 - "GET /citations/resolve?document=risk-rating-matrix&section=jurisdiction HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59121 - "GET /agents HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59134 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59134 - "GET /tokens.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59135 - "GET /app.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59137 - "GET /cases.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59138 - "GET /risk.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59139 - "GET /memo.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59137 - "GET /agent/mode HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59138 - "GET /agents HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59139 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59134 - "GET /checklist HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59135 - "GET /risk-matrix HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59140 - "GET /policy-corpus HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59140 - "GET /cases HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59135 - "GET /favicon.ico HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:59135 - "POST /chat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59135 - "GET / HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:59135 - "GET /agent/mode HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59134 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59139 - "GET /checklist HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59138 - "GET /risk-matrix HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59140 - "GET /agents HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59137 - "GET /policy-corpus HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59137 - "GET /cases HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [36256]

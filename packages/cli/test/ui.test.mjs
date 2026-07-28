@@ -257,6 +257,11 @@ test("app workflows surface in the dashboard state with kinds intact", async () 
   assert.ok(Array.isArray(state.appWorkflows) && state.appWorkflows.length >= 1);
   const kinds = new Set(state.appWorkflows[0].nodes.map((n) => n.kind));
   assert.ok(kinds.has("agent") && kinds.has("human") && kinds.has("deterministic"), "agentic + human steps distinguishable in the flow");
+
+  // Slice rows carry their PLANNED identity, not "slice N".
+  const slice1 = state.nodes.find((n) => n.id === "slice-1");
+  assert.match(slice1.description, /Core chat|—/, "slice description comes from the plan");
+  assert.ok(!/Builds feature slice 1 across every layer/.test(slice1.description), "generic description replaced");
 });
 
 test("revision API: dry-run previews the closure; a real revise reopens, resumes, and re-derives", async () => {

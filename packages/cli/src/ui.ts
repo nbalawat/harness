@@ -327,6 +327,19 @@ export function buildState(workspace: string): Record<string, unknown> {
     }
   }
 
+  // Slice nodes adopt their planned identity: "slice-2" becomes the actual
+  // feature being built, from the committed slice plan.
+  if (Array.isArray(slicePlanDoc?.slices)) {
+    const planned = slicePlanDoc!.slices as { id: string; name: string; story: string }[];
+    for (const n of nodes) {
+      const m = n.id.match(/^slice-(\d+)$/);
+      if (m && planned[Number(m[1]) - 1]) {
+        const sl = planned[Number(m[1]) - 1];
+        n.description = `${sl.name} — ${sl.story}`;
+      }
+    }
+  }
+
   const costMap = new Map(Object.entries(costs).map(([k, v]) => [k, { costUsd: v.costUsd }]));
   const firstTs = events[0]?.ts;
   const lastTs = events[events.length - 1]?.ts;
@@ -451,6 +464,19 @@ export function buildNodeDetail(workspace: string, nodeId: string): Record<strin
     }
   }
 
+  let plannedDesc: string | null = null;
+  const planMatch = nodeId.match(/^slice-(\d+)$/);
+  if (planMatch) {
+    try {
+      const planPath = path.join(workspace, "artifacts", "slice-plan", "slice_plan.json");
+      const plan = JSON.parse(fs.readFileSync(planPath, "utf8")) as { slices: { name: string; story: string; addresses?: string[] }[] };
+      const sl = plan.slices[Number(planMatch[1]) - 1];
+      if (sl) plannedDesc = `${sl.name} — ${sl.story}` + (sl.addresses?.length ? ` (covers ${sl.addresses.join(", ")})` : "");
+    } catch {
+      /* plan not committed yet */
+    }
+  }
+
   const describe = (id: string) => def.nodes.find((n) => n.id === id)?.description ?? null;
   let promptText: string | null = null;
   if (node.prompt) {
@@ -464,7 +490,7 @@ export function buildNodeDetail(workspace: string, nodeId: string): Record<strin
     prompt: promptText,
     id: node.id,
     kind: node.kind,
-    description: node.description ?? null,
+    description: plannedDesc ?? node.description ?? null,
     deps: (node.deps ?? []).map((d) => ({ id: d, description: describe(d) })),
     feeds: def.nodes.filter((n) => (n.deps ?? []).includes(nodeId)).map((n) => ({ id: n.id, description: n.description ?? null })),
     model: node.model ?? null,
