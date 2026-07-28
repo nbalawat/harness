@@ -1037,7 +1037,7 @@ pre { margin: 0 1.5rem 1.5rem; padding: 1rem 1.2rem; background: #fcfcfb; border
 const PAGE = /* html */ `<!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8"><link rel="icon" href="data:,"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta charset="utf-8"><link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 36 36'%3E%3Cpath d='M8 6 V30' stroke='%23333' stroke-width='5' stroke-linecap='round' fill='none'/%3E%3Cpath d='M28 6 V30' stroke='%23333' stroke-width='5' stroke-linecap='round' fill='none'/%3E%3Cpath d='M8 18 H28' stroke='%232a78d6' stroke-width='5' stroke-linecap='round' fill='none'/%3E%3Ccircle cx='18' cy='18' r='8.6' fill='white'/%3E%3Ccircle cx='18' cy='18' r='6.2' fill='%237c4dff'/%3E%3Ccircle cx='18' cy='18' r='2.2' fill='white'/%3E%3C/svg%3E"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>harness</title>
 <style>
 :root {
@@ -1198,6 +1198,11 @@ button.ghost { background:transparent; border:1px solid var(--border); color:var
 .event { display:flex; gap:.6rem; align-items:baseline; padding:.14rem 0; color:var(--ink2); font-size:.8rem; }
 .event .t { color:var(--muted); font-size:.7rem; flex:none; width:56px; }
 .event.bad { color:var(--crit); }
+.brand { display:flex; align-items:center; gap:.55rem; cursor:pointer; color:var(--ink); text-decoration:none; }
+.brand .mark { width:26px; height:26px; display:block; }
+.brand h1 { font-size:1.14rem; font-weight:800; letter-spacing:-.015em; margin:0; }
+.brand:hover .mark { filter:drop-shadow(0 0 6px color-mix(in srgb, var(--accent) 55%, transparent)); }
+.heromark .mark.big { width:52px; height:52px; margin-bottom:.8rem; color:var(--ink2); }
 .shot img { width:100%; height:170px; object-fit:cover; object-position:top; background:#fff; display:block; }
 .shot .cap b { font-size:.78rem; }
 .shot .capsub { font-size:.7rem; color:var(--muted); margin-top:.15rem; line-height:1.3; }
@@ -1290,7 +1295,7 @@ button.ghost { background:transparent; border:1px solid var(--border); color:var
 </head>
 <body>
 <div class="topbar">
-  <h1 id="title" onclick="goHome()">harness</h1>
+  <a class="brand" onclick="goHome()"><svg class="mark" viewBox="0 0 36 36" aria-hidden="true"><defs><linearGradient id="hgrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#2a78d6"/><stop offset="1" stop-color="#8250df"/></linearGradient></defs><path d="M8 6 V30" stroke="currentColor" stroke-width="5" stroke-linecap="round" fill="none"/><path d="M28 6 V30" stroke="currentColor" stroke-width="5" stroke-linecap="round" fill="none"/><path d="M8 18 H28" stroke="url(#hgrad)" stroke-width="5" stroke-linecap="round" fill="none"/><circle cx="18" cy="18" r="8.6" fill="var(--surface, #fff)"/><circle cx="18" cy="18" r="6.2" fill="url(#hgrad)"/><circle cx="18" cy="18" r="2.2" fill="var(--surface, #fff)" opacity=".92"/></svg><h1 id="title">harness</h1></a>
   <span class="pill" id="statusPill" style="display:none"><span class="dot" id="statusDot"></span><span id="statusText"></span></span>
   <span class="pill" id="modePill" style="display:none"></span>
   <span class="mini" id="miniStats"></span>
@@ -1307,6 +1312,7 @@ button.ghost { background:transparent; border:1px solid var(--border); color:var
 <section id="storefront" style="display:none" class="store">
   <div class="hero">
     <div class="hero-copy">
+      <div class="heromark"><svg class="mark big" viewBox="0 0 36 36" aria-hidden="true"><defs><linearGradient id="hgrad2" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#2a78d6"/><stop offset="1" stop-color="#8250df"/></linearGradient></defs><path d="M8 6 V30" stroke="currentColor" stroke-width="5" stroke-linecap="round" fill="none"/><path d="M28 6 V30" stroke="currentColor" stroke-width="5" stroke-linecap="round" fill="none"/><path d="M8 18 H28" stroke="url(#hgrad2)" stroke-width="5" stroke-linecap="round" fill="none"/><circle cx="18" cy="18" r="8.6" fill="var(--surface, #fff)"/><circle cx="18" cy="18" r="6.2" fill="url(#hgrad2)"/><circle cx="18" cy="18" r="2.2" fill="var(--surface, #fff)" opacity=".92"/></svg></div>
       <h1>Describe it. Approve it. <em>Run it.</em></h1>
       <p>The factory turns a problem statement and your documents into a working, tested, audited AI application — with you making the calls that matter.</p>
       <div class="herostats" id="heroStats"></div>
