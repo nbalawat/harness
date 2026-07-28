@@ -107,3 +107,94 @@ test("setup: preflight reports the engine and toolchain rows", () => {
   assert.match(r.stdout, /node >= 20/);
   assert.match(r.stdout, /agent auth/);
 });
+
+test("engine resolution: DAG-declared subagent teams reach the engine's options", () => {
+  // Scripted engine that records the options it was launched with.
+  const sdkDir = tmpDir("sdk-team");
+  const pkg = path.join(sdkDir, "node_modules", "@anthropic-ai", "claude-agent-sdk");
+  fs.mkdirSync(pkg, { recursive: true });
+  fs.writeFileSync(path.join(pkg, "package.json"), JSON.stringify({ name: "@anthropic-ai/claude-agent-sdk", version: "0.0.0-scripted", type: "module", main: "index.js" }));
+  fs.writeFileSync(path.join(pkg, "index.js"), `
+import * as fs from "node:fs";
+import * as path from "node:path";
+export function query({ prompt, options }) {
+  return (async function* () {
+    yield { type: "system", subtype: "init", tools: options.allowedTools, agents: Object.keys(options.agents ?? {}), model: "scripted" };
+    fs.writeFileSync(path.join(options.cwd, "team.json"), JSON.stringify({ agents: options.agents ?? null, allowedTools: options.allowedTools }));
+    yield { type: "result", usage: { input_tokens: 1, output_tokens: 1 }, total_cost_usd: 0.001, result: "ok" };
+  })();
+}
+`);
+
+  const pt = tmpDir("team-pt");
+  fs.writeFileSync(
+    path.join(pt, "dag.yaml"),
+    [
+      "name: teams",
+      "version: 0.0.1",
+      "nodes:",
+      "  - id: lead",
+      "    kind: agent",
+      "    allowedTools: [Read, Write, Task]",
+      "    agents:",
+      "      designer: {description: designs, prompt: make a design, tools: [Write], model: inherit}",
+      "    prompt: p.md",
+      "    outputs: [{name: team, file: team.json}]",
+    ].join("\n"),
+  );
+  fs.writeFileSync(path.join(pt, "p.md"), "delegate");
+
+  const ws = tmpDir("team-ws");
+  const run = spawnSync(process.execPath, [BUNDLE, "run", pt, "--workspace", ws], {
+    encoding: "utf8",
+    env: { ...process.env, HARNESS_HOME: tmpDir("team-home"), HARNESS_SDK_DIR: sdkDir },
+  });
+  assert.equal(run.status, 0, run.stdout + run.stderr);
+  const team = JSON.parse(fs.readFileSync(path.join(ws, "artifacts/lead/team.json"), "utf8"));
+  assert.equal(team.agents.designer.description, "designs", "subagent definition passed through verbatim");
+  assert.deepEqual(team.allowedTools, ["Read", "Write", "Task"]);
+  const journal = fs.readFileSync(path.join(ws, "journal.jsonl"), "utf8");
+  assert.match(journal, /"agents":\["designer"\]/, "team visible in session info (dashboard drawer)");
+});
+
+test("engine resolution: certified skills are staged into the session's project settings", () => {
+  const sdkDir = tmpDir("sdk-skill");
+  const pkg = path.join(sdkDir, "node_modules", "@anthropic-ai", "claude-agent-sdk");
+  fs.mkdirSync(pkg, { recursive: true });
+  fs.writeFileSync(path.join(pkg, "package.json"), JSON.stringify({ name: "@anthropic-ai/claude-agent-sdk", version: "0.0.0-scripted", type: "module", main: "index.js" }));
+  fs.writeFileSync(path.join(pkg, "index.js"), `
+import * as fs from "node:fs";
+import * as path from "node:path";
+export function query({ prompt, options }) {
+  return (async function* () {
+    const skillFile = path.join(options.cwd, ".claude", "skills", "conventions", "SKILL.md");
+    fs.writeFileSync(path.join(options.cwd, "probe.json"), JSON.stringify({
+      settingSources: options.settingSources,
+      skillStaged: fs.existsSync(skillFile),
+      skillContent: fs.existsSync(skillFile) ? fs.readFileSync(skillFile, "utf8") : null,
+    }));
+    yield { type: "result", usage: { input_tokens: 1, output_tokens: 1 }, total_cost_usd: 0.001, result: "ok" };
+  })();
+}
+`);
+
+  const pt = tmpDir("skill-pt");
+  fs.mkdirSync(path.join(pt, "skills", "conventions"), { recursive: true });
+  fs.writeFileSync(path.join(pt, "skills", "conventions", "SKILL.md"), "---\nname: conventions\ndescription: laws\n---\nTHE LAW: nonce-4c1b\n");
+  fs.writeFileSync(
+    path.join(pt, "dag.yaml"),
+    ["name: sk", "version: 0.0.1", "nodes:", "  - id: lead", "    kind: agent", "    allowedTools: [Read, Write, Skill]", "    skills: [conventions]", "    prompt: p.md", "    outputs: [{name: probe, file: probe.json}]"].join("\n"),
+  );
+  fs.writeFileSync(path.join(pt, "p.md"), "probe");
+
+  const ws = tmpDir("skill-ws");
+  const run = spawnSync(process.execPath, [BUNDLE, "run", pt, "--workspace", ws], {
+    encoding: "utf8",
+    env: { ...process.env, HARNESS_HOME: tmpDir("skill-home"), HARNESS_SDK_DIR: sdkDir },
+  });
+  assert.equal(run.status, 0, run.stdout + run.stderr);
+  const probe = JSON.parse(fs.readFileSync(path.join(ws, "artifacts/lead/probe.json"), "utf8"));
+  assert.deepEqual(probe.settingSources, ["project"], "project settings enabled only because skills are declared");
+  assert.equal(probe.skillStaged, true, "skill bytes staged from the certified package");
+  assert.match(probe.skillContent, /nonce-4c1b/);
+});

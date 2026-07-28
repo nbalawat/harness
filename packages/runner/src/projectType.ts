@@ -46,6 +46,27 @@ function requireKindFields(node: NodeDef): void {
   switch (node.kind) {
     case "agent":
       need(node.prompt, "a prompt file");
+      // Subagent teams: definitions are certified data. A team without the
+      // Task tool is unreachable — that's a packaging bug, caught at load.
+      if (node.agents) {
+        for (const [name, def] of Object.entries(node.agents)) {
+          const sub = def as { description?: unknown; prompt?: unknown };
+          need(
+            typeof sub?.description === "string" && typeof sub?.prompt === "string",
+            `subagent '${name}' with description and prompt`,
+          );
+        }
+        need(
+          (node.allowedTools ?? []).includes("Task"),
+          `allowedTools including "Task" (its subagent team is unreachable without it)`,
+        );
+      }
+      if (node.skills && node.skills.length > 0) {
+        need(
+          (node.allowedTools ?? []).includes("Skill"),
+          `allowedTools including "Skill" (its certified skills are unreachable without it)`,
+        );
+      }
       break;
     case "deterministic":
     case "verifier":

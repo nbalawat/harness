@@ -53,7 +53,32 @@ Common fields: `id`, `phase` (dashboard grouping), `description` (plain language
 user-facing), `deps`, `outputs` (name/file/schema or `dir: true`), `retries`,
 `model` + `escalateModel` (retry runs one tier up), `maxTurns`, `verify`
 (per-node executable exit criteria), `when` (conditional skip on artifact data),
-`params` (static inputs, e.g. a slice index).
+`params` (static inputs, e.g. a slice index), `agents` (a **subagent team**).
+
+### Subagent teams
+
+An agent node may declare a team: `agents: {name: {description, prompt, tools,
+model}}`. Definitions are certified data — they live in the DAG, count into the
+package digest, and never come from user settings (hermeticity holds). The
+node's `allowedTools` MUST include `Task` or loading fails (an unreachable team
+is a packaging bug). Patterns proven in agentic-app: parallel creators
+(design-options' four directors, one per aesthetic) and a read-only reviewer
+(slice-reviewer runs before the verifier spends a boot). Keep subagent tools
+minimal; reviewers get `[Read, Glob, Grep]` only.
+
+### Certified skills
+
+An agent node may declare `skills: [name, ...]` — each is a
+`skills/<name>/SKILL.md` directory **inside the project-type package**. The
+envelope stages them into the session's project settings dir (the attempt dir
+it fully controls) and enables `settingSources: ["project"]` for that session
+only. The node's `allowedTools` must include `Skill` (validated at load).
+
+Why this design: skills from a user's machine would make certified runs behave
+differently per machine — the opposite of "works every time". Skills from the
+package are just more certified data: versioned, digested, identical
+everywhere. Use them for deep reference material agents load on demand
+(agentic-app's `app-conventions` is the model), keeping prompts short.
 
 ### The envelope — what you get for free
 

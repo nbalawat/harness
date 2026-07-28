@@ -386,6 +386,19 @@ async function runAgent(
 
   const { query } = await loadAgentSdk();
 
+  // Certified skills: staged from the PACKAGE into the session's project
+  // settings dir. Hermeticity holds — the skill bytes are part of the
+  // certified digest; user/global skills stay excluded.
+  if (node.skills?.length) {
+    for (const skill of node.skills) {
+      const src = path.join(ctx.projectTypeDir, "skills", skill);
+      if (!fs.existsSync(path.join(src, "SKILL.md"))) {
+        throw new Error(`certified skill '${skill}' missing (skills/${skill}/SKILL.md)`);
+      }
+      fs.cpSync(src, path.join(attemptDir, ".claude", "skills", skill), { recursive: true });
+    }
+  }
+
   const model = modelForAttempt(node, attempt);
   const usage = {
     model,
@@ -405,7 +418,9 @@ async function runAgent(
       allowedTools: node.allowedTools ?? ["Read", "Write", "Edit", "Bash", "Glob", "Grep"],
       ...(node.agents ? { agents: node.agents } : {}),
       permissionMode: "acceptEdits",
-      settingSources: [], // hermetic: no user/global settings leak into certified runs
+      // Hermetic: never user/global settings. "project" resolves to the attempt
+      // dir we stage ourselves — enabled only to carry certified skills.
+      settingSources: node.skills?.length ? ["project"] : [],
       // Agents never get a free channel to interrupt users mid-node: questions
       // are denied with assumption guidance (and journaled for telemetry).
       // Everything else is allowed — the workspace itself is the sandbox.

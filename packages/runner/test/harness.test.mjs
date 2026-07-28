@@ -885,3 +885,88 @@ nodes:
   assert.equal(ui.g, undefined, "revised gate's recorded answer dropped");
   assert.deepEqual(ui.other, { x: "1" }, "other answers untouched");
 });
+
+// ---------------------------------------------------------------------------
+// Subagent teams: certified data, validated at load
+// ---------------------------------------------------------------------------
+
+test("validation: a subagent team without the Task tool is rejected (unreachable team)", () => {
+  const dir = writeFixture(
+    tmpDir("team-notask"),
+    [
+      "name: t",
+      "version: 0.0.1",
+      "nodes:",
+      "  - id: a",
+      "    kind: agent",
+      "    prompt: p.md",
+      "    agents:",
+      "      helper: {description: helps, prompt: help me}",
+      "    outputs: [{name: x, file: x.json}]",
+    ].join("\n"),
+    { "p.md": "do" },
+  );
+  assert.throws(() => loadProjectType(dir), /Task/);
+});
+
+test("validation: malformed subagent (missing prompt) is rejected", () => {
+  const dir = writeFixture(
+    tmpDir("team-bad"),
+    [
+      "name: t",
+      "version: 0.0.1",
+      "nodes:",
+      "  - id: a",
+      "    kind: agent",
+      "    prompt: p.md",
+      "    allowedTools: [Read, Task]",
+      "    agents:",
+      "      helper: {description: helps}",
+      "    outputs: [{name: x, file: x.json}]",
+    ].join("\n"),
+    { "p.md": "do" },
+  );
+  assert.throws(() => loadProjectType(dir), /subagent 'helper'/);
+});
+
+test("validation: a well-formed subagent team loads", () => {
+  const dir = writeFixture(
+    tmpDir("team-ok"),
+    [
+      "name: t",
+      "version: 0.0.1",
+      "nodes:",
+      "  - id: a",
+      "    kind: agent",
+      "    prompt: p.md",
+      "    allowedTools: [Read, Write, Task]",
+      "    agents:",
+      "      helper: {description: helps, prompt: help me, tools: [Read]}",
+      "    outputs: [{name: x, file: x.json}]",
+    ].join("\n"),
+    { "p.md": "do" },
+  );
+  const def = loadProjectType(dir);
+  assert.equal(Object.keys(def.nodes[0].agents).length, 1);
+});
+
+test("validation: certified skills without the Skill tool are rejected; well-formed loads", () => {
+  const base = [
+    "name: t",
+    "version: 0.0.1",
+    "nodes:",
+    "  - id: a",
+    "    kind: agent",
+    "    prompt: p.md",
+    "    skills: [conventions]",
+  ];
+  const noTool = writeFixture(tmpDir("skill-notool"), [...base, "    outputs: [{name: x, file: x.json}]"].join("\n"), { "p.md": "do" });
+  assert.throws(() => loadProjectType(noTool), /Skill/);
+
+  const ok = writeFixture(
+    tmpDir("skill-ok"),
+    [...base, "    allowedTools: [Read, Skill]", "    outputs: [{name: x, file: x.json}]"].join("\n"),
+    { "p.md": "do" },
+  );
+  assert.deepEqual(loadProjectType(ok).nodes[0].skills, ["conventions"]);
+});

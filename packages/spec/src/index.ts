@@ -80,6 +80,11 @@ export interface NodeDef {
   allowedTools?: string[];
   /** Subagent definitions passed through to the Agent SDK (name -> config). */
   agents?: Record<string, unknown>;
+  /**
+   * Certified skills: names of skills/<name>/ dirs in the project-type package,
+   * staged into the session's project settings — never loaded from user machines.
+   */
+  skills?: string[];
 
   // deterministic + verifier nodes
   /** Shell command; runs with cwd = attempt dir. $HARNESS_PROJECT_DIR available. */

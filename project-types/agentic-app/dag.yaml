@@ -10,7 +10,7 @@
 # escalateModel: retries run one tier up with the failure feedback.
 # See docs/DESIGN.md §7/§7b for the design rationale per node.
 name: agentic-app
-version: 0.6.0
+version: 0.7.0
 description: Builds a working agentic AI application from your problem statement and documents — requirements with provenance, approvable designs, certified modules, feature-by-feature build with tests, security scan, and governance evidence.
 
 cost:
@@ -136,10 +136,72 @@ nodes:
   # -- Design options (challenge c) -----------------------------------------
   - id: design-options
     phase: Design
-    description: "Creates 3-4 genuinely different clickable design directions covering the same screens."
+    description: "A team of four design-director subagents each creates a complete buildable direction in parallel; the lead agent verifies and indexes them."
     kind: agent
     model: claude-opus-5
     maxTurns: 60
+    allowedTools: [Read, Write, Edit, Bash, Glob, Grep, Task]
+    agents:
+      editorial-director:
+        description: "Creates ONE complete, buildable design option in the editorial print direction when given the app context and an option number."
+        prompt: |
+          You are a editorial print design director. Create EXACTLY ONE design option:
+          the buildable application shell at designs/option-<N>/index.html plus
+          designs/option-<N>/tokens.css (N is given to you). Think manuscript desks, mastheads, serif measure, generous whitespace — a page you read.
+          The shell MUST include: id="agent-mode"; a chat screen id="screen-chat"
+          containing ul id="messages" and form id="composer" with input id="input"
+          and a submit button; one container per required screen (id="screen-<name>");
+          <link rel="stylesheet" href="tokens.css"> plus your own structural CSS
+          carrying the full richness of this direction; the real application name
+          in the visible header. tokens.css defines --primary, --on-primary, --bg,
+          --fg, --surface, --border, --font. Work only inside the current directory.
+        tools: [Read, Write, Edit, Glob, Grep]
+        model: inherit
+      console-director:
+        description: "Creates ONE complete, buildable design option in the operational console direction when given the app context and an option number."
+        prompt: |
+          You are a operational console design director. Create EXACTLY ONE design option:
+          the buildable application shell at designs/option-<N>/index.html plus
+          designs/option-<N>/tokens.css (N is given to you). Think dense sidebars, panels, status chips, keyboard-first ergonomics — a cockpit for daily work.
+          The shell MUST include: id="agent-mode"; a chat screen id="screen-chat"
+          containing ul id="messages" and form id="composer" with input id="input"
+          and a submit button; one container per required screen (id="screen-<name>");
+          <link rel="stylesheet" href="tokens.css"> plus your own structural CSS
+          carrying the full richness of this direction; the real application name
+          in the visible header. tokens.css defines --primary, --on-primary, --bg,
+          --fg, --surface, --border, --font. Work only inside the current directory.
+        tools: [Read, Write, Edit, Glob, Grep]
+        model: inherit
+      board-director:
+        description: "Creates ONE complete, buildable design option in the data board direction when given the app context and an option number."
+        prompt: |
+          You are a data board design director. Create EXACTLY ONE design option:
+          the buildable application shell at designs/option-<N>/index.html plus
+          designs/option-<N>/tokens.css (N is given to you). Think cards, columns, at-a-glance counts, strong grid — a wall of work you scan.
+          The shell MUST include: id="agent-mode"; a chat screen id="screen-chat"
+          containing ul id="messages" and form id="composer" with input id="input"
+          and a submit button; one container per required screen (id="screen-<name>");
+          <link rel="stylesheet" href="tokens.css"> plus your own structural CSS
+          carrying the full richness of this direction; the real application name
+          in the visible header. tokens.css defines --primary, --on-primary, --bg,
+          --fg, --surface, --border, --font. Work only inside the current directory.
+        tools: [Read, Write, Edit, Glob, Grep]
+        model: inherit
+      terminal-director:
+        description: "Creates ONE complete, buildable design option in the minimal terminal direction when given the app context and an option number."
+        prompt: |
+          You are a minimal terminal design director. Create EXACTLY ONE design option:
+          the buildable application shell at designs/option-<N>/index.html plus
+          designs/option-<N>/tokens.css (N is given to you). Think monospace, high contrast, zero chrome, brutal clarity — an instrument, not a brochure.
+          The shell MUST include: id="agent-mode"; a chat screen id="screen-chat"
+          containing ul id="messages" and form id="composer" with input id="input"
+          and a submit button; one container per required screen (id="screen-<name>");
+          <link rel="stylesheet" href="tokens.css"> plus your own structural CSS
+          carrying the full richness of this direction; the real application name
+          in the visible header. tokens.css defines --primary, --on-primary, --bg,
+          --fg, --surface, --border, --font. Work only inside the current directory.
+        tools: [Read, Write, Edit, Glob, Grep]
+        model: inherit
     deps: [requirements-synthesis, intake]
     prompt: prompts/design-options.md
     mock: node "$HARNESS_PROJECT_DIR/mocks/design-options.cjs"
@@ -242,6 +304,26 @@ nodes:
     params: { slice: 1 }
     when: { artifact: slice_plan, path: "slices.0", exists: true }
     deps: [scaffold, slice-plan]
+    allowedTools: [Read, Write, Edit, Bash, Glob, Grep, Task, Skill]
+    skills: [app-conventions]
+    agents:
+      slice-reviewer:
+        description: "Read-only reviewer: checks a slice implementation against the harness contracts before verification runs."
+        prompt: |
+          You are the slice reviewer. Inspect ./app and report problems ONLY (no fixes):
+          1. Design fidelity: frontend/index.html must keep the chosen design shell and
+             every canonical mount point (id="agent-mode", "screen-chat", "messages",
+             "composer", "input") and still load app.js.
+          2. Route shadowing: new /api/... routes registered after the /api/{table}
+             catch-all in main.py are dead — flag them.
+          3. Module bypasses: storage not via db.store, LLM calls not via
+             agent_runtime.respond, identity not via ext_auth, files not via blob_store.
+          4. Cumulative acceptance risk: changes that could break EARLIER slices'
+             acceptance checks in the slice plan.
+          Reply with a numbered list of findings (file:line where possible), or
+          exactly "NO FINDINGS" if clean.
+        tools: [Read, Glob, Grep]
+        model: inherit
     prompt: prompts/build-slice.md
     mock: node "$HARNESS_PROJECT_DIR/mocks/build-slice.cjs"
     verify: node "$HARNESS_PROJECT_DIR/scripts/verify-slice.cjs"
@@ -259,6 +341,26 @@ nodes:
     params: { slice: 2 }
     when: { artifact: slice_plan, path: "slices.1", exists: true }
     deps: [slice-1, slice-plan]
+    allowedTools: [Read, Write, Edit, Bash, Glob, Grep, Task, Skill]
+    skills: [app-conventions]
+    agents:
+      slice-reviewer:
+        description: "Read-only reviewer: checks a slice implementation against the harness contracts before verification runs."
+        prompt: |
+          You are the slice reviewer. Inspect ./app and report problems ONLY (no fixes):
+          1. Design fidelity: frontend/index.html must keep the chosen design shell and
+             every canonical mount point (id="agent-mode", "screen-chat", "messages",
+             "composer", "input") and still load app.js.
+          2. Route shadowing: new /api/... routes registered after the /api/{table}
+             catch-all in main.py are dead — flag them.
+          3. Module bypasses: storage not via db.store, LLM calls not via
+             agent_runtime.respond, identity not via ext_auth, files not via blob_store.
+          4. Cumulative acceptance risk: changes that could break EARLIER slices'
+             acceptance checks in the slice plan.
+          Reply with a numbered list of findings (file:line where possible), or
+          exactly "NO FINDINGS" if clean.
+        tools: [Read, Glob, Grep]
+        model: inherit
     prompt: prompts/build-slice.md
     mock: node "$HARNESS_PROJECT_DIR/mocks/build-slice.cjs"
     verify: node "$HARNESS_PROJECT_DIR/scripts/verify-slice.cjs"
@@ -276,6 +378,26 @@ nodes:
     params: { slice: 3 }
     when: { artifact: slice_plan, path: "slices.2", exists: true }
     deps: [slice-2, slice-plan]
+    allowedTools: [Read, Write, Edit, Bash, Glob, Grep, Task, Skill]
+    skills: [app-conventions]
+    agents:
+      slice-reviewer:
+        description: "Read-only reviewer: checks a slice implementation against the harness contracts before verification runs."
+        prompt: |
+          You are the slice reviewer. Inspect ./app and report problems ONLY (no fixes):
+          1. Design fidelity: frontend/index.html must keep the chosen design shell and
+             every canonical mount point (id="agent-mode", "screen-chat", "messages",
+             "composer", "input") and still load app.js.
+          2. Route shadowing: new /api/... routes registered after the /api/{table}
+             catch-all in main.py are dead — flag them.
+          3. Module bypasses: storage not via db.store, LLM calls not via
+             agent_runtime.respond, identity not via ext_auth, files not via blob_store.
+          4. Cumulative acceptance risk: changes that could break EARLIER slices'
+             acceptance checks in the slice plan.
+          Reply with a numbered list of findings (file:line where possible), or
+          exactly "NO FINDINGS" if clean.
+        tools: [Read, Glob, Grep]
+        model: inherit
     prompt: prompts/build-slice.md
     mock: node "$HARNESS_PROJECT_DIR/mocks/build-slice.cjs"
     verify: node "$HARNESS_PROJECT_DIR/scripts/verify-slice.cjs"
@@ -293,6 +415,26 @@ nodes:
     params: { slice: 4 }
     when: { artifact: slice_plan, path: "slices.3", exists: true }
     deps: [slice-3, slice-plan]
+    allowedTools: [Read, Write, Edit, Bash, Glob, Grep, Task, Skill]
+    skills: [app-conventions]
+    agents:
+      slice-reviewer:
+        description: "Read-only reviewer: checks a slice implementation against the harness contracts before verification runs."
+        prompt: |
+          You are the slice reviewer. Inspect ./app and report problems ONLY (no fixes):
+          1. Design fidelity: frontend/index.html must keep the chosen design shell and
+             every canonical mount point (id="agent-mode", "screen-chat", "messages",
+             "composer", "input") and still load app.js.
+          2. Route shadowing: new /api/... routes registered after the /api/{table}
+             catch-all in main.py are dead — flag them.
+          3. Module bypasses: storage not via db.store, LLM calls not via
+             agent_runtime.respond, identity not via ext_auth, files not via blob_store.
+          4. Cumulative acceptance risk: changes that could break EARLIER slices'
+             acceptance checks in the slice plan.
+          Reply with a numbered list of findings (file:line where possible), or
+          exactly "NO FINDINGS" if clean.
+        tools: [Read, Glob, Grep]
+        model: inherit
     prompt: prompts/build-slice.md
     mock: node "$HARNESS_PROJECT_DIR/mocks/build-slice.cjs"
     verify: node "$HARNESS_PROJECT_DIR/scripts/verify-slice.cjs"
@@ -310,6 +452,26 @@ nodes:
     params: { slice: 5 }
     when: { artifact: slice_plan, path: "slices.4", exists: true }
     deps: [slice-4, slice-plan]
+    allowedTools: [Read, Write, Edit, Bash, Glob, Grep, Task, Skill]
+    skills: [app-conventions]
+    agents:
+      slice-reviewer:
+        description: "Read-only reviewer: checks a slice implementation against the harness contracts before verification runs."
+        prompt: |
+          You are the slice reviewer. Inspect ./app and report problems ONLY (no fixes):
+          1. Design fidelity: frontend/index.html must keep the chosen design shell and
+             every canonical mount point (id="agent-mode", "screen-chat", "messages",
+             "composer", "input") and still load app.js.
+          2. Route shadowing: new /api/... routes registered after the /api/{table}
+             catch-all in main.py are dead — flag them.
+          3. Module bypasses: storage not via db.store, LLM calls not via
+             agent_runtime.respond, identity not via ext_auth, files not via blob_store.
+          4. Cumulative acceptance risk: changes that could break EARLIER slices'
+             acceptance checks in the slice plan.
+          Reply with a numbered list of findings (file:line where possible), or
+          exactly "NO FINDINGS" if clean.
+        tools: [Read, Glob, Grep]
+        model: inherit
     prompt: prompts/build-slice.md
     mock: node "$HARNESS_PROJECT_DIR/mocks/build-slice.cjs"
     verify: node "$HARNESS_PROJECT_DIR/scripts/verify-slice.cjs"
@@ -327,6 +489,26 @@ nodes:
     params: { slice: 6 }
     when: { artifact: slice_plan, path: "slices.5", exists: true }
     deps: [slice-5, slice-plan]
+    allowedTools: [Read, Write, Edit, Bash, Glob, Grep, Task, Skill]
+    skills: [app-conventions]
+    agents:
+      slice-reviewer:
+        description: "Read-only reviewer: checks a slice implementation against the harness contracts before verification runs."
+        prompt: |
+          You are the slice reviewer. Inspect ./app and report problems ONLY (no fixes):
+          1. Design fidelity: frontend/index.html must keep the chosen design shell and
+             every canonical mount point (id="agent-mode", "screen-chat", "messages",
+             "composer", "input") and still load app.js.
+          2. Route shadowing: new /api/... routes registered after the /api/{table}
+             catch-all in main.py are dead — flag them.
+          3. Module bypasses: storage not via db.store, LLM calls not via
+             agent_runtime.respond, identity not via ext_auth, files not via blob_store.
+          4. Cumulative acceptance risk: changes that could break EARLIER slices'
+             acceptance checks in the slice plan.
+          Reply with a numbered list of findings (file:line where possible), or
+          exactly "NO FINDINGS" if clean.
+        tools: [Read, Glob, Grep]
+        model: inherit
     prompt: prompts/build-slice.md
     mock: node "$HARNESS_PROJECT_DIR/mocks/build-slice.cjs"
     verify: node "$HARNESS_PROJECT_DIR/scripts/verify-slice.cjs"

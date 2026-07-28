@@ -102,6 +102,11 @@ function staticChecks(dir: string, problems: string[]): void {
         problems.push(`node '${node.id}' schema invalid (${out.schema}): ${String(e).slice(0, 120)}`);
       }
     }
+    for (const skill of node.skills ?? []) {
+      if (!fs.existsSync(path.join(dir, "skills", skill, "SKILL.md"))) {
+        problems.push(`node '${node.id}' declares missing certified skill: skills/${skill}/SKILL.md`);
+      }
+    }
     // Every $HARNESS_PROJECT_DIR-relative script referenced by any command must exist.
     for (const cmd of [node.command, node.verify, node.mock].filter(Boolean) as string[]) {
       for (const m of cmd.matchAll(/\$HARNESS_PROJECT_DIR\/([^\s"']+)/g)) {

@@ -494,3 +494,24 @@ test("revision: a change request becomes a requirement with provenance and re-de
   const revisions = events(ctx, "node.reopened").filter((e) => e.reason === "user_revision");
   assert.deepEqual(revisions.map((e) => e.nodeId), ["requirements-synthesis", "slice-2"]);
 });
+
+test("certified subagent teams: design directors + slice reviewer are declared and reachable", () => {
+  const def = loadProjectType(PT_DIR);
+  const design = def.nodes.find((n) => n.id === "design-options");
+  assert.deepEqual(
+    Object.keys(design.agents).sort(),
+    ["board-director", "console-director", "editorial-director", "terminal-director"],
+    "four genuinely distinct design directors",
+  );
+  assert.ok(design.allowedTools.includes("Task"));
+  for (const [name, sub] of Object.entries(design.agents)) {
+    assert.match(sub.prompt, /screen-chat/, `${name} carries the buildable-shell contract`);
+    assert.ok(!sub.tools.includes("Task"), "directors do not sub-delegate");
+  }
+
+  for (const n of def.nodes.filter((x) => /^slice-\d$/.test(x.id))) {
+    assert.ok(n.agents["slice-reviewer"], `${n.id} has the reviewer`);
+    assert.deepEqual(n.agents["slice-reviewer"].tools, ["Read", "Glob", "Grep"], "reviewer is read-only");
+    assert.ok(n.allowedTools.includes("Task"));
+  }
+});
