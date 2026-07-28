@@ -23,7 +23,7 @@ cost:
     requirements-synthesis: { budget_usd: 3.00 }
     gap-questions: { budget_usd: 1.00 }
     architecture: { budget_usd: 2.00 }
-    design-options: { budget_usd: 12.00 }  # produces 3-4 buildable app shells (full HTML/CSS), not sketches
+    design-options: { budget_usd: 24.00 }  # a TEAM of 4 directors costs ~8/attempt (live data); covers a retry
     data-design: { budget_usd: 1.50 }
     agent-design: { budget_usd: 1.50 }
     workflow-design: { budget_usd: 1.50 }
@@ -151,7 +151,7 @@ nodes:
     description: "A team of four design-director subagents each creates a complete buildable direction in parallel; the lead agent verifies and indexes them."
     kind: agent
     model: claude-opus-5
-    maxTurns: 60
+    maxTurns: 90
     allowedTools: [Read, Write, Edit, Bash, Glob, Grep, Task]
     agents:
       editorial-director:
