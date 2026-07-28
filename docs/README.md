@@ -13,6 +13,11 @@ that work every time. Start with the guide that matches your role:
 | [Reporting bugs](guides/reporting-bugs.md) | Everyone | What to attach (the journal!), triage, when feedback beats a bug report |
 | [Reference](guides/reference.md) | Everyone | CLI, environment variables, workspace layout, glossary, FAQ |
 
+**[CAPABILITIES.md](CAPABILITIES.md)** is the one-page inventory of everything
+the harness does today (with its proof for each claim), and
+**[CHANGELOG.md](CHANGELOG.md)** is the development record — platform phases,
+agentic-app 0.3.0→0.8.0 version history, and the lessons the code now enforces.
+
 The **module catalog** — the heart of the harness, ~100 modules with per-module rationale and certification rules — is [MODULES.md](MODULES.md).
 
 Architecture and rationale live in [DESIGN.md](DESIGN.md) — the three planes,

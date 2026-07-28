@@ -24,6 +24,7 @@
 |---|---|
 | `HARNESS_HOME` | Root for the store, runtime engine, and telemetry (default `~/.harness`). |
 | `HARNESS_SDK_DIR` | Pin the Claude Agent SDK location (checked before normal module lookup — for firms that manage the engine centrally). |
+| `HARNESS_MCP_DIR` | Pin the platform MCP servers directory (checked before repo/store and `$HARNESS_HOME/mcp`). |
 | `HARNESS_TELEMETRY=0` | Opt out of local telemetry. |
 | `HARNESS_SMOKE_DOCKER=1` | Enables the full container boot smoke during integration (builds images; certification runs enable it). |
 | `ANTHROPIC_API_KEY` | Agent auth for live runs (alternative: a logged-in Claude Code CLI). |

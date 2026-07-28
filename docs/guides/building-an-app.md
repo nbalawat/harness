@@ -72,6 +72,17 @@ on a recorded assumption (visible in the Decisions tab).
   requirement coverage, slices delivered. Green means *executed and passed*,
   never "an agent said so".
 
+## What's working under the hood
+
+Each build step is a hermetic Claude agent session with exactly the
+capabilities its certified definition grants: some run **subagent teams**
+(four design directors create your options in parallel; a read-only reviewer
+checks every slice before verification), all slice builders load the
+**app-conventions skill** (the codebase's law) and drive your app through the
+**app-sandbox tools** (boot/probe/test with structured results) instead of
+raw shell. You can see all of it: any step's drawer lists its session
+capabilities, subagents, and every tool call it made.
+
 ## 5. Changing your mind
 
 Feedback never edits the app directly — it re-enters the pipeline at the right
