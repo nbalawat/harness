@@ -1222,6 +1222,56 @@ li.msg--agent .msg-body { border-left: var(--rule-accent); padding-left: var(--s
         </div>
       </aside>
     </div>
+
+    <div class="section-head">
+      <p class="section-head__kicker">Live register — intake</p>
+      <h1 class="section-head__title">Packages received, <em>as the register holds them</em></h1>
+      <p class="section-head__standfirst">A submission opens a case and is checked mechanically against Document Checklist v2.0. A complete package moves to READY with a case-ready timestamp; an incomplete one is RETURNED with the itemised list of exactly which documents are outstanding. Nothing on that list is set by hand.</p>
+      <p class="section-head__byline" id="live-worklist-meta">Reading the register…</p>
+    </div>
+
+    <form class="filters" id="intake-form" autocomplete="off">
+      <div class="field"><label for="in-ref">Submission reference</label><input id="in-ref" type="text" value="ACC-2026-0001"></div>
+      <div class="field"><label for="in-name">Client legal name</label><input id="in-name" type="text" value="Meridian Holdings Ltd"></div>
+      <div class="field"><label for="in-entity">Entity type</label><select id="in-entity"><option value="corporate" selected>Corporate</option><option value="individual">Individual</option></select></div>
+      <div class="field"><label for="in-depth">Ownership chain depth</label><input id="in-depth" type="number" min="1" value="1"></div>
+      <div class="field"><label for="in-regulated">Regulated industry</label><select id="in-regulated"><option value="false" selected>No</option><option value="true">Yes</option></select></div>
+      <div class="field"><label for="in-cross">Cross-border expected</label><select id="in-cross"><option value="false" selected>No</option><option value="true">Yes</option></select></div>
+      <div class="field field--span2"><label for="in-docs">Artefacts in the package</label><select id="in-docs" multiple size="7"></select></div>
+      <div class="field"><label for="in-user">Submitting analyst</label><input id="in-user" type="text" value="ana.analyst"></div>
+      <div class="field"><label for="intake-submit">Mechanical check</label><button class="btn" id="intake-submit" type="submit">Open case &amp; check completeness</button></div>
+    </form>
+    <p class="label" id="intake-result">No submission made this session.</p>
+
+    <div class="spread">
+      <div class="column">
+        <div class="table-scroll">
+        <table class="ledger">
+          <caption>Live register — cases opened through intake</caption>
+          <thead>
+            <tr>
+              <th scope="col">Case</th>
+              <th scope="col">Client</th>
+              <th scope="col">Status</th>
+              <th scope="col">Band</th>
+              <th scope="col">Checklist</th>
+              <th scope="col">Documents outstanding</th>
+              <th scope="col">Case ready</th>
+            </tr>
+          </thead>
+          <tbody id="live-worklist-body"></tbody>
+        </table>
+        </div>
+      </div>
+
+      <aside class="rail">
+        <ul class="margin-figures" id="live-worklist-figures"></ul>
+        <div class="margin-note margin-note--tint">
+          <span class="margin-note__label">Nothing here is waivable</span>
+          <p class="margin-note__body">A required artefact cannot be set aside by an analyst, a senior analyst, or anyone else. The attempt is refused and the refusal is written to the register.</p>
+        </div>
+      </aside>
+    </div>
   </section>
 
   <!-- =================================================================== -->
@@ -1325,6 +1375,46 @@ li.msg--agent .msg-body { border-left: var(--rule-accent); padding-left: var(--s
         <div class="margin-note">
           <span class="margin-note__label">Next review due</span>
           <p class="margin-note__body">28 January 2027 — six months from approval for High-band relationships.</p>
+        </div>
+      </aside>
+    </div>
+
+    <div class="section-head">
+      <p class="section-head__kicker">Live case file</p>
+      <h1 class="section-head__title">The file, <em>as the register holds it</em></h1>
+      <p class="section-head__standfirst">Cases are addressed by their submission reference. What follows is read straight from the record: the mechanical completeness result and, where the package fell short, the itemised list of outstanding artefacts sent to the client verbatim.</p>
+      <p class="section-head__byline" id="live-case-byline">No case loaded — choose a line from the live register, or name a reference below.</p>
+    </div>
+
+    <form class="filters" id="live-case-form" autocomplete="off">
+      <div class="field field--span2"><label for="live-case-ref">Submission reference</label><input id="live-case-ref" type="text" placeholder="ACC-2026-0001"></div>
+      <div class="field"><label for="live-case-open">Retrieve</label><button class="btn" id="live-case-open" type="submit">Open the file</button></div>
+    </form>
+
+    <div class="spread">
+      <div class="column column--measure">
+        <h4 class="head">Particulars of record</h4>
+        <dl class="dossier-dl" id="live-case-particulars"></dl>
+
+        <h4 class="head">Document completeness — evaluated mechanically</h4>
+        <ul class="checklist" id="live-case-checklist"></ul>
+
+        <div class="notice">
+          <span class="notice__label" id="live-case-notice-label">Completeness result</span>
+          <p id="live-case-notice-body">No case loaded.</p>
+        </div>
+
+        <div class="actions">
+          <button class="btn btn--ghost" type="button" id="live-case-waive">Attempt to waive an outstanding item</button>
+          <span class="actions__note" id="live-case-waive-note">Required items are not waivable by any role; an attempt is refused and written to the register.</span>
+        </div>
+      </div>
+
+      <aside class="rail">
+        <ul class="margin-figures" id="live-case-figures"></ul>
+        <div class="margin-note">
+          <span class="margin-note__label">Policy artefacts of record</span>
+          <p class="margin-note__body">Every case carries the versions it was judged under, so a past decision can be reproduced exactly.</p>
         </div>
       </aside>
     </div>
@@ -1981,5 +2071,6 @@ li.msg--agent .msg-body { border-left: var(--rule-accent); padding-left: var(--s
 </div>
 
 <script src="app.js" defer></script>
+<script src="cases.js" defer></script>
 </body>
 </html>

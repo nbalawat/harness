@@ -219,6 +219,16 @@ def band_for(total):
     return "high"
 
 
+def band_label(band):
+    """Stored/served bands are lowercase; workflows.json gates on the label form.
+
+    `sla-escalation-monitor`'s high_risk_escalation_gate compares
+    `evaluate_sla.risk_band` to the literal "High", so any handler emitting a
+    band into workflow context must emit band_label(band), never the raw value.
+    """
+    return {"low": "Low", "medium": "Medium", "high": "High"}.get(str(band).lower(), str(band).title())
+
+
 def required_approver_role(band):
     for entry in RISK_BANDS:
         if entry["band"] == band:

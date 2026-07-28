@@ -531,7 +531,12 @@ export function scanRuns(root: string): Record<string, unknown>[] {
     const dir = path.join(root, entry.name);
     if (!fs.existsSync(path.join(dir, "run.json")) || !fs.existsSync(path.join(dir, "journal.jsonl"))) continue;
     try {
-      const st = buildState(dir);
+      const st = buildState(dir) as Record<string, any>;
+      // newest slice screenshot = the card thumbnail
+      let thumb: string | null = null;
+      const shots = (st.sliceShots ?? []) as { slice: string; href: string }[];
+      if (shots.length > 0) thumb = `/thumb/${encodeURIComponent(entry.name)}/${shots[shots.length - 1].slice}`;
+      const nodes = (st.nodes ?? []) as { state: string }[];
       runs.push({
         dir,
         name: entry.name,
@@ -540,6 +545,10 @@ export function scanRuns(root: string): Record<string, unknown>[] {
         status: st.status,
         runMode: st.runMode,
         costUsd: st.totalCostUsd,
+        problem: String(st.problemStatement ?? "").slice(0, 160),
+        thumb,
+        progress: { done: nodes.filter((n) => n.state === "committed" || n.state === "skipped").length, total: nodes.length },
+        needsYou: Boolean(st.parkedGate || st.pendingQuestion),
         updatedAt: fs.statSync(path.join(dir, "journal.jsonl")).mtime.toISOString(),
       });
     } catch {
@@ -819,6 +828,17 @@ export function startUiServer(target: string, port: number): Promise<http.Server
         }
         res.writeHead(200, { "content-type": "text/html" });
         res.end(VIEW_PAGE.replace("__TITLE__", rel).replace("__BODY__", body.replace(/&/g, "&amp;").replace(/</g, "&lt;")));
+      } else if (url.pathname.startsWith("/thumb/")) {
+        // /thumb/<runName>/<slice-N> — screenshot thumbnails for storefront cards.
+        const [, , runName, slice] = url.pathname.split("/").map(decodeURIComponent);
+        const runDir = path.join(root, path.basename(runName ?? ""));
+        const shot = path.join(runDir, "artifacts", path.basename(slice ?? ""), "app", "screenshots", `${path.basename(slice ?? "")}.png`);
+        if (!fs.existsSync(path.join(runDir, "run.json")) || !fs.existsSync(shot)) {
+          res.writeHead(404).end("not found");
+          return;
+        }
+        res.writeHead(200, { "content-type": "image/png", "cache-control": "max-age=60" });
+        res.end(fs.readFileSync(shot));
       } else if (url.pathname.startsWith("/artifact/")) {
         const rel = decodeURIComponent(url.pathname.slice("/artifact/".length));
         const abs = path.normalize(path.join(artifactsRoot(), rel));
@@ -1094,6 +1114,34 @@ button.ghost { background:transparent; border:1px solid var(--border); color:var
 .event { display:flex; gap:.6rem; align-items:baseline; padding:.14rem 0; color:var(--ink2); font-size:.8rem; }
 .event .t { color:var(--muted); font-size:.7rem; flex:none; width:56px; }
 .event.bad { color:var(--crit); }
+/* storefront hero + gallery */
+.hero { display:grid; grid-template-columns: 1.4fr 1fr; gap:2rem; align-items:stretch; margin:1.2rem 0 2rem;
+  background:linear-gradient(135deg, color-mix(in srgb, var(--accent) 8%, var(--surface)), var(--surface) 55%);
+  border:1px solid var(--border); border-radius:18px; padding:2rem 2.2rem; box-shadow:var(--shadow); }
+.hero-copy h1 { font-size:2.1rem; line-height:1.15; letter-spacing:-.02em; margin-bottom:.7rem; }
+.hero-copy h1 em { color:var(--accent); font-style:normal; }
+.hero-copy p { color:var(--ink2); font-size:1rem; max-width:34rem; line-height:1.55; }
+.herostats { display:flex; gap:1.8rem; margin-top:1.4rem; flex-wrap:wrap; }
+.herostats .hs b { display:block; font-size:1.5rem; letter-spacing:-.01em; }
+.herostats .hs span { font-size:.72rem; color:var(--muted); text-transform:uppercase; letter-spacing:.07em; }
+.hero-form { background:var(--page); border:1px solid var(--border); border-radius:14px; padding:1.2rem 1.3rem; display:flex; flex-direction:column; gap:.6rem; justify-content:center; }
+.hero-form .hf-title { font-weight:750; font-size:1.05rem; }
+.hero-form input, .hero-form select { padding:.65rem .8rem; border:1px solid var(--grid); border-radius:9px; background:var(--surface); color:inherit; font:inherit; }
+.hero-form button.big { padding:.7rem 1rem; font-size:.95rem; border-radius:9px; }
+.hero-form .hf-foot { font-size:.7rem; color:var(--muted); }
+#needsYouStrip .ny { display:flex; align-items:center; gap:.8rem; background:color-mix(in srgb, var(--warn) 12%, var(--surface)); border:1px solid var(--warn); border-radius:12px; padding:.7rem 1rem; margin-bottom:.6rem; cursor:pointer; }
+#needsYouStrip .ny b { font-size:.92rem; }
+#needsYouStrip .ny:hover { box-shadow:var(--shadow); }
+.galhead { margin:1.6rem 0 .8rem; font-size:.95rem; }
+.runcard { padding:0; overflow:hidden; display:flex; flex-direction:column; transition:transform .15s ease, box-shadow .15s ease; }
+.runcard:hover { transform:translateY(-3px); box-shadow:0 8px 28px rgba(11,11,11,.12); }
+.runcard .shotwrap { height:150px; background:var(--page); border-bottom:1px solid var(--grid); overflow:hidden; display:flex; align-items:flex-start; }
+.runcard .shotwrap img { width:100%; object-fit:cover; object-position:top; }
+.runcard .shotwrap .noshot { margin:auto; color:var(--muted); font-size:.75rem; }
+.runcard .cbody { padding:.9rem 1rem 1rem; display:flex; flex-direction:column; gap:.45rem; flex:1; }
+.runcard .prob { font-size:.74rem; color:var(--muted); line-height:1.4; max-height:2.9em; overflow:hidden; }
+.runcard .pmeter { height:5px; background:var(--grid); border-radius:3px; overflow:hidden; }
+.runcard .pmeter div { height:100%; background:var(--good); }
 /* overview narrative sections */
 .secwrap { margin-top:1.6rem; padding-top:1rem; border-top:1px solid var(--grid); }
 .seclabel { font-size:.78rem; font-weight:750; text-transform:uppercase; letter-spacing:.09em; color:var(--ink2); margin-bottom:.7rem; }
@@ -1170,8 +1218,23 @@ button.ghost { background:transparent; border:1px solid var(--border); color:var
 <div class="banner" id="banner"><b>Waiting on you</b><span id="bannerText"></span><button class="primary" onclick="showTab('overview');window.scrollTo({top:0,behavior:'smooth'})">Answer now</button></div>
 <main>
 <section id="storefront" style="display:none" class="store">
-  <h2 style="font-size:1.3rem;font-weight:650">Your applications</h2>
-  <p class="lead">Every app built with the harness, in one place. Open one to see its full build story — or start a new one.</p>
+  <div class="hero">
+    <div class="hero-copy">
+      <h1>Describe it. Approve it. <em>Run it.</em></h1>
+      <p>The factory turns a problem statement and your documents into a working, tested, audited AI application — with you making the calls that matter.</p>
+      <div class="herostats" id="heroStats"></div>
+    </div>
+    <div class="hero-form">
+      <div class="hf-title">Start building</div>
+      <input id="newName" placeholder="name-your-app (lowercase, hyphens)">
+      <select id="newType"></select>
+      <button class="primary big" onclick="startNewApp()">Build my app →</button>
+      <div class="hint" id="newErr" style="min-height:1em"></div>
+      <div class="hf-foot">Parks at intake — nothing runs or spends until you answer.</div>
+    </div>
+  </div>
+  <div id="needsYouStrip"></div>
+  <div class="galhead" id="galHead" style="display:none"><b>The gallery</b><span class="hint"> — every app built here, with its latest screenshot</span></div>
   <div class="storegrid" id="storeGrid"></div>
 </section>
 <div id="runview" style="display:none">
@@ -1462,31 +1525,41 @@ function renderStorefront(data) {
   document.getElementById('banner').style.display = 'none';
   setText('title', 'harness');
   setText('miniStats', data.runs.length + ' app' + (data.runs.length === 1 ? '' : 's') + ' built');
-  setHTML('storeGrid', data.runs.map(r =>
-    '<button class="runcard" onclick="openRun(' + esc(JSON.stringify(r.dir)) + ')"><b>' + esc(r.appName) + '</b>' +
-    '<div class="meta"><span class="chip">' + esc(r.projectType) + '</span>' +
-    '<span class="chip ' + (r.status === 'completed' ? 'ok' : r.status === 'failed' ? 'bad' : '') + '">' + esc(r.status) + '</span>' +
-    '<span class="chip ' + (r.runMode === 'live' ? 'ok' : '') + '">' + (r.runMode === 'live' ? 'live agents' : 'replay') + '</span>' +
-    '<span>$' + Number(r.costUsd).toFixed(2) + '</span><span>' + esc(String(r.updatedAt).slice(0, 10)) + '</span></div></button>'
-  ).join('') +
-  '<div class="runcard newrun"><b>Build a new app</b><div class="meta">Name it, pick a certified project type, and the intake questions come to you right here.</div>' +
-  '<div style="display:flex;flex-direction:column;gap:.5rem;margin-top:.7rem">' +
-  '<input id="newName" placeholder="my-new-app (lowercase, hyphens)" style="padding:.55rem .7rem;border:1px solid var(--grid);border-radius:8px;background:var(--page);color:inherit;font:inherit">' +
-  '<select id="newType" style="padding:.55rem .7rem;border:1px solid var(--grid);border-radius:8px;background:var(--page);color:inherit;font:inherit">' +
-  (data.projectTypes || []).map(p => '<option value="' + esc(p.dir) + '">' + esc(p.name) + '@' + esc(p.version) + '</option>').join('') +
-  '</select>' +
-  '<button class="primary" onclick="startNewApp()">Start building</button>' +
-  '<div class="hint" id="newErr"></div></div></div>');
-}
 
-async function startNewApp() {
-  const name = document.getElementById('newName').value.trim();
-  const projectTypeDir = document.getElementById('newType').value;
-  if (!name) { setText('newErr', 'Give your app a name first.'); return; }
-  const r = await fetch('/api/new-run', { method:'POST', body: JSON.stringify({ name, projectTypeDir }) });
-  const data = await r.json().catch(() => ({}));
-  if (!r.ok) { setText('newErr', data.error || 'could not start'); return; }
-  await openRun(data.dir); // lands on Overview with the intake form waiting
+  // hero: project types into the form + real numbers
+  setHTML('newType', (data.projectTypes || []).map(p =>
+    '<option value="' + esc(p.dir) + '">' + esc(p.name) + '@' + esc(p.version) + '</option>').join(''));
+  const live = data.runs.filter(r => r.runMode === 'live').length;
+  const building = data.runs.filter(r => r.status === 'running').length;
+  const spend = data.runs.reduce((a, r) => a + (r.costUsd || 0), 0);
+  setHTML('heroStats',
+    '<div class="hs"><b>' + data.runs.length + '</b><span>apps built</span></div>' +
+    '<div class="hs"><b>' + live + '</b><span>with live agents</span></div>' +
+    '<div class="hs"><b>' + building + '</b><span>building now</span></div>' +
+    '<div class="hs"><b>$' + spend.toFixed(0) + '</b><span>total invested</span></div>');
+
+  // needs-you strip: parked runs and pending questions jump the queue
+  const needy = data.runs.filter(r => r.needsYou);
+  setHTML('needsYouStrip', needy.map(r =>
+    '<div class="ny" onclick="openRun(' + esc(JSON.stringify(r.dir)) + ')">' +
+    '<span class="chip">waiting on you</span><b>' + esc(r.appName) + '</b>' +
+    '<span class="hint">has a question or approval waiting — click to answer</span></div>'
+  ).join(''));
+
+  document.getElementById('galHead').style.display = data.runs.length ? '' : 'none';
+  setHTML('storeGrid', data.runs.map(r => {
+    const pct = r.progress && r.progress.total ? Math.round(100 * r.progress.done / r.progress.total) : 0;
+    const shot = r.thumb
+      ? '<div class="shotwrap"><img src="' + esc(r.thumb) + '" loading="lazy" alt=""></div>'
+      : '<div class="shotwrap"><span class="noshot">' + (r.status === 'running' ? 'building — screenshot coming' : 'no screenshot yet') + '</span></div>';
+    return '<button class="runcard" onclick="openRun(' + esc(JSON.stringify(r.dir)) + ')">' + shot +
+      '<div class="cbody"><b>' + esc(r.appName) + '</b>' +
+      (r.prob || r.problem ? '<div class="prob">' + esc(r.problem || '') + '</div>' : '') +
+      '<div class="pmeter"><div style="width:' + pct + '%"></div></div>' +
+      '<div class="meta"><span class="chip ' + (r.status === 'completed' ? 'ok' : r.status === 'failed' ? 'bad' : '') + '">' + esc(r.status) + '</span>' +
+      '<span class="chip ' + (r.runMode === 'live' ? 'ok' : '') + '">' + (r.runMode === 'live' ? 'live agents' : 'replay') + '</span>' +
+      '<span>$' + Number(r.costUsd).toFixed(2) + '</span><span>' + esc(String(r.updatedAt).slice(0, 10)) + '</span></div></div></button>';
+  }).join(''));
 }
 
 async function tick() {

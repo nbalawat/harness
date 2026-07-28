@@ -49,6 +49,12 @@ INCOMPLETE_PACKAGE = {
 }
 
 
+def ensure_cases():
+    """Each test stands on its own — re-submitting a reference supersedes it."""
+    client.post("/cases", json=COMPLETE_PACKAGE)
+    client.post("/cases", json=INCOMPLETE_PACKAGE)
+
+
 def test_checklist_is_published_and_versioned():
     body = client.get("/checklist").json()
     assert body["version"]
@@ -100,7 +106,16 @@ def test_conditional_items_only_apply_when_triggered():
     assert conditional and all(c["required"] is False for c in conditional)
 
 
+def test_resubmitting_a_reference_supersedes_rather_than_duplicates():
+    ensure_cases()
+    client.post("/cases", json=INCOMPLETE_PACKAGE)
+    refs = [c["case_reference"] for c in client.get("/cases").json()["cases"]]
+    assert refs.count("t-returned-001") == 1
+    assert client.get("/cases/T-RETURNED-001").json()["status"] == "returned"
+
+
 def test_worklist_and_case_detail_are_addressable_by_reference():
+    ensure_cases()
     listing = client.get("/cases").json()
     refs = [c["case_reference"] for c in listing["cases"]]
     assert "t-complete-001" in refs and "t-returned-001" in refs
@@ -116,6 +131,7 @@ def test_unknown_case_reference_404s():
 
 
 def test_no_role_can_waive_a_required_document():
+    ensure_cases()
     response = client.post(
         "/cases/T-RETURNED-001/waive-document",
         json={"document_type": "register_of_directors", "acting_user": "ana.analyst"},
@@ -127,6 +143,7 @@ def test_no_role_can_waive_a_required_document():
 
 
 def test_intake_runs_the_approved_workflow_and_writes_the_audit_trail():
+    ensure_cases()
     assert workflow_problems() == []
     trail = [e for e in client.get("/api/audit_trail").json()]
     actions = {e["action_type"] for e in trail}

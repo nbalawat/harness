@@ -13,7 +13,7 @@ Composition contract:
   * routes       -> mounted outside /api/ so the /api/{table} catch-all in
                     main.py can never shadow them
 """
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Header, HTTPException
 from pydantic import BaseModel, Field
 
 import kyc_policy as policy
@@ -21,7 +21,6 @@ import rbac
 import workflow_engine
 from db import store
 from ext_audit import record as audit_record
-from models import TABLES
 
 router = APIRouter()
 
@@ -32,20 +31,27 @@ CASE_TABLE = "cases"
 # Seed the named individual accounts the desk decides with (never anonymous).
 # --------------------------------------------------------------------------
 def _seed_users():
-    if store.list("users"):
-        return
+    existing = {u["username"].lower() for u in store.list("users")}
     for user in policy.SEED_USERS:
-        store.insert(
-            "users",
-            {
-                "username": user["username"],
-                "full_name": user["full_name"],
-                "role": user["role"],
-                "created_at": policy.iso(policy.now_utc()),
-                "is_active": True,
-            },
-        )
-        rbac.grant(user["username"], user["role"])
+        if user["username"].lower() not in existing:
+            store.insert(
+                "users",
+                {
+                    "username": user["username"],
+                    "full_name": user["full_name"],
+                    "role": user["role"],
+                    "created_at": policy.iso(policy.now_utc()),
+                    "is_active": True,
+                },
+            )
+    sync_rbac()
+
+
+def sync_rbac():
+    """rbac is the single authority for role checks — keep it fed from `users`."""
+    for row in store.list("users"):
+        if row.get("role"):
+            rbac.grant(row["username"], row["role"])
 
 
 _seed_users()
@@ -60,8 +66,23 @@ def user_record(username):
 
 
 def role_of(username):
+    sync_rbac()
+    roles = rbac.roles_of((username or "").strip())
+    if roles:
+        return roles[0]
     row = user_record(username)
     return row["role"] if row else None
+
+
+def acting_user(authorization, claimed):
+    """Identity is the authenticated caller when auth-basic carries one.
+
+    A body-supplied name is only a claim: it is accepted (the desk is not yet
+    behind a login in this slice) but never allowed to override a real session.
+    """
+    from ext_auth import current_user
+
+    return current_user(authorization) or (claimed or "").strip() or None
 
 
 # --------------------------------------------------------------------------
@@ -71,10 +92,15 @@ def normalise_reference(reference):
     return (reference or "").strip().lower()
 
 
+def live_cases():
+    """Superseded rows stay on the record but leave the live register."""
+    return [c for c in store.list(CASE_TABLE) if c.get("status") != "superseded"]
+
+
 def find_case(reference):
     """Cases are addressed by their submission reference, case-insensitively."""
     key = normalise_reference(reference)
-    matches = [c for c in store.list(CASE_TABLE) if c.get("case_reference") == key]
+    matches = [c for c in live_cases() if c.get("case_reference") == key]
     return matches[-1] if matches else None
 
 
@@ -120,10 +146,26 @@ def open_case_from_submission(context):
     submission = context.get("inputs") or {}
     now = policy.iso(policy.now_utc())
     versions = policy.policy_versions()
+    reference = normalise_reference(submission.get("client_reference"))
+    previous = find_case(reference)
+    if previous is not None:
+        # A reference identifies one live case: an amended package supersedes
+        # the earlier submission rather than silently duplicating it.
+        was = previous.get("status")
+        previous["status"] = "superseded"
+        audit(
+            previous["id"],
+            "case_superseded",
+            submission.get("submitted_by"),
+            field_name="status",
+            old_value=was,
+            new_value="superseded",
+            details={"superseded_by_reference": reference},
+        )
     row = store.insert(
         CASE_TABLE,
         {
-            "case_reference": normalise_reference(submission.get("client_reference")),
+            "case_reference": reference,
             "client_reference": submission.get("client_reference"),
             "client_name": submission.get("client_name"),
             "client_name_normalized": (submission.get("client_name") or "").lower(),
@@ -489,11 +531,13 @@ def checklist_definition_payload(entity_type="corporate"):
 
 
 @router.post("/cases")
-def open_case(submission: CaseSubmission):
+def open_case(submission: CaseSubmission, authorization: str | None = Header(default=None)):
     """Open a case and run the approved case-intake workflow end to end."""
     if not normalise_reference(submission.client_reference):
         raise HTTPException(status_code=400, detail="client_reference is required")
-    run_id = workflow_engine.start("case-intake-and-risk-scoring", submission.model_dump())
+    payload_in = submission.model_dump()
+    payload_in["submitted_by"] = acting_user(authorization, submission.submitted_by) or "unknown"
+    run_id = workflow_engine.start("case-intake-and-risk-scoring", payload_in)
     state = workflow_engine.state(run_id)
     if state.get("status") == "failed":
         raise HTTPException(status_code=500, detail=f"case intake failed: {state.get('error')}")
@@ -514,7 +558,7 @@ def open_case(submission: CaseSubmission):
 
 @router.get("/cases")
 def list_cases(status: str | None = None):
-    rows = store.list(CASE_TABLE)
+    rows = live_cases()
     if status:
         rows = [r for r in rows if str(r.get("status")) == status.lower()]
     return {"cases": [case_summary(r) for r in rows], "count": len(rows)}
@@ -529,7 +573,7 @@ def get_case(reference: str):
 
 
 @router.post("/cases/{reference}/waive-document")
-def waive_document(reference: str, req: WaiveRequest):
+def waive_document(reference: str, req: WaiveRequest, authorization: str | None = Header(default=None)):
     """Never permitted — a required item cannot be waived by any role."""
     row = find_case(reference)
     if row is None:
@@ -537,7 +581,7 @@ def waive_document(reference: str, req: WaiveRequest):
     audit(
         row["id"],
         "waiver_refused",
-        req.acting_user or "unknown",
+        acting_user(authorization, req.acting_user) or "unknown",
         field_name="document_type",
         old_value=req.document_type,
         new_value="refused",
@@ -550,9 +594,3 @@ def waive_document(reference: str, req: WaiveRequest):
             "Only a compliance_officer may record a documented policy exception against the case."
         ),
     )
-
-
-@router.get("/case-tables")
-def case_tables():
-    """Which generated tables this slice writes through — transparency aid."""
-    return {"tables": sorted(t for t in TABLES if store.list(t))}
