@@ -1,0 +1,87 @@
+INFO:     Started server process [75167]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:63145 (Press CTRL+C to quit)
+INFO:     127.0.0.1:63148 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63149 - "POST /cases HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63148 - "POST /cases HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63149 - "POST /cases HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63148 - "GET /cases HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63149 - "GET /cases/ACC-RETURNED-001 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63148 - "POST /cases/ACC-RETURNED-001/waive-document HTTP/1.1" 403 Forbidden
+INFO:     127.0.0.1:63149 - "GET /checklist HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63148 - "GET /risk-matrix HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63149 - "POST /risk/score HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63148 - "POST /risk/score HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63149 - "POST /risk/score HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63148 - "POST /cases HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63149 - "GET /cases/ACC-HIGH-001/score-breakdown HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63148 - "POST /cases/ACC-HIGH-001/score HTTP/1.1" 403 Forbidden
+INFO:     127.0.0.1:63149 - "GET /policy-corpus HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63148 - "POST /memos/draft HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63149 - "POST /memos/draft HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63148 - "GET /cases/ACC-HIGH-001/memos HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63149 - "GET /cases/ACC-HIGH-001 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63148 - "GET /citations/resolve?document=risk-rating-matrix&section=jurisdiction HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63149 - "GET /agents HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63148 - "GET /roles HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63149 - "GET /users HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63148 - "POST /decisions HTTP/1.1" 403 Forbidden
+INFO:     127.0.0.1:63149 - "POST /decisions HTTP/1.1" 403 Forbidden
+INFO:     127.0.0.1:63148 - "POST /decisions HTTP/1.1" 403 Forbidden
+INFO:     127.0.0.1:63149 - "POST /decisions HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:63148 - "POST /decisions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63149 - "POST /decisions HTTP/1.1" 409 Conflict
+INFO:     127.0.0.1:63148 - "POST /decisions HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:63149 - "POST /decisions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63148 - "GET /notifications?case_reference=ACC-COMPLETE-001 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63149 - "POST /cases/ACC-RETURNED-001/exceptions HTTP/1.1" 403 Forbidden
+INFO:     127.0.0.1:63148 - "POST /cases/ACC-RETURNED-001/exceptions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63149 - "GET /audit/cases/ACC-HIGH-001 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63148 - "POST /audit/entries/1/delete HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:63149 - "GET /sla-policy HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63148 - "POST /cases HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63149 - "POST /sla/evaluate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63148 - "GET /cases/ACC-SLA-001 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63149 - "GET /notifications HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63148 - "POST /sla/evaluate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63149 - "GET /escalations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63148 - "POST /sla/evaluate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63149 - "GET /cases HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63148 - "POST /decisions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63149 - "GET /cases/ACC-SLA-001 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63156 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63156 - "GET /tokens.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63157 - "GET /app.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63160 - "GET /memo.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63159 - "GET /risk.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63158 - "GET /cases.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63161 - "GET /decisions.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63160 - "GET /agent/mode HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63158 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63159 - "GET /checklist HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63157 - "GET /agents HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63156 - "GET /sla.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63161 - "GET /risk-matrix HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63160 - "GET /policy-corpus HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63158 - "GET /users HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63156 - "GET /cases HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63158 - "GET /escalations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63158 - "GET /cases HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63156 - "GET /favicon.ico HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:63156 - "POST /chat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63156 - "GET / HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:63156 - "GET /agent/mode HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63160 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63158 - "GET /agents HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63161 - "GET /checklist HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63159 - "GET /policy-corpus HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63157 - "GET /risk-matrix HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63160 - "GET /cases HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63156 - "GET /users HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63158 - "GET /escalations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63158 - "GET /cases HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [75167]

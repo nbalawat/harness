@@ -44,5 +44,13 @@ if (fs.existsSync("feedback.md")) {
   );
   fs.appendFileSync("app/SLICES.md", `- slice ${sliceIndex}: revised per user feedback\n`);
 }
+// The slice's demo declaration: which screen shows this increment, and how.
+const DEMOS = {
+  "core-chat": { screen: "screen-chat", caption: "Ask a question, get a grounded reply in the chat thread.", steps: [{ action: "fill", selector: "#input", value: "How do refunds work?" }, { action: "click", selector: "#composer button" }] },
+  "conversation-history": { screen: "screen-history", caption: "Stored conversations appear in the reviewable history list.", steps: [] },
+  "reply-approval": { screen: "screen-agents", caption: "Drafts route through approval; the roster shows who is held to what.", steps: [] },
+};
+fs.mkdirSync("app/demo", { recursive: true });
+fs.writeFileSync(`app/demo/slice-${sliceIndex}.json`, JSON.stringify(DEMOS[slice.id] ?? { screen: "screen-chat", caption: slice.story, steps: [] }, null, 2));
 fs.appendFileSync("app/SLICES.md", `- slice ${sliceIndex}: ${slice.name} — ${slice.story}\n`);
 simulateCost(1.1, 60000, 12000);

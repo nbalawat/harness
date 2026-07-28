@@ -306,12 +306,21 @@ export function buildState(workspace: string): Record<string, unknown> {
   const workflowsDoc = readArtifactJson(workspace, state.artifacts, "workflows");
   const pendingQuestion = readJsonSafe(path.join(workspace, "pending-question.json"));
 
-  // Slice progress screenshots (shipped inside the app artifact by verify-slice).
-  const sliceShots: { slice: string; href: string }[] = [];
+  // Slice progress screenshots (shipped inside the app artifact by verify-slice),
+  // captioned with the slice's planned name and its demo declaration.
+  const sliceShots: { slice: string; href: string; name?: string; caption?: string }[] = [];
   for (const rel of walk(path.join(workspace, "artifacts"), path.join(workspace, "artifacts"))) {
     const m = rel.match(new RegExp("^(slice-[0-9]+)/app/screenshots/(slice-[0-9]+)[.]png$"));
     if (m && m[1] === m[2].replace("slice-", "slice-")) {
-      if (rel.startsWith(m[2].split(".")[0])) sliceShots.push({ slice: m[2], href: "/artifact/" + rel });
+      if (rel.startsWith(m[2].split(".")[0])) {
+        const shot: { slice: string; href: string; name?: string; caption?: string } = { slice: m[2], href: "/artifact/" + rel };
+        const idx = Number(m[2].split("-")[1]);
+        const planned = (slicePlanDoc?.slices as { name: string }[] | undefined)?.[idx - 1];
+        if (planned) shot.name = planned.name;
+        const demo = readJsonSafe(path.join(workspace, "artifacts", m[1], "app", "demo", `${m[2]}.json`)) as { caption?: string } | null;
+        if (demo?.caption) shot.caption = demo.caption;
+        sliceShots.push(shot);
+      }
     }
   }
 
@@ -1189,6 +1198,9 @@ button.ghost { background:transparent; border:1px solid var(--border); color:var
 .event { display:flex; gap:.6rem; align-items:baseline; padding:.14rem 0; color:var(--ink2); font-size:.8rem; }
 .event .t { color:var(--muted); font-size:.7rem; flex:none; width:56px; }
 .event.bad { color:var(--crit); }
+.shot img { width:100%; height:170px; object-fit:cover; object-position:top; background:#fff; display:block; }
+.shot .cap b { font-size:.78rem; }
+.shot .capsub { font-size:.7rem; color:var(--muted); margin-top:.15rem; line-height:1.3; }
 /* storefront hero + gallery */
 .hero { display:grid; grid-template-columns: 1.4fr 1fr; gap:2rem; align-items:stretch; margin:1.2rem 0 2rem;
   background:linear-gradient(135deg, color-mix(in srgb, var(--accent) 8%, var(--surface)), var(--surface) 55%);
@@ -1771,10 +1783,11 @@ async function tick() {
   // slice screenshots
   document.getElementById('shotsPanel').style.display = s.sliceShots.length ? '' : 'none';
   const shotsChanged = setHTML('shots', s.sliceShots.map(x =>
-    '<button class="shot" data-href="' + x.href + '" data-cap="' + esc(x.slice) + '"><img src="' + x.href + '" loading="lazy"><div class="cap">' + esc(x.slice) + ' — click to view full size</div></button>').join(''));
+    '<button class="shot" data-href="' + x.href + '" data-cap="' + esc(x.name || x.slice) + '" data-sub="' + esc(x.caption || '') + '"><img src="' + x.href + '" loading="lazy">' +
+    '<div class="cap"><b>' + esc(x.name || x.slice) + '</b>' + (x.caption ? '<div class="capsub">' + esc(x.caption) + '</div>' : '') + '</div></button>').join(''));
   if (shotsChanged) document.querySelectorAll('.shot').forEach(b => b.onclick = () => {
     setText('docTitle', b.dataset.cap);
-    setText('docBlurb', 'the app as it looked after this slice');
+    setText('docBlurb', b.dataset.sub || 'the app as it looked after this slice');
     document.getElementById('docRawBtn').style.display = 'none';
     document.getElementById('docBody').innerHTML = '<img src="' + b.dataset.href + '" style="width:100%;border-radius:8px;border:1px solid var(--grid)">';
     document.getElementById('docModal').classList.add('open');

@@ -76,6 +76,7 @@ nodes:
       - { id: problem_statement, prompt: "Describe the problem this application should solve." }
       - { id: documents_dir, prompt: "Path to a folder of supporting documents (or 'none').", default: "none" }
       - { id: deploy_target, prompt: "Deploy target?", default: "local", why: "Enables/disables the cloud deploy stage." }
+      - { id: supervision, prompt: "How closely do you want to supervise the build? (gates-only / every-slice)", default: "gates-only", why: "every-slice adds a checkpoint after each delivered slice: the run parks with the slice's evidence until you approve or request changes." }
     outputs:
       - { name: intake, file: intake.json, schema: schemas/intake.schema.json }
 
@@ -369,7 +370,7 @@ nodes:
     retries: 2
     params: { slice: 2 }
     when: { artifact: slice_plan, path: "slices.1", exists: true }
-    deps: [slice-1, slice-plan]
+    deps: [slice-1, review-slice-1, slice-plan]
     allowedTools: [Read, Write, Edit, Bash, Glob, Grep, Task, Skill,
                    mcp__app-sandbox__start_app, mcp__app-sandbox__request,
                    mcp__app-sandbox__logs, mcp__app-sandbox__run_tests,
@@ -410,7 +411,7 @@ nodes:
     retries: 2
     params: { slice: 3 }
     when: { artifact: slice_plan, path: "slices.2", exists: true }
-    deps: [slice-2, slice-plan]
+    deps: [slice-2, review-slice-2, slice-plan]
     allowedTools: [Read, Write, Edit, Bash, Glob, Grep, Task, Skill,
                    mcp__app-sandbox__start_app, mcp__app-sandbox__request,
                    mcp__app-sandbox__logs, mcp__app-sandbox__run_tests,
@@ -451,7 +452,7 @@ nodes:
     retries: 2
     params: { slice: 4 }
     when: { artifact: slice_plan, path: "slices.3", exists: true }
-    deps: [slice-3, slice-plan]
+    deps: [slice-3, review-slice-3, slice-plan]
     allowedTools: [Read, Write, Edit, Bash, Glob, Grep, Task, Skill,
                    mcp__app-sandbox__start_app, mcp__app-sandbox__request,
                    mcp__app-sandbox__logs, mcp__app-sandbox__run_tests,
@@ -492,7 +493,7 @@ nodes:
     retries: 2
     params: { slice: 5 }
     when: { artifact: slice_plan, path: "slices.4", exists: true }
-    deps: [slice-4, slice-plan]
+    deps: [slice-4, review-slice-4, slice-plan]
     allowedTools: [Read, Write, Edit, Bash, Glob, Grep, Task, Skill,
                    mcp__app-sandbox__start_app, mcp__app-sandbox__request,
                    mcp__app-sandbox__logs, mcp__app-sandbox__run_tests,
@@ -533,7 +534,7 @@ nodes:
     retries: 2
     params: { slice: 6 }
     when: { artifact: slice_plan, path: "slices.5", exists: true }
-    deps: [slice-5, slice-plan]
+    deps: [slice-5, review-slice-5, slice-plan]
     allowedTools: [Read, Write, Edit, Bash, Glob, Grep, Task, Skill,
                    mcp__app-sandbox__start_app, mcp__app-sandbox__request,
                    mcp__app-sandbox__logs, mcp__app-sandbox__run_tests,
@@ -565,11 +566,77 @@ nodes:
       - { name: app, file: app, dir: true }
 
   # -- Validate + secure (challenges e + f) ---------------------------------
+  - id: review-slice-1
+    phase: Build
+    description: "Checkpoint: slice 1 is delivered and verified — you approve it (or request changes) before the build continues."
+    kind: gate
+    when: { artifact: intake, path: supervision, equals: "every-slice" }
+    deps: [slice-1]
+    questions:
+      - { id: verdict, prompt: "Slice 1 is verified (see its evidence in the drawer and its screenshot). Continue the build? (yes to continue — use 'Request changes' on the slice first if you want it revised)", default: "yes", why: "Your checkpoint: nothing further is built until you approve this slice." }
+    outputs:
+      - { name: review_slice_1, file: review.json }
+
+  - id: review-slice-2
+    phase: Build
+    description: "Checkpoint: slice 2 is delivered and verified — you approve it (or request changes) before the build continues."
+    kind: gate
+    when: { artifact: intake, path: supervision, equals: "every-slice" }
+    deps: [slice-2]
+    questions:
+      - { id: verdict, prompt: "Slice 2 is verified (see its evidence in the drawer and its screenshot). Continue the build? (yes to continue — use 'Request changes' on the slice first if you want it revised)", default: "yes", why: "Your checkpoint: nothing further is built until you approve this slice." }
+    outputs:
+      - { name: review_slice_2, file: review.json }
+
+  - id: review-slice-3
+    phase: Build
+    description: "Checkpoint: slice 3 is delivered and verified — you approve it (or request changes) before the build continues."
+    kind: gate
+    when: { artifact: intake, path: supervision, equals: "every-slice" }
+    deps: [slice-3]
+    questions:
+      - { id: verdict, prompt: "Slice 3 is verified (see its evidence in the drawer and its screenshot). Continue the build? (yes to continue — use 'Request changes' on the slice first if you want it revised)", default: "yes", why: "Your checkpoint: nothing further is built until you approve this slice." }
+    outputs:
+      - { name: review_slice_3, file: review.json }
+
+  - id: review-slice-4
+    phase: Build
+    description: "Checkpoint: slice 4 is delivered and verified — you approve it (or request changes) before the build continues."
+    kind: gate
+    when: { artifact: intake, path: supervision, equals: "every-slice" }
+    deps: [slice-4]
+    questions:
+      - { id: verdict, prompt: "Slice 4 is verified (see its evidence in the drawer and its screenshot). Continue the build? (yes to continue — use 'Request changes' on the slice first if you want it revised)", default: "yes", why: "Your checkpoint: nothing further is built until you approve this slice." }
+    outputs:
+      - { name: review_slice_4, file: review.json }
+
+  - id: review-slice-5
+    phase: Build
+    description: "Checkpoint: slice 5 is delivered and verified — you approve it (or request changes) before the build continues."
+    kind: gate
+    when: { artifact: intake, path: supervision, equals: "every-slice" }
+    deps: [slice-5]
+    questions:
+      - { id: verdict, prompt: "Slice 5 is verified (see its evidence in the drawer and its screenshot). Continue the build? (yes to continue — use 'Request changes' on the slice first if you want it revised)", default: "yes", why: "Your checkpoint: nothing further is built until you approve this slice." }
+    outputs:
+      - { name: review_slice_5, file: review.json }
+
+  - id: review-slice-6
+    phase: Build
+    description: "Checkpoint: slice 6 is delivered and verified — you approve it (or request changes) before the build continues."
+    kind: gate
+    when: { artifact: intake, path: supervision, equals: "every-slice" }
+    deps: [slice-6]
+    questions:
+      - { id: verdict, prompt: "Slice 6 is verified (see its evidence in the drawer and its screenshot). Continue the build? (yes to continue — use 'Request changes' on the slice first if you want it revised)", default: "yes", why: "Your checkpoint: nothing further is built until you approve this slice." }
+    outputs:
+      - { name: review_slice_6, file: review.json }
+
   - id: integrate
     phase: Verification
     description: "Runs the whole app: full test suite, agent evals, and container boot smoke."
     kind: verifier
-    deps: [slice-1, slice-2, slice-3, slice-4, slice-5, slice-6]
+    deps: [slice-1, slice-2, slice-3, slice-4, slice-5, slice-6, review-slice-1, review-slice-2, review-slice-3, review-slice-4, review-slice-5, review-slice-6]
     command: node "$HARNESS_PROJECT_DIR/scripts/verify-integrate.cjs"
     outputs:
       - { name: integration_report, file: integration_report.json, schema: schemas/integration_report.schema.json }
@@ -578,7 +645,7 @@ nodes:
     phase: Verification
     description: "Deterministic security scan — secrets, dynamic code, unsafe patterns. High findings block."
     kind: verifier
-    deps: [slice-1, slice-2, slice-3, slice-4, slice-5, slice-6]
+    deps: [slice-1, slice-2, slice-3, slice-4, slice-5, slice-6, review-slice-1, review-slice-2, review-slice-3, review-slice-4, review-slice-5, review-slice-6]
     command: node "$HARNESS_PROJECT_DIR/scripts/security-scan.cjs"
     outputs:
       - { name: security_report, file: security_report.json, schema: schemas/security_report.schema.json }

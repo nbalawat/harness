@@ -112,19 +112,48 @@ async function main() {
       // demo chat just created — state growth is the visible slice progress.
       await page.reload({ waitUntil: "load" });
       await page.waitForTimeout(900);
-      // Designs often show one screen at a time (tabs). The progress shot is a
-      // COMPOSITE: force every screen section visible so what each slice added
-      // (approvals, history, roster...) is actually in the picture.
-      await page.evaluate(() => {
-        for (const s of document.querySelectorAll('[id^="screen-"]')) {
-          s.style.display = "block";
-          s.style.visibility = "visible";
-          s.removeAttribute("hidden");
-        }
-      });
-      await page.waitForTimeout(300);
       fs.mkdirSync(path.join(app, "screenshots"), { recursive: true });
-      await page.screenshot({ path: path.join(app, "screenshots", `slice-${sliceIndex}.png`), fullPage: true });
+
+      // THE SLICE'S OWN DEMO: the builder declares how to show ITS feature
+      // (app/demo/slice-N.json: screen + steps + caption). The shot is that
+      // screen, focused — each slice's screenshot demonstrates its increment.
+      let demoShot = false;
+      const demoFile = path.join(app, "demo", `slice-${sliceIndex}.json`);
+      if (fs.existsSync(demoFile)) {
+        try {
+          const demo = JSON.parse(fs.readFileSync(demoFile, "utf8"));
+          for (const step of demo.steps ?? []) {
+            if (step.action === "fill") await page.fill(step.selector, String(step.value ?? ""));
+            if (step.action === "click") await page.locator(step.selector).first().click();
+            await page.waitForTimeout(500);
+          }
+          await page.waitForTimeout(700);
+          const target = demo.screen ? page.locator(`#${demo.screen}`) : null;
+          if (target && (await target.count()) > 0) {
+            await page.evaluate((id) => {
+              const el = document.getElementById(id);
+              if (el) { el.style.display = "block"; el.style.visibility = "visible"; el.removeAttribute("hidden"); }
+            }, demo.screen);
+            await target.first().screenshot({ path: path.join(app, "screenshots", `slice-${sliceIndex}.png`) });
+            demoShot = true;
+            console.log(`demo screenshot: slice ${sliceIndex} -> #${demo.screen}`);
+          }
+        } catch (e) {
+          console.log("slice demo failed, falling back to composite: " + String(e).slice(0, 120));
+        }
+      }
+      if (!demoShot) {
+        // Fallback composite: all screens revealed, full page.
+        await page.evaluate(() => {
+          for (const s of document.querySelectorAll('[id^="screen-"]')) {
+            s.style.display = "block";
+            s.style.visibility = "visible";
+            s.removeAttribute("hidden");
+          }
+        });
+        await page.waitForTimeout(300);
+        await page.screenshot({ path: path.join(app, "screenshots", `slice-${sliceIndex}.png`), fullPage: true });
+      }
       await browser.close();
       console.log(`progress screenshot captured for slice ${sliceIndex} (full page)`);
     } catch (e) {

@@ -8,22 +8,22 @@
       "scenario": "answers-cloudrun.json",
       "status": "completed",
       "totalCostUsd": 11.499999999999998,
-      "nodeCount": 28,
-      "digest": "c79b9ceacba6e78e"
+      "nodeCount": 34,
+      "digest": "46845f28bbb6b83f"
     },
     {
       "scenario": "answers-langgraph.json",
       "status": "completed",
       "totalCostUsd": 11.499999999999998,
-      "nodeCount": 28,
-      "digest": "4db4dee80d68a8c3"
+      "nodeCount": 34,
+      "digest": "79bc8d7df90e37bb"
     },
     {
       "scenario": "answers.json",
       "status": "completed",
       "totalCostUsd": 11.499999999999998,
-      "nodeCount": 28,
-      "digest": "0b6aae681e317749"
+      "nodeCount": 34,
+      "digest": "da4d87ea35f2fda7"
     }
   ],
   "revisionDrill": {
@@ -31,6 +31,6 @@
     "status": "completed",
     "cachedReuses": 3
   },
-  "packageDigest": "74fddba71134edb48724a3056ccb346f83ab41cde48d33ad40bbd0f62bfc55d9",
-  "certifiedAt": "2026-07-28T13:09:05.703Z"
+  "packageDigest": "5506910c9c19d684f64c73f36a6aafccaaab4ad4b458903fba0e2fa9da29b3ee",
+  "certifiedAt": "2026-07-28T13:33:32.467Z"
 }

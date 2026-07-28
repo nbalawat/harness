@@ -63,8 +63,8 @@ test("golden run: all nodes complete, deploy skipped for local target", async ()
   assert.equal(result.status, "completed");
   assert.deepEqual(
     events(golden, "node.skipped").map((e) => e.nodeId).sort(),
-    ["deploy", "slice-4", "slice-5", "slice-6"],
-    "unused slices + deploy skip",
+    ["deploy", "review-slice-1", "review-slice-2", "review-slice-3", "review-slice-4", "review-slice-5", "review-slice-6", "slice-4", "slice-5", "slice-6"],
+    "unused slices + review checkpoints (gates-only mode) + deploy skip",
   );
   assert.equal(events(golden, "run.completed").length, 1);
 });
@@ -227,7 +227,7 @@ test("cloud-run target: deploy node runs and emits the plan", async () => {
   assert.equal((await runLoop(ctx)).status, "completed");
   const skipped = events(ctx, "node.skipped").map((e) => e.nodeId);
   assert.ok(!skipped.includes("deploy"), "deploy runs for cloud-run target");
-  assert.deepEqual(skipped.sort(), ["slice-4", "slice-5", "slice-6"]);
+  assert.deepEqual(skipped.sort(), ["review-slice-1", "review-slice-2", "review-slice-3", "review-slice-4", "review-slice-5", "review-slice-6", "slice-4", "slice-5", "slice-6"]);
   assert.ok(fs.existsSync(artifact(ctx, "deploy", "deploy/service.yaml")));
   assert.match(fs.readFileSync(artifact(ctx, "deploy", "deploy/plan.md"), "utf8"), /Cloud Run/);
 });
@@ -641,4 +641,65 @@ test("slice objectives carry executable evidence: the acceptance report in the a
     assert.ok(sl.checks.length >= 1 && sl.checks.every((c) => c.ok), `${sl.slice} checks all proven`);
     assert.ok(Array.isArray(sl.addresses) && sl.addresses.length >= 1, "objective traces to requirements");
   }
+});
+
+test("every-slice supervision: the build parks at each slice checkpoint until you approve", async () => {
+  const answers = readAnswers("answers.json");
+  answers.intake = { ...answers.intake, supervision: "every-slice" };
+  const ctx = makeCtx(tmpDir("supervise"), answers);
+  ctx.acceptDefaults = false; // attended run: defaults are offered, not auto-applied
+
+  const parked = await runLoop(ctx);
+  assert.equal(parked.status, "parked");
+  // It progressed through the earlier gates? No — clarify parks first in attended mode;
+  // answer the journey gate by gate until the slice checkpoint proves the point.
+  const answerAndResume = async (nodeId, ans) => {
+    ctx.answers = { ...ctx.answers, [nodeId]: ans };
+    return runLoop(ctx);
+  };
+  let r = parked;
+  for (let guard = 0; guard < 12 && r.status === "parked"; guard++) {
+    if (r.parkedNodeId === "review-slice-1") break;
+    const node = ctx.def.nodes.find((n) => n.id === r.parkedNodeId);
+    const qs = node.questions ?? [{ id: "q" }];
+    const auto = { ...(ctx.answers[r.parkedNodeId] ?? {}) };
+    for (const q of qs) if (auto[q.id] === undefined) auto[q.id] = q.default ?? "yes";
+    if (r.parkedNodeId === "clarify") {
+      // dynamic questions: answer them from the gap artifact's own defaults
+      const gaps = readJson(artifact(ctx, "gap-questions", "gaps.json"));
+      const clarifyAnswers = {};
+      for (const q of gaps.questions) clarifyAnswers[q.id] = q.default ?? "yes";
+      r = await answerAndResume("clarify", clarifyAnswers);
+      continue;
+    }
+    r = await answerAndResume(r.parkedNodeId, auto);
+  }
+  assert.equal(r.status, "parked");
+  assert.equal(r.parkedNodeId, "review-slice-1", "the build WAITS after slice 1 for your verdict");
+  const state = foldState(ctx.journal.read());
+  assert.ok(state.committed.has("slice-1"));
+  assert.ok(!state.committed.has("slice-2"), "nothing further built before approval");
+
+  // Approve the checkpoint -> build continues into slice-2 and beyond.
+  ctx.acceptDefaults = true; // hands-off for the rest
+  const done = await runLoop(ctx);
+  assert.equal(done.status, "completed");
+  const final = foldState(ctx.journal.read());
+  assert.ok(final.committed.has("review-slice-1") && final.committed.has("slice-3"));
+});
+
+test("gates-only supervision (default): review checkpoints are skipped, not silently absent", () => {
+  const skipped = events(golden, "node.skipped").map((e) => e.nodeId);
+  for (let n = 1; n <= 3; n++) assert.ok(skipped.includes(`review-slice-${n}`), `review-slice-${n} visibly skipped`);
+});
+
+test("each slice demonstrates ITS increment: demo declarations ship with the app", () => {
+  for (let n = 1; n <= 3; n++) {
+    const demo = readJson(path.join(golden.workspace, `artifacts/slice-${n}/app/demo/slice-${n}.json`));
+    assert.ok(demo.screen && demo.screen.startsWith("screen-"), `slice-${n} targets a real screen`);
+    assert.ok(demo.caption && demo.caption.length > 15, `slice-${n} captions its increment`);
+  }
+  const d1 = readJson(path.join(golden.workspace, "artifacts/slice-1/app/demo/slice-1.json"));
+  const d2 = readJson(path.join(golden.workspace, "artifacts/slice-2/app/demo/slice-2.json"));
+  assert.notEqual(d1.screen, d2.screen, "different slices demonstrate different surfaces");
 });

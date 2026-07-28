@@ -1,0 +1,126 @@
+/* ============================================================================
+   Dossier — Editorial Compliance Record
+   Design tokens for KYC Review Desk
+   Direction: EDITORIAL PRINT. Warm paper, ink, oxblood rule.
+   ==========================================================================*/
+
+:root {
+  /* ---- Required contract tokens ------------------------------------- */
+  --primary: #6b1f24;          /* oxblood — the single restrained accent   */
+  --on-primary: #f7f2e8;       /* paper laid over the accent               */
+  --bg: #f4efe4;               /* warm laid paper                          */
+  --fg: #1c1a17;               /* ink, not black                           */
+  --surface: #fbf8f1;          /* leaf — the sheet you read on             */
+  --border: #d6cdb9;           /* pencil hairline                          */
+  --font: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua",
+          "Hoefler Text", Georgia, "Times New Roman", serif;
+
+  /* ---- Extended paper stock ----------------------------------------- */
+  --paper-deep: #ebe4d4;       /* gutter / verso                           */
+  --paper-tint: #f0e9d9;       /* pull-quote & marginalia wash             */
+  --paper-edge: #e3dbc7;       /* sheet edge shadowless separation         */
+  --leaf-shadow: rgba(60, 48, 30, 0.09);
+
+  /* ---- Ink family ---------------------------------------------------- */
+  --ink: #1c1a17;
+  --ink-soft: #4a443a;         /* secondary prose                          */
+  --ink-faint: #9a917c;        /* rules, hairline captions                 */
+  --ink-mute: #857c68;         /* metadata, folios                         */
+  --ink-ghost: #a89e88;        /* rules over text, disabled                */
+  --ink-reverse: #f7f2e8;
+
+  /* ---- Accent family -------------------------------------------------- */
+  --oxblood: #6b1f24;
+  --oxblood-deep: #4d1418;
+  --oxblood-wash: #f0e2e0;
+  --oxblood-rule: #b98d8b;
+
+  --navy: #24354f;             /* secondary ink for links / seals          */
+  --navy-wash: #e4e7ee;
+  --forest: #35513c;           /* affirmative marks                        */
+  --forest-wash: #e2e9e0;
+  --ochre: #8a6a1f;            /* caution marks                            */
+  --ochre-wash: #f2e9d3;
+
+  /* ---- Semantic status inks (printed marks, never chips) -------------- */
+  --status-new: #24354f;
+  --status-returned: #8a6a1f;
+  --status-review: #4a443a;
+  --status-pending: #6b1f24;
+  --status-approved: #35513c;
+  --status-rejected: #7a2418;
+
+  --band-low: #35513c;
+  --band-medium: #8a6a1f;
+  --band-high: #6b1f24;
+
+  --sla-ok: #35513c;
+  --sla-risk: #8a6a1f;
+  --sla-breach: #6b1f24;
+
+  /* ---- Typography ----------------------------------------------------- */
+  --font-display: "Iowan Old Style", "Palatino Linotype", Palatino,
+                  "Book Antiqua", "Hoefler Text", Georgia, serif;
+  --font-text: "Iowan Old Style", "Palatino Linotype", Palatino,
+               "Book Antiqua", "Hoefler Text", Georgia, serif;
+  --font-meta: "Optima", "Gill Sans", "Gill Sans MT", "Avenir Next",
+               "Helvetica Neue", Helvetica, sans-serif;
+  --font-figure: "Iowan Old Style", "Palatino Linotype", Palatino,
+                 Georgia, "Times New Roman", serif;
+  --font-mono: "SF Mono", "IBM Plex Mono", "Courier New", Courier, monospace;
+
+  --fs-folio: 0.6875rem;       /* 11px running heads / folios              */
+  --fs-label: 0.6875rem;       /* letterspaced small-caps labels           */
+  --fs-fine: 0.8125rem;        /* footnotes, marginalia                    */
+  --fs-small: 0.875rem;
+  --fs-body: 1.0625rem;        /* the reading size                         */
+  --fs-lead: 1.1875rem;        /* standfirst                               */
+  --fs-h4: 1.0625rem;
+  --fs-h3: 1.3125rem;
+  --fs-h2: 1.75rem;
+  --fs-h1: 2.625rem;
+  --fs-masthead: 2.25rem;
+  --fs-drop: 4.25rem;          /* drop cap                                 */
+
+  --lh-tight: 1.14;
+  --lh-heading: 1.2;
+  --lh-body: 1.66;
+  --lh-loose: 1.78;
+
+  --tracking-masthead: 0.09em;
+  --tracking-label: 0.18em;
+  --tracking-caps: 0.11em;
+
+  /* ---- Measure & rhythm ----------------------------------------------- */
+  --measure: 34rem;            /* the reading column                       */
+  --measure-wide: 46rem;
+  --rail: 15rem;               /* the marginal rail                        */
+  --gutter: 3rem;
+  --page-margin: 4rem;
+  --page-max: 78rem;
+
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --space-7: 3rem;
+  --space-8: 4rem;
+  --space-9: 6rem;
+
+  /* ---- Rules & hairlines (no boxes, no shadows) ----------------------- */
+  --hair: 1px solid var(--border);
+  --hair-faint: 1px solid #e2dac6;
+  --rule-ink: 1px solid var(--ink);
+  --rule-heavy: 3px solid var(--ink);
+  --rule-accent: 2px solid var(--primary);
+  --rule-double: 3px double var(--border);
+
+  --radius-none: 0;
+  --radius-seal: 999px;
+
+  /* ---- Motion --------------------------------------------------------- */
+  --ease: cubic-bezier(0.2, 0, 0.1, 1);
+  --dur: 160ms;
+}
