@@ -71,6 +71,13 @@ fs.writeFileSync(
 );
 fs.writeFileSync("app/SLICES.md", `# ${appName} — slices\n\n`);
 
+// 4a-bis. Business processes: the approved workflow definitions ship with the
+// app when the workflow-engine is composed — slices implement the handlers.
+if (architecture.modules.includes("workflow-engine") && inputs.workflows) {
+  fs.mkdirSync("app/workflows", { recursive: true });
+  fs.copyFileSync(inputs.workflows.path, "app/workflows/workflows.json");
+}
+
 // 4b. Agents scaffolding — the roster is approved deterministic content
 // (agent-design artifact), so it composes here; build-agents refines evals
 // and glue. Every stage after scaffold is self-consistent and testable.

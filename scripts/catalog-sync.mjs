@@ -22,4 +22,11 @@ for (const name of fs.readdirSync(modulesDir).sort()) {
 }
 const out = path.join(root, "project-types", "agentic-app", "catalog.json");
 fs.writeFileSync(out, JSON.stringify(catalog, null, 2) + "\n");
-console.log(`catalog.json: ${catalog.modules.length} modules, ${catalog.packs.length} packs`);
+
+// The architecture schema's module enum IS the certified catalog — generated,
+// never hand-maintained.
+const schemaPath = path.join(root, "project-types", "agentic-app", "schemas", "architecture.schema.json");
+const schema = JSON.parse(fs.readFileSync(schemaPath, "utf8"));
+schema.properties.modules.items = { enum: catalog.modules.map((m) => m.name) };
+fs.writeFileSync(schemaPath, JSON.stringify(schema, null, 2) + "\n");
+console.log(`catalog.json: ${catalog.modules.length} modules, ${catalog.packs.length} packs (architecture enum synced)`);

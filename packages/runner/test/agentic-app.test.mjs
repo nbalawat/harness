@@ -515,3 +515,56 @@ test("certified subagent teams: design directors + slice reviewer are declared a
     assert.ok(n.allowedTools.includes("Task"));
   }
 });
+
+// ---------------------------------------------------------------------------
+// Workflow layer: the factory's architecture shipped inside the app
+// ---------------------------------------------------------------------------
+
+test("golden run: workflows are designed, verified, traced, and composed into the app", () => {
+  const { workflows } = readJson(artifact(golden, "workflow-design", "workflows.json"));
+  assert.ok(workflows.length >= 1);
+  const wf = workflows[0];
+  const kinds = wf.nodes.map((n) => n.kind);
+  assert.ok(kinds.includes("agent") && kinds.includes("human") && kinds.includes("deterministic"), "a real process mixes all three");
+
+  // Traceability: workflow addresses join the RTM.
+  const rtm = readJson(artifact(golden, "traceability", "rtm.json"));
+  const workflowCovered = rtm.coverage.filter((c) => c.addressed_by.some((a) => a.via === "workflow"));
+  assert.ok(workflowCovered.length >= 1, "workflows address requirements in the RTM");
+
+  // The definitions ship inside the app; the engine is composed.
+  const appDir = path.join(golden.workspace, "artifacts/slice-3/app");
+  const shipped = readJson(path.join(appDir, "workflows/workflows.json"));
+  assert.equal(shipped.workflows[0].name, wf.name);
+  assert.ok(fs.existsSync(path.join(appDir, "backend/workflow_engine.py")), "engine composed");
+  const composed = readJson(path.join(appDir, "composed_modules.json"));
+  assert.ok(composed.modules.includes("workflow-engine") && composed.modules.includes("approval-flow"));
+});
+
+test("check-workflows: agent-pipe-without-gate and dangling branches are rejected", () => {
+  const dir = tmpDir("wfcheck");
+  const reqs = { requirements: { data: { requirements: [{ id: "REQ-001" }] } } };
+
+  fs.writeFileSync(path.join(dir, "inputs.json"), JSON.stringify(reqs));
+  fs.writeFileSync(
+    path.join(dir, "workflows.json"),
+    JSON.stringify({ workflows: [{ name: "pipe", addresses: ["REQ-001"], nodes: [{ id: "a", kind: "agent", prompt: "x" }, { id: "b", kind: "agent", prompt: "y" }] }] }),
+  );
+  const pipe = runScript("check-workflows.cjs", dir);
+  assert.equal(pipe.status, 1);
+  assert.match(pipe.stderr, /no human gate or condition/);
+
+  fs.writeFileSync(
+    path.join(dir, "workflows.json"),
+    JSON.stringify({ workflows: [{ name: "dangle", addresses: ["REQ-001"], nodes: [{ id: "a", kind: "condition", path: "x.y", equals: true, on_false: "ghost" }, { id: "h", kind: "human", question: "ok?" }] }] }),
+  );
+  const dangle = runScript("check-workflows.cjs", dir);
+  assert.equal(dangle.status, 1);
+  assert.match(dangle.stderr, /unknown node 'ghost'/);
+
+  fs.writeFileSync(
+    path.join(dir, "workflows.json"),
+    JSON.stringify({ workflows: [{ name: "bad-req", addresses: ["REQ-999"], nodes: [{ id: "h", kind: "human", question: "ok?" }, { id: "d", kind: "deterministic", handler: "do_it" }] }] }),
+  );
+  assert.match(runScript("check-workflows.cjs", dir).stderr, /unknown requirement REQ-999/);
+});

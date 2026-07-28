@@ -17,4 +17,6 @@ DESIGN FIDELITY (non-negotiable): app/frontend/index.html IS the design option t
 
 REVISIONS: if ./feedback.md contains user revision feedback, the user reviewed the running app and wants THIS slice corrected. Apply exactly the requested change, keep every other behavior and all previous slices' acceptance intact, and note the revision in app/SLICES.md.
 
+WORKFLOW HANDLERS: if app/workflows/workflows.json exists, every deterministic node's `handler` name is an implementation contract — register real handlers (see the app-conventions skill) for the handlers your slice's features need, with outputs satisfying each node's output_schema. The workflow endpoints must actually run end to end for processes your slice claims to deliver.
+
 REVIEW BEFORE DONE (mandatory): after implementing, invoke the slice-reviewer subagent (Task tool) on your work. Address every finding it reports — fidelity breaks, shadowed routes, module bypasses, cumulative-acceptance risks — then re-run it until it replies NO FINDINGS. The verifier boots the app after you; the reviewer is how you avoid paying for a failed boot.

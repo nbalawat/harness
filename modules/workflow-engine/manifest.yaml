@@ -1,0 +1,16 @@
+name: workflow-engine
+version: 0.1.0
+description: "Deterministic workflows with agentic nodes inside the generated app — the harness's own architecture (event-sourced, park/resume, contracts) shipped as an app capability."
+provides:
+  - "python: workflow_engine.start/tick/state/register_handler — event-sourced runs over db.store"
+  - "http: GET /workflows, POST /workflows/{name}/start, POST /workflows/runs/{id}/tick, GET /workflows/runs/{id}"
+  - "definitions: workflows/workflows.json (validated by validate_definitions and at build time)"
+requires:
+  - "persistence-core"
+  - "agent-runtime"
+  - "approval-flow"
+  - "audit-log"
+compose:
+  overlay: compose/
+certify:
+  tests: test/

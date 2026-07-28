@@ -12,6 +12,7 @@ const dataModel = inputs.data_model.data;
 const roster = inputs.agent_roster.data;
 const designs = inputs.designs.data;
 const gaps = inputs.gaps.data;
+const workflows = inputs.workflows ? inputs.workflows.data.workflows : [];
 const clarifications = inputs.clarifications.data;
 
 // Some requirement categories are satisfied by pipeline stages, not app design.
@@ -25,6 +26,9 @@ function cover(reqId, via, item) {
   (addressedBy[reqId] ??= []).push({ via, item });
 }
 
+for (const wf of workflows) {
+  for (const reqId of wf.addresses) cover(reqId, "workflow", wf.name);
+}
 for (const entry of architecture.module_coverage ?? []) {
   for (const reqId of entry.addresses) cover(reqId, "module", entry.module);
 }

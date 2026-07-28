@@ -10,7 +10,7 @@
 # escalateModel: retries run one tier up with the failure feedback.
 # See docs/DESIGN.md §7/§7b for the design rationale per node.
 name: agentic-app
-version: 0.8.0
+version: 0.9.0
 description: Builds a working agentic AI application from your problem statement and documents — requirements with provenance, approvable designs, certified modules, feature-by-feature build with tests, security scan, and governance evidence.
 
 cost:
@@ -26,6 +26,7 @@ cost:
     design-options: { budget_usd: 12.00 }  # produces 3-4 buildable app shells (full HTML/CSS), not sketches
     data-design: { budget_usd: 1.50 }
     agent-design: { budget_usd: 1.50 }
+    workflow-design: { budget_usd: 1.50 }
     slice-plan: { budget_usd: 1.50 }
     slice-1: { budget_usd: 3.00 }
     slice-2: { budget_usd: 3.00 }
@@ -263,11 +264,24 @@ nodes:
       - { name: agent_roster, file: agent_roster.json, schema: schemas/agent_roster.schema.json }
 
   # -- Traceability + confirmation (requirements FLOW into design; user confirms) --
+  - id: workflow-design
+    phase: Design
+    description: "Derives the app's business processes as deterministic workflows with agentic nodes — the pipeline's own architecture, shipped into your app."
+    kind: agent
+    model: claude-opus-5
+    deps: [requirements-synthesis, data-design, agent-design]
+    prompt: prompts/workflow-design.md
+    mock: node "$HARNESS_PROJECT_DIR/mocks/workflow-design.cjs"
+    retries: 2
+    verify: node "$HARNESS_PROJECT_DIR/scripts/check-workflows.cjs"
+    outputs:
+      - { name: workflows, file: workflows.json, schema: schemas/workflows.schema.json }
+
   - id: traceability
     phase: Confirmation
     description: "Builds the requirements traceability matrix — proof that every requirement is addressed somewhere."
     kind: deterministic
-    deps: [requirements-synthesis, architecture, data-design, agent-design, design-options, gap-questions, clarify]
+    deps: [requirements-synthesis, architecture, data-design, agent-design, design-options, gap-questions, clarify, workflow-design]
     command: node "$HARNESS_PROJECT_DIR/scripts/traceability.cjs"
     outputs:
       - { name: rtm, file: rtm.json, schema: schemas/rtm.schema.json }
@@ -287,7 +301,7 @@ nodes:
     phase: Build
     description: "Assembles the working skeleton: certified modules composed, your design applied, tests included. Zero AI cost."
     kind: deterministic
-    deps: [architecture, design-review, design-select, design-options, data-design, agent-design, intake]
+    deps: [architecture, design-review, design-select, design-options, data-design, agent-design, workflow-design, intake]
     command: node "$HARNESS_PROJECT_DIR/scripts/scaffold.cjs"
     outputs:
       - { name: app, file: app, dir: true }
@@ -297,7 +311,7 @@ nodes:
     description: "Plans the build as vertical slices — each one a user-visible feature delivered end to end."
     kind: agent
     model: claude-opus-5
-    deps: [requirements-synthesis, architecture, data-design, agent-design, design-review]
+    deps: [requirements-synthesis, architecture, data-design, agent-design, workflow-design, design-review]
     prompt: prompts/slice-plan.md
     mock: node "$HARNESS_PROJECT_DIR/mocks/slice-plan.cjs"
     verify: node "$HARNESS_PROJECT_DIR/scripts/check-slice-plan.cjs"

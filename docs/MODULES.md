@@ -85,6 +85,7 @@ golden runs.
 
 | | Module | Why |
 |---|---|---|
+| ● | workflow-engine | The factory's DNA in the app: deterministic workflows with agentic/human nodes — event-sourced, park/resume, contracts, budgets. Frameworks reason inside nodes; the engine owns the process. |
 | ● | approval-flow | Draft → review → approve/reject with full trail: THE core loop of internal tools (our first three real apps all needed it). |
 | ● | state-machine | Declarative status transitions; agents encode these as scattered ifs otherwise, and QA dies. |
 | ● | assignment | Route work items to people/queues (round-robin, load, skill). |

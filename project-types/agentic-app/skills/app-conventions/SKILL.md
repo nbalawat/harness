@@ -36,6 +36,18 @@ violating a rule costs a failed boot cycle, not a style point.
   `HarnessChart` (charts — bar axes include zero), `HarnessNotify`
   (notifications), when those modules are composed.
 
+## Workflows (when workflow-engine is composed)
+- The app's business processes are defined in `workflows/workflows.json`
+  (user-approved at design review) and run through `workflow_engine` — never
+  re-implement a process as ad-hoc endpoint code.
+- Slices IMPLEMENT the definitions by registering the named handlers:
+  `workflow_engine.register_handler("validate_question", fn)` where
+  fn(context) returns a dict satisfying the node's `output_schema.required`.
+  Register handlers at import time in an `ext_*.py`.
+- Human nodes park into approval-flow; the UI drives decisions through the
+  /workflow endpoints and resumes runs via POST /workflows/runs/{id}/tick.
+- Never write to `_wf_events` directly — start/tick/state are the only API.
+
 ## Tests & acceptance
 - The backend suite (`backend/tests/`) must stay green; add tests for new
   endpoints in the same style (stub mode pinned).

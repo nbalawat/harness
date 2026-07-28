@@ -622,6 +622,17 @@
         "rest-client",
         "persistence-core"
       ]
+    },
+    {
+      "name": "workflow-engine",
+      "version": "0.1.0",
+      "description": "Deterministic workflows with agentic nodes inside the generated app — the harness's own architecture (event-sourced, park/resume, contracts) shipped as an app capability.",
+      "requires": [
+        "persistence-core",
+        "agent-runtime",
+        "approval-flow",
+        "audit-log"
+      ]
     }
   ],
   "packs": [

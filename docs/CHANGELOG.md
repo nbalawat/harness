@@ -77,6 +77,7 @@ CAPABILITIES.md, this changelog.
 | **0.5.0** | Module extension point (`ext_*.py`); architecture selects from the certified Wave-2 catalog; template `/agents` test | the module program begins |
 | **0.6.0** | Full catalog via `catalog.json` (88 app modules + 6 packs) with selection rules (packs first, deps must be selected) | catalog scale outgrew inline prompt lists |
 | **0.7.0** | Subagent teams (4 parallel design directors; read-only slice-reviewer) + certified `app-conventions` skill | independent design aesthetics; cheap review before expensive verification |
+| **0.9.0** | **The app-workflow layer**: new `workflow-design` node (agent, verified by check-workflows, traced into the RTM, user-approved at design review) + the `workflow-engine` module (event-sourced deterministic workflows with agent/human/condition nodes, park/resume via approval-flow, contracts, audit) composed into apps; architecture schema enum now generated from the catalog | "apps will have a deterministic workflow layer, just like the DAG — some nodes agentic" |
 | **0.8.0** | `app-sandbox` MCP instance on all slice nodes; build prompt mandates structured probes over hand-rolled shell | a probe costs nothing; a failed verification costs a boot cycle and a retry |
 
 Each version was re-certified (byte-deterministic goldens, cost envelope,
