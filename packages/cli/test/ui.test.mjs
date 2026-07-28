@@ -244,6 +244,21 @@ test("agent question bridge: pending question surfaces and the answer reaches th
   });
 });
 
+test("app workflows surface in the dashboard state with kinds intact", async () => {
+  const workspace = tmpDir("wf-ui");
+  const run = runCli([
+    "run", path.join(REPO_ROOT, "project-types/agentic-app"),
+    "--workspace", workspace,
+    "--answers", path.join(REPO_ROOT, "project-types/agentic-app/fixtures/answers.json"),
+    "--mock-agents", "--accept-defaults",
+  ]);
+  assert.equal(run.status, 0, run.stderr);
+  const state = buildState(workspace);
+  assert.ok(Array.isArray(state.appWorkflows) && state.appWorkflows.length >= 1);
+  const kinds = new Set(state.appWorkflows[0].nodes.map((n) => n.kind));
+  assert.ok(kinds.has("agent") && kinds.has("human") && kinds.has("deterministic"), "agentic + human steps distinguishable in the flow");
+});
+
 test("revision API: dry-run previews the closure; a real revise reopens, resumes, and re-derives", async () => {
   const workspace = tmpDir("revise");
   const run = runCli([

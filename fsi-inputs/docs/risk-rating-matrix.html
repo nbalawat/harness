@@ -1,0 +1,21 @@
+<html><body>
+<h1>Client Risk Rating Matrix (v2.1)</h1>
+<p>The case risk score is the weighted sum of factor scores. Each factor is
+scored 0-100 by the mechanical rules below, then weighted.</p>
+<table border="1">
+<tr><th>Factor</th><th>Weight</th><th>Scoring rule</th></tr>
+<tr><td>Jurisdiction</td><td>0.30</td><td>FATF high-risk list country involved = 90; enhanced-monitoring list = 60; otherwise = 10</td></tr>
+<tr><td>Entity structure</td><td>0.25</td><td>Ownership chain depth &gt; 3 or bearer shares = 85; nominee shareholders = 60; simple structure = 15</td></tr>
+<tr><td>Industry</td><td>0.20</td><td>Money services, gambling, defense = 80; cash-intensive retail = 55; other = 20</td></tr>
+<tr><td>Sanctions screening</td><td>0.15</td><td>Any true-positive hit = 100 (auto high risk); unresolved possible hit = 70; clear = 0</td></tr>
+<tr><td>Expected activity</td><td>0.10</td><td>Cross-border wires &gt; $1M/month = 75; domestic only = 20</td></tr>
+</table>
+<h2>Bands</h2>
+<table border="1">
+<tr><th>Band</th><th>Score</th><th>Review cadence</th></tr>
+<tr><td>Low</td><td>0-39</td><td>3 years</td></tr>
+<tr><td>Medium</td><td>40-69</td><td>Annual</td></tr>
+<tr><td>High</td><td>70-100</td><td>6 months, Compliance Officer approval required</td></tr>
+</table>
+<p>A sanctions true-positive forces the case to High regardless of the weighted total.</p>
+</body></html>

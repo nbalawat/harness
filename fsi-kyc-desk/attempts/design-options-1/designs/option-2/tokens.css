@@ -1,0 +1,123 @@
+/* ============================================================
+   KYC Review Desk — OPTION 2 · "Watch Floor"
+   Design tokens for the operational console direction.
+   Cool neutral greys, one decisive indigo, disciplined semantics.
+   ============================================================ */
+
+:root {
+  /* ---- REQUIRED CONTRACT TOKENS ---- */
+  --primary: #3b5bdb;
+  --on-primary: #ffffff;
+  --bg: #eef0f4;
+  --fg: #10151f;
+  --surface: #ffffff;
+  --border: #ccd2de;
+  --font: "Inter", "SF Pro Text", -apple-system, BlinkMacSystemFont, "Segoe UI",
+    "Helvetica Neue", Arial, sans-serif;
+
+  /* ---- Extended type ---- */
+  --font-num: "SF Mono", "IBM Plex Mono", "Roboto Mono", ui-monospace,
+    Menlo, Consolas, monospace;
+  --fs-micro: 9.5px;
+  --fs-xs: 10.5px;
+  --fs-sm: 11.5px;
+  --fs-base: 12.5px;
+  --fs-md: 13.5px;
+  --fs-lg: 16px;
+  --fs-xl: 20px;
+  --fs-2xl: 26px;
+  --track-micro: 0.1em;
+  --track-label: 0.055em;
+
+  /* ---- Primary ramp ---- */
+  --primary-900: #1b2a6b;
+  --primary-800: #24379170;
+  --primary-700: #2f47b5;
+  --primary-600: #3b5bdb;
+  --primary-500: #4c6ef5;
+  --primary-300: #91a7ff;
+  --primary-100: #dbe4ff;
+  --primary-050: #edf2ff;
+
+  /* ---- Neutral ramp (cool) ---- */
+  --n-000: #ffffff;
+  --n-025: #fafbfc;
+  --n-050: #f4f6f9;
+  --n-100: #eaeef3;
+  --n-150: #e0e5ec;
+  --n-200: #d3d9e3;
+  --n-300: #b8c0ce;
+  --n-400: #939db0;
+  --n-500: #6b7688;
+  --n-600: #515b6c;
+  --n-700: #3a4353;
+  --n-800: #252c39;
+  --n-900: #161c26;
+  --n-950: #0d1119;
+
+  /* ---- Chrome (dark rail + command bar) ---- */
+  --chrome-bg: #161c26;
+  --chrome-bg-2: #1d2531;
+  --chrome-border: #2b3441;
+  --chrome-fg: #c3cbd9;
+  --chrome-fg-dim: #7c8798;
+  --chrome-active: #24304a;
+
+  /* ---- Semantic operational set ---- */
+  --ok: #1a7f52;
+  --ok-bg: #e3f6ec;
+  --ok-border: #a5dcc1;
+
+  --warn: #a35b00;
+  --warn-bg: #fff3e0;
+  --warn-border: #f2c98a;
+
+  --danger: #c02637;
+  --danger-bg: #fdeaec;
+  --danger-border: #f2b3bb;
+
+  --info: #175f8f;
+  --info-bg: #e6f2fa;
+  --info-border: #a8cfe6;
+
+  --machine: #6d3fc4;
+  --machine-bg: #f1eaff;
+  --machine-border: #c9b2f0;
+
+  --neutral-chip-bg: var(--n-100);
+  --neutral-chip-fg: var(--n-600);
+
+  /* ---- Risk bands ---- */
+  --band-low: #1a7f52;
+  --band-low-bg: #e3f6ec;
+  --band-med: #a35b00;
+  --band-med-bg: #fff3e0;
+  --band-high: #c02637;
+  --band-high-bg: #fdeaec;
+
+  /* ---- Structure ---- */
+  --radius-sm: 2px;
+  --radius: 3px;
+  --radius-lg: 5px;
+  --radius-pill: 999px;
+
+  --rail-w: 188px;
+  --rail-w-collapsed: 56px;
+  --inspector-w: 320px;
+  --cmdbar-h: 46px;
+  --statusbar-h: 26px;
+  --toolbar-h: 34px;
+
+  --hairline: 1px solid var(--border);
+  --hairline-soft: 1px solid var(--n-150);
+  --hairline-strong: 1px solid var(--n-300);
+
+  --elev-1: 0 1px 0 rgba(16, 21, 31, 0.04);
+  --elev-2: 0 1px 2px rgba(16, 21, 31, 0.08), 0 0 0 1px rgba(16, 21, 31, 0.04);
+  --elev-3: 0 4px 14px rgba(16, 21, 31, 0.14), 0 0 0 1px rgba(16, 21, 31, 0.06);
+
+  --focus-ring: 0 0 0 2px var(--surface), 0 0 0 4px var(--primary-500);
+
+  --row-h: 30px;
+  --row-h-dense: 26px;
+}

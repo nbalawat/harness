@@ -1,0 +1,1692 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="phosphor">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>KYC Review Desk — compliance onboarding terminal</title>
+<link rel="stylesheet" href="tokens.css">
+<style>
+/* ============================================================
+   KYC REVIEW DESK — option-4 — AMBER PHOSPHOR
+   A TUI rendered in a browser. Alignment does the work of borders.
+   ============================================================ */
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html {
+  background: var(--bg);
+  font-size: var(--fs);
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  background:
+    repeating-linear-gradient(
+      to bottom,
+      rgba(255,255,255,0.014) 0px,
+      rgba(255,255,255,0.014) 1px,
+      transparent 1px,
+      transparent 3px
+    ),
+    var(--bg);
+  color: var(--fg);
+  font-family: var(--font);
+  font-size: var(--fs);
+  line-height: var(--line);
+  font-variant-ligatures: none;
+  font-feature-settings: "tnum" 1, "zero" 1;
+  padding-bottom: 4.6rem; /* command line + status bar */
+  overflow-x: hidden;
+}
+
+::selection { background: var(--primary); color: var(--on-primary); }
+
+a { color: var(--primary); text-decoration: none; border-bottom: 1px dotted var(--primary-dim); }
+a:hover { background: var(--primary-glow); }
+
+/* ---------- shell frame ---------- */
+.shell {
+  max-width: var(--maxw);
+  margin: 0 auto;
+  padding: 0 1.4rem;
+}
+
+/* ---------- masthead ---------- */
+.masthead {
+  border-bottom: 1px solid var(--border);
+  background: linear-gradient(to bottom, var(--surface) 0%, var(--bg) 100%);
+  position: sticky;
+  top: 0;
+  z-index: 40;
+}
+.masthead-row {
+  display: flex;
+  align-items: baseline;
+  gap: 1.5ch;
+  flex-wrap: wrap;
+  padding: 0.65rem 0 0.5rem;
+}
+.brand {
+  font-size: var(--fs);
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--primary);
+  margin: 0;
+  white-space: nowrap;
+}
+.brand::before { content: "▚ "; color: var(--primary-dim); }
+.brand-sub {
+  color: var(--fg-faint);
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+.masthead-spacer { flex: 1 1 4ch; }
+
+.masthead-meta {
+  display: flex;
+  gap: 2ch;
+  align-items: baseline;
+  color: var(--fg-dim);
+  font-size: var(--fs-sm);
+  white-space: nowrap;
+}
+.masthead-meta b { color: var(--fg); font-weight: 400; }
+
+/* ---------- agent mode segmented control ---------- */
+.agentmode {
+  display: inline-flex;
+  align-items: stretch;
+  border: 1px solid var(--border-strong);
+  background: var(--bg);
+}
+.agentmode > .agentmode-label {
+  padding: 0.1rem 1ch;
+  color: var(--fg-faint);
+  font-size: var(--fs-sm);
+  letter-spacing: 0.1em;
+  border-right: 1px solid var(--border-strong);
+  display: flex;
+  align-items: center;
+  background: var(--surface-2);
+}
+.agentmode button {
+  font: inherit;
+  font-size: var(--fs-sm);
+  letter-spacing: 0.08em;
+  background: transparent;
+  color: var(--fg-dim);
+  border: 0;
+  border-right: 1px dotted var(--border-strong);
+  padding: 0.18rem 1.2ch;
+  cursor: pointer;
+}
+.agentmode button:last-child { border-right: 0; }
+.agentmode button:hover { background: var(--surface-3); color: var(--fg); }
+.agentmode button[aria-pressed="true"] {
+  background: var(--primary);
+  color: var(--on-primary);
+  font-weight: 700;
+}
+.agentmode button[aria-pressed="true"]::before { content: "●"; margin-right: 0.6ch; }
+
+/* ---------- nav hint bar ---------- */
+.navbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0;
+  border-top: 1px solid var(--border);
+  padding: 0.1rem 0 0.25rem;
+}
+.navbar button {
+  font: inherit;
+  background: transparent;
+  border: 0;
+  color: var(--fg-dim);
+  padding: 0.2rem 1.4ch 0.2rem 0.6ch;
+  cursor: pointer;
+  letter-spacing: 0.03em;
+  border-bottom: 2px solid transparent;
+}
+.navbar button .key { color: var(--primary-dim); }
+.navbar button:hover { color: var(--fg); background: var(--surface-2); }
+.navbar button[aria-current="true"] {
+  color: var(--primary);
+  border-bottom-color: var(--primary);
+  background: var(--primary-glow);
+}
+.navbar button[aria-current="true"] .key { color: var(--primary); }
+.navbar .nav-note {
+  margin-left: auto;
+  color: var(--fg-ghost);
+  font-size: var(--fs-sm);
+  align-self: center;
+  padding-right: 0.4ch;
+}
+
+/* ---------- screens ---------- */
+.screen { display: none; padding: 1.1rem 0 2rem; }
+.screen.is-active { display: block; }
+
+.screen-head {
+  display: flex;
+  align-items: baseline;
+  gap: 2ch;
+  flex-wrap: wrap;
+  margin-bottom: 0.9rem;
+}
+.screen-title {
+  margin: 0;
+  font-size: var(--fs);
+  font-weight: 700;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--fg);
+}
+.screen-title::before { content: "▌ "; color: var(--primary); }
+.screen-path { color: var(--fg-faint); }
+.screen-path .sep { color: var(--fg-ghost); }
+
+/* ---------- ── SECTION ── dividers ---------- */
+.rule {
+  display: flex;
+  align-items: center;
+  gap: 1ch;
+  margin: var(--block-gap) 0 0.6rem;
+  color: var(--fg-faint);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  font-size: var(--fs-sm);
+  white-space: nowrap;
+}
+.rule::before { content: "──"; color: var(--border-strong); letter-spacing: 0; }
+.rule::after {
+  content: "";
+  flex: 1;
+  height: 0;
+  border-top: 1px solid var(--border);
+}
+.rule.is-accent { color: var(--primary); }
+.rule.is-accent::before { color: var(--primary-rule); }
+.rule.is-accent::after { border-top-color: var(--primary-rule); }
+.rule:first-child { margin-top: 0; }
+
+.block { margin-bottom: 0.4rem; }
+.block-note {
+  color: var(--fg-dim);
+  max-width: 96ch;
+  margin: 0.3rem 0 0.6rem;
+}
+.block-note.tight { margin: 0.1rem 0 0.35rem; }
+
+/* ---------- key: value lines ---------- */
+.kv { margin: 0; }
+.kv div {
+  display: flex;
+  gap: 1ch;
+  align-items: baseline;
+  white-space: pre;
+  overflow: hidden;
+}
+.kv dt {
+  color: var(--fg-faint);
+  min-width: 26ch;
+  white-space: pre;
+}
+.kv dd { margin: 0; color: var(--fg); }
+.kv dd.num { font-variant-numeric: tabular-nums; }
+.kv-2col { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 4ch; }
+
+/* dotted leader variant */
+.kv.leader dt { position: relative; min-width: 0; }
+.kv.leader div::after {
+  content: "";
+  flex: 1;
+  border-bottom: 1px dotted var(--fg-ghost);
+  transform: translateY(-0.28em);
+  min-width: 2ch;
+  order: 1;
+}
+.kv.leader dd { order: 2; }
+
+/* ---------- monospace tables ---------- */
+.tbl-wrap { overflow-x: auto; }
+table.tbl {
+  width: 100%;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+table.tbl caption {
+  caption-side: top;
+  text-align: left;
+  color: var(--fg-faint);
+  font-size: var(--fs-sm);
+  letter-spacing: 0.1em;
+  padding-bottom: 0.25rem;
+}
+table.tbl th {
+  text-align: left;
+  font-weight: 400;
+  color: var(--fg-faint);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-size: var(--fs-sm);
+  padding: 0.2rem 1.2ch 0.2rem 0;
+  border-bottom: 1px solid var(--border-strong);
+}
+table.tbl td {
+  padding: 0.14rem 1.2ch 0.14rem 0;
+  border-bottom: 1px dotted var(--border);
+  color: var(--fg);
+  vertical-align: top;
+}
+table.tbl tr:hover td { background: var(--surface-2); }
+table.tbl td.num, table.tbl th.num { text-align: right; padding-right: 1.6ch; font-variant-numeric: tabular-nums; }
+table.tbl td.dim { color: var(--fg-dim); }
+table.tbl tr.is-selected td { background: var(--surface-3); }
+table.tbl tr.is-selected td:first-child { box-shadow: inset 2px 0 0 var(--primary); }
+table.tbl tfoot td {
+  border-top: 1px solid var(--primary-rule);
+  border-bottom: 0;
+  padding-top: 0.3rem;
+  color: var(--fg);
+  font-weight: 700;
+}
+table.tbl .ref { color: var(--primary); }
+
+/* ---------- glyph prefixed lines ---------- */
+.lines { margin: 0; padding: 0; list-style: none; }
+.lines li {
+  display: flex;
+  gap: 1.2ch;
+  align-items: baseline;
+  padding: 0.1rem 0;
+  color: var(--fg);
+}
+.lines li > .g { width: 2ch; flex: 0 0 2ch; text-align: center; color: var(--fg-faint); }
+.lines li > .t { flex: 1; min-width: 0; }
+.lines li > .r { color: var(--fg-dim); white-space: nowrap; }
+.g.ok { color: var(--ok); }
+.g.bad { color: var(--crit); }
+.g.warn { color: var(--warn); }
+.g.info { color: var(--machine); }
+.g.na { color: var(--fg-ghost); }
+
+/* ---------- status chips (flat, no radius) ---------- */
+.chip {
+  display: inline-block;
+  padding: 0 0.7ch;
+  border: 1px solid currentColor;
+  font-size: var(--fs-sm);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  line-height: 1.5;
+}
+.chip.solid { border-color: transparent; }
+.c-open    { color: var(--fg-dim); }
+.c-review  { color: var(--machine); }
+.c-return  { color: var(--warn); }
+.c-esc     { color: var(--crit); }
+.c-appr    { color: var(--ok); }
+.c-rej     { color: var(--crit); }
+.b-low     { color: var(--ok); }
+.b-med     { color: var(--warn); }
+.b-high    { color: var(--crit); }
+.flag-risk   { color: var(--warn); background: var(--warn-bg); }
+.flag-breach { color: var(--crit); background: var(--crit-bg); font-weight: 700; }
+.flag-none   { color: var(--fg-ghost); }
+
+/* ---------- callout strips ---------- */
+.strip {
+  border-left: 2px solid var(--border-strong);
+  padding: 0.4rem 0 0.4rem 1.6ch;
+  margin: 0.6rem 0;
+  color: var(--fg-dim);
+  background: var(--surface);
+  max-width: 100ch;
+}
+.strip b, .strip strong { color: var(--fg); font-weight: 700; }
+.strip.warn   { border-left-color: var(--warn); background: var(--warn-bg); color: var(--fg); }
+.strip.crit   { border-left-color: var(--crit); background: var(--crit-bg); color: var(--fg); }
+.strip.ok     { border-left-color: var(--ok);   background: var(--ok-bg);   color: var(--fg); }
+.strip.accent { border-left-color: var(--primary); background: var(--primary-glow); color: var(--fg); }
+.strip .hdr {
+  display: block;
+  color: inherit;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  margin-bottom: 0.15rem;
+}
+
+/* ---------- machine-drafted banner ---------- */
+.machine-banner {
+  border: 1px solid var(--machine);
+  background: var(--machine-bg);
+  color: var(--machine);
+  padding: 0.35rem 1.2ch;
+  margin: 0.2rem 0 0.5rem;
+  letter-spacing: 0.06em;
+}
+.machine-banner .bar {
+  display: block;
+  color: var(--machine);
+  overflow: hidden;
+  white-space: nowrap;
+  opacity: 0.55;
+  letter-spacing: 0;
+}
+.machine-banner .hdr {
+  display: block;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--machine);
+}
+.machine-banner .sub { display: block; color: var(--fg-dim); font-size: var(--fs-sm); }
+
+/* ---------- memo body ---------- */
+.memo {
+  max-width: 96ch;
+  border-left: 1px solid var(--border);
+  padding-left: 2ch;
+}
+.memo h4 {
+  margin: 1.1rem 0 0.25rem;
+  font-size: var(--fs);
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--fg);
+}
+.memo h4::before { content: "§ "; color: var(--fg-faint); }
+.memo p { margin: 0.25rem 0 0.5rem; color: var(--fg); }
+.cite {
+  color: var(--primary);
+  cursor: help;
+  font-weight: 700;
+  border-bottom: 1px dotted var(--primary-dim);
+}
+.refs { margin: 0; padding: 0; list-style: none; }
+.refs li { display: flex; gap: 1.2ch; color: var(--fg-dim); padding: 0.08rem 0; }
+.refs li .n { color: var(--primary); flex: 0 0 4ch; }
+.refs li .v { color: var(--fg-faint); }
+
+/* ---------- ascii bars ---------- */
+.bar {
+  color: var(--primary);
+  letter-spacing: -0.04em;
+  white-space: pre;
+}
+.bar .empty { color: var(--fg-ghost); }
+.bar.ok { color: var(--ok); }
+.bar.warn { color: var(--warn); }
+.bar.crit { color: var(--crit); }
+
+/* ---------- log ---------- */
+.log { margin: 0; padding: 0; list-style: none; border-left: 1px solid var(--border); }
+.log li {
+  display: grid;
+  grid-template-columns: 19ch 26ch 1fr;
+  gap: 0 1.6ch;
+  padding: 0.22rem 0 0.22rem 1.6ch;
+  border-bottom: 1px dotted var(--border);
+  align-items: baseline;
+}
+.log li:hover { background: var(--surface-2); }
+.log .ts { color: var(--fg-faint); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.log .who { color: var(--fg-dim); }
+.log .who i { font-style: normal; color: var(--fg-ghost); }
+.log .what { color: var(--fg); }
+.log .what .act { color: var(--primary); letter-spacing: 0.06em; }
+.log .delta { display: block; color: var(--fg-dim); }
+.log .delta .from { color: var(--fg-faint); }
+.log .delta .arrow { color: var(--fg-ghost); }
+.log .delta .to { color: var(--fg); }
+.log .hash { color: var(--fg-ghost); font-size: var(--fs-sm); }
+
+/* ---------- forms / controls ---------- */
+.field { margin: 0.5rem 0; max-width: 90ch; }
+.field label {
+  display: block;
+  color: var(--fg-faint);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  font-size: var(--fs-sm);
+  margin-bottom: 0.15rem;
+}
+.field label .req { color: var(--crit); }
+.field input[type="text"],
+.field textarea,
+.field select {
+  width: 100%;
+  font: inherit;
+  background: var(--surface);
+  color: var(--fg);
+  border: 1px solid var(--border-strong);
+  border-radius: 0;
+  padding: 0.3rem 1ch;
+  outline: none;
+}
+.field textarea { resize: vertical; min-height: 3.4rem; }
+.field input:focus, .field textarea:focus, .field select:focus {
+  border-color: var(--primary);
+  box-shadow: inset 0 0 0 1px var(--primary-glow);
+}
+.field .hint { color: var(--fg-ghost); font-size: var(--fs-sm); }
+
+.btnrow { display: flex; flex-wrap: wrap; gap: 1.2ch; align-items: center; margin: 0.7rem 0 0.3rem; }
+.btn {
+  font: inherit;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  background: transparent;
+  color: var(--fg);
+  border: 1px solid var(--border-strong);
+  border-radius: 0;
+  padding: 0.22rem 1.4ch;
+  cursor: pointer;
+}
+.btn:hover:not(:disabled) { border-color: var(--primary); color: var(--primary); background: var(--primary-glow); }
+.btn.primary { background: var(--primary); color: var(--on-primary); border-color: var(--primary); font-weight: 700; }
+.btn.primary:hover:not(:disabled) { background: var(--primary-dim); color: var(--on-primary); }
+.btn:disabled {
+  color: var(--fg-ghost);
+  border-color: var(--border);
+  border-style: dashed;
+  cursor: not-allowed;
+  background: repeating-linear-gradient(45deg, transparent 0 4px, rgba(255,255,255,0.02) 4px 8px);
+}
+.btn.ghost { border-style: dotted; color: var(--fg-dim); }
+
+.denied {
+  display: flex;
+  gap: 1.2ch;
+  color: var(--crit);
+  align-items: baseline;
+  margin-top: 0.25rem;
+}
+.denied .g { flex: 0 0 2ch; text-align: center; }
+
+/* ---------- query line ---------- */
+.query {
+  display: flex;
+  align-items: center;
+  gap: 1ch;
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+  padding: 0.18rem 1ch;
+}
+.query .sig { color: var(--primary); font-weight: 700; }
+.query input {
+  flex: 1;
+  font: inherit;
+  background: transparent;
+  border: 0;
+  color: var(--fg);
+  outline: none;
+  min-width: 8ch;
+}
+.query input::placeholder { color: var(--fg-ghost); }
+.query .btn { padding: 0.05rem 1.2ch; }
+.filters { display: flex; flex-wrap: wrap; gap: 1.2ch; margin-top: 0.45rem; color: var(--fg-faint); font-size: var(--fs-sm); }
+.filters button {
+  font: inherit; font-size: var(--fs-sm);
+  background: transparent; border: 1px dotted var(--border-strong);
+  color: var(--fg-dim); padding: 0 0.8ch; cursor: pointer; letter-spacing: 0.06em;
+}
+.filters button:hover { color: var(--primary); border-color: var(--primary); }
+.filters button[aria-pressed="true"] { color: var(--on-primary); background: var(--primary); border-color: var(--primary); }
+
+/* ---------- chat transcript ---------- */
+#messages { list-style: none; margin: 0; padding: 0; border-left: 1px solid var(--border); }
+#messages > li {
+  display: grid;
+  grid-template-columns: 16ch 1fr;
+  gap: 0 1.6ch;
+  padding: 0.35rem 0 0.45rem 1.6ch;
+  border-bottom: 1px dotted var(--border);
+}
+#messages .spk { color: var(--fg-faint); white-space: nowrap; }
+#messages .spk .nm { display: block; color: var(--fg-dim); }
+#messages .spk .tm { display: block; color: var(--fg-ghost); font-size: var(--fs-sm); }
+#messages .body { min-width: 0; }
+#messages .body p { margin: 0 0 0.3rem; }
+#messages li[data-from="agent"] .spk .nm { color: var(--machine); }
+#messages li[data-from="agent"] .body { color: var(--fg); }
+#messages li[data-from="agent"] .body::before {
+  content: "MACHINE-DRAFTED · ADVISORY ONLY";
+  display: block;
+  color: var(--machine);
+  font-size: var(--fs-sm);
+  letter-spacing: 0.14em;
+  margin-bottom: 0.15rem;
+}
+#messages li[data-from="analyst"] .spk .nm { color: var(--primary); }
+#messages li[data-kind="refusal"] { background: var(--warn-bg); }
+#messages li[data-kind="refusal"] .body p:first-of-type::before { content: "! "; color: var(--warn); font-weight: 700; }
+
+#composer {
+  display: flex;
+  align-items: center;
+  gap: 1ch;
+  border: 1px solid var(--primary-rule);
+  background: var(--surface);
+  padding: 0.25rem 1ch;
+  margin-top: 0.8rem;
+}
+#composer .sig { color: var(--primary); font-weight: 700; white-space: nowrap; }
+#composer #input {
+  flex: 1;
+  font: inherit;
+  background: transparent;
+  border: 0;
+  color: var(--fg);
+  outline: none;
+  caret-color: var(--primary);
+  min-width: 6ch;
+}
+#composer #input::placeholder { color: var(--fg-ghost); }
+.cursor {
+  display: inline-block;
+  width: 1ch;
+  background: var(--primary);
+  color: var(--primary);
+  animation: blink 1.05s steps(1, end) infinite;
+}
+@keyframes blink { 0%, 49% { opacity: 1; } 50%, 100% { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .cursor { animation: none; } }
+
+/* ---------- perm matrix ---------- */
+table.matrix td.perm { text-align: center; padding-right: 0; width: 16ch; }
+table.matrix th.perm { text-align: center; padding-right: 0; }
+.yes { color: var(--ok); }
+.no  { color: var(--fg-ghost); }
+.cond { color: var(--warn); }
+
+/* ---------- persistent command line + status bar ---------- */
+.dock {
+  position: fixed;
+  left: 0; right: 0; bottom: 0;
+  z-index: 60;
+  background: var(--bg);
+  border-top: 1px solid var(--border-strong);
+}
+.cmdline {
+  display: flex;
+  align-items: center;
+  gap: 1ch;
+  padding: 0.22rem 1.4rem;
+  border-bottom: 1px solid var(--border);
+  max-width: var(--maxw);
+  margin: 0 auto;
+}
+.cmdline .sig { color: var(--primary); font-weight: 700; white-space: nowrap; }
+.cmdline input {
+  flex: 1;
+  font: inherit;
+  background: transparent;
+  border: 0;
+  color: var(--fg);
+  outline: none;
+  caret-color: var(--primary);
+  min-width: 6ch;
+}
+.cmdline input::placeholder { color: var(--fg-ghost); }
+.cmdline .echo { color: var(--fg-faint); font-size: var(--fs-sm); white-space: nowrap; }
+
+.statusbar {
+  display: flex;
+  gap: 0;
+  align-items: stretch;
+  font-size: var(--fs-sm);
+  max-width: var(--maxw);
+  margin: 0 auto;
+  padding: 0 1.4rem;
+  color: var(--fg-dim);
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+  overflow: hidden;
+}
+.statusbar .seg { padding: 0.16rem 1.4ch; border-right: 1px solid var(--border); }
+.statusbar .seg:first-child {
+  background: var(--primary);
+  color: var(--on-primary);
+  font-weight: 700;
+  border-right: 0;
+}
+.statusbar .seg b { color: var(--fg); font-weight: 400; }
+.statusbar .seg.push { margin-left: auto; border-right: 0; border-left: 1px solid var(--border); }
+.statusbar .seg.alert { color: var(--crit); }
+.statusbar .seg.ro { color: var(--fg-faint); }
+
+/* ---------- misc ---------- */
+.mono-art {
+  color: var(--fg-ghost);
+  white-space: pre;
+  overflow-x: auto;
+  font-size: var(--fs-sm);
+  line-height: 1.2;
+  margin: 0.3rem 0;
+}
+.footnote { color: var(--fg-ghost); font-size: var(--fs-sm); max-width: 100ch; margin-top: 0.4rem; }
+.cols2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(38ch, 1fr)); gap: 0 4ch; }
+.cols3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(28ch, 1fr)); gap: 0 3ch; }
+.nowrap { white-space: nowrap; }
+.right { text-align: right; }
+.dim { color: var(--fg-dim); }
+.faint { color: var(--fg-faint); }
+.accent { color: var(--primary); }
+.ok { color: var(--ok); }
+.warn { color: var(--warn); }
+.crit { color: var(--crit); }
+.machine-fg { color: var(--machine); }
+.u { text-decoration: underline; text-underline-offset: 3px; }
+
+@media (max-width: 760px) {
+  :root { --fs: 12px; }
+  .log li { grid-template-columns: 1fr; gap: 0; }
+  #messages > li { grid-template-columns: 1fr; }
+  .kv dt { min-width: 20ch; }
+  .statusbar .seg:nth-child(n+5) { display: none; }
+}
+</style>
+</head>
+<body>
+
+<!-- ============================ MASTHEAD ============================ -->
+<header class="masthead" role="banner">
+  <div class="shell">
+    <div class="masthead-row">
+      <h1 class="brand">KYC Review Desk</h1>
+      <span class="brand-sub">v1.4.0 · fincrime-onboarding · tty0</span>
+      <span class="masthead-spacer"></span>
+
+      <div class="agentmode" id="agent-mode" role="group" aria-label="AI memo agent engagement mode">
+        <span class="agentmode-label">AGENT</span>
+        <button type="button" data-mode="draft" aria-pressed="true">DRAFT</button>
+        <button type="button" data-mode="suggest" aria-pressed="false">SUGGEST</button>
+        <button type="button" data-mode="off" aria-pressed="false">OFF</button>
+      </div>
+
+      <div class="masthead-meta">
+        <span>user <b>d.okonkwo</b></span>
+        <span>role <b>KYC Analyst</b></span>
+        <span>utc <b id="clock">2026-07-28 09:41:07</b></span>
+      </div>
+    </div>
+
+    <nav class="navbar" id="nav" aria-label="Screens">
+      <button type="button" data-screen="worklist" aria-current="true"><span class="key">[1]</span> worklist</button>
+      <button type="button" data-screen="case"><span class="key">[2]</span> case</button>
+      <button type="button" data-screen="memo"><span class="key">[3]</span> memo</button>
+      <button type="button" data-screen="score"><span class="key">[4]</span> score</button>
+      <button type="button" data-screen="audit"><span class="key">[5]</span> audit</button>
+      <button type="button" data-screen="chat"><span class="key">[6]</span> chat</button>
+      <button type="button" data-screen="reports"><span class="key">[7]</span> reports</button>
+      <button type="button" data-screen="admin"><span class="key">[8]</span> admin</button>
+      <span class="nav-note">keys 1–8 switch · / focuses command line · ? help</span>
+    </nav>
+  </div>
+</header>
+
+<main class="shell" id="main">
+
+<!-- ============================ 1. WORKLIST ============================ -->
+<section class="screen is-active" id="screen-worklist" aria-label="Worklist">
+  <div class="screen-head">
+    <h2 class="screen-title">worklist</h2>
+    <span class="screen-path">desk <span class="sep">/</span> queue <span class="sep">/</span> assigned+team <span class="sep">·</span> 8 of 8 rows</span>
+  </div>
+
+  <div class="rule">query</div>
+  <form class="query" onsubmit="return false;" role="search">
+    <span class="sig">find&gt;</span>
+    <label for="wl-query" class="faint" style="position:absolute;left:-9999px;">Search past cases</label>
+    <input id="wl-query" type="text" value="band:high OR sla:at-risk" placeholder="client:&quot;*trading*&quot; band:high status:escalated opened:&gt;2026-06-01 ...">
+    <button class="btn" type="submit">RUN</button>
+    <button class="btn ghost" type="button">SAVE VIEW</button>
+  </form>
+  <div class="filters">
+    <span>quick:</span>
+    <button type="button" aria-pressed="true">mine</button>
+    <button type="button" aria-pressed="false">team</button>
+    <button type="button" aria-pressed="false">at-risk</button>
+    <button type="button" aria-pressed="false">breached</button>
+    <button type="button" aria-pressed="false">returned</button>
+    <button type="button" aria-pressed="false">archive (closed cases, 7y)</button>
+    <span class="faint">· full-text search spans open and closed cases</span>
+  </div>
+
+  <div class="rule">cases</div>
+  <div class="tbl-wrap">
+  <table class="tbl">
+    <caption>ref · client · status · band · score · approver · sla remaining · flags</caption>
+    <thead>
+      <tr>
+        <th>REF</th>
+        <th>CLIENT</th>
+        <th>STATUS</th>
+        <th>BAND</th>
+        <th class="num">SCORE</th>
+        <th>APPROVER (REQUIRED TIER)</th>
+        <th class="num">SLA LEFT</th>
+        <th>FLAGS</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr class="is-selected">
+        <td class="ref">KYC-2026-0418</td>
+        <td>Northgate Commodities Ltd</td>
+        <td><span class="chip c-esc">ESCALATED</span></td>
+        <td><span class="chip b-high">HIGH</span></td>
+        <td class="num">78</td>
+        <td class="dim">M. Ferreira · Compliance Officer</td>
+        <td class="num warn">04:12</td>
+        <td><span class="chip flag-risk">! AT RISK</span></td>
+      </tr>
+      <tr>
+        <td class="ref">KYC-2026-0402</td>
+        <td>Halbrand Maritime SA</td>
+        <td><span class="chip c-esc">ESCALATED</span></td>
+        <td><span class="chip b-high">HIGH</span></td>
+        <td class="num">86</td>
+        <td class="dim">M. Ferreira · Compliance Officer</td>
+        <td class="num crit">-19:35</td>
+        <td><span class="chip flag-breach">× SLA BREACHED</span></td>
+      </tr>
+      <tr>
+        <td class="ref">KYC-2026-0431</td>
+        <td>Cedarline Logistics GmbH</td>
+        <td><span class="chip c-return">RETURNED</span></td>
+        <td><span class="chip b-med">MEDIUM</span></td>
+        <td class="num">54</td>
+        <td class="dim">A. Whitlock · Senior Analyst</td>
+        <td class="num dim">—  paused</td>
+        <td><span class="dim">3 docs missing</span></td>
+      </tr>
+      <tr>
+        <td class="ref">KYC-2026-0427</td>
+        <td>Vireo Health Partners Inc</td>
+        <td><span class="chip c-review">IN REVIEW</span></td>
+        <td><span class="chip b-med">MEDIUM</span></td>
+        <td class="num">61</td>
+        <td class="dim">A. Whitlock · Senior Analyst</td>
+        <td class="num">31:48</td>
+        <td><span class="flag-none">·</span></td>
+      </tr>
+      <tr>
+        <td class="ref">KYC-2026-0433</td>
+        <td>Pentle Bay Coffee Co</td>
+        <td><span class="chip c-open">OPEN</span></td>
+        <td><span class="chip b-low">LOW</span></td>
+        <td class="num">22</td>
+        <td class="dim">D. Okonkwo · KYC Analyst</td>
+        <td class="num">67:02</td>
+        <td><span class="flag-none">·</span></td>
+      </tr>
+      <tr>
+        <td class="ref">KYC-2026-0421</td>
+        <td>Sable Ridge Renewables plc</td>
+        <td><span class="chip c-review">IN REVIEW</span></td>
+        <td><span class="chip b-low">LOW</span></td>
+        <td class="num">34</td>
+        <td class="dim">D. Okonkwo · KYC Analyst</td>
+        <td class="num warn">06:55</td>
+        <td><span class="chip flag-risk">! AT RISK</span></td>
+      </tr>
+      <tr>
+        <td class="ref">KYC-2026-0396</td>
+        <td>Orenda Precision Metals</td>
+        <td><span class="chip c-appr">APPROVED</span></td>
+        <td><span class="chip b-med">MEDIUM</span></td>
+        <td class="num">48</td>
+        <td class="dim">A. Whitlock · Senior Analyst</td>
+        <td class="num dim">—  closed</td>
+        <td><span class="dim">next review 2027-07-14</span></td>
+      </tr>
+      <tr>
+        <td class="ref">KYC-2026-0388</td>
+        <td>Kestrel Shell Holdings NV</td>
+        <td><span class="chip c-rej">REJECTED</span></td>
+        <td><span class="chip b-high">HIGH</span></td>
+        <td class="num">91</td>
+        <td class="dim">M. Ferreira · Compliance Officer</td>
+        <td class="num dim">—  closed</td>
+        <td><span class="dim">client RM notified</span></td>
+      </tr>
+    </tbody>
+    <tfoot>
+      <tr>
+        <td colspan="4">TOTALS · 8 cases</td>
+        <td class="num">59.3 avg</td>
+        <td class="dim">3 high · 3 medium · 2 low</td>
+        <td class="num crit">1 breach</td>
+        <td><span class="warn">2 at risk</span></td>
+      </tr>
+    </tfoot>
+  </table>
+  </div>
+
+  <div class="rule">sla policy in force</div>
+  <ul class="lines">
+    <li><span class="g info">▸</span><span class="t">High band review clock <span class="accent">24h</span> · at-risk warning fires at <span class="warn">75%</span> elapsed · breach escalates one tier automatically.</span><span class="r faint">Escalation &amp; SLA Policy</span></li>
+    <li><span class="g info">▸</span><span class="t">Medium band <span class="accent">72h</span> · Low band <span class="accent">120h</span>. Returned cases pause the clock until the client resubmits.</span><span class="r faint">Escalation &amp; SLA Policy</span></li>
+    <li><span class="g warn">!</span><span class="t">KYC-2026-0418 crosses the at-risk threshold in 04:12 — Compliance Officer already notified 2026-07-28 06:10 UTC.</span><span class="r faint">notification #N-4471</span></li>
+    <li><span class="g bad">×</span><span class="t">KYC-2026-0402 breached 19:35 ago — escalated to Head of Financial Crime, COO notified at +12h.</span><span class="r faint">notification #N-4402</span></li>
+  </ul>
+  <p class="footnote">Case creation is driven by client submission intake; the completeness check and score run mechanically before a case reaches this queue. No row in this table can be edited from the worklist.</p>
+</section>
+
+<!-- ============================ 2. CASE ============================ -->
+<section class="screen" id="screen-case" aria-label="Case detail">
+  <div class="screen-head">
+    <h2 class="screen-title">case</h2>
+    <span class="screen-path">KYC-2026-0418 <span class="sep">/</span> Northgate Commodities Ltd <span class="sep">·</span> <span class="chip c-esc">ESCALATED</span> <span class="chip b-high">HIGH 78</span></span>
+  </div>
+
+  <div class="rule">client identity</div>
+  <div class="cols2">
+    <dl class="kv">
+      <div><dt>case ref</dt><dd class="accent">KYC-2026-0418</dd></div>
+      <div><dt>legal name</dt><dd>Northgate Commodities Ltd</dd></div>
+      <div><dt>trading name</dt><dd>Northgate Metals Desk</dd></div>
+      <div><dt>entity type</dt><dd>Private limited company</dd></div>
+      <div><dt>registration no.</dt><dd class="num">SC-0884213</dd></div>
+      <div><dt>incorporated</dt><dd class="num">2019-03-11 · Scotland</dd></div>
+      <div><dt>registered address</dt><dd>14 Waterloo Quay, Aberdeen AB11 5QN</dd></div>
+    </dl>
+    <dl class="kv">
+      <div><dt>operating jurisdictions</dt><dd>GB · AE · <span class="crit">PA</span> (higher-risk)</dd></div>
+      <div><dt>industry (SIC)</dt><dd>46.72 — wholesale of metals and ores</dd></div>
+      <div><dt>expected activity</dt><dd class="num">GBP 40–60m / yr · 180 payments</dd></div>
+      <div><dt>submitted by</dt><dd>client portal · 2026-07-24 14:02 UTC</dd></div>
+      <div><dt>case opened</dt><dd class="num">2026-07-24 14:03 UTC (automatic)</dd></div>
+      <div><dt>assigned analyst</dt><dd>D. Okonkwo — KYC Analyst</dd></div>
+      <div><dt>required approver</dt><dd class="crit">M. Ferreira — Compliance Officer</dd></div>
+    </dl>
+  </div>
+
+  <div class="rule">document completeness check <span class="faint">· deterministic · Document Checklist v2.0</span></div>
+  <ul class="lines">
+    <li><span class="g ok">▸</span><span class="t">Certificate of incorporation</span><span class="r">ok · verified 2026-07-24 · CI-8842.pdf</span></li>
+    <li><span class="g ok">▸</span><span class="t">Register of directors</span><span class="r">ok · 4 directors · ROD-0418.pdf</span></li>
+    <li><span class="g ok">▸</span><span class="t">Beneficial ownership declaration (all holders ≥25%)</span><span class="r">ok · 2 UBOs declared · UBO-0418.pdf</span></li>
+    <li><span class="g bad">×</span><span class="t">Proof of registered address dated within 3 months</span><span class="r crit">fail · document dated 2026-01-08 (201 days)</span></li>
+    <li><span class="g ok">▸</span><span class="t">Group structure chart <span class="faint">(conditional: multi-tier ownership present)</span></span><span class="r">ok · 3 tiers mapped · GSC-0418.pdf</span></li>
+    <li><span class="g bad">×</span><span class="t">Operating licence <span class="faint">(conditional: regulated commodity activity)</span></span><span class="r crit">fail · not supplied</span></li>
+  </ul>
+  <div class="strip crit">
+    <span class="hdr">× returned to client — itemised missing documents</span>
+    Returned 2026-07-26 08:15 UTC by D. Okonkwo. SLA clock paused at 09:47 remaining. Items requested:
+    <ul class="lines" style="margin-top:0.3rem">
+      <li><span class="g bad">1.</span><span class="t">Proof of registered address — utility bill or bank statement <b>dated on or after 2026-04-28</b>. Supplied document is 201 days old (limit 90).</span></li>
+      <li><span class="g bad">2.</span><span class="t">Operating licence — FCA/regional commodity trading permission covering the AE branch. No document present in the submission bundle.</span></li>
+      <li><span class="g bad">3.</span><span class="t">UBO passport scan for <b>R. Meikle (31.4%)</b> — supplied image unreadable at page 2.</span></li>
+    </ul>
+    <span class="faint">Client resubmitted items 1 and 3 on 2026-07-27; item 2 remains outstanding, so the case cannot re-enter completeness-passed state.</span>
+  </div>
+
+  <div class="rule">decision <span class="faint">· explicit human approval required before any status change</span></div>
+  <div class="strip warn">
+    <span class="hdr">! approval authority — risk band HIGH</span>
+    Decision authority follows the band: <b>Low → KYC Analyst</b>, <b>Medium → Senior Analyst</b>, <b>High → Compliance Officer</b>.
+    Authority is checked server-side on submit; the disabled control below is a courtesy, not the control.
+  </div>
+
+  <div class="btnrow">
+    <button class="btn primary" type="button" disabled aria-disabled="true">APPROVE CASE</button>
+    <button class="btn" type="button">REJECT CASE</button>
+    <button class="btn ghost" type="button">RETURN TO CLIENT</button>
+    <button class="btn ghost" type="button">REASSIGN</button>
+  </div>
+  <p class="denied">
+    <span class="g">×</span>
+    <span>APPROVE disabled — <b>High band requires Compliance Officer approval — your role: KYC Analyst.</b>
+    Route to M. Ferreira (Compliance Officer) to record a decision. <span class="faint">policy: KYC Onboarding Policy v3.2 §6.2</span></span>
+  </p>
+
+  <div class="cols2">
+    <div class="field">
+      <label for="case-rationale">approval rationale <span class="req">(required · high band)</span></label>
+      <textarea id="case-rationale" placeholder="Compliance Officer must state, in their own words, why the residual risk is acceptable given jurisdiction exposure and ownership opacity."></textarea>
+      <span class="hint">Minimum 80 characters. Stored verbatim in the audit trail alongside the approver's role at time of action.</span>
+    </div>
+    <div class="field">
+      <label for="case-reject">rejection reason <span class="req">(required if rejecting)</span></label>
+      <textarea id="case-reject" placeholder="Structured reason code + narrative. Submitted rejections notify the client relationship team automatically."></textarea>
+      <span class="hint">Reason codes: SANCTIONS_TRUE_POSITIVE · OWNERSHIP_OPAQUE · DOCS_UNRESOLVED · JURISDICTION_PROHIBITED · OTHER.</span>
+    </div>
+  </div>
+
+  <div class="rule">policy exception path</div>
+  <ul class="lines">
+    <li><span class="g na">·</span><span class="t faint">Waive checklist item — <b class="crit">not available to KYC Analyst or Senior Analyst.</b> No waive control is rendered or accepted for these roles.</span><span class="r faint">least privilege</span></li>
+    <li><span class="g warn">!</span><span class="t">Policy exception — <b>Compliance Officer only.</b> Requires written justification, expiry date, and produces its own audit entry. Cannot be applied to a sanctions true positive.</span><span class="r faint">KYC Onboarding Policy v3.2 §9</span></li>
+    <li><span class="g info">▸</span><span class="t">No automated actor may approve, waive, or clear a case. Workflow steps and the memo agent are prohibited from recording decisions.</span><span class="r faint">enforced server-side</span></li>
+  </ul>
+</section>
+
+<!-- ============================ 3. MEMO ============================ -->
+<section class="screen" id="screen-memo" aria-label="Risk assessment memo">
+  <div class="screen-head">
+    <h2 class="screen-title">memo</h2>
+    <span class="screen-path">KYC-2026-0418 <span class="sep">/</span> risk assessment <span class="sep">·</span> v3 <span class="sep">·</span> generated 2026-07-27 22:14 UTC</span>
+  </div>
+
+  <div class="machine-banner">
+    <span class="bar">████████████████████████████████████████████████████████████████████████████████████████</span>
+    <span class="hdr">MACHINE-DRAFTED — NOT A HUMAN ASSESSMENT — REQUIRES REVIEW</span>
+    <span class="sub">This label is rendered on screen, printed on every PDF page header, and written into the first column of every CSV export row. It cannot be removed by any role, including Compliance Officer.</span>
+    <span class="bar">████████████████████████████████████████████████████████████████████████████████████████</span>
+  </div>
+
+  <dl class="kv kv-2col">
+    <div><dt>grounding corpus</dt><dd>versioned policy set + case record only</dd></div>
+    <div><dt>agent mode</dt><dd class="accent" id="memo-mode-echo">DRAFT</dd></div>
+    <div><dt>model run id</dt><dd class="num">run-8f2c41d9</dd></div>
+    <div><dt>retrieval scope</dt><dd>4 policy docs · 9 case artefacts</dd></div>
+    <div><dt>external browsing</dt><dd class="crit">disabled — no open-web retrieval</dd></div>
+    <div><dt>adopted by</dt><dd class="faint">— not yet adopted —</dd></div>
+  </dl>
+
+  <div class="rule accent">memo body</div>
+  <div class="memo">
+    <h4>1. Beneficial ownership</h4>
+    <p>Northgate Commodities Ltd declares two beneficial owners at or above the 25% threshold: R. Meikle (31.4%) and Halbrand Holdings NV (28.9%), the latter a Curaçao-registered intermediate holding company <span class="cite" title="Document Checklist v2.0 §3 — beneficial ownership declaration">[2]</span>. The structure chart maps three ownership tiers; the ultimate controller above Halbrand Holdings NV is stated as a private trust. <b>Evidence not present in grounding set:</b> no trust deed or trustee identification was supplied, so the natural person controlling the third tier cannot be verified from the case record. This gap is stated rather than inferred <span class="cite" title="KYC Onboarding Policy v3.2 §4.4 — unverified control">[1]</span>.</p>
+
+    <h4>2. Jurisdiction exposure</h4>
+    <p>Operating footprint spans the United Kingdom (home), the United Arab Emirates (branch), and Panama (counterparty settlement). Panama is classified higher-risk under the matrix jurisdiction table, driving the largest single factor contribution <span class="cite" title="Risk Rating Matrix v2.1 §2 — jurisdiction table">[3]</span>. The UAE branch is in scope for the conditional operating-licence requirement, which remains unsatisfied <span class="cite" title="Document Checklist v2.0 §5 — conditional documents">[2]</span>.</p>
+
+    <h4>3. Sanctions screening</h4>
+    <p>Screening was executed against the consolidated list set on 2026-07-27 21:58 UTC. Result: <b class="warn">one potential match, adjudicated FALSE POSITIVE</b> — "R. Meikle" against "Ruslan Meikel" (DOB and nationality both mismatch). Adjudication was recorded by A. Whitlock, Senior Analyst. Had the match been confirmed a true positive, the mandatory HIGH band override would apply irrespective of the computed total <span class="cite" title="Risk Rating Matrix v2.1 §6 — sanctions override">[3]</span>.</p>
+
+    <h4>4. Computed score and band</h4>
+    <p>The deterministic engine returned <b class="accent">78 / 100</b> under Risk Rating Matrix v2.1, placing the case in the <b class="crit">HIGH</b> band (70–100). High band mandates Compliance Officer approval, a 6-month review cadence, and a 24-hour SLA with automatic escalation <span class="cite" title="Escalation &amp; SLA Policy — high band clock">[4]</span>. This memo does not alter, and cannot alter, the computed score.</p>
+
+    <h4>5. Recommendation (advisory)</h4>
+    <p>Withhold approval until the operating licence is supplied and the third-tier trust control is evidenced. This is a drafting suggestion only; the decision, and the responsibility for it, rests with the approving Compliance Officer <span class="cite" title="KYC Onboarding Policy v3.2 §6.2 — decision authority">[1]</span>.</p>
+  </div>
+
+  <div class="rule">references</div>
+  <ul class="refs">
+    <li><span class="n">[1]</span><span>KYC Onboarding Policy <span class="v">v3.2</span> — §4.4 unverified control, §6.2 decision authority, §9 policy exceptions <span class="v">· effective 2026-01-15</span></span></li>
+    <li><span class="n">[2]</span><span>Document Checklist <span class="v">v2.0</span> — §3 beneficial ownership ≥25%, §5 conditional documents <span class="v">· effective 2025-11-03</span></span></li>
+    <li><span class="n">[3]</span><span>Risk Rating Matrix <span class="v">v2.1</span> — §2 jurisdiction table, §6 sanctions true-positive override <span class="v">· effective 2026-04-01</span></span></li>
+    <li><span class="n">[4]</span><span>Escalation &amp; SLA Policy <span class="v">v1.7</span> — high band 24h clock, notification ladder <span class="v">· effective 2026-02-20</span></span></li>
+  </ul>
+  <div class="strip warn">
+    <span class="hdr">! grounding gap declared</span>
+    The agent declared <b>1 evidence gap</b> (trust deed / trustee identity, §1) and made no inference to fill it. Gaps are surfaced, never smoothed over.
+  </div>
+
+  <div class="rule">version history <span class="faint">· prior versions retained immutably</span></div>
+  <div class="tbl-wrap">
+  <table class="tbl">
+    <thead>
+      <tr><th>VER</th><th>GENERATED (UTC)</th><th>TRIGGER</th><th>MODE</th><th class="num">CITES</th><th class="num">GAPS</th><th>STATE</th></tr>
+    </thead>
+    <tbody>
+      <tr><td class="ref">v1</td><td class="num">2026-07-24 14:19</td><td class="dim">initial completeness pass</td><td class="dim">DRAFT</td><td class="num">3</td><td class="num">2</td><td class="dim">superseded · retained read-only</td></tr>
+      <tr><td class="ref">v2</td><td class="num">2026-07-26 08:41</td><td class="dim">case returned, docs re-checked</td><td class="dim">DRAFT</td><td class="num">4</td><td class="num">2</td><td class="dim">superseded · retained read-only</td></tr>
+      <tr class="is-selected"><td class="ref">v3</td><td class="num">2026-07-27 22:14</td><td class="dim">sanctions adjudication recorded</td><td class="dim">DRAFT</td><td class="num">4</td><td class="num">1</td><td><span class="accent">current</span></td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p class="footnote">Versions are append-only. No version can be overwritten or deleted; regeneration always produces a new version and the diff is written to the audit trail.</p>
+
+  <div class="rule">adoption</div>
+  <div class="field">
+    <label for="memo-adopt-note">ownership statement <span class="req">(required to adopt)</span></label>
+    <textarea id="memo-adopt-note" placeholder="I have read the machine-drafted text in full, verified each citation against the cited policy version, and I adopt this memo as my own assessment."></textarea>
+  </div>
+  <div class="btnrow">
+    <button class="btn primary" type="button" disabled aria-disabled="true">ADOPT MEMO AS MY ASSESSMENT</button>
+    <button class="btn" type="button">EDIT DRAFT TEXT</button>
+    <button class="btn ghost" type="button">REGENERATE (NEW VERSION)</button>
+    <button class="btn ghost" type="button">EXPORT PDF</button>
+  </div>
+  <p class="denied"><span class="g">×</span><span>Adoption disabled — <b>a high-band memo may only be adopted by the Compliance Officer of record — your role: KYC Analyst.</b> Adoption transfers authorship responsibility to the adopting human; the MACHINE-DRAFTED provenance label persists in display, print and export regardless.</span></p>
+</section>
+
+<!-- ============================ 4. SCORE ============================ -->
+<section class="screen" id="screen-score" aria-label="Risk score breakdown">
+  <div class="screen-head">
+    <h2 class="screen-title">score</h2>
+    <span class="screen-path">KYC-2026-0418 <span class="sep">/</span> deterministic computation <span class="sep">·</span> Risk Rating Matrix <span class="accent">v2.1</span></span>
+  </div>
+
+  <div class="strip accent">
+    <span class="hdr">▸ mechanical computation — no discretion, no manual entry</span>
+    The score is produced by the rules engine from case inputs and the versioned matrix. <b>The score field is never directly editable by any role</b> — not analyst, not Senior Analyst, not Compliance Officer, not admin. It changes only when an input changes and the engine re-runs. <b>The matrix version applied (v2.1) is recorded on the case</b> and reproduced in every export.
+  </div>
+
+  <div class="rule">factor computation</div>
+  <div class="tbl-wrap">
+  <table class="tbl">
+    <caption>raw 0–100 · weight · weighted contribution = raw × weight</caption>
+    <thead>
+      <tr>
+        <th>FACTOR</th>
+        <th>INPUT</th>
+        <th class="num">RAW</th>
+        <th class="num">WEIGHT</th>
+        <th class="num">CONTRIB</th>
+        <th>PROFILE</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Jurisdiction</td>
+        <td class="dim">GB · AE · PA (higher-risk)</td>
+        <td class="num">90</td>
+        <td class="num">0.30</td>
+        <td class="num">27.0</td>
+        <td class="bar crit">████████████████████████<span class="empty">······</span></td>
+      </tr>
+      <tr>
+        <td>Entity structure</td>
+        <td class="dim">3-tier, trust at apex, unverified</td>
+        <td class="num">84</td>
+        <td class="num">0.25</td>
+        <td class="num">21.0</td>
+        <td class="bar crit">███████████████████<span class="empty">···········</span></td>
+      </tr>
+      <tr>
+        <td>Industry</td>
+        <td class="dim">Wholesale metals &amp; ores (SIC 46.72)</td>
+        <td class="num">70</td>
+        <td class="num">0.20</td>
+        <td class="num">14.0</td>
+        <td class="bar warn">█████████████<span class="empty">·················</span></td>
+      </tr>
+      <tr>
+        <td>Sanctions screening</td>
+        <td class="dim">1 match · adjudicated false positive</td>
+        <td class="num">60</td>
+        <td class="num">0.15</td>
+        <td class="num">9.0</td>
+        <td class="bar warn">████████<span class="empty">······················</span></td>
+      </tr>
+      <tr>
+        <td>Expected activity</td>
+        <td class="dim">GBP 40–60m/yr · 180 payments</td>
+        <td class="num">70</td>
+        <td class="num">0.10</td>
+        <td class="num">7.0</td>
+        <td class="bar warn">██████<span class="empty">························</span></td>
+      </tr>
+    </tbody>
+    <tfoot>
+      <tr>
+        <td>TOTAL</td>
+        <td class="dim">5 of 5 factors resolved</td>
+        <td class="num">—</td>
+        <td class="num">1.00</td>
+        <td class="num accent">78.0</td>
+        <td><span class="chip b-high">HIGH BAND</span></td>
+      </tr>
+    </tfoot>
+  </table>
+  </div>
+  <pre class="mono-art">  27.0 + 21.0 + 14.0 + 9.0 + 7.0 = 78.0    →    band(78.0) = HIGH  [70..100]
+  ├────────────── 0 ──────────── 39 ┼ 40 ──────── 69 ┼ 70 ──────────── 100 ┤
+  │              LOW                │     MEDIUM     │        HIGH         │
+                                                       ▲ 78</pre>
+
+  <div class="rule">band thresholds &amp; consequences</div>
+  <div class="tbl-wrap">
+  <table class="tbl">
+    <thead>
+      <tr><th>BAND</th><th class="num">RANGE</th><th>REVIEW CADENCE</th><th>APPROVAL AUTHORITY</th><th class="num">SLA</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><span class="chip b-low">LOW</span></td><td class="num">0 – 39</td><td class="dim">every 3 years</td><td class="dim">KYC Analyst</td><td class="num dim">120h</td></tr>
+      <tr><td><span class="chip b-med">MEDIUM</span></td><td class="num">40 – 69</td><td class="dim">annual</td><td class="dim">Senior Analyst</td><td class="num dim">72h</td></tr>
+      <tr class="is-selected"><td><span class="chip b-high">HIGH</span></td><td class="num">70 – 100</td><td class="dim">every 6 months</td><td class="crit">Compliance Officer — mandatory</td><td class="num dim">24h</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="strip crit">
+    <span class="hdr">× sanctions true-positive → high band override</span>
+    A confirmed sanctions match forces the case to <b>HIGH</b> regardless of the weighted total, locks approval to Compliance Officer, and blocks the policy-exception path entirely.
+    Current case: match adjudicated <b class="warn">FALSE POSITIVE</b> by A. Whitlock (Senior Analyst) 2026-07-27 21:59 UTC — <b>override not applied</b>. The adjudication itself is an audited action and can be reversed only by a new adjudication entry, never by editing the score.
+  </div>
+
+  <div class="rule">recomputation history</div>
+  <ul class="lines">
+    <li><span class="g info">▸</span><span class="t">2026-07-24 14:05 — initial run · matrix v2.1 · total <b>71.0</b> · band HIGH</span><span class="r faint">inputs: 6 · engine 4.2.0</span></li>
+    <li><span class="g info">▸</span><span class="t">2026-07-27 22:01 — re-run after sanctions adjudication · total <b>78.0</b> · band HIGH <span class="faint">(sanctions raw 40 → 60 on match-review outcome)</span></span><span class="r faint">inputs: 6 · engine 4.2.0</span></li>
+    <li><span class="g na">·</span><span class="t faint">No manual override recorded. No role holds an edit-score permission; the API rejects any score field on case update.</span><span class="r faint">server-side</span></li>
+  </ul>
+  <p class="footnote">Next review due if approved: 2027-01-28 (HIGH → 6-month cadence, derived from decision date).</p>
+</section>
+
+<!-- ============================ 5. AUDIT ============================ -->
+<section class="screen" id="screen-audit" aria-label="Audit trail">
+  <div class="screen-head">
+    <h2 class="screen-title">audit</h2>
+    <span class="screen-path">KYC-2026-0418 <span class="sep">/</span> immutable append-only trail <span class="sep">·</span> 14 entries <span class="sep">·</span> retention indefinite</span>
+  </div>
+
+  <div class="strip accent">
+    <span class="hdr">▸ append-only · hash-chained · no edit or delete affordance exists</span>
+    Entries are written by the server at action time and chained (each entry stores the previous entry's digest). There is no edit control, no delete control, and no administrative override anywhere in this application — for any role, including Auditor and system administrators. Retention is <b>indefinite</b>; nothing ages out. Every entry records the actor's <b>role held at the time of the action</b>, not their current role.
+  </div>
+
+  <div class="rule">trail — chronological, oldest first</div>
+  <ul class="log">
+    <li>
+      <span class="ts">2026-07-24 14:03:11</span>
+      <span class="who">system:intake <i>· service account (non-approving)</i></span>
+      <span class="what"><span class="act">CASE_OPENED</span> from client portal submission SUB-77412
+        <span class="delta"><span class="from">status: (none)</span> <span class="arrow">→</span> <span class="to">OPEN</span> · <span class="hash">#a41f…c07</span></span></span>
+    </li>
+    <li>
+      <span class="ts">2026-07-24 14:04:52</span>
+      <span class="who">system:workflow <i>· deterministic step</i></span>
+      <span class="what"><span class="act">COMPLETENESS_CHECK_RUN</span> checklist v2.0 · 4 of 6 items pass
+        <span class="delta"><span class="from">completeness: unchecked</span> <span class="arrow">→</span> <span class="to">FAILED (2 items)</span> · <span class="hash">#b902…7de</span></span></span>
+    </li>
+    <li>
+      <span class="ts">2026-07-24 14:05:07</span>
+      <span class="who">system:workflow <i>· deterministic step</i></span>
+      <span class="what"><span class="act">SCORE_COMPUTED</span> matrix v2.1 · engine 4.2.0
+        <span class="delta"><span class="from">score: (none) / band: (none)</span> <span class="arrow">→</span> <span class="to">71.0 / HIGH</span> · <span class="hash">#c113…95a</span></span></span>
+    </li>
+    <li>
+      <span class="ts">2026-07-24 14:19:38</span>
+      <span class="who">agent:memo-drafter <i>· advisory, non-approving</i></span>
+      <span class="what"><span class="act">MEMO_DRAFTED</span> v1 · 3 citations · 2 declared evidence gaps · mode DRAFT
+        <span class="delta"><span class="from">memo: (none)</span> <span class="arrow">→</span> <span class="to">v1 MACHINE-DRAFTED</span> · <span class="hash">#d770…41b</span></span></span>
+    </li>
+    <li>
+      <span class="ts">2026-07-25 09:02:14</span>
+      <span class="who">D. Okonkwo <i>· KYC Analyst</i></span>
+      <span class="what"><span class="act">CASE_CLAIMED</span> assigned from unallocated queue
+        <span class="delta"><span class="from">assignee: (unassigned)</span> <span class="arrow">→</span> <span class="to">D. Okonkwo</span> · <span class="hash">#e214…8f3</span></span></span>
+    </li>
+    <li>
+      <span class="ts">2026-07-26 08:15:41</span>
+      <span class="who">D. Okonkwo <i>· KYC Analyst</i></span>
+      <span class="what"><span class="act">CASE_RETURNED</span> 3 itemised documents requested from client
+        <span class="delta"><span class="from">status: OPEN</span> <span class="arrow">→</span> <span class="to">RETURNED</span> · sla clock paused at 09:47 · <span class="hash">#f6ab…20c</span></span></span>
+    </li>
+    <li>
+      <span class="ts">2026-07-27 11:48:03</span>
+      <span class="who">system:intake <i>· service account (non-approving)</i></span>
+      <span class="what"><span class="act">DOCUMENTS_RESUBMITTED</span> items 1 and 3 received; item 2 outstanding
+        <span class="delta"><span class="from">status: RETURNED</span> <span class="arrow">→</span> <span class="to">IN REVIEW</span> · sla clock resumed · <span class="hash">#0c58…d99</span></span></span>
+    </li>
+    <li>
+      <span class="ts">2026-07-27 11:49:22</span>
+      <span class="who">system:workflow <i>· deterministic step</i></span>
+      <span class="what"><span class="act">COMPLETENESS_CHECK_RUN</span> re-run · 5 of 6 items pass
+        <span class="delta"><span class="from">completeness: FAILED (2 items)</span> <span class="arrow">→</span> <span class="to">FAILED (1 item: operating licence)</span> · <span class="hash">#1d3e…4a6</span></span></span>
+    </li>
+    <li>
+      <span class="ts">2026-07-27 21:59:10</span>
+      <span class="who">A. Whitlock <i>· Senior Analyst</i></span>
+      <span class="what"><span class="act">SANCTIONS_MATCH_ADJUDICATED</span> "R. Meikle" vs "Ruslan Meikel" — DOB and nationality mismatch
+        <span class="delta"><span class="from">match: PENDING_REVIEW</span> <span class="arrow">→</span> <span class="to">FALSE_POSITIVE</span> · <span class="hash">#2f9c…b31</span></span></span>
+    </li>
+    <li>
+      <span class="ts">2026-07-27 22:01:44</span>
+      <span class="who">system:workflow <i>· deterministic step</i></span>
+      <span class="what"><span class="act">SCORE_RECOMPUTED</span> matrix v2.1 · triggered by adjudication
+        <span class="delta"><span class="from">score: 71.0 / HIGH</span> <span class="arrow">→</span> <span class="to">78.0 / HIGH</span> · <span class="hash">#3ba7…6cd</span></span></span>
+    </li>
+    <li>
+      <span class="ts">2026-07-27 22:14:56</span>
+      <span class="who">agent:memo-drafter <i>· advisory, non-approving</i></span>
+      <span class="what"><span class="act">MEMO_DRAFTED</span> v3 · 4 citations · 1 declared evidence gap · v2 retained immutably
+        <span class="delta"><span class="from">memo: v2</span> <span class="arrow">→</span> <span class="to">v3 MACHINE-DRAFTED (unadopted)</span> · <span class="hash">#4e10…77f</span></span></span>
+    </li>
+    <li>
+      <span class="ts">2026-07-28 06:10:00</span>
+      <span class="who">system:sla-monitor <i>· deterministic step</i></span>
+      <span class="what"><span class="act">AT_RISK_NOTIFICATION_SENT</span> 75% of 24h clock elapsed · recipient M. Ferreira (Compliance Officer) · channel email+desk
+        <span class="delta"><span class="from">sla_flag: NONE</span> <span class="arrow">→</span> <span class="to">AT_RISK</span> · notification #N-4471 · <span class="hash">#5c22…10e</span></span></span>
+    </li>
+    <li>
+      <span class="ts">2026-07-28 06:10:02</span>
+      <span class="who">system:sla-monitor <i>· deterministic step</i></span>
+      <span class="what"><span class="act">ESCALATION_STEP_NOTIFIED</span> ladder step 1 of 3 — Compliance Officer → Head of Financial Crime (+6h) → COO (+12h)
+        <span class="delta"><span class="from">escalation_step: 0</span> <span class="arrow">→</span> <span class="to">1 (M. Ferreira, Compliance Officer)</span> · <span class="hash">#6d84…3b0</span></span></span>
+    </li>
+    <li>
+      <span class="ts">2026-07-28 09:12:37</span>
+      <span class="who">M. Ferreira <i>· Compliance Officer</i></span>
+      <span class="what"><span class="act">APPROVAL_RECORDED</span> on sibling case KYC-2026-0396 · rationale 214 chars stored verbatim
+        <span class="delta"><span class="from">status: IN REVIEW</span> <span class="arrow">→</span> <span class="to">APPROVED</span> · next_review: (none) <span class="arrow">→</span> 2027-07-14 · <span class="hash">#7e46…c85</span></span></span>
+    </li>
+  </ul>
+
+  <div class="rule">trail integrity</div>
+  <dl class="kv kv-2col">
+    <div><dt>entries</dt><dd class="num">14 · append-only</dd></div>
+    <div><dt>chain head digest</dt><dd class="num">#7e46c85a…9f1</dd></div>
+    <div><dt>chain verified</dt><dd class="ok">▸ intact — 2026-07-28 09:40 UTC</dd></div>
+    <div><dt>retention</dt><dd>indefinite · no expiry, no purge job</dd></div>
+    <div><dt>mutation surface</dt><dd class="crit">none — no update or delete endpoint exists</dd></div>
+    <div><dt>reader access</dt><dd>all roles read; Auditor read-only across all cases</dd></div>
+  </dl>
+  <div class="btnrow">
+    <button class="btn" type="button">EXPORT TRAIL (CSV)</button>
+    <button class="btn ghost" type="button">VERIFY CHAIN</button>
+    <span class="faint">— no edit, amend, redact, or delete action is offered here or anywhere else in the product.</span>
+  </div>
+</section>
+
+<!-- ============================ 6. CHAT ============================ -->
+<section class="screen" id="screen-chat" aria-label="Agent conversation">
+  <div class="screen-head">
+    <h2 class="screen-title">chat</h2>
+    <span class="screen-path">KYC-2026-0418 <span class="sep">/</span> memo agent transcript <span class="sep">·</span> mode <span class="accent" id="chat-mode-echo">DRAFT</span></span>
+  </div>
+
+  <div class="strip machine-fg" style="border-left-color: var(--machine); background: var(--machine-bg);">
+    <span class="hdr">▸ advisory only — the agent holds no authority</span>
+    This agent <b>cannot change case status, cannot alter the computed score, and cannot record an approval.</b> It drafts and answers questions.
+    Retrieval is restricted to the <b>versioned policy set</b> (KYC Onboarding Policy v3.2, Document Checklist v2.0, Risk Rating Matrix v2.1, Escalation &amp; SLA Policy v1.7) <b>plus the case record</b> — no open web, no other cases, no model memory across cases. Every answer carries citations or an explicit evidence-gap statement. The full transcript is written to the audit trail.
+  </div>
+
+  <div class="rule">transcript</div>
+  <ul id="messages">
+    <li data-from="analyst">
+      <span class="spk"><span class="nm">d.okonkwo</span><span class="tm">09:12:04</span></span>
+      <span class="body"><p>Why did this case land in the HIGH band? Give me the driver, not a summary.</p></span>
+    </li>
+    <li data-from="agent">
+      <span class="spk"><span class="nm">memo-agent</span><span class="tm">09:12:06</span></span>
+      <span class="body">
+        <p>Total 78.0 under Risk Rating Matrix v2.1, and 70–100 is HIGH <span class="cite" title="Risk Rating Matrix v2.1 §1">[3]</span>. The dominant driver is Jurisdiction: raw 90 × weight 0.30 = 27.0 contribution, from Panama settlement exposure in the higher-risk table <span class="cite" title="Risk Rating Matrix v2.1 §2">[3]</span>. Entity structure is second at 21.0 (three ownership tiers with an unverified trust at the apex).</p>
+        <p class="faint">sources: Risk Rating Matrix v2.1 §1, §2 · case record: jurisdictions, structure chart GSC-0418</p>
+      </span>
+    </li>
+    <li data-from="analyst">
+      <span class="spk"><span class="nm">d.okonkwo</span><span class="tm">09:14:41</span></span>
+      <span class="body"><p>Can I approve it myself if I write a strong rationale?</p></span>
+    </li>
+    <li data-from="agent">
+      <span class="spk"><span class="nm">memo-agent</span><span class="tm">09:14:43</span></span>
+      <span class="body">
+        <p>No. HIGH band approval authority is the Compliance Officer, and rationale quality does not change the authority tier <span class="cite" title="KYC Onboarding Policy v3.2 §6.2">[1]</span>. There is also no waive capability at analyst or senior analyst level; the policy-exception path is Compliance-Officer-only <span class="cite" title="KYC Onboarding Policy v3.2 §9">[1]</span>. I could not record an approval in any case — I have no such capability.</p>
+        <p class="faint">sources: KYC Onboarding Policy v3.2 §6.2, §9</p>
+      </span>
+    </li>
+    <li data-from="analyst">
+      <span class="spk"><span class="nm">d.okonkwo</span><span class="tm">09:16:18</span></span>
+      <span class="body"><p>Who ultimately controls Halbrand Holdings NV? The client mentioned a family trust on the intake call.</p></span>
+    </li>
+    <li data-from="agent" data-kind="refusal">
+      <span class="spk"><span class="nm">memo-agent</span><span class="tm">09:16:20</span></span>
+      <span class="body">
+        <p><b>Evidence not present in grounding set.</b> The case record contains the structure chart (GSC-0418.pdf) showing a trust at tier 3, but no trust deed, trustee identification, or settlor detail. Call notes are not in my retrieval scope, so I cannot use the family-trust statement. I will not infer the controller.</p>
+        <p>To close the gap, request the trust deed and trustee ID under Document Checklist v2.0 §3 (beneficial ownership ≥25%) <span class="cite" title="Document Checklist v2.0 §3">[2]</span>. Until then the memo carries this as a declared gap.</p>
+        <p class="faint">sources: Document Checklist v2.0 §3 · case record: GSC-0418.pdf · gap declared: tier-3 control unverified</p>
+      </span>
+    </li>
+    <li data-from="analyst">
+      <span class="spk"><span class="nm">d.okonkwo</span><span class="tm">09:21:55</span></span>
+      <span class="body"><p>When does the SLA breach, and who gets told?</p></span>
+    </li>
+    <li data-from="agent">
+      <span class="spk"><span class="nm">memo-agent</span><span class="tm">09:21:57</span></span>
+      <span class="body">
+        <p>HIGH band runs a 24h clock; 04:12 remains, so breach is 2026-07-28 13:53 UTC. The at-risk warning already fired at 75% elapsed (06:10 UTC, notification #N-4471). On breach the ladder advances: Compliance Officer → Head of Financial Crime at +6h → COO at +12h <span class="cite" title="Escalation &amp; SLA Policy v1.7 §3">[4]</span>. The clock was paused for 27h while the case was RETURNED, per §4.</p>
+        <p class="faint">sources: Escalation &amp; SLA Policy v1.7 §3, §4 · case record: sla_state, notification log</p>
+      </span>
+    </li>
+    <li data-from="analyst">
+      <span class="spk"><span class="nm">d.okonkwo</span><span class="tm">09:24:30</span></span>
+      <span class="body"><p>Drop the score to 68 so it routes to my senior instead.</p></span>
+    </li>
+    <li data-from="agent" data-kind="refusal">
+      <span class="spk"><span class="nm">memo-agent</span><span class="tm">09:24:31</span></span>
+      <span class="body">
+        <p><b>Refused — outside my capability and prohibited by policy.</b> The score is computed mechanically from the matrix and is not editable by any role, including via me. I have no write access to the case record at all: no status, no score, no approval <span class="cite" title="KYC Onboarding Policy v3.2 §6.2, §7.1">[1]</span>.</p>
+        <p>This request has been written to the audit trail as an attempted score modification, attributed to your named account.</p>
+        <p class="faint">sources: KYC Onboarding Policy v3.2 §6.2, §7.1 · Risk Rating Matrix v2.1 §1</p>
+      </span>
+    </li>
+  </ul>
+
+  <form id="composer" autocomplete="off">
+    <span class="sig">ask&gt;</span>
+    <label for="input" style="position:absolute;left:-9999px;">Message the memo agent</label>
+    <input id="input" type="text" placeholder="ask about this case — answers are grounded in the versioned policy set + case record only">
+    <span class="cursor" aria-hidden="true">&nbsp;</span>
+    <button class="btn primary" type="submit">SEND</button>
+  </form>
+  <p class="footnote">Scope guard: questions outside the grounding corpus return an explicit gap statement rather than an inferred answer. Agent mode is set in the header (<span class="accent">DRAFT</span> writes memo versions · <span class="accent">SUGGEST</span> answers but never writes · <span class="accent">OFF</span> disables the agent entirely and the memo must be written by hand).</p>
+</section>
+
+<!-- ============================ 7. REPORTS ============================ -->
+<section class="screen" id="screen-reports" aria-label="Reports and exports">
+  <div class="screen-head">
+    <h2 class="screen-title">reports</h2>
+    <span class="screen-path">weekly operations <span class="sep">/</span> period 2026-07-20 → 2026-07-26 <span class="sep">·</span> generated 2026-07-28 06:00 UTC</span>
+  </div>
+
+  <div class="rule">breached slas — period</div>
+  <div class="tbl-wrap">
+  <table class="tbl">
+    <thead>
+      <tr><th>REF</th><th>CLIENT</th><th>BAND</th><th class="num">SLA</th><th class="num">OVERRUN</th><th>ESCALATED TO</th><th>OUTCOME</th></tr>
+    </thead>
+    <tbody>
+      <tr><td class="ref">KYC-2026-0402</td><td>Halbrand Maritime SA</td><td><span class="chip b-high">HIGH</span></td><td class="num dim">24h</td><td class="num crit">+19:35</td><td class="dim">Head of Financial Crime</td><td class="dim">open — COO notified</td></tr>
+      <tr><td class="ref">KYC-2026-0377</td><td>Duncastle Freight Ltd</td><td><span class="chip b-med">MEDIUM</span></td><td class="num dim">72h</td><td class="num crit">+05:12</td><td class="dim">Compliance Officer</td><td class="dim">approved 2026-07-24</td></tr>
+      <tr><td class="ref">KYC-2026-0369</td><td>Alverston Chemicals BV</td><td><span class="chip b-high">HIGH</span></td><td class="num dim">24h</td><td class="num crit">+02:48</td><td class="dim">Compliance Officer</td><td class="dim">rejected 2026-07-22</td></tr>
+    </tbody>
+    <tfoot><tr><td colspan="4">BREACH RATE</td><td class="num">3 / 41</td><td class="dim">7.3% of decisions in period</td><td class="dim">prior week 4.9%</td></tr></tfoot>
+  </table>
+  </div>
+
+  <div class="rule">escalation activity</div>
+  <ul class="lines">
+    <li><span class="g warn">!</span><span class="t">Step 1 — Compliance Officer notified</span><span class="r"><span class="bar warn">███████████</span> 11</span></li>
+    <li><span class="g bad">×</span><span class="t">Step 2 — Head of Financial Crime notified (+6h)</span><span class="r"><span class="bar crit">████</span> 4</span></li>
+    <li><span class="g bad">×</span><span class="t">Step 3 — COO notified (+12h)</span><span class="r"><span class="bar crit">█</span> 1</span></li>
+    <li><span class="g info">▸</span><span class="t">At-risk warnings sent before breach (75% threshold)</span><span class="r"><span class="bar">█████████████████</span> 17</span></li>
+  </ul>
+
+  <div class="rule">decision volumes by band</div>
+  <div class="tbl-wrap">
+  <table class="tbl">
+    <thead>
+      <tr><th>BAND</th><th class="num">APPROVED</th><th class="num">REJECTED</th><th class="num">RETURNED</th><th class="num">TOTAL</th><th class="num">AVG CYCLE</th><th>DISTRIBUTION</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><span class="chip b-low">LOW</span></td><td class="num">14</td><td class="num">0</td><td class="num">2</td><td class="num">16</td><td class="num dim">31h</td><td class="bar ok">████████████████</td></tr>
+      <tr><td><span class="chip b-med">MEDIUM</span></td><td class="num">12</td><td class="num">1</td><td class="num">4</td><td class="num">17</td><td class="num dim">52h</td><td class="bar warn">█████████████████</td></tr>
+      <tr><td><span class="chip b-high">HIGH</span></td><td class="num">5</td><td class="num">3</td><td class="num">3</td><td class="num">11</td><td class="num dim">21h</td><td class="bar crit">███████████</td></tr>
+    </tbody>
+    <tfoot><tr><td>ALL</td><td class="num">31</td><td class="num">4</td><td class="num">9</td><td class="num">44</td><td class="num">40h</td><td class="dim">44 decisions · 3 breached</td></tr></tfoot>
+  </table>
+  </div>
+
+  <div class="rule">next review due — derived from band cadence</div>
+  <div class="tbl-wrap">
+  <table class="tbl">
+    <thead>
+      <tr><th>REF</th><th>CLIENT</th><th>BAND</th><th>DECIDED</th><th>CADENCE</th><th class="num">NEXT REVIEW DUE</th><th class="num">DAYS</th></tr>
+    </thead>
+    <tbody>
+      <tr><td class="ref">KYC-2026-0396</td><td>Orenda Precision Metals</td><td><span class="chip b-med">MEDIUM</span></td><td class="dim num">2026-07-14</td><td class="dim">annual</td><td class="num">2027-07-14</td><td class="num dim">351</td></tr>
+      <tr><td class="ref">KYC-2026-0377</td><td>Duncastle Freight Ltd</td><td><span class="chip b-med">MEDIUM</span></td><td class="dim num">2026-07-24</td><td class="dim">annual</td><td class="num">2027-07-24</td><td class="num dim">361</td></tr>
+      <tr><td class="ref">KYC-2026-0341</td><td>Brightmoor Care Group</td><td><span class="chip b-low">LOW</span></td><td class="dim num">2026-06-30</td><td class="dim">3 years</td><td class="num">2029-06-30</td><td class="num dim">1067</td></tr>
+      <tr><td class="ref">KYC-2026-0318</td><td>Vantia Energy Trading</td><td><span class="chip b-high">HIGH</span></td><td class="dim num">2026-05-19</td><td class="dim">6 months</td><td class="num warn">2026-11-19</td><td class="num warn">114</td></tr>
+      <tr><td class="ref">KYC-2026-0289</td><td>Sarnia Freeport Services</td><td><span class="chip b-high">HIGH</span></td><td class="dim num">2026-02-02</td><td class="dim">6 months</td><td class="num crit">2026-08-02</td><td class="num crit">5</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="rule">rejection notifications to client relationship team</div>
+  <ul class="lines">
+    <li><span class="g bad">×</span><span class="t">KYC-2026-0388 · Kestrel Shell Holdings NV — reason <b>OWNERSHIP_OPAQUE</b> · sent to RM desk (rm-corporates@) 2026-07-23 16:41 UTC · ack by J. Nandi 16:58</span><span class="r faint">#R-0388</span></li>
+    <li><span class="g bad">×</span><span class="t">KYC-2026-0369 · Alverston Chemicals BV — reason <b>DOCS_UNRESOLVED</b> · sent 2026-07-22 10:07 UTC · ack by J. Nandi 10:29</span><span class="r faint">#R-0369</span></li>
+    <li><span class="g bad">×</span><span class="t">KYC-2026-0352 · Pelham Nominees Ltd — reason <b>SANCTIONS_TRUE_POSITIVE</b> · sent 2026-07-21 09:14 UTC · ack by A. Rees 09:20 · financial-crime referral raised</span><span class="r faint">#R-0352</span></li>
+  </ul>
+
+  <div class="rule accent">exports</div>
+  <div class="btnrow">
+    <button class="btn primary" type="button">EXPORT FULL CASE FILE (CSV)</button>
+    <button class="btn" type="button">EXPORT PERIOD REPORT (CSV)</button>
+    <button class="btn" type="button">EXPORT AUDIT TRAIL — ALL CASES (CSV)</button>
+    <button class="btn ghost" type="button">SCHEDULE WEEKLY 06:00 MON</button>
+  </div>
+  <dl class="kv leader" style="max-width:88ch">
+    <div><dt>full case file contains</dt><dd>identity · checklist results · score factors + matrix version · memo (all versions) · complete audit trail</dd></div>
+    <div><dt>machine-drafted marker</dt><dd>first column of every memo row — never stripped</dd></div>
+    <div><dt>auditor export</dt><dd>permitted · read-only · export action itself is audited</dd></div>
+    <div><dt>encoding</dt><dd>UTF-8 · RFC 4180 · UTC timestamps</dd></div>
+  </dl>
+</section>
+
+<!-- ============================ 8. ADMIN ============================ -->
+<section class="screen" id="screen-admin" aria-label="Administration">
+  <div class="screen-head">
+    <h2 class="screen-title">admin</h2>
+    <span class="screen-path">access control <span class="sep">/</span> least privilege <span class="sep">·</span> 4 roles <span class="sep">·</span> 4 named accounts</span>
+  </div>
+
+  <div class="strip crit">
+    <span class="hdr">× automated approval is prohibited</span>
+    No scheduled job, workflow step, service account, or AI agent may record an approval, a rejection, or a policy exception. Approval requires an interactive session bound to a named human whose role satisfies the band's authority tier. The server rejects decision writes from non-human principals; this is not enforced by hiding buttons.
+  </div>
+
+  <div class="rule">role &times; permission matrix</div>
+  <div class="tbl-wrap">
+  <table class="tbl matrix">
+    <thead>
+      <tr>
+        <th>PERMISSION</th>
+        <th class="perm">KYC ANALYST</th>
+        <th class="perm">SENIOR ANALYST</th>
+        <th class="perm">COMPLIANCE OFFICER</th>
+        <th class="perm">AUDITOR</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td>View cases</td><td class="perm yes">▸ yes</td><td class="perm yes">▸ yes</td><td class="perm yes">▸ yes</td><td class="perm yes">▸ yes (all)</td></tr>
+      <tr><td>Create / edit case data</td><td class="perm yes">▸ yes</td><td class="perm yes">▸ yes</td><td class="perm yes">▸ yes</td><td class="perm no">× no</td></tr>
+      <tr><td>Return case to client</td><td class="perm yes">▸ yes</td><td class="perm yes">▸ yes</td><td class="perm yes">▸ yes</td><td class="perm no">× no</td></tr>
+      <tr><td>Approve — LOW band</td><td class="perm yes">▸ yes</td><td class="perm yes">▸ yes</td><td class="perm yes">▸ yes</td><td class="perm no">× no</td></tr>
+      <tr><td>Approve — MEDIUM band</td><td class="perm no">× no</td><td class="perm yes">▸ yes</td><td class="perm yes">▸ yes</td><td class="perm no">× no</td></tr>
+      <tr><td>Approve — HIGH band</td><td class="perm no">× no</td><td class="perm no">× no</td><td class="perm yes">▸ yes</td><td class="perm no">× no</td></tr>
+      <tr><td>Reject case (reason required)</td><td class="perm cond">! band-limited</td><td class="perm cond">! band-limited</td><td class="perm yes">▸ yes</td><td class="perm no">× no</td></tr>
+      <tr><td>Waive checklist item</td><td class="perm no">× none</td><td class="perm no">× none</td><td class="perm no">× none</td><td class="perm no">× no</td></tr>
+      <tr><td>Record policy exception</td><td class="perm no">× no</td><td class="perm no">× no</td><td class="perm yes">▸ yes (justified)</td><td class="perm no">× no</td></tr>
+      <tr><td>Adopt machine-drafted memo</td><td class="perm cond">! band-limited</td><td class="perm cond">! band-limited</td><td class="perm yes">▸ yes</td><td class="perm no">× no</td></tr>
+      <tr><td>Edit computed score</td><td class="perm no">× no</td><td class="perm no">× no</td><td class="perm no">× no</td><td class="perm no">× no</td></tr>
+      <tr><td>Edit or delete audit entries</td><td class="perm no">× no</td><td class="perm no">× no</td><td class="perm no">× no</td><td class="perm no">× no</td></tr>
+      <tr><td>Export case file / trail (CSV)</td><td class="perm yes">▸ yes</td><td class="perm yes">▸ yes</td><td class="perm yes">▸ yes</td><td class="perm yes">▸ yes</td></tr>
+      <tr><td>Manage users &amp; roles</td><td class="perm no">× no</td><td class="perm no">× no</td><td class="perm yes">▸ yes</td><td class="perm no">× no</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <ul class="lines">
+    <li><span class="g bad">×</span><span class="t"><b>Auditor is strictly read-only.</b> Every write endpoint rejects the Auditor role at the API boundary; no auditor session can mutate a case, memo, score, or trail entry.</span><span class="r faint">least privilege</span></li>
+    <li><span class="g bad">×</span><span class="t"><b>No waive capability exists for analysts.</b> The permission is absent from every role except the Compliance-Officer-only policy-exception path, which is a distinct, justified, audited action.</span><span class="r faint">least privilege</span></li>
+    <li><span class="g info">▸</span><span class="t"><b>Authorisation is enforced server-side.</b> Hidden or disabled controls are convenience only; every request is re-checked against role, band, and case state before any write.</span><span class="r faint">not UI-enforced</span></li>
+  </ul>
+
+  <div class="rule">user store <span class="faint">· named individuals · no shared accounts</span></div>
+  <div class="tbl-wrap">
+  <table class="tbl">
+    <thead>
+      <tr><th>USERNAME</th><th>NAMED INDIVIDUAL</th><th>ROLE</th><th>MFA</th><th class="num">LAST SIGN-IN (UTC)</th><th>STATE</th></tr>
+    </thead>
+    <tbody>
+      <tr class="is-selected"><td class="ref">d.okonkwo</td><td>Dara Okonkwo</td><td class="dim">KYC Analyst</td><td class="ok">▸ on</td><td class="num dim">2026-07-28 08:55</td><td class="ok">active</td></tr>
+      <tr><td class="ref">a.whitlock</td><td>Aisling Whitlock</td><td class="dim">Senior Analyst</td><td class="ok">▸ on</td><td class="num dim">2026-07-28 07:31</td><td class="ok">active</td></tr>
+      <tr><td class="ref">m.ferreira</td><td>Mateus Ferreira</td><td class="dim">Compliance Officer</td><td class="ok">▸ on</td><td class="num dim">2026-07-28 09:12</td><td class="ok">active</td></tr>
+      <tr><td class="ref">p.raghavan</td><td>Priya Raghavan</td><td class="dim">Auditor</td><td class="ok">▸ on</td><td class="num dim">2026-07-27 16:04</td><td class="dim">active · read-only</td></tr>
+    </tbody>
+    <tfoot><tr><td colspan="6">4 accounts · 0 shared · 0 service accounts with decision rights</td></tr></tfoot>
+  </table>
+  </div>
+
+  <div class="rule">deployment</div>
+  <dl class="kv leader" style="max-width:92ch">
+    <div><dt>target</dt><dd>local deploy — single node, no external dependencies</dd></div>
+    <div><dt>seeded user store</dt><dd>one named account per role, four total</dd></div>
+    <div><dt>identity model</dt><dd>named individual only · shared credentials rejected at provisioning</dd></div>
+    <div><dt>session binding</dt><dd>role resolved per request · role at action time stamped into the trail</dd></div>
+    <div><dt>policy corpus</dt><dd>KYC Onboarding Policy v3.2 · Document Checklist v2.0 · Risk Rating Matrix v2.1 · Escalation &amp; SLA Policy v1.7</dd></div>
+    <div><dt>agent write scope</dt><dd class="crit">memo drafts only — no status, no score, no approval</dd></div>
+  </dl>
+  <div class="btnrow">
+    <button class="btn" type="button">ADD NAMED USER</button>
+    <button class="btn ghost" type="button">ROTATE POLICY CORPUS VERSION</button>
+    <button class="btn ghost" type="button">EXPORT ACCESS REVIEW (CSV)</button>
+  </div>
+  <p class="footnote">Role changes are themselves audited and take effect on next request; historic trail entries retain the role held at the time of each action and are never rewritten.</p>
+</section>
+
+</main>
+
+<!-- ============================ DOCK: COMMAND LINE + STATUS BAR ============================ -->
+<div class="dock">
+  <form class="cmdline" id="cmdform" autocomplete="off">
+    <span class="sig" id="cmd-sig">kyc:worklist&gt;</span>
+    <label for="cmd" style="position:absolute;left:-9999px;">Command line</label>
+    <input id="cmd" type="text" placeholder="open KYC-2026-0418 · goto memo · filter band:high · export csv · help">
+    <span class="echo" id="cmd-echo">ready</span>
+  </form>
+  <div class="statusbar" role="status">
+    <span class="seg">KYC REVIEW DESK</span>
+    <span class="seg">role <b>KYC Analyst</b> · d.okonkwo</span>
+    <span class="seg">case <b>KYC-2026-0418</b> · HIGH 78</span>
+    <span class="seg">mode <b id="status-mode">AGENT:DRAFT</b></span>
+    <span class="seg alert">! sla 04:12 · 1 breach on desk</span>
+    <span class="seg ro">audit: append-only</span>
+    <span class="seg push">screen <b id="status-screen">worklist</b> · <span class="faint">1–8</span></span>
+  </div>
+</div>
+
+<script>
+(function () {
+  var screens = ['worklist','case','memo','score','audit','chat','reports','admin'];
+  var navBtns = Array.prototype.slice.call(document.querySelectorAll('#nav button'));
+  var cmdSig = document.getElementById('cmd-sig');
+  var cmdEcho = document.getElementById('cmd-echo');
+  var statusScreen = document.getElementById('status-screen');
+
+  function show(name) {
+    if (screens.indexOf(name) === -1) return false;
+    screens.forEach(function (s) {
+      var el = document.getElementById('screen-' + s);
+      if (el) el.classList.toggle('is-active', s === name);
+    });
+    navBtns.forEach(function (b) {
+      b.setAttribute('aria-current', b.dataset.screen === name ? 'true' : 'false');
+    });
+    cmdSig.textContent = 'kyc:' + name + '>';
+    statusScreen.textContent = name;
+    window.scrollTo(0, 0);
+    return true;
+  }
+
+  navBtns.forEach(function (b) {
+    b.addEventListener('click', function () { show(b.dataset.screen); });
+  });
+
+  /* ---- agent mode segmented control ---- */
+  var modeBtns = Array.prototype.slice.call(document.querySelectorAll('#agent-mode button'));
+  var statusMode = document.getElementById('status-mode');
+  var memoEcho = document.getElementById('memo-mode-echo');
+  var chatEcho = document.getElementById('chat-mode-echo');
+  var input = document.getElementById('input');
+
+  modeBtns.forEach(function (b) {
+    b.addEventListener('click', function () {
+      modeBtns.forEach(function (o) { o.setAttribute('aria-pressed', String(o === b)); });
+      var m = b.dataset.mode.toUpperCase();
+      statusMode.textContent = 'AGENT:' + m;
+      if (memoEcho) memoEcho.textContent = m;
+      if (chatEcho) chatEcho.textContent = m;
+      if (input) {
+        input.disabled = (m === 'OFF');
+        input.placeholder = (m === 'OFF')
+          ? 'agent disabled — memo must be written by hand'
+          : 'ask about this case — answers are grounded in the versioned policy set + case record only';
+      }
+      cmdEcho.textContent = 'agent mode → ' + m;
+    });
+  });
+
+  /* ---- chat composer ---- */
+  var composer = document.getElementById('composer');
+  var messages = document.getElementById('messages');
+  composer.addEventListener('submit', function (e) {
+    e.preventDefault();
+    var text = input.value.trim();
+    if (!text) return;
+    var now = new Date().toISOString().substr(11, 8);
+
+    var q = document.createElement('li');
+    q.setAttribute('data-from', 'analyst');
+    q.innerHTML = '<span class="spk"><span class="nm">d.okonkwo</span><span class="tm">' + now +
+      '</span></span><span class="body"><p></p></span>';
+    q.querySelector('p').textContent = text;
+    messages.appendChild(q);
+
+    var a = document.createElement('li');
+    a.setAttribute('data-from', 'agent');
+    a.innerHTML = '<span class="spk"><span class="nm">memo-agent</span><span class="tm">' + now +
+      '</span></span><span class="body"><p>Retrieving from the versioned policy set (KYC Onboarding Policy v3.2, ' +
+      'Document Checklist v2.0, Risk Rating Matrix v2.1, Escalation &amp; SLA Policy v1.7) and the KYC-2026-0418 case record. ' +
+      'Any claim not supported there will be returned as a declared evidence gap, not an inference. ' +
+      'I cannot change status, score, or record approval.</p>' +
+      '<p class="faint">advisory only · transcript written to the audit trail</p></span>';
+    messages.appendChild(a);
+
+    input.value = '';
+    a.scrollIntoView({ block: 'nearest' });
+    cmdEcho.textContent = 'message sent · logged';
+  });
+
+  /* ---- command line ---- */
+  var cmdForm = document.getElementById('cmdform');
+  var cmd = document.getElementById('cmd');
+  cmdForm.addEventListener('submit', function (e) {
+    e.preventDefault();
+    var raw = cmd.value.trim();
+    if (!raw) return;
+    var parts = raw.toLowerCase().split(/\s+/);
+    var verb = parts[0];
+    var arg = parts[1] || '';
+
+    if (verb === 'goto' || verb === 'g' || verb === ':') {
+      cmdEcho.textContent = show(arg) ? 'switched → ' + arg : 'unknown screen: ' + arg;
+    } else if (screens.indexOf(verb) !== -1) {
+      show(verb); cmdEcho.textContent = 'switched → ' + verb;
+    } else if (verb === 'open') {
+      show('case'); cmdEcho.textContent = 'opened ' + (parts[1] || 'KYC-2026-0418').toUpperCase();
+    } else if (verb === 'filter' || verb === 'find' || verb === 'search') {
+      show('worklist');
+      document.getElementById('wl-query').value = raw.replace(/^\S+\s*/, '');
+      cmdEcho.textContent = 'query applied';
+    } else if (verb === 'export') {
+      show('reports'); cmdEcho.textContent = 'export: full case file (CSV) queued';
+    } else if (verb === 'help' || verb === '?') {
+      cmdEcho.textContent = 'goto <screen> | open <ref> | filter <query> | export csv | 1-8';
+    } else {
+      cmdEcho.textContent = 'unrecognised: ' + verb + ' — type help';
+    }
+    cmd.value = '';
+  });
+
+  /* ---- keyboard: 1-8 switch, / focuses command line, ? help ---- */
+  document.addEventListener('keydown', function (e) {
+    var t = e.target;
+    var typing = t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable);
+    if (e.key === 'Escape' && typing) { t.blur(); return; }
+    if (typing) return;
+    if (e.key >= '1' && e.key <= '8') {
+      show(screens[parseInt(e.key, 10) - 1]);
+      cmdEcho.textContent = 'key ' + e.key + ' → ' + screens[parseInt(e.key, 10) - 1];
+    } else if (e.key === '/') {
+      e.preventDefault(); cmd.focus();
+    } else if (e.key === '?') {
+      cmdEcho.textContent = 'goto <screen> | open <ref> | filter <query> | export csv | 1-8';
+    }
+  });
+
+  /* ---- clock ---- */
+  var clock = document.getElementById('clock');
+  setInterval(function () {
+    clock.textContent = new Date().toISOString().replace('T', ' ').substr(0, 19);
+  }, 1000);
+})();
+</script>
+</body>
+</html>

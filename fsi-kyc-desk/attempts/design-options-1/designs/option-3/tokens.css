@@ -1,0 +1,110 @@
+/* ==========================================================================
+   KYC Review Desk — Option 3 "Portfolio Atlas"
+   Design tokens: analytical data board. Light canvas, white cards,
+   teal primary, categorical risk-band encoding held constant everywhere.
+   ========================================================================== */
+
+:root {
+  /* --- Contract tokens (required, exact names) --- */
+  --primary: #0e7c86;
+  --on-primary: #ffffff;
+  --bg: #f2f5f7;
+  --fg: #14202b;
+  --surface: #ffffff;
+  --border: #dde4ea;
+  --font: "Inter", "Segoe UI Variable", "Segoe UI", -apple-system,
+    BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+
+  /* --- Primary ramp --- */
+  --primary-050: #e6f4f5;
+  --primary-100: #c5e6e8;
+  --primary-200: #8fd0d5;
+  --primary-400: #2a9aa4;
+  --primary-600: #0e7c86;
+  --primary-700: #0a5f68;
+  --primary-800: #07454b;
+  --primary-tint: rgba(14, 124, 134, 0.08);
+  --primary-tint-strong: rgba(14, 124, 134, 0.16);
+
+  /* --- Neutrals --- */
+  --canvas: #f2f5f7;
+  --canvas-deep: #e7ecf1;
+  --surface-2: #fafbfc;
+  --surface-3: #f4f7f9;
+  --fg-strong: #0b141c;
+  --fg-muted: #5b6b7a;
+  --fg-faint: #8a99a7;
+  --border-strong: #c3cfd9;
+  --border-faint: #eaeff3;
+
+  /* --- Categorical risk-band encoding (CONSTANT ACROSS EVERY CHART) --- */
+  --band-low: #1d9a6c;
+  --band-low-soft: #e3f5ec;
+  --band-low-ink: #0e5c40;
+  --band-medium: #d98b1f;
+  --band-medium-soft: #fdf1dc;
+  --band-medium-ink: #7d4e05;
+  --band-high: #c33d4a;
+  --band-high-soft: #fbe6e8;
+  --band-high-ink: #7d1f28;
+
+  /* --- Status / signal --- */
+  --state-open: #4a6fa5;
+  --state-open-soft: #e8eef8;
+  --state-review: #6b52a8;
+  --state-review-soft: #efeafa;
+  --state-escalated: #c33d4a;
+  --state-escalated-soft: #fbe6e8;
+  --state-approved: #1d9a6c;
+  --state-approved-soft: #e3f5ec;
+  --state-rejected: #59636d;
+  --state-rejected-soft: #ecf0f3;
+  --state-returned: #b4681a;
+  --state-returned-soft: #fdeedd;
+
+  --signal-breach: #a8232f;
+  --signal-breach-soft: #fbe1e3;
+  --signal-atrisk: #c47a09;
+  --signal-atrisk-soft: #fdf2da;
+  --signal-ok: #1d9a6c;
+  --signal-machine: #6b52a8;
+  --signal-machine-soft: #f0ecfb;
+
+  /* --- Chart support --- */
+  --axis: #b7c3cd;
+  --gridline: #e7edf1;
+  --plot-bg: #fbfcfd;
+  --spark: #0e7c86;
+  --spark-fill: rgba(14, 124, 134, 0.14);
+
+  /* --- Typography scale --- */
+  --font-numeric: "Inter", "Segoe UI Variable", -apple-system, sans-serif;
+  --font-mono: "SFMono-Regular", "JetBrains Mono", Consolas, monospace;
+  --fs-kpi: 40px;
+  --fs-kpi-sm: 28px;
+  --fs-h1: 25px;
+  --fs-h2: 17px;
+  --fs-h3: 14px;
+  --fs-body: 14px;
+  --fs-sm: 12.5px;
+  --fs-xs: 11px;
+  --fs-label: 10.5px;
+  --tracking-label: 0.09em;
+  --tracking-kpi: -0.025em;
+
+  /* --- Geometry --- */
+  --r-sm: 6px;
+  --r-md: 10px;
+  --r-lg: 14px;
+  --r-xl: 20px;
+  --r-pill: 999px;
+  --gutter: 20px;
+  --gutter-lg: 26px;
+  --pad-card: 20px;
+
+  /* --- Elevation (soft, board-like) --- */
+  --shadow-1: 0 1px 2px rgba(20, 32, 43, 0.05), 0 1px 3px rgba(20, 32, 43, 0.04);
+  --shadow-2: 0 2px 4px rgba(20, 32, 43, 0.05), 0 6px 16px rgba(20, 32, 43, 0.06);
+  --shadow-3: 0 8px 28px rgba(20, 32, 43, 0.10);
+  --ring: 0 0 0 3px rgba(14, 124, 134, 0.22);
+}

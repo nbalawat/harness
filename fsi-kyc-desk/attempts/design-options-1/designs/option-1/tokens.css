@@ -1,0 +1,87 @@
+/* ===========================================================================
+   KYC Review Desk — Option 1 — "Foolscap & Oxblood"
+   Editorial print direction: warm paper ground, deep ink, one oxblood accent.
+   Design tokens only. All structure lives in index.html.
+   ========================================================================= */
+
+:root {
+  /* --- Required contract tokens ------------------------------------------ */
+  --primary: #6E1A1A;                 /* oxblood — ink-stamp accent          */
+  --on-primary: #F7F2E7;              /* paper struck over oxblood           */
+  --bg: #F4EFE4;                      /* warm laid-paper ground              */
+  --fg: #191512;                      /* deep printing ink                   */
+  --surface: #FBF7EE;                 /* leaf / inset sheet                   */
+  --border: #C8BCA5;                  /* hairline rule                        */
+  --font: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua",
+          Georgia, "Times New Roman", Times, serif;
+
+  /* --- Type families ------------------------------------------------------ */
+  --font-serif: var(--font);
+  --font-display: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia,
+                  "Times New Roman", Times, serif;
+  --font-sans: "Helvetica Neue", Helvetica, "Inter", "Segoe UI", Arial,
+               system-ui, sans-serif;
+  --font-figure: "Iowan Old Style", Palatino, Georgia, "Times New Roman", serif;
+
+  /* --- Ink values --------------------------------------------------------- */
+  --ink: #191512;
+  --ink-2: #40382E;                   /* secondary prose                     */
+  --ink-3: #6B6153;                   /* metadata, folios                    */
+  --ink-4: #94897A;                   /* deleted / dormant                   */
+  --paper: #F4EFE4;
+  --paper-2: #FBF7EE;                 /* inset leaf                          */
+  --paper-3: #EBE4D4;                 /* tinted band / table zebra           */
+  --paper-edge: #E2DAC7;
+
+  /* --- Accents ------------------------------------------------------------ */
+  --oxblood: #6E1A1A;
+  --oxblood-deep: #4E1010;
+  --oxblood-wash: #EFE0DA;
+  --stamp: #8A2020;
+  --seal-green: #35563F;              /* pass marks only                     */
+  --seal-amber: #8A6412;              /* medium band only                    */
+
+  /* --- Rules & hairlines --------------------------------------------------- */
+  --rule: #C8BCA5;
+  --rule-faint: #DCD3BF;
+  --rule-heavy: #191512;
+  --rule-hair: 1px;
+  --rule-thick: 2.5px;
+
+  /* --- Measure & rhythm ---------------------------------------------------- */
+  --measure: 34rem;                   /* memo reading measure ~66 characters */
+  --measure-wide: 48rem;
+  --page: 78rem;
+  --margin-col: 15.5rem;              /* sidenote / marginalia column        */
+  --baseline: 1.65;
+  --leading-memo: 1.78;
+
+  /* --- Type scale (editorial, not modular-UI) ------------------------------ */
+  --t-masthead: clamp(2.6rem, 6vw, 4.5rem);
+  --t-display: clamp(1.9rem, 3.4vw, 2.9rem);
+  --t-head: 1.5rem;
+  --t-sub: 1.125rem;
+  --t-body: 1.0625rem;
+  --t-small: 0.9375rem;
+  --t-meta: 0.75rem;
+  --t-label: 0.6875rem;
+  --t-micro: 0.625rem;
+
+  /* --- Spacing (set in ems of the baseline) -------------------------------- */
+  --sp-1: 0.35rem;
+  --sp-2: 0.7rem;
+  --sp-3: 1.15rem;
+  --sp-4: 1.85rem;
+  --sp-5: 2.9rem;
+  --sp-6: 4.4rem;
+
+  /* --- Letterfit ----------------------------------------------------------- */
+  --track-caps: 0.16em;
+  --track-caps-tight: 0.1em;
+  --track-display: -0.012em;
+
+  /* --- Bands --------------------------------------------------------------- */
+  --band-low: #35563F;
+  --band-medium: #8A6412;
+  --band-high: #6E1A1A;
+}

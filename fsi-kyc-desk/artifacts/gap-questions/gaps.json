@@ -1,0 +1,22 @@
+{
+  "questions": [
+    {
+      "id": "GAP-001",
+      "prompt": "Where do sanctions screening results originate? Does the system perform screening itself via a screening-provider integration (e.g., API to a screening vendor), or does it ingest and record results produced by an external screening platform operated separately?",
+      "default": "External screening platform: the system receives pre-screened results and records them; no provider integration in scope.",
+      "why": "This determines whether a screening-provider API integration, hit-adjudication workflow, and refresh scheduling are in scope. The sanctions factor and its true-positive High-band override (REQ-021, REQ-026) depend on pre-populated hit data."
+    },
+    {
+      "id": "GAP-002",
+      "prompt": "How does a client submission physically arrive in the system? Is there a client-facing submission portal, an internal analyst interface for batch upload, an API endpoint from an upstream system, or a file-drop mechanism?",
+      "default": "Internal analyst portal: analysts upload client-submitted packages on behalf of clients; no external client-facing surface in scope.",
+      "why": "This determines whether an external submission API, client authentication, rate limiting, and submission intake validation are in scope. It affects the boundary between external and internal surfaces, and defines how REQ-001 and REQ-002 (case creation from submission) are triggered."
+    },
+    {
+      "id": "GAP-003",
+      "prompt": "Does the completeness check validate document content (e.g., extracting issue dates to enforce the 3-month proof-of-address rule, reading ownership percentages from structure charts), or does it only verify that documents are declared present with metadata supplied at upload (e.g., 'proof of address document uploaded' without date inspection)?",
+      "default": "Metadata-only: completeness checks declared presence and user-supplied metadata; document content extraction and date/figure inspection are out of scope.",
+      "why": "This decides whether document parsing, OCR, date extraction, and ownership-figure validation are required. It changes what 'mechanical check' means in REQ-003 and REQ-004, and affects whether analysts need tools to inspect documents or if the UI can rely on declared metadata alone."
+    }
+  ]
+}

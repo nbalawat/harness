@@ -1,0 +1,50 @@
+/* KYC Review Desk — option-4 — AMBER PHOSPHOR
+   Minimal terminal design tokens.
+   Monochrome canvas, one phosphor accent, restrained semantic trio. */
+
+:root {
+  /* ---- required seven ---- */
+  --primary: #ffb000;                 /* amber phosphor */
+  --on-primary: #17140d;              /* text on phosphor fills */
+  --bg: #0b0b0c;                      /* near-black canvas */
+  --fg: #e8e2d6;                      /* warm off-white */
+  --surface: #121213;                 /* recessed block */
+  --border: #2a2a2b;                  /* rule lines */
+  --font: "SFMono-Regular", "SF Mono", "Menlo", "DejaVu Sans Mono",
+          "Liberation Mono", "Consolas", "Courier New", monospace;
+
+  /* ---- monochrome ladder ---- */
+  --fg-dim: #9a948a;                  /* secondary text */
+  --fg-faint: #635f59;                /* labels, rules, glyph gutters */
+  --fg-ghost: #3a3835;                /* disabled, dot leaders */
+  --surface-2: #191919;               /* raised block / table head */
+  --surface-3: #202021;               /* hover, selected row */
+  --border-strong: #45443f;
+
+  /* ---- phosphor variants ---- */
+  --primary-dim: #a87400;
+  --primary-glow: rgba(255, 176, 0, 0.13);
+  --primary-rule: rgba(255, 176, 0, 0.42);
+
+  /* ---- semantic trio (used sparingly) ---- */
+  --ok: #6fbf73;                      /* pass / low band / approved */
+  --warn: #e8a33d;                    /* at-risk / medium band / returned */
+  --crit: #e2564a;                    /* breach / high band / rejected */
+  --ok-bg: rgba(111, 191, 115, 0.10);
+  --warn-bg: rgba(232, 163, 61, 0.10);
+  --crit-bg: rgba(226, 86, 74, 0.11);
+
+  /* ---- machine-drafted marker ---- */
+  --machine: #7fb0d8;
+  --machine-bg: rgba(127, 176, 216, 0.10);
+
+  /* ---- character grid ---- */
+  --ch: 0.62rem;                      /* nominal advance width */
+  --line: 1.45;                       /* tight line-height */
+  --fs: 13px;                         /* one size scale */
+  --fs-sm: 11.5px;                    /* status bar / hints only */
+  --gutter: 1.5ch;
+  --block-gap: 1.6rem;
+  --maxw: 1180px;
+  --radius: 0;                        /* no rounded corners, ever */
+}

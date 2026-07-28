@@ -303,6 +303,7 @@ export function buildState(workspace: string): Record<string, unknown> {
   const intakeDoc = readArtifactJson(workspace, state.artifacts, "intake");
   const designChoiceDoc = readArtifactJson(workspace, state.artifacts, "design_choice");
   const rosterDoc = readArtifactJson(workspace, state.artifacts, "agent_roster");
+  const workflowsDoc = readArtifactJson(workspace, state.artifacts, "workflows");
   const pendingQuestion = readJsonSafe(path.join(workspace, "pending-question.json"));
 
   // Slice progress screenshots (shipped inside the app artifact by verify-slice).
@@ -340,6 +341,7 @@ export function buildState(workspace: string): Record<string, unknown> {
     quality,
     designChoice: (designChoiceDoc?.chosen_option as string | undefined) ?? null,
     appAgents: Array.isArray(rosterDoc?.agents) ? rosterDoc!.agents : null,
+    appWorkflows: Array.isArray(workflowsDoc?.workflows) ? workflowsDoc!.workflows : null,
     pendingQuestion,
     sliceShots,
     workspace,
@@ -1101,6 +1103,25 @@ button.ghost { background:transparent; border:1px solid var(--border); color:var
 .agcard .agrow .k { color:var(--muted); text-transform:uppercase; font-size:.64rem; letter-spacing:.06em; margin-right:.2rem; }
 .agcard .badgechip.deny { border-color:var(--crit); color:var(--crit); }
 .agcard .agevals { font-size:.74rem; color:var(--muted); margin-top:.4rem; border-top:1px dashed var(--grid); padding-top:.4rem; }
+/* app workflows */
+.wf { border:1px solid var(--grid); border-radius:12px; padding:.9rem 1rem; margin-bottom:.9rem; background:var(--page); }
+.wf .wfname { font-weight:700; font-size:.95rem; }
+.wf .wfdesc { color:var(--muted); font-size:.8rem; margin:.2rem 0 .6rem; }
+.wfflow { display:flex; align-items:stretch; gap:0; overflow-x:auto; padding:.4rem 0; }
+.wfnode { min-width:150px; max-width:190px; border-radius:10px; padding:.5rem .65rem; font-size:.74rem; border:1.5px solid var(--grid); background:var(--surface); flex-shrink:0; }
+.wfnode .nk { font-size:.6rem; text-transform:uppercase; letter-spacing:.08em; font-weight:700; display:inline-block; padding:.1rem .4rem; border-radius:4px; margin-bottom:.3rem; }
+.wfnode .nid { font-weight:650; margin-bottom:.15rem; }
+.wfnode .nd { color:var(--muted); font-size:.68rem; line-height:1.35; max-height:3.6em; overflow:hidden; }
+.wfnode.k-agent { border-color:var(--accent); box-shadow:0 0 0 3px color-mix(in srgb, var(--accent) 12%, transparent); }
+.wfnode.k-agent .nk { background:var(--accent); color:var(--accent-ink); }
+.wfnode.k-human { border-color:var(--warn); }
+.wfnode.k-human .nk { background:var(--warn); color:#3b2c00; }
+.wfnode.k-deterministic .nk { background:var(--grid); color:var(--ink2); }
+.wfnode.k-condition { border-style:dashed; }
+.wfnode.k-condition .nk { background:var(--surface); border:1px solid var(--grid); color:var(--ink2); }
+.wfarrow { align-self:center; padding:0 .35rem; color:var(--muted); flex-shrink:0; font-size:.9rem; }
+.wflegend { display:flex; gap:.9rem; margin-top:.5rem; font-size:.68rem; color:var(--muted); flex-wrap:wrap; }
+.wflegend b { font-weight:700; }
 /* drawer + modal */
 #drawer { position:fixed; top:0; right:-580px; width:min(560px,94vw); height:100vh; background:var(--surface); border-left:1px solid var(--border); box-shadow:-12px 0 40px rgba(0,0,0,.18); transition:right .25s ease; z-index:60; display:flex; flex-direction:column; }
 #drawer.open { right:0; }
@@ -1165,6 +1186,7 @@ button.ghost { background:transparent; border:1px solid var(--border); color:var
     <div class="card"><h2>Quality &amp; test results</h2><div id="quality"></div></div>
   </div>
   <div class="card" id="agentsPanel" style="display:none"><h2>Your app&#39;s agents <span class="hint">— who does the work inside the built application, with their tools and guardrails</span></h2><div class="agrid" id="appAgents"></div></div>
+  <div class="card" id="workflowsPanel" style="display:none"><h2>Your app&#39;s processes <span class="hint">— the deterministic flow, with the agentic and human steps called out</span></h2><div id="appWorkflows"></div></div>
   <div class="card" id="shotsPanel" style="display:none"><h2>Watch it grow — one screenshot per slice</h2><div class="shots" id="shots"></div>
     <details style="margin-top:.9rem"><summary style="cursor:pointer;font-weight:600;font-size:.88rem">Request a change to the app</summary>
       <form id="feedbackForm" style="margin-top:.7rem;max-width:640px">
@@ -1530,6 +1552,33 @@ async function tick() {
       ((a.eval_criteria || []).length ? '<div class="agevals">held to: ' + esc(a.eval_criteria.join('; ')) + '</div>' : '') +
       '</div>').join(''));
   } else agentsPanel.style.display = 'none';
+
+  // your app's processes — deterministic flow with agentic/human steps called out
+  const wfPanel = document.getElementById('workflowsPanel');
+  if (Array.isArray(s.appWorkflows) && s.appWorkflows.length) {
+    wfPanel.style.display = '';
+    const KIND_LABEL = { deterministic: 'code', agent: 'AI agent', human: 'human', condition: 'branch' };
+    const nodeDetail = (n) => {
+      if (n.kind === 'deterministic') return 'handler: ' + (n.handler || '');
+      if (n.kind === 'agent') return String(n.prompt || '').slice(0, 90);
+      if (n.kind === 'human') return String(n.question || '').slice(0, 90);
+      if (n.kind === 'condition') return n.path + ' = ' + JSON.stringify(n.equals) + (n.on_false ? ' · else → ' + n.on_false : '');
+      return '';
+    };
+    setHTML('appWorkflows', s.appWorkflows.map(wf =>
+      '<div class="wf"><div class="wfname">' + esc(title(wf.name)) + '</div>' +
+      '<div class="wfdesc">' + esc(wf.description || '') + '</div>' +
+      '<div class="wfflow">' + wf.nodes.map((n, i) =>
+        (i > 0 ? '<span class="wfarrow">→</span>' : '') +
+        '<div class="wfnode k-' + esc(n.kind) + '"><span class="nk">' + (KIND_LABEL[n.kind] || esc(n.kind)) + '</span>' +
+        '<div class="nid">' + esc(title(n.id)) + '</div>' +
+        '<div class="nd">' + esc(nodeDetail(n)) + '</div></div>'
+      ).join('') + '</div>' +
+      ((wf.addresses || []).length ? '<div class="agrow" style="font-size:.72rem;margin-top:.4rem"><span class="k" style="color:var(--muted);text-transform:uppercase;font-size:.62rem;margin-right:.3rem">covers</span>' + wf.addresses.map(a => '<span class="badgechip">' + esc(a) + '</span>').join('') + '</div>' : '') +
+      '</div>'
+    ).join('') +
+    '<div class="wflegend"><span><b style="color:var(--accent)">AI agent</b> — reasoning step (model)</span><span><b>code</b> — deterministic handler</span><span><b style="color:var(--warn)">human</b> — parks until a person decides</span><span><b>branch</b> — condition on earlier outputs</span></div>');
+  } else wfPanel.style.display = 'none';
 
   // slice screenshots
   document.getElementById('shotsPanel').style.display = s.sliceShots.length ? '' : 'none';

@@ -1,0 +1,17 @@
+ESCALATION AND SLA POLICY - KYC OPERATIONS (v1.4)
+
+Service levels by risk band, measured from case-ready (completeness passed):
+
+  Low risk:     decision within 48 business hours.
+  Medium risk:  decision within 24 business hours.
+  High risk:    Compliance Officer decision within 8 business hours.
+
+At 80% of an SLA window consumed without a decision, the case is flagged AT
+RISK and the assigned approver is notified. A breached SLA is recorded on the
+case permanently and appears in the weekly operations report.
+
+Escalation chain for unactioned high-risk cases: assigned Compliance Officer
+-> Head of Financial Crime -> COO. Each escalation step is recorded with who
+was notified and when.
+
+Nothing in this policy permits skipping an approval to meet an SLA.

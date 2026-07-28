@@ -1,0 +1,118 @@
+{
+  "sources": [
+    {
+      "id": "src-problem-statement",
+      "original": "/Users/nbalawat/development/harness/fsi-kyc-desk/artifacts/intake/intake.json#problem_statement",
+      "extracted": "corpus/problem-statement.md",
+      "type": "problem_statement"
+    },
+    {
+      "id": "src-document-checklist",
+      "original": "/Users/nbalawat/development/harness/fsi-inputs/docs/document-checklist.md",
+      "extracted": "corpus/document-checklist.md",
+      "type": "markdown"
+    },
+    {
+      "id": "src-escalation-sla-policy",
+      "original": "/Users/nbalawat/development/harness/fsi-inputs/docs/escalation-sla-policy.txt",
+      "extracted": "corpus/escalation-sla-policy.md",
+      "type": "text"
+    },
+    {
+      "id": "src-kyc-onboarding-policy",
+      "original": "/Users/nbalawat/development/harness/fsi-inputs/docs/kyc-onboarding-policy.md",
+      "extracted": "corpus/kyc-onboarding-policy.md",
+      "type": "markdown"
+    },
+    {
+      "id": "src-regulator-audit-requirements",
+      "original": "/Users/nbalawat/development/harness/fsi-inputs/docs/regulator-audit-requirements.md",
+      "extracted": "corpus/regulator-audit-requirements.md",
+      "type": "markdown"
+    },
+    {
+      "id": "src-risk-rating-matrix",
+      "original": "/Users/nbalawat/development/harness/fsi-inputs/docs/risk-rating-matrix.html",
+      "extracted": "corpus/risk-rating-matrix.md",
+      "type": "html"
+    }
+  ],
+  "claims": [
+    { "id": "claim-001", "text": "Cases are created from a client submission.", "source": "src-problem-statement" },
+    { "id": "claim-002", "text": "A deterministic workflow runs the document completeness check.", "source": "src-problem-statement" },
+    { "id": "claim-003", "text": "A deterministic workflow computes the risk score mechanically from the risk rating matrix.", "source": "src-problem-statement" },
+    { "id": "claim-004", "text": "An AI agent drafts the risk assessment memo, grounded ONLY in the policy documents and the case data.", "source": "src-problem-statement" },
+    { "id": "claim-005", "text": "The AI-drafted risk assessment memo must include citations.", "source": "src-problem-statement" },
+    { "id": "claim-006", "text": "The AI-drafted risk assessment memo must carry a clear machine-drafted label.", "source": "src-problem-statement" },
+    { "id": "claim-007", "text": "Decision authority follows risk bands: analyst / senior analyst / compliance officer.", "source": "src-problem-statement" },
+    { "id": "claim-008", "text": "Explicit human approval is required before any status change.", "source": "src-problem-statement" },
+    { "id": "claim-009", "text": "High-risk cases escalate with SLA tracking.", "source": "src-problem-statement" },
+    { "id": "claim-010", "text": "High-risk cases receive at-risk warnings.", "source": "src-problem-statement" },
+    { "id": "claim-011", "text": "Every action lands in an immutable audit trail satisfying the regulator requirements.", "source": "src-problem-statement" },
+    { "id": "claim-012", "text": "Analysts can search past cases.", "source": "src-problem-statement" },
+    { "id": "claim-013", "text": "Analysts can export full case files as CSV.", "source": "src-problem-statement" },
+    { "id": "claim-014", "text": "Access is role-based.", "source": "src-problem-statement" },
+    { "id": "claim-015", "text": "Auditors are read-only.", "source": "src-problem-statement" },
+
+    { "id": "claim-016", "text": "Every corporate case requires a certificate of incorporation.", "source": "src-document-checklist" },
+    { "id": "claim-017", "text": "Every corporate case requires a register of directors.", "source": "src-document-checklist" },
+    { "id": "claim-018", "text": "Every corporate case requires a beneficial ownership declaration covering all owners of 25% or more.", "source": "src-document-checklist" },
+    { "id": "claim-019", "text": "Every corporate case requires proof of registered address dated within 3 months.", "source": "src-document-checklist" },
+    { "id": "claim-020", "text": "If the ownership chain depth is greater than 1, a structure chart down to natural persons is additionally required.", "source": "src-document-checklist" },
+    { "id": "claim-021", "text": "If the client is in a regulated industry, a copy of the operating license is additionally required.", "source": "src-document-checklist" },
+    { "id": "claim-022", "text": "If cross-border activity is expected, an expected activity questionnaire is additionally required.", "source": "src-document-checklist" },
+    { "id": "claim-023", "text": "A case failing the completeness check is RETURNED along with the list of missing documents.", "source": "src-document-checklist" },
+    { "id": "claim-024", "text": "Completeness is a mechanical check; analysts may not waive required items.", "source": "src-document-checklist" },
+    { "id": "claim-025", "text": "Exceptions to the completeness checklist require a Compliance Officer policy exception, which is itself recorded.", "source": "src-document-checklist" },
+
+    { "id": "claim-026", "text": "Low-risk cases require a decision within 48 business hours, measured from case-ready (completeness passed).", "source": "src-escalation-sla-policy" },
+    { "id": "claim-027", "text": "Medium-risk cases require a decision within 24 business hours, measured from case-ready (completeness passed).", "source": "src-escalation-sla-policy" },
+    { "id": "claim-028", "text": "High-risk cases require a Compliance Officer decision within 8 business hours, measured from case-ready (completeness passed).", "source": "src-escalation-sla-policy" },
+    { "id": "claim-029", "text": "At 80% of an SLA window consumed without a decision, the case is flagged AT RISK and the assigned approver is notified.", "source": "src-escalation-sla-policy" },
+    { "id": "claim-030", "text": "A breached SLA is recorded on the case permanently.", "source": "src-escalation-sla-policy" },
+    { "id": "claim-031", "text": "A breached SLA appears in the weekly operations report.", "source": "src-escalation-sla-policy" },
+    { "id": "claim-032", "text": "The escalation chain for unactioned high-risk cases is: assigned Compliance Officer -> Head of Financial Crime -> COO.", "source": "src-escalation-sla-policy" },
+    { "id": "claim-033", "text": "Each escalation step is recorded with who was notified and when.", "source": "src-escalation-sla-policy" },
+    { "id": "claim-034", "text": "No provision permits skipping an approval to meet an SLA.", "source": "src-escalation-sla-policy" },
+
+    { "id": "claim-035", "text": "A case is opened when a client submission arrives with its document package.", "source": "src-kyc-onboarding-policy" },
+    { "id": "claim-036", "text": "The document package must pass a completeness check against the Document Checklist before any review begins.", "source": "src-kyc-onboarding-policy" },
+    { "id": "claim-037", "text": "Incomplete cases are returned, not parked.", "source": "src-kyc-onboarding-policy" },
+    { "id": "claim-038", "text": "The risk score is computed from the Risk Rating Matrix; scoring is mechanical and no analyst judgment enters the score itself.", "source": "src-kyc-onboarding-policy" },
+    { "id": "claim-039", "text": "A risk assessment memo is drafted for every case, summarizing beneficial ownership, jurisdiction exposure, sanctions screening results, and the computed score, citing the specific policy provisions applied.", "source": "src-kyc-onboarding-policy" },
+    { "id": "claim-040", "text": "Low risk (score < 40): a KYC analyst may approve.", "source": "src-kyc-onboarding-policy" },
+    { "id": "claim-041", "text": "Medium risk (40-69): a senior analyst must approve.", "source": "src-kyc-onboarding-policy" },
+    { "id": "claim-042", "text": "High risk (>= 70): escalates to a Compliance Officer, who must give explicit approval AND a documented rationale.", "source": "src-kyc-onboarding-policy" },
+    { "id": "claim-043", "text": "No case may change status without an explicit human approval recorded with the approver's identity and timestamp.", "source": "src-kyc-onboarding-policy" },
+    { "id": "claim-044", "text": "Automated approval is prohibited.", "source": "src-kyc-onboarding-policy" },
+    { "id": "claim-045", "text": "Rejected cases must record the rejection reason.", "source": "src-kyc-onboarding-policy" },
+    { "id": "claim-046", "text": "The client relationship team is notified when a case is rejected.", "source": "src-kyc-onboarding-policy" },
+    { "id": "claim-047", "text": "The KYC Analyst role opens cases, runs checks, and approves low-risk cases.", "source": "src-kyc-onboarding-policy" },
+    { "id": "claim-048", "text": "The Senior Analyst role approves medium-risk cases.", "source": "src-kyc-onboarding-policy" },
+    { "id": "claim-049", "text": "The Compliance Officer role approves high-risk cases and all escalations, and owns policy exceptions.", "source": "src-kyc-onboarding-policy" },
+    { "id": "claim-050", "text": "The Auditor role has read-only access to everything, including the full decision trail.", "source": "src-kyc-onboarding-policy" },
+    { "id": "claim-051", "text": "Every state change, approval, rejection, and memo version is retained indefinitely.", "source": "src-kyc-onboarding-policy" },
+    { "id": "claim-052", "text": "Retained records must be reviewable by internal audit and regulators.", "source": "src-kyc-onboarding-policy" },
+
+    { "id": "claim-053", "text": "The system must provide an immutable, append-only trail of every case action: who, what, when, and the before/after of any changed field.", "source": "src-regulator-audit-requirements" },
+    { "id": "claim-054", "text": "Deletion or edit of audit trail entries must be technically impossible through the application.", "source": "src-regulator-audit-requirements" },
+    { "id": "claim-055", "text": "Every approval or rejection must be tied to a named individual with a role valid for that decision tier at decision time.", "source": "src-regulator-audit-requirements" },
+    { "id": "claim-056", "text": "For any past case, the exact risk score inputs, the matrix version applied, and the memo text as approved must be retrievable (reproducibility).", "source": "src-regulator-audit-requirements" },
+    { "id": "claim-057", "text": "The AI-drafted memo must be clearly labeled as machine-drafted.", "source": "src-regulator-audit-requirements" },
+    { "id": "claim-058", "text": "The AI-drafted memo must cite the policy provisions it relies on.", "source": "src-regulator-audit-requirements" },
+    { "id": "claim-059", "text": "The approving human owns the memo's content upon approval.", "source": "src-regulator-audit-requirements" },
+    { "id": "claim-060", "text": "Auditors can export any case file, including the full trail, in a reviewable format (CSV acceptable).", "source": "src-regulator-audit-requirements" },
+    { "id": "claim-061", "text": "Access is least-privilege by role; auditors are read-only.", "source": "src-regulator-audit-requirements" },
+
+    { "id": "claim-062", "text": "The case risk score is the weighted sum of factor scores; each factor is scored 0-100 by mechanical rules, then weighted.", "source": "src-risk-rating-matrix" },
+    { "id": "claim-063", "text": "Jurisdiction factor (weight 0.30): FATF high-risk list country involved = 90; enhanced-monitoring list = 60; otherwise = 10.", "source": "src-risk-rating-matrix" },
+    { "id": "claim-064", "text": "Entity structure factor (weight 0.25): ownership chain depth > 3 or bearer shares = 85; nominee shareholders = 60; simple structure = 15.", "source": "src-risk-rating-matrix" },
+    { "id": "claim-065", "text": "Industry factor (weight 0.20): money services, gambling, or defense = 80; cash-intensive retail = 55; other = 20.", "source": "src-risk-rating-matrix" },
+    { "id": "claim-066", "text": "Sanctions screening factor (weight 0.15): any true-positive hit = 100 (auto high risk); unresolved possible hit = 70; clear = 0.", "source": "src-risk-rating-matrix" },
+    { "id": "claim-067", "text": "Expected activity factor (weight 0.10): cross-border wires > $1M/month = 75; domestic only = 20.", "source": "src-risk-rating-matrix" },
+    { "id": "claim-068", "text": "Low band: score 0-39, review cadence 3 years.", "source": "src-risk-rating-matrix" },
+    { "id": "claim-069", "text": "Medium band: score 40-69, review cadence annual.", "source": "src-risk-rating-matrix" },
+    { "id": "claim-070", "text": "High band: score 70-100, review cadence 6 months, Compliance Officer approval required.", "source": "src-risk-rating-matrix" },
+    { "id": "claim-071", "text": "A sanctions true-positive forces the case to High band regardless of the weighted total score.", "source": "src-risk-rating-matrix" }
+  ]
+}

@@ -1,0 +1,6 @@
+{
+  "project_name": "KYC Review Desk",
+  "problem_statement": "Our compliance team onboards corporate clients through a manual KYC review that is slow and hard to audit. We need an application where: cases are created from a client submission; a DETERMINISTIC workflow runs the document completeness check and computes the risk score mechanically from our risk rating matrix; an AI agent drafts the risk assessment memo grounded ONLY in our policy documents and the case data, with citations and a clear machine-drafted label; decision authority follows risk bands (analyst / senior analyst / compliance officer) with explicit human approval required before any status change; high-risk cases escalate with SLA tracking and at-risk warnings; every action lands in an immutable audit trail satisfying our regulator requirements; analysts can search past cases and export full case files as CSV; access is role-based and auditors are read-only.",
+  "documents_dir": "/Users/nbalawat/development/harness/fsi-inputs/docs",
+  "deploy_target": "local"
+}
