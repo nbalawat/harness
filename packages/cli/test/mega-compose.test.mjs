@@ -24,6 +24,9 @@ test("mega-compose: all app modules coexist in one booted application", () => {
     if (!fs.existsSync(manifestPath)) continue;
     const manifest = parse(fs.readFileSync(manifestPath, "utf8"));
     if ((manifest.kind ?? "app") !== "app") continue;
+    // Runtime adapters etc. declare conflicts — the mega app takes the first
+    // of each conflicting family (compat-matrix governs real selections).
+    if ((manifest.conflicts ?? []).some((c) => composed.includes(c))) continue;
     const compose = path.join(MODULES, name, "compose");
     if (fs.existsSync(compose)) {
       fs.cpSync(compose, app, { recursive: true });

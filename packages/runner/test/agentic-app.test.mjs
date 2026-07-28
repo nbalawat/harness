@@ -568,3 +568,38 @@ test("check-workflows: agent-pipe-without-gate and dangling branches are rejecte
   );
   assert.match(runScript("check-workflows.cjs", dir).stderr, /unknown requirement REQ-999/);
 });
+
+// ---------------------------------------------------------------------------
+// Agent-runtime adapters: framework mandates flow through the whole pipeline
+// ---------------------------------------------------------------------------
+
+test("ADK mandate: the full pipeline builds and verifies an ADK-runtime app", async () => {
+  const ctx = makeCtx(tmpDir("adk-e2e"), readAnswers("scenario-adk.json"));
+  assert.equal((await runLoop(ctx)).status, "completed");
+
+  const appDir = path.join(ctx.workspace, "artifacts/slice-3/app");
+  const composed = readJson(path.join(appDir, "composed_modules.json"));
+  assert.ok(composed.modules.includes("agent-runtime-adk"), "architecture composed the ADK adapter");
+  assert.ok(!composed.modules.includes("agent-runtime"), "exactly one runtime");
+
+  const runtime = fs.readFileSync(path.join(appDir, "backend/agent_runtime.py"), "utf8");
+  assert.match(runtime, /google\.adk/, "the shipped runtime IS the ADK implementation");
+  const reqs = fs.readFileSync(path.join(appDir, "backend/requirements.txt"), "utf8");
+  assert.match(reqs, /google-adk/, "framework dependency travels with the app");
+
+  // The same behavioral gate every runtime passes: integration evals were real.
+  const integration = readJson(artifact(ctx, "integrate", "integration_report.json"));
+  assert.equal(integration.evals.status, "pass");
+  assert.equal(integration.backend_tests.status, "pass");
+});
+
+test("runtime adapters: compat-matrix refuses two runtimes in one selection", () => {
+  const result = spawnSync(
+    process.execPath,
+    [path.join(REPO_ROOT, "modules/compat-matrix/check.mjs"), path.join(REPO_ROOT, "modules"),
+     "persistence-core", "chat-shell", "agent-runtime-langgraph", "agent-runtime-adk"],
+    { encoding: "utf8" },
+  );
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /conflicts with/);
+});

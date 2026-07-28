@@ -56,6 +56,8 @@ golden runs.
 | | Module | Why |
 |---|---|---|
 | ● | agent-runtime | THE engine adapter: live-api / live-cli / stub behind one `respond()`; roster is the contract; mode always disclosed. Nothing may call an LLM directly. |
+| ● | agent-runtime-langgraph | The agent-runtime contract on LangGraph — a compiled StateGraph executes every reply; same roster/evals/mode contract, department framework mandates satisfied without forks. |
+| ● | agent-runtime-adk | The agent-runtime contract on Google ADK — an LlmAgent + Runner executes every reply behind the identical interface. Conflicts with other runtime adapters (compat-matrix enforced). |
 | ● | rag-core | Chunking/embedding/retrieval done right once — grounding quality is the #1 driver of app trust. |
 | ● | prompt-registry | App prompts as versioned data, not string literals buried in code — enables review and hotfix without rebuild. |
 | ● | eval-harness | Richer eval runner (rubrics, regression sets) — evals are how app agents stay honest after changes. |

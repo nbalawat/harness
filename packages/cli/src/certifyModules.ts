@@ -28,7 +28,7 @@ interface Manifest {
   provides?: unknown[];
   requires?: unknown[];
   compose?: { overlay?: string };
-  certify?: { tests?: string; command?: string };
+  certify?: { tests?: string; command?: string; python_deps?: string[] };
   /** pack only: the modules the pack composes. */
   modules?: string[];
   /** app only: modules this one cannot be composed with. */
@@ -191,9 +191,10 @@ function certifyOne(modulesDir: string, projectTypeDir: string, name: string): M
     for (const f of fs.readdirSync(src).filter((f) => f.endsWith(".py"))) {
       fs.copyFileSync(path.join(src, f), path.join(dest, f));
     }
+    const extraDeps = (manifest.certify?.python_deps ?? []).flatMap((d) => ["--with", d]);
     const pytest = spawnSync(
       "uv",
-      ["run", "--with", "fastapi", "--with", "httpx", "--with", "pytest", "python", "-m", "pytest", "module_tests", "-q"],
+      ["run", "--with", "fastapi", "--with", "httpx", "--with", "pytest", ...extraDeps, "python", "-m", "pytest", "module_tests", "-q"],
       { cwd: path.join(app, "backend"), encoding: "utf8", timeout: 300000, env: { ...process.env, HARNESS_AGENT_MODE: "stub" } },
     );
     if (pytest.status !== 0) {

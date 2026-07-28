@@ -27,6 +27,18 @@ fs.writeFileSync(
   JSON.stringify({ modules: architecture.modules }, null, 2),
 );
 
+// 2b. Runtime dependencies: modules declare app_deps (e.g. langgraph) which
+// join the app's requirements.txt — boots and tests install from it.
+const extraDeps = [];
+for (const moduleName of architecture.modules) {
+  const manifest = fs.readFileSync(path.join(repoRoot, "modules", moduleName, "manifest.yaml"), "utf8");
+  const m = manifest.match(/^app_deps:\n((?:  - .*\n)+)/m);
+  if (m) for (const line of m[1].trim().split("\n")) extraDeps.push(line.replace(/^\s*-\s*/, "").replace(/"/g, ""));
+}
+if (extraDeps.length > 0) {
+  fs.appendFileSync("app/backend/requirements.txt", extraDeps.join("\n") + "\n");
+}
+
 // 3. The approved design IS the frontend. Copy the chosen option's entire
 // shell (index.html + tokens.css + any assets) over the composed frontend so
 // the app the user gets is the app they chose — full layout, not just colors.

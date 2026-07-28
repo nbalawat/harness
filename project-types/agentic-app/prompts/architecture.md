@@ -8,4 +8,6 @@ THE CERTIFIED CATALOG is the file `catalog.json` in the project-type package dir
 - Every module-typed `requires` of a chosen module must also be chosen (e.g. data-retention requires soft-delete).
 - Pick what the requirements demand — nothing more. Idle modules are dead weight the user pays to carry.
 
+AGENT RUNTIME SELECTION: agent-runtime (Claude Agent SDK) is the default. If the department mandates a framework, swap it for EXACTLY ONE adapter — agent-runtime-langgraph or agent-runtime-adk (they conflict with each other; compat-matrix enforces this). The behavioral contract (roster, respond, mode disclosure, evals) is identical across runtimes.
+
 Also include `module_coverage`: for each chosen module, the requirement IDs it addresses. Every non-unknown requirement must be addressed somewhere across the design artifacts — the traceability node fails otherwise.

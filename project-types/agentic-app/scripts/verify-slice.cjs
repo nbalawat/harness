@@ -44,7 +44,7 @@ async function main() {
   const port = await freePort();
   const log = fs.openSync("slice-app.log", "w");
   const child = spawn(
-    `uv run --with fastapi --with uvicorn uvicorn dev:app --host 127.0.0.1 --port ${port}`,
+    `uv run --with fastapi --with uvicorn --with-requirements requirements.txt uvicorn dev:app --host 127.0.0.1 --port ${port}`,
     { shell: true, detached: true, cwd: path.join(app, "backend"), env: { ...process.env, HARNESS_AGENT_MODE: "stub" }, stdio: ["ignore", log, log] },
   );
   fs.closeSync(log);
@@ -129,7 +129,7 @@ async function main() {
 
   const pytest = spawnSync(
     "uv",
-    ["run", "--with", "fastapi", "--with", "httpx", "--with", "pytest", "python", "-m", "pytest", "tests", "-q"],
+    ["run", "--with", "fastapi", "--with", "httpx", "--with", "pytest", "--with-requirements", "requirements.txt", "python", "-m", "pytest", "tests", "-q"],
     { cwd: path.join(app, "backend"), encoding: "utf8", timeout: 300000 },
   );
   if (pytest.status !== 0) fail(`backend tests FAILED\n${(pytest.stdout ?? "").slice(-1500)}\n${(pytest.stderr ?? "").slice(-1000)}`);

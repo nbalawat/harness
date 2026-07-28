@@ -44,7 +44,7 @@ mcp:
   app-sandbox:
     server: "@harness/app-sandbox"
     config:
-      boot: uv run --with fastapi --with uvicorn uvicorn dev:app --host 127.0.0.1 --port $PORT
+      boot: uv run --with fastapi --with uvicorn --with-requirements requirements.txt uvicorn dev:app --host 127.0.0.1 --port $PORT
       health: /health
       cwd: backend
       env: { HARNESS_AGENT_MODE: stub }
@@ -60,7 +60,7 @@ certification:
 # How the dashboard launches the built product for live preview.
 preview:
   artifact: app
-  command: uv run --with fastapi --with uvicorn uvicorn dev:app --host 127.0.0.1 --port $PORT
+  command: uv run --with fastapi --with uvicorn --with-requirements requirements.txt uvicorn dev:app --host 127.0.0.1 --port $PORT
   cwd: backend
   health: /health
 

@@ -67,13 +67,17 @@ if (process.env.HARNESS_SMOKE_DOCKER === "1" && dockerProbe.status === 0) {
 // 4. Backend tests — the generated app's own harness, in an isolated env
 const pytest = run(
   "uv",
-  ["run", "--with", "fastapi", "--with", "httpx", "--with", "pytest", "python", "-m", "pytest", "tests", "-q"],
+  ["run", "--with", "fastapi", "--with", "httpx", "--with", "pytest", "--with-requirements", "requirements.txt", "python", "-m", "pytest", "tests", "-q"],
   { cwd: path.join(app, "backend") },
 );
 if (pytest.status !== 0) fail("backend tests", pytest);
 
 // 5. Agent evals — executable exit criteria for agent behavior
-const evals = run("python3", [path.join(app, "agents", "run_evals.py")], { env: { ...process.env, HARNESS_AGENT_MODE: "stub" } });
+const evals = run(
+  "uv",
+  ["run", "--with-requirements", path.join(app, "backend", "requirements.txt"), "python", path.join(app, "agents", "run_evals.py")],
+  { env: { ...process.env, HARNESS_AGENT_MODE: "stub" } },
+);
 if (evals.status !== 0) fail("agent evals", evals);
 
 const evalResults = JSON.parse(fs.readFileSync(path.join(app, "agents", "eval_results.json"), "utf8"));
