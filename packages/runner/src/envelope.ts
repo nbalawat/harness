@@ -65,13 +65,45 @@ export async function executeNode(
     .read()
     .filter((e) => e.type === "node.running" && e.nodeId === node.id).length;
 
+  let prevAttemptDir: string | undefined;
   for (let seq = 1; seq <= maxAttempts; seq++) {
     const attempt = priorAttempts + seq;
+
+    // Budgets gate the START of work — money already spent is never recovered
+    // by discarding finished artifacts, so enforcement happens here, not after
+    // a completed attempt.
+    const budget = ctx.def.cost?.nodes?.[node.id]?.budget_usd;
+    if (budget !== undefined) {
+      const spent = cumulativeNodeCost(ctx, node.id);
+      if (spent >= budget) {
+        ctx.journal.append({
+          type: "budget.exceeded",
+          scope: "node",
+          nodeId: node.id,
+          budgetUsd: budget,
+          spentUsd: spent,
+          blockedAttempt: attempt,
+        });
+        ctx.journal.append({ type: "node.failed", nodeId: node.id });
+        return "failed";
+      }
+    }
+
     const started = Date.now();
     ctx.journal.append({ type: "node.running", nodeId: node.id, attempt });
 
     const attemptDir = path.join(ctx.workspace, "attempts", `${node.id}-${attempt}`);
     fs.mkdirSync(attemptDir, { recursive: true });
+    // Retry continuity: a retry CONTINUES from the previous attempt's working
+    // tree instead of starting over — feedback says what to fix, the files say
+    // where it left off.
+    if (prevAttemptDir && fs.existsSync(prevAttemptDir)) {
+      fs.cpSync(prevAttemptDir, attemptDir, { recursive: true });
+      for (const stale of ["inputs.json", "cost.json", "feedback.md"]) {
+        fs.rmSync(path.join(attemptDir, stale), { force: true });
+      }
+    }
+    prevAttemptDir = attemptDir;
     fs.writeFileSync(
       path.join(attemptDir, "inputs.json"),
       JSON.stringify(buildInputs(ctx, node, state), null, 2),
@@ -114,25 +146,22 @@ export async function executeNode(
 
     recordCost(ctx, node, attempt, Date.now() - started, attemptDir);
 
-    // Budget enforcement: a node that breaches its certified budget never
-    // commits and never retries — it escalates immediately.
-    const budget = ctx.def.cost?.nodes?.[node.id]?.budget_usd;
-    if (budget !== undefined) {
-      const spent = cumulativeNodeCost(ctx, node.id);
-      if (spent > budget) {
-        ctx.journal.append({
-          type: "budget.exceeded",
-          scope: "node",
-          nodeId: node.id,
-          budgetUsd: budget,
-          spentUsd: spent,
-        });
-        ctx.journal.append({ type: "node.failed", nodeId: node.id });
-        return "failed";
-      }
-    }
-
     if (!error) {
+      // Finished, validated work ALWAYS commits — an overrun is recorded
+      // loudly but never shreds a good artifact the money already bought.
+      if (budget !== undefined) {
+        const spent = cumulativeNodeCost(ctx, node.id);
+        if (spent > budget) {
+          ctx.journal.append({
+            type: "budget.exceeded",
+            scope: "node",
+            nodeId: node.id,
+            budgetUsd: budget,
+            spentUsd: spent,
+            committed: true,
+          });
+        }
+      }
       commit(ctx, node, attemptDir, inputsHash);
       return "committed";
     }
@@ -407,7 +436,7 @@ async function runAgent(
     declared ? `\nYou MUST produce these files in the current directory:\n${declared}` : "",
     "Work only inside the current directory. When an input provides an app directory, copy it here first (cp -R <input path> ./app) and modify the copy.",
     fs.existsSync(path.join(attemptDir, "feedback.md"))
-      ? `\nIMPORTANT: ./feedback.md contains required changes (a failed attempt's errors, or explicit user revision requests). Read it FIRST and incorporate it.`
+      ? `\nIMPORTANT: ./feedback.md contains required changes (a failed attempt's errors, or explicit user revision requests). Read it FIRST. Your previous attempt's working files are ALREADY in the current directory — continue from them and fix what feedback names; do not start over.`
       : "",
   ].join("\n");
 

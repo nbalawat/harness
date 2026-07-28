@@ -14,28 +14,27 @@ version: 0.9.0
 description: Builds a working agentic AI application from your problem statement and documents — requirements with provenance, approvable designs, certified modules, feature-by-feature build with tests, security scan, and governance evidence.
 
 cost:
-  # Envelope includes headroom for revision cycles (user feedback re-derives
-  # downstream steps; memoization re-uses unchanged ones, but changed steps
-  # legitimately spend again).
-  # Complex builds (FSI-grade: workflows + rich policy corpora) run ~$35-50
-  # live including one recovered failure; 60 covers that plus revision cycles.
-  run_budget_usd: 60.00
+  # PHILOSOPHY: budgets are RUNAWAY GUARDS, not cost targets — set ~3x the
+  # observed p95 so legitimate heavy work never stalls a build. The envelope
+  # is the real spend control; finished work always commits (never shredded);
+  # budgets only block STARTING further attempts.
+  run_budget_usd: 100.00
   nodes:
-    ingest: { budget_usd: 2.00 }
-    requirements-synthesis: { budget_usd: 3.00 }
-    gap-questions: { budget_usd: 1.00 }
-    architecture: { budget_usd: 2.00 }
-    design-options: { budget_usd: 24.00 }  # a TEAM of 4 directors costs ~8/attempt (live data); covers a retry
-    data-design: { budget_usd: 1.50 }
-    agent-design: { budget_usd: 1.50 }
-    workflow-design: { budget_usd: 1.50 }
-    slice-plan: { budget_usd: 3.50 }  # planning against workflows + rich requirements (live data)
-    slice-1: { budget_usd: 9.00 }
-    slice-2: { budget_usd: 9.00 }
-    slice-3: { budget_usd: 9.00 }
-    slice-4: { budget_usd: 9.00 }
-    slice-5: { budget_usd: 9.00 }
-    slice-6: { budget_usd: 9.00 }
+    ingest: { budget_usd: 6.00 }
+    requirements-synthesis: { budget_usd: 9.00 }
+    gap-questions: { budget_usd: 3.00 }
+    architecture: { budget_usd: 6.00 }
+    design-options: { budget_usd: 36.00 }
+    data-design: { budget_usd: 5.00 }
+    agent-design: { budget_usd: 5.00 }
+    workflow-design: { budget_usd: 6.00 }
+    slice-plan: { budget_usd: 9.00 }
+    slice-1: { budget_usd: 15.00 }
+    slice-2: { budget_usd: 15.00 }
+    slice-3: { budget_usd: 15.00 }
+    slice-4: { budget_usd: 15.00 }
+    slice-5: { budget_usd: 15.00 }
+    slice-6: { budget_usd: 15.00 }
 
 interaction:
   max_questions_per_gate: 6

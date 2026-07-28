@@ -422,18 +422,71 @@ test("cost.json from a payload flows into the ledger with full attribution", asy
   assert.equal(foldState(ctx.journal.read()).totalCostUsd, 0.6);
 });
 
-test("node budget: an overspending node escalates without committing or retrying", async () => {
+test("node budget: finished work commits even over budget; the breach is recorded loudly", async () => {
   const dir = writeFixture(tmpDir("nb-pt"), costedDag({ nodeBudget: 0.5 }), COSTED_FILES);
   const ctx = makeCtx(tmpDir("nb-ws"), dir, {});
   const result = await runLoop(ctx);
 
-  assert.equal(result.status, "failed");
+  // The attempt cost 0.6 against a 0.5 cap — but the work FINISHED and
+  // validated. Discarding it would double the loss; it commits, with the
+  // overrun visible in the ledger.
+  assert.equal(result.status, "completed");
+  assert.ok(fs.existsSync(path.join(ctx.workspace, "artifacts/work1")), "bought-and-finished work is never shredded");
   const breach = events(ctx, "budget.exceeded")[0];
   assert.equal(breach.scope, "node");
-  assert.equal(breach.nodeId, "work1");
-  assert.equal(breach.budgetUsd, 0.5);
+  assert.equal(breach.committed, true);
   assert.ok(breach.spentUsd > 0.5);
-  assert.ok(!fs.existsSync(path.join(ctx.workspace, "artifacts/work1")), "breaching node never commits");
+});
+
+test("node budget: exhausted budget blocks the NEXT attempt from starting", async () => {
+  // The mock fails validation (bad artifact) while spending 0.6 of a 0.5 cap;
+  // retries are configured but the budget gate must refuse attempt 2.
+  const dir = writeFixture(tmpDir("nbf-pt"), costedDag({ nodeBudget: 0.5 }).replace("retries: 0", "retries: 3"), {
+    ...COSTED_FILES,
+    "mock.cjs": COSTED_FILES["mock.cjs"].replace('{ ok: true }', '{ wrong_field: 1 }'),
+  });
+  const ctx = makeCtx(tmpDir("nbf-ws"), dir, {});
+  const result = await runLoop(ctx);
+
+  assert.equal(result.status, "failed");
+  assert.equal(events(ctx, "node.running").length, 1, "only one attempt ran — budget gated the second");
+  const breach = events(ctx, "budget.exceeded")[0];
+  assert.equal(breach.blockedAttempt, 2);
+});
+
+test("retry continuity: attempt 2 continues from attempt 1's working files", async () => {
+  const dir = writeFixture(
+    tmpDir("cont-pt"),
+    [
+      "name: cont",
+      "version: 0.0.1",
+      "nodes:",
+      "  - id: work",
+      "    kind: agent",
+      "    prompt: p.md",
+      '    mock: node "$HARNESS_PROJECT_DIR/mock.cjs"',
+      "    retries: 2",
+      "    outputs: [{name: out, file: out.json}]",
+    ].join("\n"),
+    {
+      "p.md": "build",
+      // Attempt 1: leaves partial work, produces no artifact (fails validation).
+      // Attempt 2: finds the partial work and completes it — only possible
+      // because the working tree carried over.
+      "mock.cjs": `const fs = require("node:fs");
+if (!fs.existsSync("partial.txt")) {
+  fs.writeFileSync("partial.txt", "expensive groundwork from attempt 1");
+} else {
+  fs.writeFileSync("out.json", JSON.stringify({ continued_from: fs.readFileSync("partial.txt", "utf8") }));
+}
+`,
+    },
+  );
+  const ctx = makeCtx(tmpDir("cont-ws"), dir, {});
+  assert.equal((await runLoop(ctx)).status, "completed");
+  assert.equal(events(ctx, "node.running").length, 2, "took exactly two attempts");
+  const out = JSON.parse(fs.readFileSync(path.join(ctx.workspace, "artifacts/work/out.json"), "utf8"));
+  assert.equal(out.continued_from, "expensive groundwork from attempt 1", "attempt 2 built on attempt 1's files");
 });
 
 test("run budget: pre-dispatch gate blocks the next node once spend reaches the cap", async () => {

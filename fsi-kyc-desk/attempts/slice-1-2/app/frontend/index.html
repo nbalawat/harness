@@ -849,6 +849,29 @@ li.msg--agent .msg-body { border-left: var(--rule-accent); padding-left: var(--s
   .screen { display: block !important; page-break-after: always; }
   body { background: #fff; }
 }
+
+/* ================== LIVE DESK — intake & completeness ================== */
+/* Set in the same hand as the rest of the dossier: rules, not boxes.      */
+.field--span4 { grid-column: 1 / -1; }
+
+.doc-picker {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-2) var(--space-5);
+  padding-top: var(--space-2);
+}
+.doc-pick {
+  display: flex; align-items: baseline; gap: var(--space-3);
+  font-size: var(--fs-fine); color: var(--ink-soft);
+  border-bottom: var(--hair-faint); padding-bottom: var(--space-2);
+}
+.doc-pick input { accent-color: var(--primary); }
+.doc-pick em { font-family: var(--font-meta); font-size: 0.625rem; letter-spacing: var(--tracking-caps);
+  text-transform: uppercase; color: var(--ink-ghost); font-style: normal; margin-left: auto; }
+
+.live-note { font-size: var(--fs-fine); font-style: italic; color: var(--ink-mute); padding: var(--space-4) 0; }
+.live-block { margin-top: var(--space-7); border-top: var(--rule-ink); padding-top: var(--space-4); }
+.ledger .missing-list { font-size: var(--fs-fine); color: var(--primary); }
 </style>
 </head>
 <body>
@@ -1198,6 +1221,64 @@ li.msg--agent .msg-body { border-left: var(--rule-accent); padding-left: var(--s
           <span class="notice__label">† Band override in force</span>
           <p>KYC-2026-0417 computes mechanically at 58.7 (Medium). A confirmed sanctions true-positive lifts the case to the High band under onboarding policy v3.2 §7.1. The computed figure is never rewritten; the band alone is overridden, and the reason travels with the case.</p>
         </div>
+
+        <!-- ---- live desk: submission intake ------------------------- -->
+        <div class="live-block">
+          <h4 class="head">Take in a client submission</h4>
+          <p class="label" style="margin-bottom:var(--space-3)">Checked mechanically against the document checklist on receipt · no item may be waived</p>
+
+          <form class="filters" id="intake-form">
+            <div class="field"><label for="in-ref">Submission reference</label><input id="in-ref" type="text" placeholder="ACC-2026-0001" required></div>
+            <div class="field field--span2"><label for="in-name">Client legal name</label><input id="in-name" type="text" placeholder="Meridian Holdings Ltd" required></div>
+            <div class="field"><label for="in-by">Submitted by</label>
+              <select id="in-by">
+                <option value="ana.analyst" selected>ana.analyst</option>
+                <option value="sam.senior">sam.senior</option>
+                <option value="cora.compliance">cora.compliance</option>
+              </select>
+            </div>
+            <div class="field"><label for="in-depth">Ownership chain depth</label><input id="in-depth" type="number" min="1" max="9" value="1"></div>
+            <div class="field"><label for="in-reg">Regulated industry</label><select id="in-reg"><option value="false" selected>No</option><option value="true">Yes</option></select></div>
+            <div class="field"><label for="in-xb">Cross-border expected</label><select id="in-xb"><option value="false" selected>No</option><option value="true">Yes</option></select></div>
+            <div class="field"><label for="in-jur">Jurisdiction</label><select id="in-jur"><option value="standard" selected>Standard</option><option value="enhanced_monitoring">Enhanced monitoring</option><option value="fatf_high_risk">FATF high risk</option></select></div>
+            <div class="field"><label for="in-struct">Entity structure</label><select id="in-struct"><option value="simple" selected>Simple</option><option value="nominee_shareholders">Nominee shareholders</option><option value="chain_depth_over_3">Chain depth over 3</option><option value="bearer_shares">Bearer shares</option></select></div>
+            <div class="field"><label for="in-ind">Industry</label><select id="in-ind"><option value="other" selected>Other</option><option value="cash_intensive_retail">Cash-intensive retail</option><option value="money_services">Money services</option><option value="gambling">Gambling</option><option value="defense">Defense</option></select></div>
+            <div class="field"><label for="in-sanc">Sanctions screening</label><select id="in-sanc"><option value="clear" selected>Clear</option><option value="unresolved_possible">Unresolved possible</option><option value="true_positive">True positive</option></select></div>
+            <div class="field"><label for="in-act">Expected activity</label><select id="in-act"><option value="domestic_only" selected>Domestic only</option><option value="cross_border_over_1m">Cross-border over $1m</option></select></div>
+            <div class="field field--span4">
+              <label for="in-docs">Artefacts in the package</label>
+              <div class="doc-picker" id="in-docs"></div>
+            </div>
+          </form>
+
+          <div class="actions">
+            <button class="btn btn--solid" type="submit" form="intake-form" id="intake-submit">Open case and run the completeness check</button>
+            <span class="actions__note" id="intake-status">A complete package is marked READY and stamped; an incomplete one is RETURNED with the itemised list.</span>
+          </div>
+        </div>
+
+        <!-- ---- live desk: worklist ---------------------------------- -->
+        <div class="live-block">
+          <h4 class="head">Live worklist — cases opened on this desk</h4>
+          <div class="table-scroll">
+            <table class="ledger">
+              <caption id="live-worklist-caption">Cases on the live register</caption>
+              <thead>
+                <tr>
+                  <th scope="col">Case</th>
+                  <th scope="col">Client</th>
+                  <th scope="col">Status</th>
+                  <th scope="col">Band</th>
+                  <th scope="col" class="num">Score</th>
+                  <th scope="col">Approver of record</th>
+                  <th scope="col">Documents outstanding</th>
+                </tr>
+              </thead>
+              <tbody id="live-worklist-body"></tbody>
+            </table>
+          </div>
+          <p class="live-note" id="live-worklist-empty">No submission has yet been taken in on this desk.</p>
+        </div>
       </div>
 
       <aside class="rail">
@@ -1301,6 +1382,27 @@ li.msg--agent .msg-body { border-left: var(--rule-accent); padding-left: var(--s
           <button class="btn btn--ghost" type="button">Return to client with itemised list</button>
           <button class="btn btn--ghost" type="button">Add analyst note to file</button>
           <span class="actions__note">Any status change is written to the register with the acting officer named.</span>
+        </div>
+
+        <!-- ---- live desk: the case file as held on this desk --------- -->
+        <div class="live-block">
+          <h4 class="head">Live case file</h4>
+          <p class="label" style="margin-bottom:var(--space-3)">Addressed by submission reference · read from the case record, never typed</p>
+
+          <form class="filters" onsubmit="return false">
+            <div class="field field--span2"><label for="case-picker">Case on file</label><select id="case-picker"></select></div>
+            <div class="field field--span2"><label for="case-ready-stamp">Case-ready timestamp</label><input id="case-ready-stamp" type="text" readonly></div>
+          </form>
+
+          <dl class="dossier-dl" id="live-case-detail"></dl>
+
+          <h4 class="head" id="live-case-checklist-head">Document completeness</h4>
+          <ul class="checklist" id="live-case-checklist"></ul>
+
+          <div class="notice">
+            <span class="notice__label" id="live-case-result-label">Completeness result</span>
+            <p id="live-case-result-text">Select a case above to read its mechanical completeness result.</p>
+          </div>
         </div>
       </div>
 
@@ -1980,6 +2082,9 @@ li.msg--agent .msg-body { border-left: var(--rule-accent); padding-left: var(--s
 
 </div>
 
+<script src="mod_datatable.js" defer></script>
+<script src="mod_recorddetail.js" defer></script>
 <script src="app.js" defer></script>
+<script src="kyc_cases.js" defer></script>
 </body>
 </html>

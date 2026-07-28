@@ -115,9 +115,12 @@ before commit.
    deterministic. A mock must produce artifacts of the same shape and honor the
    same feedback contracts (e.g. incorporate `feedback.md` change requests) as
    the live agent. The Claude Agent SDK remains the execution engine.
-5. **Budget every step** from real run data, with headroom for what the step
-   actually produces (we learned this: a design step producing buildable shells
-   costs ~4x one producing sketches).
+5. **Budget liberally: caps are runaway guards, not cost targets.** Set node
+   budgets ~3x the observed p95 so legitimate heavy work never stalls a build
+   — the envelope is the real spend control. Semantics: finished, validated
+   work ALWAYS commits (an overrun is recorded, never shredded); budgets only
+   block *starting* further attempts; retries continue from the previous
+   attempt's working files rather than starting over.
 6. **Ask only what documents can't answer**, always with defaults and a "why" —
    the interaction budget fails the gate loudly if it over-asks.
 
