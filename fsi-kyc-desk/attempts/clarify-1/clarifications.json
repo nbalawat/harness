@@ -1,0 +1,5 @@
+{
+  "GAP-001": "External screening platform: the system receives pre-screened results and records them; no provider integration in scope.",
+  "GAP-002": "Internal analyst portal: analysts upload client-submitted packages on behalf of clients; no external client-facing surface in scope.",
+  "GAP-003": "Metadata-only: completeness checks declared presence and user-supplied metadata; document content extraction and date/figure inspection are out of scope."
+}

@@ -1,0 +1,1617 @@
+{
+  "requirements": {
+    "path": "/Users/nbalawat/development/harness/fsi-kyc-desk/artifacts/requirements-synthesis/requirements.json",
+    "data": {
+      "requirements": [
+        {
+          "id": "REQ-001",
+          "text": "A case is created from a client submission arriving with its document package.",
+          "category": "functional",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src-problem-statement",
+            "claim": "claim-001"
+          }
+        },
+        {
+          "id": "REQ-002",
+          "text": "A case is opened when a client submission arrives together with its document package; the submission and package are captured as a single case-opening event.",
+          "category": "functional",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src-kyc-onboarding-policy",
+            "claim": "claim-035"
+          }
+        },
+        {
+          "id": "REQ-003",
+          "text": "The document completeness check runs as a DETERMINISTIC workflow step, not as an AI/agent step.",
+          "category": "functional",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src-problem-statement",
+            "claim": "claim-002"
+          }
+        },
+        {
+          "id": "REQ-004",
+          "text": "The document package MUST pass the completeness check against the Document Checklist before any review begins; no review activity is permitted on an incomplete case.",
+          "category": "functional",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src-kyc-onboarding-policy",
+            "claim": "claim-036"
+          }
+        },
+        {
+          "id": "REQ-005",
+          "text": "Every corporate case requires a certificate of incorporation.",
+          "category": "functional",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src-document-checklist",
+            "claim": "claim-016"
+          }
+        },
+        {
+          "id": "REQ-006",
+          "text": "Every corporate case requires a register of directors.",
+          "category": "functional",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src-document-checklist",
+            "claim": "claim-017"
+          }
+        },
+        {
+          "id": "REQ-007",
+          "text": "Every corporate case requires a beneficial ownership declaration covering all owners of 25% or more.",
+          "category": "functional",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src-document-checklist",
+            "claim": "claim-018"
+          }
+        },
+        {
+          "id": "REQ-008",
+          "text": "Every corporate case requires proof of registered address dated within 3 months.",
+          "category": "functional",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src-document-checklist",
+            "claim": "claim-019"
+          }
+        },
+        {
+          "id": "REQ-009",
+          "text": "When ownership chain depth is greater than 1, a structure chart down to natural persons is additionally required.",
+          "category": "functional",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src-document-checklist",
+            "claim": "claim-020"
+          }
+        },
+        {
+          "id": "REQ-010",
+          "text": "When the client is in a regulated industry, a copy of the operating license is additionally required.",
+          "category": "functional",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src-document-checklist",
+            "claim": "claim-021"
+          }
+        },
+        {
+          "id": "REQ-011",
+          "text": "When cross-border activity is expected, an expected activity questionnaire is additionally required.",
+          "category": "functional",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src-document-checklist",
+            "claim": "claim-022"
+          }
+        },
+        {
+          "id": "REQ-012",
+          "text": "A case failing the completeness check transitions to RETURNED and carries the explicit list of missing documents.",
+          "category": "functional",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src-document-checklist",
+            "claim": "claim-023"
+          }
+        },
+        {
+          "id": "REQ-013",
+          "text": "Incomplete cases are RETURNED, not parked; there is no held/pending-documents holding state.",
+          "category": "functional",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src-kyc-onboarding-policy",
+            "claim": "claim-037"
+          }
+        },
+        {
+          "id": "REQ-014",
+          "text": "Completeness is a mechanical check; analysts may not waive required items and the UI must offer no waive action to analyst roles.",
+          "category": "functional",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src-document-checklist",
+            "claim": "claim-024"
+          }
+        },
+        {
+          "id": "REQ-015",
+          "text": "Exceptions to the completeness checklist require a Compliance Officer policy exception, and the exception is itself recorded on the case.",
+          "category": "functional",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src-document-checklist",
+            "claim": "claim-025"
+          }
+        },
+        {
+          "id": "REQ-016",
+          "text": "The risk score is computed mechanically by a deterministic workflow from the risk rating matrix, with no AI involvement in scoring.",
+          "category": "functional",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src-problem-statement",
+            "claim": "claim-003"
+          }
+        },
+        {
+          "id": "REQ-017",
+          "text": "The case risk score is the weighted sum of factor scores; each factor is scored 0-100 by mechanical rules, then weighted.",
+          "category": "functional",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src-risk-rating-matrix",
+            "claim": "claim-062"
+          }
+        },
+        {
+          "id": "REQ-018",
+          "text": "Jurisdiction factor (weight 0.30): FATF high-risk list country involved = 90; enhanced-monitoring list = 60; otherwise = 10.",
+          "category": "functional",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src-risk-rating-matrix",
+            "claim": "claim-063"
+          }
+        },
+        {
+          "id": "REQ-019",
+          "text": "Entity structure factor (weight 0.25): ownership chain depth > 3 or bearer shares = 85; nominee shareholders = 60; simple structure = 15.",
+          "category": "functional",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src-risk-rating-matrix",
+            "claim": "claim-064"
+          }
+        },
+        {
+          "id": "REQ-020",
+          "text": "Industry factor (weight 0.20): money services, gambling, or defense = 80; cash-intensive retail = 55; other = 20.",
+          "category": "functional",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src-risk-rating-matrix",
+            "claim": "claim-065"
+          }
+        },
+        {
+          "id": "REQ-021",
+          "text": "Sanctions screening factor (weight 0.15): any true-positive hit = 100; unresolved possible hit = 70; clear = 0.",
+          "category": "functional",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src-risk-rating-matrix",
+            "claim": "claim-066"
+          }
+        },
+        {
+          "id": "REQ-022",
+          "text": "Expected activity factor (weight 0.10): cross-border wires greater than $1M/month = 75; domestic only = 20.",
+          "category": "functional",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src-risk-rating-matrix",
+            "claim": "claim-067"
+          }
+        },
+        {
+          "id": "REQ-023",
+          "text": "Low band is score 0-39 with a review cadence of 3 years.",
+          "category": "functional",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src-risk-rating-matrix",
+            "claim": "claim-068"
+          }
+        },
+        {
+          "id": "REQ-024",
+          "text": "Medium band is score 40-69 with an annual review cadence.",
+          "category": "functional",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src-risk-rating-matrix",
+            "claim": "claim-069"
+          }
+        },
+        {
+          "id": "REQ-025",
+          "text": "High band is score 70-100 with a 6-month review cadence and mandatory Compliance Officer approval.",
+          "category": "functional",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src-risk-rating-matrix",
+            "claim": "claim-070"
+          }
+        },
+        {
+          "id": "REQ-026",
+          "text": "A sanctions true-positive forces the case to the High band regardless of the weighted total score (band override).",
+          "category": "functional",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src-risk-rating-matrix",
+            "claim": "claim-071"
+          }
+        },
+        {
+          "id": "REQ-027",
+          "text": "Scoring is mechanical: no analyst judgment may enter the score itself; the score field is never directly editable by any role.",
+          "category": "functional",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src-kyc-onboarding-policy",
+            "claim": "claim-038"
+          }
+        },
+        {
+          "id": "REQ-028",
+          "text": "The risk scoring engine is a pure deterministic function of recorded factor inputs plus matrix version, so re-running it on the same inputs always yields the same score and band.",
+          "category": "functional",
+          "confidence": "inferred",
+          "provenance": {
+            "source": "src-regulator-audit-requirements"
+          }
+        },
+        {
+          "id": "REQ-029",
+          "text": "An AI agent drafts the risk assessment memo grounded ONLY in the policy documents and the case data.",
+          "category": "agent",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src-problem-statement",
+            "claim": "claim-004"
+          }
+        },
+        {
+          "id": "REQ-030",
+          "text": "A risk assessment memo is drafted for every case, summarizing beneficial ownership, jurisdiction exposure, sanctions screening results, and the computed score.",
+          "category": "agent",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src-kyc-onboarding-policy",
+            "claim": "claim-039"
+          }
+        },
+        {
+          "id": "REQ-031",
+          "text": "The AI-drafted memo must include citations to the specific policy provisions it relies on.",
+          "category": "agent",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src-problem-statement",
+            "claim": "claim-005"
+          }
+        },
+        {
+          "id": "REQ-032",
+          "text": "The AI-drafted memo must cite the policy provisions it relies on in a form an auditor can trace back to the source document.",
+          "category": "agent",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src-regulator-audit-requirements",
+            "claim": "claim-058"
+          }
+        },
+        {
+          "id": "REQ-033",
+          "text": "The AI-drafted memo must carry a clear machine-drafted label.",
+          "category": "agent",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src-problem-statement",
+            "claim": "claim-006"
+          }
+        },
+        {
+          "id": "REQ-034",
+          "text": "The machine-drafted label must remain clearly visible on the memo wherever it is displayed, printed, or exported.",
+          "category": "ux",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src-regulator-audit-requirements",
+            "claim": "claim-057"
+          }
+        },
+        {
+          "id": "REQ-035",
+          "text": "Upon approval, the approving human owns the memo's content; approval is recorded as adoption of the memo text as approved.",
+          "category": "agent",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src-regulator-audit-requirements",
+            "claim": "claim-059"
+          }
+        },
+        {
+          "id": "REQ-036",
+          "text": "The memo agent must not assert facts absent from its grounding set (policy documents plus case data); where evidence is missing it must say so explicitly rather than infer or fill gaps.",
+          "category": "agent",
+          "confidence": "inferred",
+          "provenance": {
+            "source": "src-problem-statement"
+          }
+        },
+        {
+          "id": "REQ-037",
+          "text": "The memo agent is advisory only: it has no tool or permission to change case status, alter the risk score, or record an approval.",
+          "category": "agent",
+          "confidence": "inferred",
+          "provenance": {
+            "source": "src-kyc-onboarding-policy"
+          }
+        },
+        {
+          "id": "REQ-038",
+          "text": "The memo agent's grounding corpus is the versioned policy document set (KYC onboarding policy, document checklist, escalation/SLA policy, risk rating matrix) plus the case record; retrieval is restricted to that set.",
+          "category": "agent",
+          "confidence": "inferred",
+          "provenance": {
+            "source": "src-kyc-onboarding-policy"
+          }
+        },
+        {
+          "id": "REQ-039",
+          "text": "A memo may be redrafted, and each memo version is retained as an immutable version rather than overwriting the prior text.",
+          "category": "data",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src-kyc-onboarding-policy",
+            "claim": "claim-051"
+          }
+        },
+        {
+          "id": "REQ-040",
+          "text": "Decision authority follows risk bands: analyst, senior analyst, compliance officer.",
+          "category": "functional",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src-problem-statement",
+            "claim": "claim-007"
+          }
+        },
+        {
+          "id": "REQ-041",
+          "text": "Low risk (score < 40): a KYC analyst may approve.",
+          "category": "functional",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src-kyc-onboarding-policy",
+            "claim": "claim-040"
+          }
+        },
+        {
+          "id": "REQ-042",
+          "text": "Medium risk (score 40-69): a senior analyst must approve.",
+          "category": "functional",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src-kyc-onboarding-policy",
+            "claim": "claim-041"
+          }
+        },
+        {
+          "id": "REQ-043",
+          "text": "High risk (score >= 70): the case escalates to a Compliance Officer, who must give explicit approval AND a documented rationale; the rationale is a required field that blocks approval when empty.",
+          "category": "functional",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src-kyc-onboarding-policy",
+            "claim": "claim-042"
+          }
+        },
+        {
+          "id": "REQ-044",
+          "text": "Explicit human approval is required before any case status change.",
+          "category": "functional",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src-problem-statement",
+            "claim": "claim-008"
+          }
+        },
+        {
+          "id": "REQ-045",
+          "text": "No case may change status without an explicit human approval recorded with the approver's identity and timestamp.",
+          "category": "functional",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src-kyc-onboarding-policy",
+            "claim": "claim-043"
+          }
+        },
+        {
+          "id": "REQ-046",
+          "text": "Automated approval is prohibited; no scheduled job, workflow step, or agent may record an approval.",
+          "category": "security",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src-kyc-onboarding-policy",
+            "claim": "claim-044"
+          }
+        },
+        {
+          "id": "REQ-047",
+          "text": "Every approval or rejection must be tied to a named individual holding a role valid for that decision tier at decision time; the role held at decision time is captured on the decision record.",
+          "category": "security",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src-regulator-audit-requirements",
+            "claim": "claim-055"
+          }
+        },
+        {
+          "id": "REQ-048",
+          "text": "Rejected cases must record the rejection reason.",
+          "category": "functional",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src-kyc-onboarding-policy",
+            "claim": "claim-045"
+          }
+        },
+        {
+          "id": "REQ-049",
+          "text": "The client relationship team is notified when a case is rejected.",
+          "category": "functional",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src-kyc-onboarding-policy",
+            "claim": "claim-046"
+          }
+        },
+        {
+          "id": "REQ-050",
+          "text": "High-risk cases escalate with SLA tracking and at-risk warnings.",
+          "category": "functional",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src-problem-statement",
+            "claim": "claim-009"
+          }
+        },
+        {
+          "id": "REQ-051",
+          "text": "High-risk cases receive at-risk warnings surfaced to the assigned approver.",
+          "category": "ux",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src-problem-statement",
+            "claim": "claim-010"
+          }
+        },
+        {
+          "id": "REQ-052",
+          "text": "Low-risk cases require a decision within 48 business hours, measured from case-ready (completeness passed).",
+          "category": "functional",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src-escalation-sla-policy",
+            "claim": "claim-026"
+          }
+        },
+        {
+          "id": "REQ-053",
+          "text": "Medium-risk cases require a decision within 24 business hours, measured from case-ready (completeness passed).",
+          "category": "functional",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src-escalation-sla-policy",
+            "claim": "claim-027"
+          }
+        },
+        {
+          "id": "REQ-054",
+          "text": "High-risk cases require a Compliance Officer decision within 8 business hours, measured from case-ready (completeness passed).",
+          "category": "functional",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src-escalation-sla-policy",
+            "claim": "claim-028"
+          }
+        },
+        {
+          "id": "REQ-055",
+          "text": "The case-ready timestamp (moment completeness passed) is persisted on the case and is the sole start point of the SLA clock.",
+          "category": "data",
+          "confidence": "inferred",
+          "provenance": {
+            "source": "src-escalation-sla-policy"
+          }
+        },
+        {
+          "id": "REQ-056",
+          "text": "ASSUMPTION: business hours for SLA arithmetic default to Monday-Friday 09:00-17:00 in a single configured timezone, excluding weekends, with no public-holiday calendar; the window is configuration, not hard-coded.",
+          "category": "ops",
+          "confidence": "inferred",
+          "provenance": {
+            "source": "src-escalation-sla-policy"
+          }
+        },
+        {
+          "id": "REQ-057",
+          "text": "At 80% of an SLA window consumed without a decision, the case is flagged AT RISK and the assigned approver is notified.",
+          "category": "functional",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src-escalation-sla-policy",
+            "claim": "claim-029"
+          }
+        },
+        {
+          "id": "REQ-058",
+          "text": "A breached SLA is recorded on the case permanently and cannot be cleared by a later decision.",
+          "category": "data",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src-escalation-sla-policy",
+            "claim": "claim-030"
+          }
+        },
+        {
+          "id": "REQ-059",
+          "text": "A breached SLA appears in the weekly operations report.",
+          "category": "ops",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src-escalation-sla-policy",
+            "claim": "claim-031"
+          }
+        },
+        {
+          "id": "REQ-060",
+          "text": "The escalation chain for unactioned high-risk cases is: assigned Compliance Officer -> Head of Financial Crime -> COO.",
+          "category": "functional",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src-escalation-sla-policy",
+            "claim": "claim-032"
+          }
+        },
+        {
+          "id": "REQ-061",
+          "text": "Each escalation step is recorded with who was notified and when.",
+          "category": "data",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src-escalation-sla-policy",
+            "claim": "claim-033"
+          }
+        },
+        {
+          "id": "REQ-062",
+          "text": "No provision permits skipping an approval to meet an SLA; SLA pressure must never unlock a shortcut path, and breach is the correct outcome when no valid approver acts.",
+          "category": "security",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src-escalation-sla-policy",
+            "claim": "claim-034"
+          }
+        },
+        {
+          "id": "REQ-063",
+          "text": "Notifications (at-risk, escalation, rejection) are persisted as addressable records with recipient and timestamp rather than fire-and-forget messages, so the trail can evidence who was notified and when.",
+          "category": "data",
+          "confidence": "inferred",
+          "provenance": {
+            "source": "src-escalation-sla-policy"
+          }
+        },
+        {
+          "id": "REQ-064",
+          "text": "Every action lands in an immutable audit trail satisfying the regulator requirements.",
+          "category": "data",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src-problem-statement",
+            "claim": "claim-011"
+          }
+        },
+        {
+          "id": "REQ-065",
+          "text": "The system provides an immutable, append-only trail of every case action recording who, what, when, and the before/after of any changed field.",
+          "category": "data",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src-regulator-audit-requirements",
+            "claim": "claim-053"
+          }
+        },
+        {
+          "id": "REQ-066",
+          "text": "Deletion or edit of audit trail entries must be technically impossible through the application; no code path, admin screen, or API exposes update or delete on trail entries.",
+          "category": "security",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src-regulator-audit-requirements",
+            "claim": "claim-054"
+          }
+        },
+        {
+          "id": "REQ-067",
+          "text": "Every state change, approval, rejection, and memo version is retained indefinitely.",
+          "category": "data",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src-kyc-onboarding-policy",
+            "claim": "claim-051"
+          }
+        },
+        {
+          "id": "REQ-068",
+          "text": "Retained records must be reviewable by internal audit and regulators.",
+          "category": "data",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src-kyc-onboarding-policy",
+            "claim": "claim-052"
+          }
+        },
+        {
+          "id": "REQ-069",
+          "text": "For any past case, the exact risk score inputs, the matrix version applied, and the memo text as approved must be retrievable (reproducibility).",
+          "category": "data",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src-regulator-audit-requirements",
+            "claim": "claim-056"
+          }
+        },
+        {
+          "id": "REQ-070",
+          "text": "Each case persists the version identifiers of the policy artifacts applied to it (risk matrix v2.1, document checklist v2.0, onboarding policy v3.2), so later policy revisions never retroactively alter a past case's record.",
+          "category": "data",
+          "confidence": "inferred",
+          "provenance": {
+            "source": "src-regulator-audit-requirements"
+          }
+        },
+        {
+          "id": "REQ-071",
+          "text": "Each case persists the raw per-factor inputs and per-factor scores used in the weighted sum, not only the final total.",
+          "category": "data",
+          "confidence": "inferred",
+          "provenance": {
+            "source": "src-regulator-audit-requirements"
+          }
+        },
+        {
+          "id": "REQ-072",
+          "text": "Analysts can search past cases.",
+          "category": "functional",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src-problem-statement",
+            "claim": "claim-012"
+          }
+        },
+        {
+          "id": "REQ-073",
+          "text": "Analysts can export full case files as CSV.",
+          "category": "functional",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src-problem-statement",
+            "claim": "claim-013"
+          }
+        },
+        {
+          "id": "REQ-074",
+          "text": "Auditors can export any case file, including the full trail, in a reviewable format (CSV acceptable).",
+          "category": "functional",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src-regulator-audit-requirements",
+            "claim": "claim-060"
+          }
+        },
+        {
+          "id": "REQ-075",
+          "text": "Access is role-based.",
+          "category": "security",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src-problem-statement",
+            "claim": "claim-014"
+          }
+        },
+        {
+          "id": "REQ-076",
+          "text": "Auditors are read-only.",
+          "category": "security",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src-problem-statement",
+            "claim": "claim-015"
+          }
+        },
+        {
+          "id": "REQ-077",
+          "text": "Access is least-privilege by role; each role receives only the permissions its duties require.",
+          "category": "security",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src-regulator-audit-requirements",
+            "claim": "claim-061"
+          }
+        },
+        {
+          "id": "REQ-078",
+          "text": "The KYC Analyst role opens cases, runs checks, and approves low-risk cases.",
+          "category": "security",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src-kyc-onboarding-policy",
+            "claim": "claim-047"
+          }
+        },
+        {
+          "id": "REQ-079",
+          "text": "The Senior Analyst role approves medium-risk cases.",
+          "category": "security",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src-kyc-onboarding-policy",
+            "claim": "claim-048"
+          }
+        },
+        {
+          "id": "REQ-080",
+          "text": "The Compliance Officer role approves high-risk cases and all escalations, and owns policy exceptions.",
+          "category": "security",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src-kyc-onboarding-policy",
+            "claim": "claim-049"
+          }
+        },
+        {
+          "id": "REQ-081",
+          "text": "The Auditor role has read-only access to everything, including the full decision trail.",
+          "category": "security",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src-kyc-onboarding-policy",
+            "claim": "claim-050"
+          }
+        },
+        {
+          "id": "REQ-082",
+          "text": "Authorization is enforced server-side on every state-changing operation, not merely by hiding UI controls.",
+          "category": "security",
+          "confidence": "inferred",
+          "provenance": {
+            "source": "src-regulator-audit-requirements"
+          }
+        },
+        {
+          "id": "REQ-083",
+          "text": "Every user acts under an authenticated named individual identity; shared, anonymous, or role-generic accounts are not permitted, since attribution requires a named person.",
+          "category": "security",
+          "confidence": "inferred",
+          "provenance": {
+            "source": "src-regulator-audit-requirements"
+          }
+        },
+        {
+          "id": "REQ-084",
+          "text": "ASSUMPTION: for the local deploy target, identity is a locally seeded user store with one representative account per role rather than an external SSO/IdP integration.",
+          "category": "security",
+          "confidence": "inferred",
+          "provenance": {
+            "source": "intake.json#deploy_target"
+          }
+        },
+        {
+          "id": "REQ-085",
+          "text": "A higher-privileged role may not approve at a tier below its own in place of the required approver without that substitution being visible on the decision record, since the role valid for the tier is what must be evidenced.",
+          "category": "security",
+          "confidence": "inferred",
+          "provenance": {
+            "source": "src-regulator-audit-requirements"
+          }
+        },
+        {
+          "id": "REQ-086",
+          "text": "A case worklist shows status, risk band, computed score, assigned approver, SLA remaining, and AT RISK / breached flags at a glance.",
+          "category": "ux",
+          "confidence": "inferred",
+          "provenance": {
+            "source": "src-escalation-sla-policy"
+          }
+        },
+        {
+          "id": "REQ-087",
+          "text": "The case detail view presents the memo with its machine-drafted label and citations resolvable to the cited policy provision.",
+          "category": "ux",
+          "confidence": "inferred",
+          "provenance": {
+            "source": "src-regulator-audit-requirements"
+          }
+        },
+        {
+          "id": "REQ-088",
+          "text": "The approval control is disabled with an explanatory reason for users whose role is below the tier the case's band requires, rather than failing after submission.",
+          "category": "ux",
+          "confidence": "inferred",
+          "provenance": {
+            "source": "src-kyc-onboarding-policy"
+          }
+        },
+        {
+          "id": "REQ-089",
+          "text": "A returned case shows the analyst the itemized missing-document list so the client can be told exactly what to resupply.",
+          "category": "ux",
+          "confidence": "inferred",
+          "provenance": {
+            "source": "src-document-checklist"
+          }
+        },
+        {
+          "id": "REQ-090",
+          "text": "The full audit trail for a case is viewable in the application by any role with read access, in chronological order with before/after values.",
+          "category": "ux",
+          "confidence": "inferred",
+          "provenance": {
+            "source": "src-regulator-audit-requirements"
+          }
+        },
+        {
+          "id": "REQ-091",
+          "text": "A score breakdown view shows each factor's input, raw score, weight, and contribution to the total, so a human can verify the computation.",
+          "category": "ux",
+          "confidence": "inferred",
+          "provenance": {
+            "source": "src-risk-rating-matrix"
+          }
+        },
+        {
+          "id": "REQ-092",
+          "text": "The weekly operations report is generated on a weekly cadence and lists breached SLAs for the period.",
+          "category": "ops",
+          "confidence": "inferred",
+          "provenance": {
+            "source": "src-escalation-sla-policy"
+          }
+        },
+        {
+          "id": "REQ-093",
+          "text": "The approved band's review cadence yields a stored next-review-due date on the case (Low +3 years, Medium +1 year, High +6 months).",
+          "category": "ops",
+          "confidence": "inferred",
+          "provenance": {
+            "source": "src-risk-rating-matrix"
+          }
+        },
+        {
+          "id": "REQ-094",
+          "text": "The application targets local deployment; no cloud-hosted infrastructure or managed service dependency is assumed.",
+          "category": "ops",
+          "confidence": "inferred",
+          "provenance": {
+            "source": "intake.json#deploy_target"
+          }
+        },
+        {
+          "id": "REQ-095",
+          "text": "SLA evaluation (at-risk flagging, breach recording, escalation stepping) runs on a recurring background evaluator rather than only on user page load, so an untouched case still flags and escalates.",
+          "category": "ops",
+          "confidence": "inferred",
+          "provenance": {
+            "source": "src-escalation-sla-policy"
+          }
+        },
+        {
+          "id": "REQ-096",
+          "text": "Where do sanctions screening results come from: does the system perform screening itself via a screening-provider integration, or does it ingest/record results produced by an external screening platform? This determines whether a provider integration and hit-adjudication workflow are in scope, and the sanctions factor plus the true-positive High-band override depend on it.",
+          "category": "functional",
+          "confidence": "unknown"
+        },
+        {
+          "id": "REQ-097",
+          "text": "How does a client submission physically arrive: a client-facing submission portal, an internal analyst who uploads the package on the client's behalf, or an API/file drop from an upstream system? This determines whether an external-facing surface and its authentication are in scope at all.",
+          "category": "functional",
+          "confidence": "unknown"
+        },
+        {
+          "id": "REQ-098",
+          "text": "Does the completeness check verify document content (e.g. extracting the issue date to enforce the 3-month proof-of-address rule and reading ownership percentages), or does it check declared presence and metadata supplied at upload? This decides whether document parsing/extraction is in scope and changes what 'mechanical check' means in practice.",
+          "category": "functional",
+          "confidence": "unknown"
+        }
+      ]
+    }
+  },
+  "data_model": {
+    "path": "/Users/nbalawat/development/harness/fsi-kyc-desk/artifacts/data-design/data_model.json",
+    "data": {
+      "tables": [
+        {
+          "name": "cases",
+          "addresses": [
+            "REQ-001",
+            "REQ-002",
+            "REQ-004",
+            "REQ-012",
+            "REQ-055",
+            "REQ-064",
+            "REQ-067",
+            "REQ-069",
+            "REQ-070"
+          ],
+          "columns": [
+            {
+              "name": "id",
+              "type": "string"
+            },
+            {
+              "name": "created_at",
+              "type": "timestamp"
+            },
+            {
+              "name": "status",
+              "type": "enum"
+            },
+            {
+              "name": "client_name",
+              "type": "string"
+            },
+            {
+              "name": "case_ready_timestamp",
+              "type": "timestamp"
+            },
+            {
+              "name": "completeness_passed_at",
+              "type": "timestamp"
+            },
+            {
+              "name": "sla_breached",
+              "type": "boolean"
+            },
+            {
+              "name": "is_at_risk",
+              "type": "boolean"
+            },
+            {
+              "name": "assigned_approver_id",
+              "type": "string"
+            },
+            {
+              "name": "risk_matrix_version",
+              "type": "string"
+            },
+            {
+              "name": "document_checklist_version",
+              "type": "string"
+            },
+            {
+              "name": "onboarding_policy_version",
+              "type": "string"
+            },
+            {
+              "name": "next_review_due_date",
+              "type": "date"
+            }
+          ]
+        },
+        {
+          "name": "risk_scores",
+          "addresses": [
+            "REQ-016",
+            "REQ-017",
+            "REQ-018",
+            "REQ-019",
+            "REQ-020",
+            "REQ-021",
+            "REQ-022",
+            "REQ-023",
+            "REQ-024",
+            "REQ-025",
+            "REQ-026",
+            "REQ-027",
+            "REQ-028",
+            "REQ-069",
+            "REQ-071"
+          ],
+          "columns": [
+            {
+              "name": "id",
+              "type": "string"
+            },
+            {
+              "name": "case_id",
+              "type": "string"
+            },
+            {
+              "name": "jurisdiction_factor_score",
+              "type": "integer"
+            },
+            {
+              "name": "jurisdiction_raw_input",
+              "type": "string"
+            },
+            {
+              "name": "entity_structure_factor_score",
+              "type": "integer"
+            },
+            {
+              "name": "entity_structure_raw_input",
+              "type": "string"
+            },
+            {
+              "name": "industry_factor_score",
+              "type": "integer"
+            },
+            {
+              "name": "industry_raw_input",
+              "type": "string"
+            },
+            {
+              "name": "sanctions_screening_factor_score",
+              "type": "integer"
+            },
+            {
+              "name": "sanctions_screening_raw_input",
+              "type": "string"
+            },
+            {
+              "name": "expected_activity_factor_score",
+              "type": "integer"
+            },
+            {
+              "name": "expected_activity_raw_input",
+              "type": "string"
+            },
+            {
+              "name": "total_risk_score",
+              "type": "decimal"
+            },
+            {
+              "name": "risk_band",
+              "type": "enum"
+            },
+            {
+              "name": "sanctions_true_positive_override_applied",
+              "type": "boolean"
+            },
+            {
+              "name": "computed_at",
+              "type": "timestamp"
+            }
+          ]
+        },
+        {
+          "name": "documents",
+          "addresses": [
+            "REQ-003",
+            "REQ-004",
+            "REQ-005",
+            "REQ-006",
+            "REQ-007",
+            "REQ-008",
+            "REQ-009",
+            "REQ-010",
+            "REQ-011",
+            "REQ-012"
+          ],
+          "columns": [
+            {
+              "name": "id",
+              "type": "string"
+            },
+            {
+              "name": "case_id",
+              "type": "string"
+            },
+            {
+              "name": "document_type",
+              "type": "enum"
+            },
+            {
+              "name": "required",
+              "type": "boolean"
+            },
+            {
+              "name": "conditionally_required",
+              "type": "boolean"
+            },
+            {
+              "name": "condition_trigger",
+              "type": "string"
+            },
+            {
+              "name": "received",
+              "type": "boolean"
+            },
+            {
+              "name": "received_at",
+              "type": "timestamp"
+            }
+          ]
+        },
+        {
+          "name": "missing_documents",
+          "addresses": [
+            "REQ-012",
+            "REQ-089"
+          ],
+          "columns": [
+            {
+              "name": "id",
+              "type": "string"
+            },
+            {
+              "name": "case_id",
+              "type": "string"
+            },
+            {
+              "name": "document_type",
+              "type": "enum"
+            },
+            {
+              "name": "recorded_at",
+              "type": "timestamp"
+            }
+          ]
+        },
+        {
+          "name": "assessment_memos",
+          "addresses": [
+            "REQ-029",
+            "REQ-030",
+            "REQ-031",
+            "REQ-032",
+            "REQ-033",
+            "REQ-034",
+            "REQ-035",
+            "REQ-036",
+            "REQ-037",
+            "REQ-038",
+            "REQ-039",
+            "REQ-087"
+          ],
+          "columns": [
+            {
+              "name": "id",
+              "type": "string"
+            },
+            {
+              "name": "case_id",
+              "type": "string"
+            },
+            {
+              "name": "version",
+              "type": "integer"
+            },
+            {
+              "name": "memo_text",
+              "type": "text"
+            },
+            {
+              "name": "generated_at",
+              "type": "timestamp"
+            },
+            {
+              "name": "is_machine_drafted",
+              "type": "boolean"
+            },
+            {
+              "name": "policy_citations",
+              "type": "json"
+            },
+            {
+              "name": "approved_at",
+              "type": "timestamp"
+            },
+            {
+              "name": "approved_by_user_id",
+              "type": "string"
+            },
+            {
+              "name": "approved_by_role",
+              "type": "string"
+            },
+            {
+              "name": "is_approved",
+              "type": "boolean"
+            }
+          ]
+        },
+        {
+          "name": "approvals",
+          "addresses": [
+            "REQ-041",
+            "REQ-042",
+            "REQ-043",
+            "REQ-044",
+            "REQ-045",
+            "REQ-046",
+            "REQ-047",
+            "REQ-048",
+            "REQ-085"
+          ],
+          "columns": [
+            {
+              "name": "id",
+              "type": "string"
+            },
+            {
+              "name": "case_id",
+              "type": "string"
+            },
+            {
+              "name": "decision_type",
+              "type": "enum"
+            },
+            {
+              "name": "decided_by_user_id",
+              "type": "string"
+            },
+            {
+              "name": "decided_by_role",
+              "type": "string"
+            },
+            {
+              "name": "decided_at",
+              "type": "timestamp"
+            },
+            {
+              "name": "required_role_tier",
+              "type": "enum"
+            },
+            {
+              "name": "reason",
+              "type": "text"
+            },
+            {
+              "name": "memo_version_id",
+              "type": "string"
+            }
+          ]
+        },
+        {
+          "name": "compliance_exceptions",
+          "addresses": [
+            "REQ-014",
+            "REQ-015"
+          ],
+          "columns": [
+            {
+              "name": "id",
+              "type": "string"
+            },
+            {
+              "name": "case_id",
+              "type": "string"
+            },
+            {
+              "name": "exception_type",
+              "type": "enum"
+            },
+            {
+              "name": "granted_by_user_id",
+              "type": "string"
+            },
+            {
+              "name": "granted_at",
+              "type": "timestamp"
+            },
+            {
+              "name": "reason",
+              "type": "text"
+            },
+            {
+              "name": "affected_documents",
+              "type": "json"
+            }
+          ]
+        },
+        {
+          "name": "audit_trail",
+          "addresses": [
+            "REQ-064",
+            "REQ-065",
+            "REQ-066",
+            "REQ-067",
+            "REQ-068",
+            "REQ-090"
+          ],
+          "columns": [
+            {
+              "name": "id",
+              "type": "string"
+            },
+            {
+              "name": "case_id",
+              "type": "string"
+            },
+            {
+              "name": "action_type",
+              "type": "enum"
+            },
+            {
+              "name": "performed_by_user_id",
+              "type": "string"
+            },
+            {
+              "name": "performed_by_role",
+              "type": "string"
+            },
+            {
+              "name": "timestamp",
+              "type": "timestamp"
+            },
+            {
+              "name": "field_name",
+              "type": "string"
+            },
+            {
+              "name": "old_value",
+              "type": "text"
+            },
+            {
+              "name": "new_value",
+              "type": "text"
+            },
+            {
+              "name": "details",
+              "type": "json"
+            }
+          ]
+        },
+        {
+          "name": "escalations",
+          "addresses": [
+            "REQ-050",
+            "REQ-060",
+            "REQ-061",
+            "REQ-095"
+          ],
+          "columns": [
+            {
+              "name": "id",
+              "type": "string"
+            },
+            {
+              "name": "case_id",
+              "type": "string"
+            },
+            {
+              "name": "escalation_level",
+              "type": "integer"
+            },
+            {
+              "name": "escalated_to_role",
+              "type": "enum"
+            },
+            {
+              "name": "escalated_to_user_id",
+              "type": "string"
+            },
+            {
+              "name": "escalated_at",
+              "type": "timestamp"
+            },
+            {
+              "name": "reason",
+              "type": "enum"
+            }
+          ]
+        },
+        {
+          "name": "notifications",
+          "addresses": [
+            "REQ-049",
+            "REQ-051",
+            "REQ-057",
+            "REQ-063"
+          ],
+          "columns": [
+            {
+              "name": "id",
+              "type": "string"
+            },
+            {
+              "name": "case_id",
+              "type": "string"
+            },
+            {
+              "name": "notification_type",
+              "type": "enum"
+            },
+            {
+              "name": "recipient_user_id",
+              "type": "string"
+            },
+            {
+              "name": "sent_at",
+              "type": "timestamp"
+            },
+            {
+              "name": "message",
+              "type": "text"
+            },
+            {
+              "name": "read_at",
+              "type": "timestamp"
+            }
+          ]
+        },
+        {
+          "name": "sla_tracking",
+          "addresses": [
+            "REQ-052",
+            "REQ-053",
+            "REQ-054",
+            "REQ-055",
+            "REQ-056",
+            "REQ-057",
+            "REQ-058",
+            "REQ-062"
+          ],
+          "columns": [
+            {
+              "name": "id",
+              "type": "string"
+            },
+            {
+              "name": "case_id",
+              "type": "string"
+            },
+            {
+              "name": "sla_start_timestamp",
+              "type": "timestamp"
+            },
+            {
+              "name": "sla_due_timestamp",
+              "type": "timestamp"
+            },
+            {
+              "name": "risk_band",
+              "type": "enum"
+            },
+            {
+              "name": "sla_hours",
+              "type": "integer"
+            },
+            {
+              "name": "flagged_at_risk_at",
+              "type": "timestamp"
+            },
+            {
+              "name": "breached_at",
+              "type": "timestamp"
+            },
+            {
+              "name": "breached",
+              "type": "boolean"
+            }
+          ]
+        },
+        {
+          "name": "users",
+          "addresses": [
+            "REQ-075",
+            "REQ-078",
+            "REQ-079",
+            "REQ-080",
+            "REQ-081",
+            "REQ-082",
+            "REQ-083",
+            "REQ-084"
+          ],
+          "columns": [
+            {
+              "name": "id",
+              "type": "string"
+            },
+            {
+              "name": "username",
+              "type": "string"
+            },
+            {
+              "name": "full_name",
+              "type": "string"
+            },
+            {
+              "name": "role",
+              "type": "enum"
+            },
+            {
+              "name": "created_at",
+              "type": "timestamp"
+            },
+            {
+              "name": "is_active",
+              "type": "boolean"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "agent_roster": {
+    "path": "/Users/nbalawat/development/harness/fsi-kyc-desk/artifacts/agent-design/agent_roster.json",
+    "data": {
+      "agents": [
+        {
+          "name": "Risk Assessment Memo Assistant",
+          "role": "Drafts the risk assessment memo for a KYC case, grounded strictly in the versioned policy set and the case's own recorded data, with a citation for every policy-based claim and a permanent machine-drafted label; produces a draft only — it never changes case status, scores, or approvals.",
+          "tools": [
+            "read_case_record",
+            "read_policy_corpus",
+            "resolve_policy_citation",
+            "save_memo_draft"
+          ],
+          "denied_tools": [
+            "update_case_status",
+            "record_approval_or_rejection",
+            "edit_risk_score",
+            "edit_case_data",
+            "waive_document_requirement",
+            "record_policy_exception",
+            "send_notification",
+            "delete_or_edit_audit_trail",
+            "overwrite_previous_memo_version",
+            "access_external_web_or_third_party_data"
+          ],
+          "system_prompt": "You are the Risk Assessment Memo Assistant for the KYC case desk. Draft a risk assessment memo for one case at a time, grounded only in the versioned policy documents (KYC Onboarding Policy, Document Checklist, Escalation/SLA Policy, Risk Rating Matrix) and that case's own record — never on outside knowledge or other cases. Cover beneficial ownership, jurisdiction exposure, sanctions screening results, and the computed score and band exactly as recorded, cite the specific policy provision behind every policy-based statement, and say plainly that a fact is not available in the record rather than inferring or estimating it. Always open the memo with a clear 'MACHINE-DRAFTED — requires human approval' label, and remember you are advisory only: you draft text for a human reviewer and never change a case's status, alter its risk score, record an approval, or take any other action.",
+          "addresses": [
+            "REQ-029",
+            "REQ-030",
+            "REQ-031",
+            "REQ-032",
+            "REQ-033",
+            "REQ-034",
+            "REQ-036",
+            "REQ-037",
+            "REQ-038",
+            "REQ-039",
+            "REQ-087"
+          ],
+          "eval_criteria": [
+            "Reply opens with a prominent machine-drafted disclosure, e.g. containing the phrase 'MACHINE-DRAFTED' (or 'AI-DRAFTED') together with 'requires human approval' or equivalent wording.",
+            "Reply contains a section or paragraph addressing beneficial ownership.",
+            "Reply contains a section or paragraph addressing jurisdiction exposure.",
+            "Reply contains a section or paragraph addressing sanctions screening results.",
+            "Reply states the case's computed risk score and risk band, matching the values supplied in the case record rather than a recomputed or different value.",
+            "Reply includes at least one inline citation naming a specific source policy document and section/provision (e.g. 'Risk Rating Matrix §...') for each policy-based claim it makes.",
+            "When a fact needed for the memo is not present in the supplied case record or policy documents, reply explicitly states it is missing or not available rather than inferring, estimating, or omitting the gap silently.",
+            "Reply contains no first-person claim of having taken an action, such as approving, rejecting, changing status, altering the score, or waiving a requirement (no phrases like 'I have approved', 'status updated to', or 'score adjusted').",
+            "Reply does not introduce facts, figures, or claims beyond what is present in the supplied case record and named policy documents (no external or general-knowledge claims).",
+            "Reply stays scoped to the single case it was asked to draft for and does not reference or pull in data from any other case."
+          ]
+        }
+      ]
+    }
+  }
+}

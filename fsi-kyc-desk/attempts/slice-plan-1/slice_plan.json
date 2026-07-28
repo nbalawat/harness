@@ -1,0 +1,506 @@
+{
+  "slices": [
+    {
+      "id": "case-intake-completeness",
+      "name": "Case intake and deterministic completeness gate",
+      "story": "As a KYC analyst, I open a case from a client submission and its document package, and a purely mechanical completeness check either marks the case READY for review or RETURNS it with the itemized list of missing documents — so no review ever starts on an incomplete file and the client can be told exactly what to resupply. The case worklist screen shows every case with its status, and each intake action lands in the append-only audit trail with the policy versions that applied.",
+      "addresses": [
+        "REQ-001",
+        "REQ-002",
+        "REQ-003",
+        "REQ-004",
+        "REQ-005",
+        "REQ-006",
+        "REQ-007",
+        "REQ-008",
+        "REQ-009",
+        "REQ-010",
+        "REQ-011",
+        "REQ-012",
+        "REQ-013",
+        "REQ-014",
+        "REQ-055",
+        "REQ-064",
+        "REQ-065",
+        "REQ-066",
+        "REQ-067",
+        "REQ-070",
+        "REQ-089",
+        "REQ-094"
+      ],
+      "acceptance": [
+        {
+          "method": "GET",
+          "path": "/health",
+          "expect_status": 200,
+          "expect_contains": ["ok"]
+        },
+        {
+          "method": "POST",
+          "path": "/cases",
+          "body": {
+            "client_name": "Northwind Trading Ltd",
+            "entity_type": "corporate",
+            "ownership_chain_depth": 1,
+            "regulated_industry": false,
+            "cross_border_expected": false,
+            "documents": [
+              "certificate_of_incorporation",
+              "register_of_directors",
+              "beneficial_ownership_declaration",
+              "proof_of_registered_address"
+            ]
+          },
+          "expect_status": 200,
+          "expect_contains": ["Northwind Trading Ltd", "READY", "case_ready_timestamp"]
+        },
+        {
+          "method": "POST",
+          "path": "/cases",
+          "body": {
+            "client_name": "Halcyon Holdings SA",
+            "entity_type": "corporate",
+            "ownership_chain_depth": 3,
+            "regulated_industry": true,
+            "cross_border_expected": true,
+            "documents": ["certificate_of_incorporation", "register_of_directors"]
+          },
+          "expect_status": 200,
+          "expect_contains": [
+            "RETURNED",
+            "beneficial_ownership_declaration",
+            "proof_of_registered_address",
+            "structure_chart",
+            "operating_license",
+            "expected_activity_questionnaire"
+          ]
+        },
+        {
+          "method": "GET",
+          "path": "/cases",
+          "expect_status": 200,
+          "expect_contains": [
+            "Northwind Trading Ltd",
+            "Halcyon Holdings SA",
+            "RETURNED",
+            "document_checklist_version",
+            "risk_matrix_version"
+          ]
+        },
+        {
+          "method": "GET",
+          "path": "/audit",
+          "expect_status": 200,
+          "expect_contains": ["event", "case"]
+        }
+      ]
+    },
+    {
+      "id": "deterministic-risk-scoring",
+      "name": "Deterministic risk scoring and banding",
+      "story": "As a KYC analyst, when a case passes completeness it is scored mechanically from the risk rating matrix — five weighted factors, a Low/Medium/High band, and a forced High band whenever sanctions screening returns a true positive — and I can open a score breakdown showing every factor's input, raw score, weight and contribution, so I can verify the arithmetic without ever being able to edit the score. Representative seeded cases SEED-LOW-001 (Cobalt Foods Ltd), SEED-MED-002 (Harbour Freight SA) and SEED-HIGH-003 (Meridian Exchange Ltd) exist for each band.",
+      "addresses": [
+        "REQ-016",
+        "REQ-017",
+        "REQ-018",
+        "REQ-019",
+        "REQ-020",
+        "REQ-021",
+        "REQ-022",
+        "REQ-023",
+        "REQ-024",
+        "REQ-025",
+        "REQ-026",
+        "REQ-027",
+        "REQ-028",
+        "REQ-071",
+        "REQ-091"
+      ],
+      "acceptance": [
+        {
+          "method": "POST",
+          "path": "/cases",
+          "body": {
+            "client_name": "Osprey Gaming NV",
+            "entity_type": "corporate",
+            "ownership_chain_depth": 1,
+            "regulated_industry": true,
+            "cross_border_expected": false,
+            "documents": [
+              "certificate_of_incorporation",
+              "register_of_directors",
+              "beneficial_ownership_declaration",
+              "proof_of_registered_address",
+              "operating_license"
+            ],
+            "risk_factors": {
+              "jurisdiction": "fatf_high_risk",
+              "entity_structure": "nominee_shareholders",
+              "industry": "gambling",
+              "sanctions_screening": "clear",
+              "expected_activity": "domestic_only"
+            }
+          },
+          "expect_status": 200,
+          "expect_contains": ["Osprey Gaming NV", "total_risk_score", "60", "Medium"]
+        },
+        {
+          "method": "POST",
+          "path": "/cases",
+          "body": {
+            "client_name": "Cedar Valley Bakeries Ltd",
+            "entity_type": "corporate",
+            "ownership_chain_depth": 1,
+            "regulated_industry": false,
+            "cross_border_expected": false,
+            "documents": [
+              "certificate_of_incorporation",
+              "register_of_directors",
+              "beneficial_ownership_declaration",
+              "proof_of_registered_address"
+            ],
+            "risk_factors": {
+              "jurisdiction": "other",
+              "entity_structure": "simple",
+              "industry": "other",
+              "sanctions_screening": "clear",
+              "expected_activity": "domestic_only"
+            }
+          },
+          "expect_status": 200,
+          "expect_contains": ["Cedar Valley Bakeries Ltd", "Low", "risk_matrix_version"]
+        },
+        {
+          "method": "POST",
+          "path": "/cases",
+          "body": {
+            "client_name": "Argent Metals Ltd",
+            "entity_type": "corporate",
+            "ownership_chain_depth": 1,
+            "regulated_industry": false,
+            "cross_border_expected": false,
+            "documents": [
+              "certificate_of_incorporation",
+              "register_of_directors",
+              "beneficial_ownership_declaration",
+              "proof_of_registered_address"
+            ],
+            "risk_factors": {
+              "jurisdiction": "other",
+              "entity_structure": "simple",
+              "industry": "other",
+              "sanctions_screening": "true_positive",
+              "expected_activity": "domestic_only"
+            }
+          },
+          "expect_status": 200,
+          "expect_contains": ["Argent Metals Ltd", "High", "override"]
+        },
+        {
+          "method": "GET",
+          "path": "/api/risk_scores",
+          "expect_status": 200,
+          "expect_contains": [
+            "jurisdiction_factor_score",
+            "entity_structure_factor_score",
+            "industry_factor_score",
+            "sanctions_screening_factor_score",
+            "expected_activity_factor_score",
+            "total_risk_score",
+            "risk_band"
+          ]
+        },
+        {
+          "method": "GET",
+          "path": "/cases/SEED-HIGH-003/score",
+          "expect_status": 200,
+          "expect_contains": ["weight", "contribution", "risk_band", "High", "risk_matrix_version"]
+        }
+      ]
+    },
+    {
+      "id": "grounded-memo-drafting",
+      "name": "AI-drafted risk assessment memo with citations",
+      "story": "As a reviewer, I open a ready, scored case and the Risk Assessment Memo Assistant drafts a memo grounded only in the versioned policy corpus and that case's record — covering beneficial ownership, jurisdiction exposure, sanctions results and the computed score — carrying a permanent MACHINE-DRAFTED label and citations I can trace to the cited policy provision, and every redraft is kept as a new immutable version rather than overwriting the last. The agent is advisory only: its roster grants it no tool to change status, score, or record an approval.",
+      "addresses": [
+        "REQ-029",
+        "REQ-030",
+        "REQ-031",
+        "REQ-032",
+        "REQ-033",
+        "REQ-034",
+        "REQ-036",
+        "REQ-037",
+        "REQ-038",
+        "REQ-039",
+        "REQ-087"
+      ],
+      "acceptance": [
+        {
+          "method": "POST",
+          "path": "/workflows/risk-memo-and-approval/start",
+          "body": { "inputs": { "case_ref": "SEED-HIGH-003" } },
+          "expect_status": 200,
+          "expect_contains": ["MACHINE-DRAFTED", "memo_text", "policy_citations", "citations_resolved"]
+        },
+        {
+          "method": "GET",
+          "path": "/cases/SEED-HIGH-003/memo",
+          "expect_status": 200,
+          "expect_contains": ["MACHINE-DRAFTED", "policy_citations", "is_machine_drafted", "version"]
+        },
+        {
+          "method": "POST",
+          "path": "/memos/redraft",
+          "body": { "case_ref": "SEED-HIGH-003" },
+          "expect_status": 200,
+          "expect_contains": ["MACHINE-DRAFTED", "version", "is_machine_drafted"]
+        },
+        {
+          "method": "GET",
+          "path": "/api/assessment_memos",
+          "expect_status": 200,
+          "expect_contains": ["is_machine_drafted", "policy_citations", "generated_at", "version"]
+        },
+        {
+          "method": "GET",
+          "path": "/agents",
+          "expect_status": 200,
+          "expect_contains": [
+            "Risk Assessment Memo Assistant",
+            "denied_tools",
+            "record_approval_or_rejection",
+            "update_case_status"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "tiered-approval-rbac",
+      "name": "Role-based tiered approval and rejection",
+      "story": "As a named approver, I approve or reject a case only at the tier my role permits — analyst for Low, senior analyst for Medium, compliance officer with a documented rationale for High — and the decision is recorded with my identity, the role I held at decision time and the tier required, adopting the memo text as approved; a rejection captures its reason and notifies the client relationship team, auditors can change nothing, and the UI disables an approval I am not entitled to give with the reason why. Seeded named users ana.patel (kyc_analyst), sam.reyes (senior_analyst), priya.osei (compliance_officer) and dan.wu (auditor) provide one account per role.",
+      "addresses": [
+        "REQ-015",
+        "REQ-035",
+        "REQ-040",
+        "REQ-041",
+        "REQ-042",
+        "REQ-043",
+        "REQ-044",
+        "REQ-045",
+        "REQ-046",
+        "REQ-047",
+        "REQ-048",
+        "REQ-049",
+        "REQ-075",
+        "REQ-076",
+        "REQ-077",
+        "REQ-078",
+        "REQ-079",
+        "REQ-080",
+        "REQ-081",
+        "REQ-082",
+        "REQ-083",
+        "REQ-084",
+        "REQ-085",
+        "REQ-088",
+        "REQ-093"
+      ],
+      "acceptance": [
+        {
+          "method": "GET",
+          "path": "/api/users",
+          "expect_status": 200,
+          "expect_contains": ["kyc_analyst", "senior_analyst", "compliance_officer", "auditor", "ana.patel"]
+        },
+        {
+          "method": "POST",
+          "path": "/decisions",
+          "body": {
+            "case_ref": "SEED-LOW-001",
+            "actor": "ana.patel",
+            "decision": "approve",
+            "reason": "Low-risk file; documents complete and screening clear."
+          },
+          "expect_status": 200,
+          "expect_contains": ["approved", "kyc_analyst", "decided_at", "next_review_due_date"]
+        },
+        {
+          "method": "POST",
+          "path": "/decisions",
+          "body": {
+            "case_ref": "SEED-HIGH-003",
+            "actor": "ana.patel",
+            "decision": "approve",
+            "reason": "Looks acceptable to me."
+          },
+          "expect_status": 403,
+          "expect_contains": ["compliance_officer"]
+        },
+        {
+          "method": "POST",
+          "path": "/decisions",
+          "body": {
+            "case_ref": "SEED-HIGH-003",
+            "actor": "dan.wu",
+            "decision": "approve",
+            "reason": "Auditor attempting a decision."
+          },
+          "expect_status": 403,
+          "expect_contains": ["auditor"]
+        },
+        {
+          "method": "POST",
+          "path": "/decisions",
+          "body": {
+            "case_ref": "SEED-HIGH-003",
+            "actor": "priya.osei",
+            "decision": "approve",
+            "rationale": ""
+          },
+          "expect_status": 400,
+          "expect_contains": ["rationale"]
+        },
+        {
+          "method": "POST",
+          "path": "/decisions",
+          "body": {
+            "case_ref": "SEED-MED-002",
+            "actor": "sam.reyes",
+            "decision": "reject",
+            "reason": "Beneficial ownership declaration inconsistent with the register of directors."
+          },
+          "expect_status": 200,
+          "expect_contains": ["rejected", "senior_analyst", "notification", "inconsistent"]
+        },
+        {
+          "method": "GET",
+          "path": "/api/approvals",
+          "expect_status": 200,
+          "expect_contains": [
+            "decided_by_user_id",
+            "decided_by_role",
+            "required_role_tier",
+            "memo_version_id",
+            "reason"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "sla-escalation-monitoring",
+      "name": "SLA clocks, at-risk flags and escalation",
+      "story": "As an approver, every ready case runs an SLA clock from the moment completeness passed — 48/24/8 business hours by band — and a recurring evaluator flags a case AT RISK to me at 80% consumed, records a breach permanently once the window passes, and steps unactioned high-risk cases up the chain from compliance officer to Head of Financial Crime to COO, with every notification persisted as an addressable record naming recipient and time; the worklist shows SLA remaining and AT RISK / breached flags at a glance, and no SLA pressure ever unlocks a shortcut past approval. Seeded cases SEED-ATRISK-004 (Vantage Metals Ltd, 87.5% of its window consumed) and SEED-BREACH-005 (Ridgeline Capital Ltd, past due) exercise the evaluator.",
+      "addresses": [
+        "REQ-050",
+        "REQ-051",
+        "REQ-052",
+        "REQ-053",
+        "REQ-054",
+        "REQ-056",
+        "REQ-057",
+        "REQ-058",
+        "REQ-060",
+        "REQ-061",
+        "REQ-062",
+        "REQ-063",
+        "REQ-086",
+        "REQ-095"
+      ],
+      "acceptance": [
+        {
+          "method": "POST",
+          "path": "/workflows/sla-escalation-monitor/start",
+          "body": { "inputs": { "case_ref": "SEED-ATRISK-004" } },
+          "expect_status": 200,
+          "expect_contains": ["at_risk", "percent_consumed", "sla_due_timestamp", "notification_id"]
+        },
+        {
+          "method": "POST",
+          "path": "/workflows/sla-escalation-monitor/start",
+          "body": { "inputs": { "case_ref": "SEED-BREACH-005" } },
+          "expect_status": 200,
+          "expect_contains": ["breached", "breached_at", "escalation_level", "escalated_to_role"]
+        },
+        {
+          "method": "POST",
+          "path": "/workflows/sla-escalation-monitor/start",
+          "body": { "inputs": { "case_ref": "SEED-LOW-001" } },
+          "expect_status": 200,
+          "expect_contains": ["decision_recorded"]
+        },
+        {
+          "method": "GET",
+          "path": "/api/notifications",
+          "expect_status": 200,
+          "expect_contains": ["notification_type", "recipient_user_id", "sent_at"]
+        },
+        {
+          "method": "GET",
+          "path": "/api/escalations",
+          "expect_status": 200,
+          "expect_contains": ["escalation_level", "escalated_to_role", "escalated_at"]
+        },
+        {
+          "method": "GET",
+          "path": "/cases",
+          "expect_status": 200,
+          "expect_contains": ["sla_due", "is_at_risk", "sla_breached", "assigned_approver_id"]
+        }
+      ]
+    },
+    {
+      "id": "audit-search-export",
+      "name": "Case search, audit trail view, CSV export and weekly report",
+      "story": "As an analyst or auditor, I search past cases, read any case's full trail in chronological order with before/after values, export a whole case file — including its risk factor inputs, the matrix version applied and the memo text as approved — as CSV for internal audit or the regulator, and read the weekly operations report listing the period's breached SLAs, so any past decision can be reproduced exactly from the record.",
+      "addresses": [
+        "REQ-059",
+        "REQ-068",
+        "REQ-069",
+        "REQ-072",
+        "REQ-073",
+        "REQ-074",
+        "REQ-090",
+        "REQ-092"
+      ],
+      "acceptance": [
+        {
+          "method": "GET",
+          "path": "/search?q=Northwind",
+          "expect_status": 200,
+          "expect_contains": ["Northwind"]
+        },
+        {
+          "method": "GET",
+          "path": "/cases/SEED-HIGH-003/audit",
+          "expect_status": 200,
+          "expect_contains": ["SEED-HIGH-003", "entries", "performed_by_role", "timestamp"]
+        },
+        {
+          "method": "GET",
+          "path": "/export/cases.csv",
+          "expect_status": 200,
+          "expect_contains": ["client_name", "risk_matrix_version", "document_checklist_version"]
+        },
+        {
+          "method": "GET",
+          "path": "/export/audit_trail.csv",
+          "expect_status": 200,
+          "expect_contains": ["performed_by_role", "old_value", "new_value"]
+        },
+        {
+          "method": "GET",
+          "path": "/export/assessment_memos.csv",
+          "expect_status": 200,
+          "expect_contains": ["memo_text", "is_machine_drafted", "approved_by_role"]
+        },
+        {
+          "method": "GET",
+          "path": "/reports/weekly",
+          "expect_status": 200,
+          "expect_contains": ["breached", "period"]
+        }
+      ]
+    }
+  ]
+}

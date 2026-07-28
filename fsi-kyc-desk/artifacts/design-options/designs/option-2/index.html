@@ -1,0 +1,2817 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>KYC Review Desk — Watchfloor Operational Compliance Console</title>
+<link rel="stylesheet" href="tokens.css">
+<style>
+/* ============================================================
+   WATCHFLOOR — OPERATIONAL COMPLIANCE CONSOLE
+   Structural stylesheet. Dense operator surface:
+   fixed top status strip · persistent left rail ·
+   scrollable work canvas · persistent right utility drawer.
+   ============================================================ */
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font);
+  font-size: var(--fs-sm);
+  line-height: var(--lh-body);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overflow: hidden;
+  background-image:
+    linear-gradient(var(--grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+  background-size: 48px 48px, 48px 48px;
+}
+
+/* screen-reader-only radio inputs that drive the tab mechanism */
+.nav-radio {
+  position: absolute;
+  width: 1px; height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* ============================================================
+   APP FRAME
+   ============================================================ */
+
+.app {
+  display: grid;
+  grid-template-columns: var(--rail-w) minmax(0, 1fr) var(--drawer-w);
+  grid-template-rows: var(--strip-h) minmax(0, 1fr);
+  grid-template-areas:
+    "strip strip strip"
+    "rail  canvas drawer";
+  height: 100vh;
+}
+
+/* ------------------------------------------------------------
+   TOP STATUS STRIP
+   ------------------------------------------------------------ */
+
+.strip {
+  grid-area: strip;
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+  background: linear-gradient(180deg, #0e141d 0%, var(--strip-bg) 100%);
+  border-bottom: 1px solid var(--border);
+  box-shadow: 0 1px 0 rgba(0,0,0,.6), 0 6px 18px rgba(0,0,0,.35);
+  position: relative;
+  z-index: 40;
+}
+
+.strip::after {
+  content: "";
+  position: absolute;
+  left: 0; right: 0; bottom: -1px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--accent-glow) 18%, transparent 60%);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 var(--pad-md) 0 var(--pad-lg);
+  min-width: calc(var(--rail-w) + 76px);
+  border-right: 1px solid var(--border-soft);
+}
+
+.brand-mark {
+  width: 26px; height: 26px;
+  flex: none;
+  border-radius: var(--radius-sm);
+  background:
+    radial-gradient(circle at 32% 28%, rgba(22,197,214,.55), transparent 62%),
+    linear-gradient(150deg, var(--surface-4), var(--surface-2));
+  border: 1px solid var(--border-strong);
+  box-shadow: var(--glow-live);
+  position: relative;
+  display: grid;
+  place-items: center;
+}
+.brand-mark span {
+  font-family: var(--font-mono);
+  font-size: var(--fs-tiny);
+  font-weight: 700;
+  color: var(--accent);
+  letter-spacing: .04em;
+}
+
+.brand-text { display: flex; flex-direction: column; line-height: 1.15; }
+.brand-app {
+  font-size: var(--fs-md);
+  font-weight: 700;
+  color: var(--fg-strong);
+  letter-spacing: .01em;
+  white-space: nowrap;
+}
+.brand-suite {
+  font-size: var(--fs-micro);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-label);
+  color: var(--fg-faint);
+  white-space: nowrap;
+}
+
+.strip-metrics {
+  display: flex;
+  align-items: stretch;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.metric {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 1px;
+  padding: 0 var(--pad-md);
+  border-right: 1px solid var(--border-soft);
+  min-width: 0;
+  white-space: nowrap;
+}
+.metric-k {
+  font-size: var(--fs-micro);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-label);
+  color: var(--fg-faint);
+}
+.metric-v {
+  font-family: var(--font-mono);
+  font-size: var(--fs-md);
+  font-variant-numeric: tabular-nums;
+  color: var(--fg-strong);
+  font-weight: 600;
+  letter-spacing: -.01em;
+  display: flex; align-items: center; gap: 6px;
+}
+.metric-v.is-ok   { color: var(--ok); }
+.metric-v.is-warn { color: var(--warn); }
+.metric-v.is-crit { color: var(--crit); }
+.metric-sub { font-size: var(--fs-micro); color: var(--fg-dim); font-family: var(--font-mono); }
+
+.live-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--ok);
+  box-shadow: 0 0 0 3px var(--ok-wash);
+  animation: pulse 2.4s ease-in-out infinite;
+  flex: none;
+}
+.live-dot.is-crit { background: var(--crit); box-shadow: 0 0 0 3px var(--crit-wash); animation-duration: 1.1s; }
+.live-dot.is-warn { background: var(--warn); box-shadow: 0 0 0 3px var(--warn-wash); }
+@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .28; } }
+
+.strip-right {
+  display: flex;
+  align-items: center;
+  gap: var(--pad-sm);
+  padding: 0 var(--pad-lg) 0 var(--pad-md);
+  border-left: 1px solid var(--border-soft);
+  flex: none;
+}
+
+/* agent mode selector */
+#agent-mode {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  background: var(--surface-inset);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  padding: 2px;
+  box-shadow: inset 0 1px 3px rgba(0,0,0,.5);
+}
+#agent-mode .mode-label {
+  font-size: var(--fs-micro);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-label);
+  color: var(--fg-faint);
+  padding: 0 8px 0 6px;
+  white-space: nowrap;
+}
+#agent-mode select {
+  appearance: none;
+  -webkit-appearance: none;
+  background: linear-gradient(180deg, var(--surface-4), var(--surface-3));
+  color: var(--accent);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  font-size: var(--fs-tiny);
+  letter-spacing: .05em;
+  text-transform: uppercase;
+  padding: 4px 24px 4px 8px;
+  cursor: pointer;
+  box-shadow: 0 0 0 1px rgba(22,197,214,.18), 0 0 12px rgba(22,197,214,.1);
+}
+#agent-mode select:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+#agent-mode .caret {
+  margin-left: -18px;
+  pointer-events: none;
+  color: var(--accent-dim);
+  font-size: 8px;
+}
+
+.role-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--surface-inset);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  padding: 4px 10px 4px 6px;
+}
+.role-avatar {
+  width: 22px; height: 22px; border-radius: var(--radius-sm);
+  background: linear-gradient(150deg, #244055, #16222e);
+  border: 1px solid var(--border-strong);
+  display: grid; place-items: center;
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  color: var(--accent);
+  font-weight: 700;
+}
+.role-lines { display: flex; flex-direction: column; line-height: 1.2; }
+.role-name { font-size: var(--fs-xs); color: var(--fg-strong); font-weight: 600; white-space: nowrap; }
+.role-tier {
+  font-size: var(--fs-micro);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wide);
+  color: var(--warn);
+  white-space: nowrap;
+}
+.least-priv {
+  font-size: var(--fs-micro);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-label);
+  color: var(--fg-faint);
+  border-left: 1px solid var(--border-soft);
+  padding-left: 8px;
+  white-space: nowrap;
+}
+
+/* ------------------------------------------------------------
+   LEFT RAIL
+   ------------------------------------------------------------ */
+
+.rail {
+  grid-area: rail;
+  background: var(--rail-bg);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  z-index: 30;
+}
+
+.rail-section {
+  padding: var(--pad-md) var(--pad-sm) var(--pad-tight);
+  font-size: var(--fs-micro);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-label);
+  color: var(--fg-faint);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+.rail-section::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--border-soft);
+}
+
+.rail-item {
+  display: grid;
+  grid-template-columns: 22px minmax(0,1fr) auto;
+  align-items: center;
+  gap: 8px;
+  margin: 1px var(--pad-tight);
+  padding: 7px 8px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  color: var(--fg-muted);
+  font-size: var(--fs-sm);
+  border: 1px solid transparent;
+  position: relative;
+  user-select: none;
+  transition: background .12s ease, color .12s ease;
+}
+.rail-item:hover { background: var(--rail-active); color: var(--fg-strong); }
+
+.rail-glyph {
+  font-family: var(--font-mono);
+  font-size: var(--fs-tiny);
+  color: var(--fg-faint);
+  text-align: center;
+  letter-spacing: -.04em;
+}
+.rail-label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; letter-spacing: .01em; }
+
+.rail-count {
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  font-variant-numeric: tabular-nums;
+  color: var(--fg-dim);
+  background: var(--surface-2);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-pill);
+  padding: 0 6px;
+  line-height: 15px;
+}
+.rail-count.is-crit { color: var(--crit); border-color: var(--crit-dim); background: var(--crit-wash); }
+.rail-count.is-warn { color: var(--warn); border-color: var(--warn-dim); background: var(--warn-wash); }
+
+.rail-kbd {
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  color: var(--fg-faint);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-xs);
+  padding: 0 4px;
+  line-height: 14px;
+  background: var(--surface-inset);
+}
+
+.rail-foot {
+  margin-top: auto;
+  padding: var(--pad-sm);
+  border-top: 1px solid var(--border-soft);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.rail-foot-row {
+  display: flex; justify-content: space-between; align-items: center;
+  font-size: var(--fs-micro);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wide);
+  color: var(--fg-faint);
+}
+.rail-foot-row b { font-family: var(--font-mono); color: var(--fg-dim); font-weight: 500; letter-spacing: 0; text-transform: none; }
+
+/* ------------------------------------------------------------
+   CANVAS + SCREENS
+   ------------------------------------------------------------ */
+
+.canvas {
+  grid-area: canvas;
+  overflow: hidden;
+  position: relative;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.screen { display: none; height: 100%; min-height: 0; flex-direction: column; }
+
+/* tab mechanism: radios precede .app, general sibling combinator */
+#nav-chat:checked     ~ .app #screen-chat,
+#nav-worklist:checked ~ .app #screen-worklist,
+#nav-case:checked     ~ .app #screen-case,
+#nav-score:checked    ~ .app #screen-score,
+#nav-memo:checked     ~ .app #screen-memo,
+#nav-audit:checked    ~ .app #screen-audit,
+#nav-search:checked   ~ .app #screen-search,
+#nav-reports:checked  ~ .app #screen-reports { display: flex; }
+
+#nav-chat:checked     ~ .app label[for="nav-chat"],
+#nav-worklist:checked ~ .app label[for="nav-worklist"],
+#nav-case:checked     ~ .app label[for="nav-case"],
+#nav-score:checked    ~ .app label[for="nav-score"],
+#nav-memo:checked     ~ .app label[for="nav-memo"],
+#nav-audit:checked    ~ .app label[for="nav-audit"],
+#nav-search:checked   ~ .app label[for="nav-search"],
+#nav-reports:checked  ~ .app label[for="nav-reports"] {
+  background: linear-gradient(90deg, var(--accent-wash), transparent 78%), var(--rail-active);
+  color: var(--fg-strong);
+  border-color: var(--border-soft);
+  box-shadow: inset 0 1px 0 var(--border-inner);
+}
+#nav-chat:checked     ~ .app label[for="nav-chat"]::before,
+#nav-worklist:checked ~ .app label[for="nav-worklist"]::before,
+#nav-case:checked     ~ .app label[for="nav-case"]::before,
+#nav-score:checked    ~ .app label[for="nav-score"]::before,
+#nav-memo:checked     ~ .app label[for="nav-memo"]::before,
+#nav-audit:checked    ~ .app label[for="nav-audit"]::before,
+#nav-search:checked   ~ .app label[for="nav-search"]::before,
+#nav-reports:checked  ~ .app label[for="nav-reports"]::before {
+  content: "";
+  position: absolute;
+  left: -6px; top: 5px; bottom: 5px;
+  width: 2px;
+  border-radius: 0 2px 2px 0;
+  background: var(--accent);
+  box-shadow: 0 0 10px var(--accent-glow);
+}
+#nav-chat:checked     ~ .app label[for="nav-chat"] .rail-glyph,
+#nav-worklist:checked ~ .app label[for="nav-worklist"] .rail-glyph,
+#nav-case:checked     ~ .app label[for="nav-case"] .rail-glyph,
+#nav-score:checked    ~ .app label[for="nav-score"] .rail-glyph,
+#nav-memo:checked     ~ .app label[for="nav-memo"] .rail-glyph,
+#nav-audit:checked    ~ .app label[for="nav-audit"] .rail-glyph,
+#nav-search:checked   ~ .app label[for="nav-search"] .rail-glyph,
+#nav-reports:checked  ~ .app label[for="nav-reports"] .rail-glyph { color: var(--accent); }
+
+.nav-radio:focus-visible ~ .app .rail-item { }
+
+/* screen header bar */
+.screen-head {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: var(--pad-sm);
+  padding: 10px var(--pad-lg);
+  border-bottom: 1px solid var(--border);
+  background: linear-gradient(180deg, var(--surface-2), rgba(10,14,20,.7));
+  backdrop-filter: blur(6px);
+  min-height: 52px;
+}
+.screen-title { display: flex; flex-direction: column; line-height: 1.2; min-width: 0; }
+.screen-eyebrow {
+  font-size: var(--fs-micro);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-label);
+  color: var(--fg-faint);
+}
+.screen-h1 {
+  font-size: var(--fs-lg);
+  font-weight: 650;
+  color: var(--fg-strong);
+  letter-spacing: -.005em;
+  margin: 0;
+  white-space: nowrap;
+}
+.screen-head-spacer { flex: 1; }
+.screen-head-meta {
+  display: flex; align-items: center; gap: var(--pad-sm);
+  font-family: var(--font-mono);
+  font-size: var(--fs-tiny);
+  color: var(--fg-dim);
+  font-variant-numeric: tabular-nums;
+}
+
+.screen-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--pad-md) var(--pad-lg) 48px;
+}
+.screen-body.is-flush { padding: 0; }
+
+/* ------------------------------------------------------------
+   PRIMITIVES
+   ------------------------------------------------------------ */
+
+.panel {
+  background: linear-gradient(180deg, var(--surface-2), var(--surface-1));
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-panel);
+  overflow: hidden;
+  position: relative;
+}
+.panel + .panel { margin-top: var(--pad-md); }
+.panel.is-live { box-shadow: var(--shadow-panel), var(--glow-live); }
+.panel.is-crit { border-color: var(--crit-dim); box-shadow: var(--shadow-panel), var(--glow-crit); }
+.panel.is-warn { border-color: var(--warn-dim); box-shadow: var(--shadow-panel), var(--glow-warn); }
+
+.panel-head {
+  display: flex;
+  align-items: center;
+  gap: var(--pad-xs);
+  padding: 8px var(--pad-md);
+  border-bottom: 1px solid var(--border-soft);
+  background: linear-gradient(180deg, rgba(255,255,255,.022), transparent);
+}
+.panel-head h2, .panel-head h3 {
+  margin: 0;
+  font-size: var(--fs-micro);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-label);
+  color: var(--fg-muted);
+  font-weight: 700;
+}
+.panel-head .spacer { flex: 1; }
+.panel-note {
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  color: var(--fg-faint);
+  font-variant-numeric: tabular-nums;
+}
+.panel-body { padding: var(--pad-md); }
+.panel-body.is-flush { padding: 0; }
+
+.grid { display: grid; gap: var(--pad-md); }
+.g-2 { grid-template-columns: repeat(2, minmax(0,1fr)); }
+.g-3 { grid-template-columns: repeat(3, minmax(0,1fr)); }
+.g-4 { grid-template-columns: repeat(4, minmax(0,1fr)); }
+.g-case { grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); }
+.g-memo { grid-template-columns: minmax(0, 1fr) 300px; }
+
+.mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
+.dim { color: var(--fg-dim); }
+.muted { color: var(--fg-muted); }
+.faint { color: var(--fg-faint); }
+.strong { color: var(--fg-strong); }
+.micro {
+  font-size: var(--fs-micro);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-label);
+  color: var(--fg-faint);
+}
+
+/* status chips */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wide);
+  font-weight: 600;
+  line-height: 16px;
+  padding: 0 7px;
+  border-radius: var(--radius-xs);
+  border: 1px solid var(--border-strong);
+  background: var(--neutral-wash);
+  color: var(--neutral);
+  white-space: nowrap;
+}
+.chip::before {
+  content: "";
+  width: 5px; height: 5px;
+  border-radius: 1px;
+  background: currentColor;
+  flex: none;
+}
+.chip.no-dot::before { display: none; }
+.chip.ok      { color: var(--ok);      background: var(--ok-wash);      border-color: var(--ok-dim); }
+.chip.warn    { color: var(--warn);    background: var(--warn-wash);    border-color: var(--warn-dim); }
+.chip.crit    { color: var(--crit);    background: var(--crit-wash);    border-color: var(--crit-dim); }
+.chip.info    { color: var(--info);    background: var(--info-wash);    border-color: #2f5a99; }
+.chip.accent  { color: var(--accent);  background: var(--accent-wash);  border-color: var(--accent-dim); }
+.chip.machine { color: var(--machine); background: var(--machine-wash); border-color: #6b4fb0; }
+.chip.lg { font-size: var(--fs-tiny); line-height: 20px; padding: 0 9px; }
+
+/* countdown pill with depleting bar */
+.countdown {
+  display: inline-grid;
+  grid-template-rows: auto 3px;
+  gap: 3px;
+  min-width: 84px;
+}
+.countdown-v {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -.02em;
+  color: var(--fg-strong);
+  display: flex; align-items: baseline; gap: 4px;
+}
+.countdown-v small { font-size: var(--fs-micro); color: var(--fg-faint); }
+.countdown-track {
+  background: var(--surface-inset);
+  border-radius: var(--radius-pill);
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,.04);
+}
+.countdown-fill {
+  height: 100%;
+  border-radius: var(--radius-pill);
+  background: var(--ok);
+  box-shadow: 0 0 8px var(--ok-wash);
+}
+.countdown.warn .countdown-v { color: var(--warn); }
+.countdown.warn .countdown-fill { background: var(--warn); box-shadow: 0 0 8px var(--warn-wash); }
+.countdown.crit .countdown-v { color: var(--crit); }
+.countdown.crit .countdown-fill { background: var(--crit); box-shadow: 0 0 10px var(--crit-wash); animation: pulse 1.4s ease-in-out infinite; }
+.countdown.done .countdown-v { color: var(--fg-faint); }
+.countdown.done .countdown-fill { background: var(--fg-faint); }
+
+/* severity bar (risk score) */
+.sev {
+  display: grid;
+  grid-template-columns: 40px minmax(56px, 1fr);
+  align-items: center;
+  gap: 8px;
+}
+.sev-num {
+  font-family: var(--font-mono);
+  font-size: var(--fs-md);
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  letter-spacing: -.03em;
+  text-align: right;
+}
+.sev-track {
+  height: 6px;
+  background: var(--surface-inset);
+  border: 1px solid rgba(255,255,255,.04);
+  border-radius: var(--radius-pill);
+  overflow: hidden;
+  position: relative;
+}
+.sev-track::before, .sev-track::after {
+  content: "";
+  position: absolute; top: 0; bottom: 0;
+  width: 1px;
+  background: rgba(255,255,255,.13);
+  z-index: 2;
+}
+.sev-track::before { left: 40%; }
+.sev-track::after  { left: 70%; }
+.sev-fill { height: 100%; border-radius: var(--radius-pill); }
+.sev.low  .sev-num { color: var(--band-low); }  .sev.low  .sev-fill { background: linear-gradient(90deg, var(--ok-dim), var(--band-low)); box-shadow: 0 0 8px var(--ok-wash); }
+.sev.med  .sev-num { color: var(--band-med); }  .sev.med  .sev-fill { background: linear-gradient(90deg, var(--warn-dim), var(--band-med)); box-shadow: 0 0 8px var(--warn-wash); }
+.sev.high .sev-num { color: var(--band-high); } .sev.high .sev-fill { background: linear-gradient(90deg, var(--crit-dim), var(--band-high)); box-shadow: 0 0 10px var(--crit-wash); }
+
+/* dense tables */
+.tbl {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: var(--fs-xs);
+}
+.tbl thead th {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  background: linear-gradient(180deg, var(--surface-3), var(--surface-2));
+  text-align: left;
+  font-size: var(--fs-micro);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-label);
+  color: var(--fg-faint);
+  font-weight: 700;
+  padding: 7px var(--pad-sm);
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+.tbl tbody td {
+  padding: 7px var(--pad-sm);
+  border-bottom: 1px solid var(--border-soft);
+  vertical-align: middle;
+  color: var(--fg);
+  height: var(--row-h);
+}
+.tbl tbody tr:hover td { background: rgba(22,197,214,.045); }
+.tbl tbody tr.is-crit td { background: rgba(255,84,112,.05); }
+.tbl tbody tr.is-crit:hover td { background: rgba(255,84,112,.09); }
+.tbl tbody tr.is-sel td { background: var(--accent-wash); box-shadow: inset 2px 0 0 var(--accent); }
+.tbl .num { text-align: right; font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.tbl .id { font-family: var(--font-mono); color: var(--accent); letter-spacing: -.01em; }
+.tbl tfoot td {
+  padding: 8px var(--pad-sm);
+  border-top: 1px solid var(--border-strong);
+  background: var(--surface-3);
+  font-weight: 700;
+  color: var(--fg-strong);
+}
+
+/* key/value list */
+.kv { display: grid; grid-template-columns: 132px minmax(0,1fr); gap: 0; }
+.kv dt {
+  font-size: var(--fs-micro);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-label);
+  color: var(--fg-faint);
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border-soft);
+}
+.kv dd {
+  margin: 0;
+  padding: 6px 0;
+  font-size: var(--fs-xs);
+  color: var(--fg);
+  border-bottom: 1px solid var(--border-soft);
+}
+.kv dt:last-of-type, .kv dd:last-of-type { border-bottom: 0; }
+
+/* buttons */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  letter-spacing: .02em;
+  color: var(--fg);
+  background: linear-gradient(180deg, var(--surface-4), var(--surface-3));
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  padding: 6px 12px;
+  cursor: pointer;
+  white-space: nowrap;
+  box-shadow: inset 0 1px 0 var(--border-inner);
+}
+.btn:hover { border-color: var(--accent-dim); color: var(--fg-strong); }
+.btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.btn.primary {
+  background: linear-gradient(180deg, var(--accent), var(--accent-dim));
+  color: var(--on-primary);
+  border-color: var(--accent);
+  box-shadow: 0 0 14px var(--accent-glow), inset 0 1px 0 rgba(255,255,255,.28);
+}
+.btn.primary:hover { filter: brightness(1.08); }
+.btn.ghost { background: transparent; }
+.btn.danger { color: var(--crit); border-color: var(--crit-dim); background: var(--crit-wash); }
+.btn.sm { font-size: var(--fs-micro); padding: 4px 9px; }
+.btn[disabled], .btn.is-disabled {
+  opacity: .5;
+  cursor: not-allowed;
+  filter: grayscale(.65);
+  box-shadow: none;
+}
+.btn .kbd {
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  opacity: .65;
+  border: 1px solid currentColor;
+  border-radius: 2px;
+  padding: 0 3px;
+  line-height: 12px;
+}
+
+/* inputs */
+.field {
+  display: flex; flex-direction: column; gap: 4px; min-width: 0;
+}
+.field > label {
+  font-size: var(--fs-micro);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-label);
+  color: var(--fg-faint);
+}
+.field input, .field select {
+  appearance: none; -webkit-appearance: none;
+  background: var(--surface-inset);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  color: var(--fg-strong);
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  padding: 6px 8px;
+  box-shadow: inset 0 1px 3px rgba(0,0,0,.45);
+  min-width: 0;
+}
+.field input::placeholder { color: var(--fg-faint); }
+.field input:focus, .field select:focus { outline: none; border-color: var(--accent-dim); box-shadow: inset 0 1px 3px rgba(0,0,0,.45), 0 0 0 2px var(--accent-wash); }
+
+/* callouts */
+.callout {
+  display: flex;
+  gap: var(--pad-sm);
+  padding: var(--pad-sm) var(--pad-md);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-strong);
+  border-left-width: 3px;
+  background: var(--surface-3);
+  font-size: var(--fs-xs);
+  line-height: 1.5;
+}
+.callout .co-title {
+  font-size: var(--fs-micro);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-label);
+  font-weight: 700;
+  display: block;
+  margin-bottom: 3px;
+}
+.callout.crit { border-left-color: var(--crit); background: var(--crit-wash); }
+.callout.crit .co-title { color: var(--crit); }
+.callout.warn { border-left-color: var(--warn); background: var(--warn-wash); }
+.callout.warn .co-title { color: var(--warn); }
+.callout.info { border-left-color: var(--info); background: var(--info-wash); }
+.callout.info .co-title { color: var(--info); }
+.callout.machine { border-left-color: var(--machine); background: var(--machine-wash); }
+.callout.machine .co-title { color: var(--machine); }
+
+/* sticky action bar */
+.action-bar {
+  flex: none;
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--pad-md);
+  padding: 10px var(--pad-lg);
+  background: linear-gradient(180deg, rgba(12,17,25,.94), var(--surface-0));
+  border-top: 1px solid var(--border-strong);
+  box-shadow: var(--shadow-sticky);
+  z-index: 20;
+}
+.action-bar .lock-reason {
+  display: flex; flex-direction: column; line-height: 1.35; min-width: 0;
+}
+.action-bar .lock-reason .lr-t {
+  font-size: var(--fs-micro);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-label);
+  color: var(--crit);
+  font-weight: 700;
+}
+.action-bar .lock-reason .lr-b { font-size: var(--fs-xs); color: var(--fg-muted); }
+.action-bar .spacer { flex: 1; }
+
+/* toolbar */
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--pad-xs);
+  padding: 8px var(--pad-lg);
+  border-bottom: 1px solid var(--border-soft);
+  background: var(--surface-1);
+  flex-wrap: wrap;
+}
+.seg {
+  display: inline-flex;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  background: var(--surface-inset);
+}
+.seg span {
+  font-size: var(--fs-micro);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wide);
+  padding: 4px 9px;
+  color: var(--fg-dim);
+  border-right: 1px solid var(--border-soft);
+  cursor: pointer;
+  font-weight: 600;
+}
+.seg span:last-child { border-right: 0; }
+.seg span.on { background: var(--accent-wash); color: var(--accent); box-shadow: inset 0 -2px 0 var(--accent-dim); }
+
+/* ------------------------------------------------------------
+   CHAT SCREEN
+   ------------------------------------------------------------ */
+
+.chat-layout {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0,1fr) 268px;
+}
+.chat-main { display: flex; flex-direction: column; min-height: 0; min-width: 0; }
+
+#messages {
+  list-style: none;
+  margin: 0;
+  padding: var(--pad-lg) var(--pad-lg) var(--pad-md);
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--pad-md);
+}
+#messages > li { display: grid; grid-template-columns: 26px minmax(0,1fr); gap: var(--pad-sm); max-width: 860px; }
+#messages > li.from-user { margin-left: auto; }
+
+.msg-av {
+  width: 26px; height: 26px;
+  border-radius: var(--radius-sm);
+  display: grid; place-items: center;
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  font-weight: 700;
+  border: 1px solid var(--border-strong);
+  background: var(--surface-3);
+  color: var(--fg-muted);
+}
+li.from-agent .msg-av { color: var(--accent); border-color: var(--accent-dim); background: var(--accent-wash); box-shadow: 0 0 10px var(--accent-glow); }
+li.from-system .msg-av { color: var(--fg-faint); }
+
+.msg-body { min-width: 0; }
+.msg-meta {
+  display: flex; align-items: center; gap: 8px;
+  margin-bottom: 4px;
+  font-size: var(--fs-micro);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-label);
+  color: var(--fg-faint);
+  flex-wrap: wrap;
+}
+.msg-meta b { color: var(--fg-muted); font-weight: 700; }
+.msg-meta time { font-family: var(--font-mono); letter-spacing: 0; text-transform: none; }
+
+.bubble {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface-2);
+  padding: var(--pad-sm) var(--pad-md);
+  font-size: var(--fs-xs);
+  line-height: var(--lh-body);
+  box-shadow: inset 0 1px 0 var(--border-inner);
+}
+li.from-user .bubble { background: var(--surface-3); border-color: var(--border-strong); }
+li.from-agent .bubble { border-color: #23384a; background: linear-gradient(180deg, #131d27, var(--surface-2)); }
+li.from-system .bubble { background: transparent; border-style: dashed; border-color: var(--border-soft); color: var(--fg-dim); font-family: var(--font-mono); font-size: var(--fs-micro); }
+.bubble p { margin: 0 0 8px; }
+.bubble p:last-child { margin-bottom: 0; }
+.bubble ul, .bubble ol { margin: 0 0 8px; padding-left: 18px; }
+.bubble li { margin-bottom: 3px; }
+
+.cite {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 3px;
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  color: var(--accent);
+  background: var(--accent-wash);
+  border: 1px solid var(--accent-dim);
+  border-radius: var(--radius-xs);
+  padding: 0 4px;
+  line-height: 14px;
+  white-space: nowrap;
+  vertical-align: 1px;
+}
+
+.cite-strip {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--border-soft);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.composer-wrap {
+  flex: none;
+  border-top: 1px solid var(--border);
+  background: linear-gradient(180deg, var(--surface-1), var(--surface-0));
+  padding: var(--pad-sm) var(--pad-lg) var(--pad-md);
+}
+.composer-hint {
+  display: flex; align-items: center; gap: var(--pad-sm);
+  margin-bottom: 7px;
+  font-size: var(--fs-micro);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-label);
+  color: var(--fg-faint);
+  flex-wrap: wrap;
+}
+#composer {
+  display: grid;
+  grid-template-columns: auto minmax(0,1fr) auto;
+  align-items: center;
+  gap: var(--pad-xs);
+  background: var(--surface-inset);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  padding: 5px 6px 5px var(--pad-sm);
+  box-shadow: inset 0 1px 4px rgba(0,0,0,.55);
+}
+#composer:focus-within { border-color: var(--accent-dim); box-shadow: inset 0 1px 4px rgba(0,0,0,.55), 0 0 0 2px var(--accent-wash); }
+.composer-scope {
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wide);
+  color: var(--accent);
+  background: var(--accent-wash);
+  border: 1px solid var(--accent-dim);
+  border-radius: var(--radius-xs);
+  padding: 2px 6px;
+  white-space: nowrap;
+}
+#input {
+  background: transparent;
+  border: 0;
+  color: var(--fg-strong);
+  font-family: var(--font);
+  font-size: var(--fs-sm);
+  padding: 7px 2px;
+  min-width: 0;
+}
+#input::placeholder { color: var(--fg-faint); }
+#input:focus { outline: none; }
+
+.chat-side {
+  border-left: 1px solid var(--border);
+  background: var(--surface-1);
+  overflow-y: auto;
+  padding: var(--pad-md) var(--pad-sm);
+  display: flex;
+  flex-direction: column;
+  gap: var(--pad-md);
+  min-width: 0;
+}
+.side-block { }
+.side-title {
+  font-size: var(--fs-micro);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-label);
+  color: var(--fg-faint);
+  margin: 0 0 6px;
+  display: flex; align-items: center; gap: 6px;
+}
+.side-title::after { content: ""; flex: 1; height: 1px; background: var(--border-soft); }
+.src {
+  display: grid;
+  grid-template-columns: minmax(0,1fr) auto;
+  gap: 2px 6px;
+  padding: 6px 8px;
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  margin-bottom: 5px;
+  font-size: var(--fs-micro);
+}
+.src b { color: var(--fg); font-size: var(--fs-xs); font-weight: 600; grid-column: 1; }
+.src .v { font-family: var(--font-mono); color: var(--accent); }
+.src .m { grid-column: 1 / -1; color: var(--fg-faint); font-family: var(--font-mono); }
+
+/* ------------------------------------------------------------
+   RIGHT UTILITY DRAWER
+   ------------------------------------------------------------ */
+
+.drawer {
+  grid-area: drawer;
+  background: var(--drawer-bg);
+  border-left: 1px solid var(--border);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  z-index: 25;
+}
+.drawer-head {
+  position: sticky; top: 0; z-index: 5;
+  display: flex; align-items: center; gap: 8px;
+  padding: 9px var(--pad-md);
+  border-bottom: 1px solid var(--border);
+  background: linear-gradient(180deg, var(--surface-2), var(--drawer-bg));
+  font-size: var(--fs-micro);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-label);
+  color: var(--fg-muted);
+  font-weight: 700;
+}
+.drawer-sec { padding: var(--pad-md) var(--pad-md) var(--pad-sm); border-bottom: 1px solid var(--border-soft); }
+.drawer-sec h3 {
+  margin: 0 0 8px;
+  font-size: var(--fs-micro);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-label);
+  color: var(--fg-faint);
+  font-weight: 700;
+  display: flex; align-items: center; gap: 6px;
+}
+.drawer-sec h3 .spacer { flex: 1; }
+
+.q-row {
+  display: grid;
+  grid-template-columns: minmax(0,1fr) auto;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 0;
+  border-bottom: 1px dotted var(--border-soft);
+  font-size: var(--fs-xs);
+}
+.q-row:last-child { border-bottom: 0; }
+.q-row .q-id { font-family: var(--font-mono); color: var(--accent); font-size: var(--fs-tiny); }
+.q-row .q-sub { font-size: var(--fs-micro); color: var(--fg-faint); display: block; }
+
+.chain { display: flex; flex-direction: column; gap: 0; }
+.chain-step {
+  display: grid;
+  grid-template-columns: 16px minmax(0,1fr);
+  gap: 8px;
+  padding-bottom: 10px;
+  position: relative;
+  font-size: var(--fs-xs);
+}
+.chain-step:not(:last-child)::before {
+  content: "";
+  position: absolute;
+  left: 7px; top: 14px; bottom: 0;
+  width: 1px;
+  background: var(--border-strong);
+}
+.chain-node {
+  width: 15px; height: 15px;
+  border-radius: 50%;
+  border: 1px solid var(--border-strong);
+  background: var(--surface-3);
+  display: grid; place-items: center;
+  font-family: var(--font-mono);
+  font-size: 8px;
+  color: var(--fg-faint);
+  z-index: 1;
+}
+.chain-step.done .chain-node { background: var(--ok-wash); border-color: var(--ok-dim); color: var(--ok); }
+.chain-step.active .chain-node { background: var(--warn-wash); border-color: var(--warn); color: var(--warn); box-shadow: 0 0 10px var(--warn-wash); }
+.chain-t { color: var(--fg); font-weight: 600; }
+.chain-m { font-size: var(--fs-micro); color: var(--fg-faint); font-family: var(--font-mono); }
+
+.ver-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  padding: 4px 0;
+  font-size: var(--fs-tiny);
+  border-bottom: 1px dotted var(--border-soft);
+}
+.ver-row:last-child { border-bottom: 0; }
+.ver-row span { color: var(--fg-muted); }
+.ver-row b { font-family: var(--font-mono); color: var(--accent); font-weight: 600; }
+
+.hot { display: grid; grid-template-columns: auto minmax(0,1fr); gap: 4px 8px; font-size: var(--fs-micro); align-items: center; }
+.hot kbd {
+  font-family: var(--font-mono);
+  background: var(--surface-inset);
+  border: 1px solid var(--border-strong);
+  border-bottom-width: 2px;
+  border-radius: var(--radius-xs);
+  padding: 1px 5px;
+  color: var(--fg-muted);
+  font-size: var(--fs-micro);
+  text-align: center;
+}
+.hot span { color: var(--fg-faint); }
+
+/* ------------------------------------------------------------
+   AUDIT LEDGER
+   ------------------------------------------------------------ */
+
+.ledger { display: flex; flex-direction: column; }
+.ledger-row {
+  display: grid;
+  grid-template-columns: 150px 132px minmax(0,1fr);
+  gap: var(--pad-md);
+  padding: 9px var(--pad-md);
+  border-bottom: 1px solid var(--border-soft);
+  font-size: var(--fs-xs);
+  position: relative;
+}
+.ledger-row:hover { background: rgba(255,255,255,.018); }
+.ledger-row::before {
+  content: "";
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 2px;
+  background: var(--border-strong);
+}
+.ledger-row.ev-approve::before { background: var(--ok); }
+.ledger-row.ev-reject::before  { background: var(--crit); }
+.ledger-row.ev-escalate::before{ background: var(--warn); }
+.ledger-row.ev-agent::before   { background: var(--machine); }
+.ledger-row.ev-system::before  { background: var(--info); }
+
+.ledger-when { display: flex; flex-direction: column; gap: 1px; }
+.ledger-ts { font-family: var(--font-mono); font-size: var(--fs-tiny); color: var(--fg-muted); font-variant-numeric: tabular-nums; }
+.ledger-seq { font-family: var(--font-mono); font-size: var(--fs-micro); color: var(--fg-faint); }
+.ledger-who { display: flex; flex-direction: column; gap: 1px; }
+.ledger-actor { color: var(--fg-strong); font-weight: 600; }
+.ledger-role { font-size: var(--fs-micro); text-transform: uppercase; letter-spacing: var(--tracking-wide); color: var(--fg-faint); }
+.ledger-what { min-width: 0; }
+.ledger-action { color: var(--fg); margin-bottom: 4px; }
+.delta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  background: var(--surface-inset);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-xs);
+  padding: 2px 7px;
+  flex-wrap: wrap;
+}
+.delta .before { color: var(--fg-faint); text-decoration: line-through; text-decoration-color: var(--crit-dim); }
+.delta .arrow { color: var(--accent); }
+.delta .after { color: var(--ok); font-weight: 600; }
+.hash { font-family: var(--font-mono); font-size: var(--fs-micro); color: var(--fg-faint); letter-spacing: -.02em; }
+
+/* ------------------------------------------------------------
+   MEMO
+   ------------------------------------------------------------ */
+
+.memo-doc {
+  padding: var(--pad-lg);
+  font-size: var(--fs-xs);
+  line-height: 1.62;
+  max-width: 780px;
+}
+.memo-doc h3 {
+  font-size: var(--fs-micro);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-label);
+  color: var(--accent);
+  margin: var(--pad-lg) 0 6px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--border-soft);
+}
+.memo-doc h3:first-child { margin-top: 0; }
+.memo-doc p { margin: 0 0 10px; color: var(--fg); }
+.memo-doc ul { margin: 0 0 10px; padding-left: 18px; }
+.memo-doc li { margin-bottom: 4px; }
+
+.machine-banner {
+  display: flex;
+  align-items: center;
+  gap: var(--pad-sm);
+  padding: var(--pad-sm) var(--pad-md);
+  background:
+    repeating-linear-gradient(135deg, rgba(180,140,255,.09) 0 8px, transparent 8px 16px),
+    var(--machine-wash);
+  border: 1px solid #6b4fb0;
+  border-radius: var(--radius-sm);
+  box-shadow: 0 0 18px rgba(180,140,255,.14);
+}
+.machine-banner .mb-tag {
+  font-family: var(--font-mono);
+  font-size: var(--fs-tiny);
+  font-weight: 700;
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: #d9c6ff;
+  background: rgba(107,79,176,.55);
+  border: 1px solid var(--machine);
+  border-radius: var(--radius-xs);
+  padding: 3px 9px;
+  white-space: nowrap;
+}
+.machine-banner .mb-txt { font-size: var(--fs-xs); color: #cbb9ea; line-height: 1.45; }
+
+.ver-list { display: flex; flex-direction: column; }
+.ver-item {
+  display: grid;
+  grid-template-columns: 46px minmax(0,1fr);
+  gap: 8px;
+  padding: 8px var(--pad-md);
+  border-bottom: 1px solid var(--border-soft);
+  font-size: var(--fs-micro);
+}
+.ver-item:last-child { border-bottom: 0; }
+.ver-item .vtag {
+  font-family: var(--font-mono);
+  font-size: var(--fs-tiny);
+  color: var(--accent);
+  font-weight: 700;
+}
+.ver-item.is-current { background: var(--accent-wash); }
+.ver-item .vt { color: var(--fg); font-size: var(--fs-xs); }
+.ver-item .vm { color: var(--fg-faint); font-family: var(--font-mono); }
+
+.cite-list { display: flex; flex-direction: column; }
+.cite-item {
+  display: grid;
+  grid-template-columns: 34px minmax(0,1fr);
+  gap: 8px;
+  padding: 8px var(--pad-md);
+  border-bottom: 1px solid var(--border-soft);
+  font-size: var(--fs-micro);
+}
+.cite-item:last-child { border-bottom: 0; }
+.cite-item .cn {
+  font-family: var(--font-mono);
+  color: var(--accent);
+  background: var(--accent-wash);
+  border: 1px solid var(--accent-dim);
+  border-radius: var(--radius-xs);
+  text-align: center;
+  height: 17px; line-height: 15px;
+  font-size: var(--fs-micro);
+}
+.cite-item .ct { color: var(--fg); font-size: var(--fs-xs); }
+.cite-item .cs { color: var(--fg-faint); font-family: var(--font-mono); }
+
+/* ------------------------------------------------------------
+   CHECKLIST
+   ------------------------------------------------------------ */
+
+.check-row {
+  display: grid;
+  grid-template-columns: 18px minmax(0,1fr) auto;
+  align-items: center;
+  gap: var(--pad-sm);
+  padding: 7px var(--pad-md);
+  border-bottom: 1px solid var(--border-soft);
+  font-size: var(--fs-xs);
+}
+.check-row:last-child { border-bottom: 0; }
+.check-mark {
+  width: 15px; height: 15px;
+  border-radius: var(--radius-xs);
+  border: 1px solid var(--border-strong);
+  display: grid; place-items: center;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  background: var(--surface-inset);
+  color: var(--fg-faint);
+}
+.check-row.pass .check-mark { color: var(--ok); border-color: var(--ok-dim); background: var(--ok-wash); }
+.check-row.fail .check-mark { color: var(--crit); border-color: var(--crit-dim); background: var(--crit-wash); }
+.check-row.fail .check-name { color: var(--crit); }
+.check-row.na .check-mark { color: var(--fg-faint); }
+.check-name { color: var(--fg); }
+.check-name small { display: block; color: var(--fg-faint); font-size: var(--fs-micro); font-family: var(--font-mono); }
+
+/* stat tiles */
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(148px, 1fr)); gap: var(--pad-sm); }
+.tile {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: linear-gradient(180deg, var(--surface-3), var(--surface-2));
+  padding: var(--pad-sm) var(--pad-md);
+  box-shadow: inset 0 1px 0 var(--border-inner);
+  display: flex; flex-direction: column; gap: 2px;
+  position: relative;
+  overflow: hidden;
+}
+.tile::after {
+  content: "";
+  position: absolute; inset: auto 0 0 0; height: 2px;
+  background: var(--border-strong);
+}
+.tile.ok::after   { background: var(--ok); box-shadow: 0 0 10px var(--ok-wash); }
+.tile.warn::after { background: var(--warn); box-shadow: 0 0 10px var(--warn-wash); }
+.tile.crit::after { background: var(--crit); box-shadow: 0 0 10px var(--crit-wash); }
+.tile-k { font-size: var(--fs-micro); text-transform: uppercase; letter-spacing: var(--tracking-label); color: var(--fg-faint); }
+.tile-v { font-family: var(--font-mono); font-size: var(--fs-2xl); font-weight: 700; letter-spacing: -.035em; color: var(--fg-strong); font-variant-numeric: tabular-nums; line-height: 1.15; }
+.tile.ok .tile-v { color: var(--ok); }
+.tile.warn .tile-v { color: var(--warn); }
+.tile.crit .tile-v { color: var(--crit); }
+.tile-m { font-size: var(--fs-micro); color: var(--fg-dim); font-family: var(--font-mono); }
+
+.readonly-note {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: var(--fs-micro);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-label);
+  color: var(--fg-faint);
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-sm);
+  padding: 4px 9px;
+}
+
+/* filter bar for search */
+.filters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: var(--pad-sm);
+  align-items: end;
+}
+
+.stack { display: flex; flex-direction: column; gap: var(--pad-md); }
+.row { display: flex; align-items: center; gap: var(--pad-sm); flex-wrap: wrap; }
+.row.tight { gap: 6px; }
+
+.scroll-x { overflow-x: auto; }
+
+/* scrollbars */
+::-webkit-scrollbar { width: 9px; height: 9px; }
+::-webkit-scrollbar-track { background: var(--surface-0); }
+::-webkit-scrollbar-thumb { background: #26313f; border-radius: var(--radius-pill); border: 2px solid var(--surface-0); }
+::-webkit-scrollbar-thumb:hover { background: #33465a; }
+
+@media (max-width: 1400px) {
+  .app { grid-template-columns: var(--rail-w) minmax(0,1fr); grid-template-areas: "strip strip" "rail canvas"; }
+  .drawer { display: none; }
+}
+</style>
+</head>
+<body>
+
+<!-- ===== tab mechanism: pure-CSS radio nav ===== -->
+<input class="nav-radio" type="radio" name="screen" id="nav-chat" checked>
+<input class="nav-radio" type="radio" name="screen" id="nav-worklist">
+<input class="nav-radio" type="radio" name="screen" id="nav-case">
+<input class="nav-radio" type="radio" name="screen" id="nav-score">
+<input class="nav-radio" type="radio" name="screen" id="nav-memo">
+<input class="nav-radio" type="radio" name="screen" id="nav-audit">
+<input class="nav-radio" type="radio" name="screen" id="nav-search">
+<input class="nav-radio" type="radio" name="screen" id="nav-reports">
+
+<div class="app">
+
+  <!-- ============ TOP STATUS STRIP ============ -->
+  <header class="strip">
+    <div class="brand">
+      <div class="brand-mark"><span>KY</span></div>
+      <div class="brand-text">
+        <div class="brand-app">KYC Review Desk</div>
+        <div class="brand-suite">Watchfloor &middot; Operational Compliance Console</div>
+      </div>
+    </div>
+
+    <div class="strip-metrics">
+      <div class="metric">
+        <div class="metric-k">Shift</div>
+        <div class="metric-v"><span class="live-dot"></span>EMEA&nbsp;/&nbsp;DAY</div>
+        <div class="metric-sub">14:32:07 UTC &middot; 03:28 left</div>
+      </div>
+      <div class="metric">
+        <div class="metric-k">Queue depth</div>
+        <div class="metric-v">27</div>
+        <div class="metric-sub">+4 last 60m</div>
+      </div>
+      <div class="metric">
+        <div class="metric-k">Pending approval</div>
+        <div class="metric-v is-warn">9</div>
+        <div class="metric-sub">3 above your tier</div>
+      </div>
+      <div class="metric">
+        <div class="metric-k">SLA at risk</div>
+        <div class="metric-v is-warn"><span class="live-dot is-warn"></span>5</div>
+        <div class="metric-sub">&lt; 25% window left</div>
+      </div>
+      <div class="metric">
+        <div class="metric-k">Breached</div>
+        <div class="metric-v is-crit"><span class="live-dot is-crit"></span>2</div>
+        <div class="metric-sub">KYC-2026-0402, 0388</div>
+      </div>
+      <div class="metric">
+        <div class="metric-k">Next breach in</div>
+        <div class="metric-v is-crit">00:41:18</div>
+        <div class="metric-sub">KYC-2026-0417 &middot; HIGH</div>
+      </div>
+      <div class="metric">
+        <div class="metric-k">Escalations open</div>
+        <div class="metric-v">3</div>
+        <div class="metric-sub">1 at Head of FinCrime</div>
+      </div>
+    </div>
+
+    <div class="strip-right">
+      <div id="agent-mode">
+        <span class="mode-label">Agent mode</span>
+        <select aria-label="Agent operating mode">
+          <option selected>Draft memo</option>
+          <option>Explain score</option>
+          <option>Cite policy</option>
+          <option>Read-only</option>
+        </select>
+        <span class="caret">&#9660;</span>
+      </div>
+      <div class="role-badge">
+        <div class="role-avatar">PN</div>
+        <div class="role-lines">
+          <span class="role-name">P. Nkemdirim</span>
+          <span class="role-tier">Senior Analyst &middot; Tier 2</span>
+        </div>
+      </div>
+      <div class="least-priv">Least privilege<br>Approve &le; Medium</div>
+    </div>
+  </header>
+
+  <!-- ============ LEFT RAIL ============ -->
+  <nav class="rail">
+    <div class="rail-section">Agent</div>
+    <label class="rail-item" for="nav-chat">
+      <span class="rail-glyph">&#9670;</span>
+      <span class="rail-label">Agent Workspace</span>
+      <span class="rail-kbd">1</span>
+    </label>
+
+    <div class="rail-section">Operations</div>
+    <label class="rail-item" for="nav-worklist">
+      <span class="rail-glyph">&#9776;</span>
+      <span class="rail-label">Case Worklist</span>
+      <span class="rail-count is-warn">27</span>
+    </label>
+    <label class="rail-item" for="nav-case">
+      <span class="rail-glyph">&#9635;</span>
+      <span class="rail-label">Case Detail</span>
+      <span class="rail-kbd">3</span>
+    </label>
+    <label class="rail-item" for="nav-score">
+      <span class="rail-glyph">&#8942;</span>
+      <span class="rail-label">Risk Score</span>
+      <span class="rail-kbd">4</span>
+    </label>
+    <label class="rail-item" for="nav-memo">
+      <span class="rail-glyph">&#9998;</span>
+      <span class="rail-label">Assessment Memo</span>
+      <span class="rail-count">v4</span>
+    </label>
+
+    <div class="rail-section">Assurance</div>
+    <label class="rail-item" for="nav-audit">
+      <span class="rail-glyph">&#9783;</span>
+      <span class="rail-label">Audit Trail</span>
+      <span class="rail-kbd">6</span>
+    </label>
+    <label class="rail-item" for="nav-search">
+      <span class="rail-glyph">&#9906;</span>
+      <span class="rail-label">Case Search</span>
+      <span class="rail-kbd">7</span>
+    </label>
+    <label class="rail-item" for="nav-reports">
+      <span class="rail-glyph">&#9632;</span>
+      <span class="rail-label">Weekly Report</span>
+      <span class="rail-count is-crit">2</span>
+    </label>
+
+    <div class="rail-foot">
+      <div class="rail-foot-row"><span>Matrix</span><b>v2.1</b></div>
+      <div class="rail-foot-row"><span>Checklist</span><b>v2.0</b></div>
+      <div class="rail-foot-row"><span>Policy</span><b>v3.2</b></div>
+      <div class="rail-foot-row"><span>Ledger</span><b>append-only</b></div>
+    </div>
+  </nav>
+
+  <!-- ============ CANVAS ============ -->
+  <main class="canvas">
+
+    <!-- ─────────────── 1. CHAT ─────────────── -->
+    <section class="screen" id="screen-chat" aria-label="Agent workspace">
+      <div class="screen-head">
+        <div class="screen-title">
+          <span class="screen-eyebrow">Agent workspace &middot; grounded on case + policy corpus only</span>
+          <h1 class="screen-h1">Memo Drafting Agent</h1>
+        </div>
+        <div class="screen-head-spacer"></div>
+        <div class="screen-head-meta">
+          <span class="chip accent">Scope KYC-2026-0417</span>
+          <span class="chip machine">Machine-drafted output</span>
+          <span class="chip">Grounding 3 sources</span>
+          <span>latency 1.9s</span>
+        </div>
+      </div>
+
+      <div class="chat-layout">
+        <div class="chat-main">
+          <ul id="messages">
+
+            <li class="from-system">
+              <div class="msg-av">&#9679;</div>
+              <div class="msg-body">
+                <div class="bubble">SESSION OPEN &middot; 2026-07-28 13:58:02 UTC &middot; agent mode = DRAFT MEMO &middot; corpus locked to: onboarding policy v3.2, risk matrix v2.1, document checklist v2.0, case record KYC-2026-0417. Free-text web retrieval disabled by policy.</div>
+              </div>
+            </li>
+
+            <li class="from-user">
+              <div class="msg-av">PN</div>
+              <div class="msg-body">
+                <div class="msg-meta"><b>P. Nkemdirim</b> <span>Senior Analyst</span> <time>13:58:44</time></div>
+                <div class="bubble">
+                  <p>Draft the risk assessment memo for KYC-2026-0417 — Meridian Freight Holdings B.V. The deterministic engine scored it 74, High band. I need the jurisdiction and sanctions rationale spelled out, and every claim tied back to policy.</p>
+                </div>
+              </div>
+            </li>
+
+            <li class="from-agent">
+              <div class="msg-av">AI</div>
+              <div class="msg-body">
+                <div class="msg-meta"><b>Assessment Agent</b> <span>mode: draft memo</span> <time>13:58:47</time> <span class="chip machine no-dot">Machine-drafted</span></div>
+                <div class="bubble">
+                  <p>Draft v4 prepared. Machine-drafted — not a compliance conclusion until a human with the required authority adopts it.</p>
+                  <p><b>Jurisdiction.</b> The counterparty's registered seat is the Netherlands (low risk), but 62% of declared trade volume routes through Panama and the UAE, both listed as enhanced-monitoring corridors <span class="cite">[1] Onboarding Policy v3.2 §4.2</span>. Under the matrix the jurisdiction factor takes the highest applicable corridor, giving a raw 85 <span class="cite">[2] Risk Matrix v2.1 §J-3</span>.</p>
+                  <p><b>Sanctions screening.</b> One name hit on the UBO — "M. A. Rahimi", 91% fuzzy match to an OFAC SDN entry — has been adjudicated a <b>true positive on a different individual</b> (DOB and nationality mismatch, cleared by screening team 2026-07-26). It remains a recorded alert, so the band-override clause applies and the case cannot settle below High regardless of weighted total <span class="cite">[3] Risk Matrix v2.1 §S-1(b)</span>.</p>
+                  <p><b>Entity structure.</b> Four-layer holding chain with a Curaçao intermediate and a nominee director at layer 3; beneficial ownership is traceable to two natural persons at 41% and 38% <span class="cite">[4] Onboarding Policy v3.2 §6.1</span>.</p>
+                  <p><b>Documents.</b> Package is incomplete — two items outstanding, so the case sits in RETURNED until they land <span class="cite">[5] Document Checklist v2.0 items 7, 11</span>.</p>
+                  <div class="cite-strip">
+                    <span class="cite">[1] Policy v3.2 §4.2</span>
+                    <span class="cite">[2] Matrix v2.1 §J-3</span>
+                    <span class="cite">[3] Matrix v2.1 §S-1(b)</span>
+                    <span class="cite">[4] Policy v3.2 §6.1</span>
+                    <span class="cite">[5] Checklist v2.0 #7,#11</span>
+                  </div>
+                </div>
+              </div>
+            </li>
+
+            <li class="from-user">
+              <div class="msg-av">PN</div>
+              <div class="msg-body">
+                <div class="msg-meta"><b>P. Nkemdirim</b> <span>Senior Analyst</span> <time>14:04:11</time></div>
+                <div class="bubble"><p>Why did Expected Activity only contribute 4.0? The declared volume looked heavy to me.</p></div>
+              </div>
+            </li>
+
+            <li class="from-agent">
+              <div class="msg-av">AI</div>
+              <div class="msg-body">
+                <div class="msg-meta"><b>Assessment Agent</b> <span>mode: explain score</span> <time>14:04:13</time> <span class="chip machine no-dot">Machine-drafted</span></div>
+                <div class="bubble">
+                  <p>The engine — not the agent — computes that value. Expected Activity scored raw 40 against band thresholds in <span class="cite">[2] Risk Matrix v2.1 §E-2</span>: declared EUR 18.4m annual turnover falls in the 10–25m tier (raw 40), not the &gt;25m tier (raw 70). Weight is 0.10, so contribution = 40 &times; 0.10 = <b>4.0</b>.</p>
+                  <p>If the declared figure is restated above EUR 25m, the recomputed weighted total moves 74 &rarr; 77. I cannot change inputs; a Senior Analyst must amend the submission record and the engine will recompute deterministically.</p>
+                </div>
+              </div>
+            </li>
+
+            <li class="from-user">
+              <div class="msg-av">PN</div>
+              <div class="msg-body">
+                <div class="msg-meta"><b>P. Nkemdirim</b> <span>Senior Analyst</span> <time>14:09:30</time></div>
+                <div class="bubble"><p>Understood. Can you approve and move it to APPROVED once I adopt v4?</p></div>
+              </div>
+            </li>
+
+            <li class="from-agent">
+              <div class="msg-av">AI</div>
+              <div class="msg-body">
+                <div class="msg-meta"><b>Assessment Agent</b> <span>mode: draft memo</span> <time>14:09:31</time> <span class="chip crit no-dot">Action refused</span></div>
+                <div class="bubble">
+                  <p>No. I have no status-change authority — every status transition requires explicit human approval, and this case is High band, which requires a <b>Compliance Officer (Tier 3)</b>. Your role is Senior Analyst (Tier 2), so the approval control stays disabled for you on this case <span class="cite">[1] Onboarding Policy v3.2 §9.4</span>.</p>
+                  <p>Available to you now: adopt draft v4 as the case memo of record (that is a memo action, not a status change), or route to R. Castellanos, Compliance Officer, who is on shift until 18:00 UTC.</p>
+                </div>
+              </div>
+            </li>
+
+            <li class="from-system">
+              <div class="msg-av">&#9679;</div>
+              <div class="msg-body">
+                <div class="bubble">AUDIT &middot; seq 00042 &middot; agent draft v4 written to case memo history (immutable) &middot; adoption pending human action &middot; hash 9f3c&hellip;a71e</div>
+              </div>
+            </li>
+
+          </ul>
+
+          <div class="composer-wrap">
+            <div class="composer-hint">
+              <span class="chip accent no-dot">Case KYC-2026-0417</span>
+              <span>Grounded answers only &middot; citations enforced</span>
+              <span class="least-priv" style="border:0;padding:0">Enter to send &middot; Shift+Enter newline</span>
+            </div>
+            <form id="composer" autocomplete="off">
+              <span class="composer-scope">Draft memo</span>
+              <input id="input" name="prompt" type="text" placeholder="Ask the agent to draft, justify, or cite — e.g. &quot;restate section 3 citing the sanctions override clause&quot;">
+              <button class="btn primary" type="submit">Send <span class="kbd">&#8629;</span></button>
+            </form>
+          </div>
+        </div>
+
+        <aside class="chat-side">
+          <div class="side-block">
+            <h4 class="side-title">Grounding sources</h4>
+            <div class="src"><b>Onboarding Policy</b><span class="v">v3.2</span><span class="m">§4.2 §6.1 §9.4 &middot; 4 spans cited</span></div>
+            <div class="src"><b>Risk Rating Matrix</b><span class="v">v2.1</span><span class="m">§J-3 §S-1(b) §E-2 &middot; 3 spans</span></div>
+            <div class="src"><b>Document Checklist</b><span class="v">v2.0</span><span class="m">items 7, 11 &middot; 1 span</span></div>
+            <div class="src"><b>Case record</b><span class="v">0417</span><span class="m">submission + doc package</span></div>
+          </div>
+          <div class="side-block">
+            <h4 class="side-title">Guardrails</h4>
+            <div class="stack" style="gap:6px">
+              <div class="row tight"><span class="chip ok">Citations required</span></div>
+              <div class="row tight"><span class="chip ok">No status authority</span></div>
+              <div class="row tight"><span class="chip ok">No score mutation</span></div>
+              <div class="row tight"><span class="chip ok">Corpus locked</span></div>
+              <div class="row tight"><span class="chip warn">1 refusal this session</span></div>
+            </div>
+          </div>
+          <div class="side-block">
+            <h4 class="side-title">Draft state</h4>
+            <div class="q-row"><span>Current draft <span class="q-sub">1,284 words &middot; 5 citations</span></span><span class="chip machine no-dot">v4</span></div>
+            <div class="q-row"><span>Adopted version <span class="q-sub">awaiting human action</span></span><span class="chip warn no-dot">none</span></div>
+            <div class="q-row"><span>Uncited claims <span class="q-sub">blocked at generation</span></span><span class="chip ok no-dot">0</span></div>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <!-- ─────────────── 2. WORKLIST ─────────────── -->
+    <section class="screen" id="screen-worklist" aria-label="Case worklist">
+      <div class="screen-head">
+        <div class="screen-title">
+          <span class="screen-eyebrow">Live queue &middot; auto-refresh 15s</span>
+          <h1 class="screen-h1">Case Worklist</h1>
+        </div>
+        <div class="screen-head-spacer"></div>
+        <div class="screen-head-meta">
+          <span class="chip crit">2 breached</span>
+          <span class="chip warn">5 at risk</span>
+          <span class="chip ok">20 clear</span>
+          <span>last sync 14:32:04</span>
+        </div>
+      </div>
+
+      <div class="toolbar">
+        <div class="seg">
+          <span class="on">All 27</span><span>Mine 11</span><span>Pending approval 9</span><span>Escalated 3</span><span>Returned 4</span>
+        </div>
+        <div class="seg">
+          <span>Low</span><span class="on">Medium</span><span class="on">High</span>
+        </div>
+        <div class="row tight" style="margin-left:auto">
+          <button class="btn sm ghost">Sort: SLA remaining &#9660;</button>
+          <button class="btn sm ghost">Density: compact</button>
+          <button class="btn sm">Claim next &#8250;</button>
+        </div>
+      </div>
+
+      <div class="screen-body is-flush">
+        <div class="scroll-x">
+        <table class="tbl">
+          <thead>
+            <tr>
+              <th style="width:120px">Case ID</th>
+              <th>Client</th>
+              <th style="width:130px">Status</th>
+              <th style="width:88px">Band</th>
+              <th style="width:120px">Score</th>
+              <th style="width:150px">Assigned approver</th>
+              <th style="width:78px">Tier</th>
+              <th style="width:130px">SLA remaining</th>
+              <th style="width:110px">Flag</th>
+              <th style="width:96px">Updated</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr class="is-crit">
+              <td class="id">KYC-2026-0402</td>
+              <td>Aurelia Petrochem Trading DMCC <span class="faint mono">&middot; DMCC</span></td>
+              <td><span class="chip warn">Pending approval</span></td>
+              <td><span class="chip crit no-dot">High</span></td>
+              <td><div class="sev high"><span class="sev-num">88</span><span class="sev-track"><span class="sev-fill" style="width:88%"></span></span></div></td>
+              <td>R. Castellanos</td>
+              <td class="num">3</td>
+              <td><div class="countdown crit"><span class="countdown-v">-06:12 <small>over</small></span><span class="countdown-track"><span class="countdown-fill" style="width:100%"></span></span></div></td>
+              <td><span class="chip crit">Breached</span></td>
+              <td class="num dim">14:21</td>
+            </tr>
+            <tr class="is-crit">
+              <td class="id">KYC-2026-0388</td>
+              <td>Zenith Maritime Group Ltd <span class="faint mono">&middot; CY</span></td>
+              <td><span class="chip info">In review</span></td>
+              <td><span class="chip crit no-dot">High</span></td>
+              <td><div class="sev high"><span class="sev-num">79</span><span class="sev-track"><span class="sev-fill" style="width:79%"></span></span></div></td>
+              <td>R. Castellanos</td>
+              <td class="num">3</td>
+              <td><div class="countdown crit"><span class="countdown-v">-01:47 <small>over</small></span><span class="countdown-track"><span class="countdown-fill" style="width:100%"></span></span></div></td>
+              <td><span class="chip crit">Breached</span></td>
+              <td class="num dim">13:58</td>
+            </tr>
+            <tr class="is-sel">
+              <td class="id">KYC-2026-0417</td>
+              <td>Meridian Freight Holdings B.V. <span class="faint mono">&middot; NL</span></td>
+              <td><span class="chip">Returned</span></td>
+              <td><span class="chip crit no-dot">High</span></td>
+              <td><div class="sev high"><span class="sev-num">74</span><span class="sev-track"><span class="sev-fill" style="width:74%"></span></span></div></td>
+              <td>R. Castellanos</td>
+              <td class="num">3</td>
+              <td><div class="countdown crit"><span class="countdown-v">00:41:18 <small>/ 8h</small></span><span class="countdown-track"><span class="countdown-fill" style="width:9%"></span></span></div></td>
+              <td><span class="chip crit">At risk</span></td>
+              <td class="num dim">14:29</td>
+            </tr>
+            <tr>
+              <td class="id">KYC-2026-0421</td>
+              <td>Northwind Agritech AB <span class="faint mono">&middot; SE</span></td>
+              <td><span class="chip warn">Pending approval</span></td>
+              <td><span class="chip warn no-dot">Medium</span></td>
+              <td><div class="sev med"><span class="sev-num">61</span><span class="sev-track"><span class="sev-fill" style="width:61%"></span></span></div></td>
+              <td>P. Nkemdirim</td>
+              <td class="num">2</td>
+              <td><div class="countdown warn"><span class="countdown-v">04:22:40 <small>/ 24h</small></span><span class="countdown-track"><span class="countdown-fill" style="width:18%"></span></span></div></td>
+              <td><span class="chip warn">At risk</span></td>
+              <td class="num dim">14:12</td>
+            </tr>
+            <tr>
+              <td class="id">KYC-2026-0419</td>
+              <td>Cobalt Ridge Mining Corp <span class="faint mono">&middot; CA</span></td>
+              <td><span class="chip info">In review</span></td>
+              <td><span class="chip warn no-dot">Medium</span></td>
+              <td><div class="sev med"><span class="sev-num">57</span><span class="sev-track"><span class="sev-fill" style="width:57%"></span></span></div></td>
+              <td>P. Nkemdirim</td>
+              <td class="num">2</td>
+              <td><div class="countdown warn"><span class="countdown-v">05:58:12 <small>/ 24h</small></span><span class="countdown-track"><span class="countdown-fill" style="width:25%"></span></span></div></td>
+              <td><span class="chip warn">At risk</span></td>
+              <td class="num dim">13:44</td>
+            </tr>
+            <tr>
+              <td class="id">KYC-2026-0424</td>
+              <td>Halcyon Digital Payments Ltd <span class="faint mono">&middot; GB</span></td>
+              <td><span class="chip warn">Pending approval</span></td>
+              <td><span class="chip crit no-dot">High</span></td>
+              <td><div class="sev high"><span class="sev-num">72</span><span class="sev-track"><span class="sev-fill" style="width:72%"></span></span></div></td>
+              <td>R. Castellanos</td>
+              <td class="num">3</td>
+              <td><div class="countdown warn"><span class="countdown-v">02:04:55 <small>/ 8h</small></span><span class="countdown-track"><span class="countdown-fill" style="width:26%"></span></span></div></td>
+              <td><span class="chip warn">At risk</span></td>
+              <td class="num dim">14:30</td>
+            </tr>
+            <tr>
+              <td class="id">KYC-2026-0426</td>
+              <td>Silverlake Property Trust <span class="faint mono">&middot; JE</span></td>
+              <td><span class="chip">Returned</span></td>
+              <td><span class="chip warn no-dot">Medium</span></td>
+              <td><div class="sev med"><span class="sev-num">52</span><span class="sev-track"><span class="sev-fill" style="width:52%"></span></span></div></td>
+              <td>K. Sorensen</td>
+              <td class="num">1</td>
+              <td><div class="countdown warn"><span class="countdown-v">07:11:03 <small>/ 24h</small></span><span class="countdown-track"><span class="countdown-fill" style="width:30%"></span></span></div></td>
+              <td><span class="chip warn">At risk</span></td>
+              <td class="num dim">12:50</td>
+            </tr>
+            <tr>
+              <td class="id">KYC-2026-0428</td>
+              <td>Fjordline Logistics AS <span class="faint mono">&middot; NO</span></td>
+              <td><span class="chip info">In review</span></td>
+              <td><span class="chip ok no-dot">Low</span></td>
+              <td><div class="sev low"><span class="sev-num">31</span><span class="sev-track"><span class="sev-fill" style="width:31%"></span></span></div></td>
+              <td>K. Sorensen</td>
+              <td class="num">1</td>
+              <td><div class="countdown"><span class="countdown-v">29:40:12 <small>/ 48h</small></span><span class="countdown-track"><span class="countdown-fill" style="width:62%"></span></span></div></td>
+              <td><span class="chip ok">Clear</span></td>
+              <td class="num dim">11:36</td>
+            </tr>
+            <tr>
+              <td class="id">KYC-2026-0430</td>
+              <td>Verdant Foods Cooperative <span class="faint mono">&middot; IE</span></td>
+              <td><span class="chip accent">New</span></td>
+              <td><span class="chip ok no-dot">Low</span></td>
+              <td><div class="sev low"><span class="sev-num">22</span><span class="sev-track"><span class="sev-fill" style="width:22%"></span></span></div></td>
+              <td>&mdash; <span class="faint">unassigned</span></td>
+              <td class="num">1</td>
+              <td><div class="countdown"><span class="countdown-v">44:18:55 <small>/ 48h</small></span><span class="countdown-track"><span class="countdown-fill" style="width:92%"></span></span></div></td>
+              <td><span class="chip ok">Clear</span></td>
+              <td class="num dim">14:31</td>
+            </tr>
+            <tr>
+              <td class="id">KYC-2026-0431</td>
+              <td>Anvil Precision Engineering GmbH <span class="faint mono">&middot; DE</span></td>
+              <td><span class="chip accent">New</span></td>
+              <td><span class="chip ok no-dot">Low</span></td>
+              <td><div class="sev low"><span class="sev-num">18</span><span class="sev-track"><span class="sev-fill" style="width:18%"></span></span></div></td>
+              <td>&mdash; <span class="faint">unassigned</span></td>
+              <td class="num">1</td>
+              <td><div class="countdown"><span class="countdown-v">46:02:39 <small>/ 48h</small></span><span class="countdown-track"><span class="countdown-fill" style="width:96%"></span></span></div></td>
+              <td><span class="chip ok">Clear</span></td>
+              <td class="num dim">14:32</td>
+            </tr>
+            <tr>
+              <td class="id">KYC-2026-0396</td>
+              <td>Solstice Renewables Holding S.A. <span class="faint mono">&middot; LU</span></td>
+              <td><span class="chip ok">Approved</span></td>
+              <td><span class="chip warn no-dot">Medium</span></td>
+              <td><div class="sev med"><span class="sev-num">48</span><span class="sev-track"><span class="sev-fill" style="width:48%"></span></span></div></td>
+              <td>P. Nkemdirim</td>
+              <td class="num">2</td>
+              <td><div class="countdown done"><span class="countdown-v">closed <small>07:12 used</small></span><span class="countdown-track"><span class="countdown-fill" style="width:100%"></span></span></div></td>
+              <td><span class="chip ok">Met</span></td>
+              <td class="num dim">09:18</td>
+            </tr>
+            <tr>
+              <td class="id">KYC-2026-0374</td>
+              <td>Pacific Horizon Shipping Pte <span class="faint mono">&middot; SG</span></td>
+              <td><span class="chip crit">Rejected</span></td>
+              <td><span class="chip crit no-dot">High</span></td>
+              <td><div class="sev high"><span class="sev-num">91</span><span class="sev-track"><span class="sev-fill" style="width:91%"></span></span></div></td>
+              <td>R. Castellanos</td>
+              <td class="num">3</td>
+              <td><div class="countdown done"><span class="countdown-v">closed <small>05:40 used</small></span><span class="countdown-track"><span class="countdown-fill" style="width:100%"></span></span></div></td>
+              <td><span class="chip">Met</span></td>
+              <td class="num dim">Jul 24</td>
+            </tr>
+          </tbody>
+        </table>
+        </div>
+      </div>
+
+      <div class="action-bar">
+        <span class="micro">Bulk actions</span>
+        <button class="btn sm">Assign to me</button>
+        <button class="btn sm">Request documents</button>
+        <button class="btn sm">Escalate selected</button>
+        <span class="spacer"></span>
+        <span class="readonly-note">Auditor role would see this view read-only</span>
+        <button class="btn primary sm">Open KYC-2026-0417 <span class="kbd">&#8629;</span></button>
+      </div>
+    </section>
+
+    <!-- ─────────────── 3. CASE DETAIL ─────────────── -->
+    <section class="screen" id="screen-case" aria-label="Case detail">
+      <div class="screen-head">
+        <div class="screen-title">
+          <span class="screen-eyebrow">Corporate onboarding &middot; opened 2026-07-27 09:14 UTC</span>
+          <h1 class="screen-h1">KYC-2026-0417 &middot; Meridian Freight Holdings B.V.</h1>
+        </div>
+        <div class="screen-head-spacer"></div>
+        <div class="screen-head-meta">
+          <span class="chip">Returned</span>
+          <span class="chip crit no-dot">High &middot; 74</span>
+          <div class="countdown crit"><span class="countdown-v">00:41:18 <small>/ 8h SLA</small></span><span class="countdown-track"><span class="countdown-fill" style="width:9%"></span></span></div>
+        </div>
+      </div>
+
+      <div class="screen-body">
+        <div class="callout crit" style="margin-bottom:14px">
+          <div>
+            <span class="co-title">Returned to client &middot; 2 documents outstanding</span>
+            Deterministic completeness check (checklist v2.0) failed at items 7 and 11. The case cannot advance to PENDING APPROVAL until the package is complete. Client contact notified 2026-07-27 16:40 UTC; first chase due 2026-07-28 16:40 UTC.
+          </div>
+        </div>
+
+        <div class="grid g-case">
+          <div class="stack">
+
+            <div class="panel">
+              <div class="panel-head"><h2>Client &amp; entity</h2><span class="spacer"></span><span class="panel-note">source: submission 0417-A</span></div>
+              <div class="panel-body">
+                <div class="grid g-2">
+                  <dl class="kv">
+                    <dt>Legal name</dt><dd>Meridian Freight Holdings B.V.</dd>
+                    <dt>Registration</dt><dd class="mono">NL-KVK 68204417</dd>
+                    <dt>Seat</dt><dd>Rotterdam, Netherlands</dd>
+                    <dt>Incorporated</dt><dd class="mono">2011-03-22</dd>
+                    <dt>Industry</dt><dd>Freight forwarding &amp; bonded warehousing</dd>
+                    <dt>Declared turnover</dt><dd class="mono">EUR 18,400,000 / yr</dd>
+                  </dl>
+                  <dl class="kv">
+                    <dt>Entity structure</dt><dd>4-layer holding chain</dd>
+                    <dt>Intermediates</dt><dd>Curaçao (L2), Malta (L3)</dd>
+                    <dt>Nominee director</dt><dd><span class="chip warn no-dot">Present at L3</span></dd>
+                    <dt>UBO 1</dt><dd>J. Verstraete &mdash; <span class="mono">41.0%</span></dd>
+                    <dt>UBO 2</dt><dd>M. A. Rahimi &mdash; <span class="mono">38.0%</span> <span class="chip crit no-dot">Alert</span></dd>
+                    <dt>Trade corridors</dt><dd>NL, PA <span class="chip warn no-dot">EM</span>, AE <span class="chip warn no-dot">EM</span></dd>
+                  </dl>
+                </div>
+              </div>
+            </div>
+
+            <div class="panel is-crit">
+              <div class="panel-head">
+                <h2>Document completeness check</h2>
+                <span class="spacer"></span>
+                <span class="chip crit">FAIL &middot; 9 of 11</span>
+                <span class="panel-note">checklist v2.0 &middot; run 2026-07-27 16:38</span>
+              </div>
+              <div class="panel-body is-flush">
+                <div class="check-row pass"><span class="check-mark">&#10003;</span><span class="check-name">1 &middot; Certificate of incorporation<small>MFH_CoI_2011.pdf &middot; 412 KB</small></span><span class="chip ok no-dot">Verified</span></div>
+                <div class="check-row pass"><span class="check-mark">&#10003;</span><span class="check-name">2 &middot; Articles of association<small>MFH_AoA_rev4.pdf &middot; 1.2 MB</small></span><span class="chip ok no-dot">Verified</span></div>
+                <div class="check-row pass"><span class="check-mark">&#10003;</span><span class="check-name">3 &middot; Register of directors<small>KVK_extract_20260702.pdf</small></span><span class="chip ok no-dot">Verified</span></div>
+                <div class="check-row pass"><span class="check-mark">&#10003;</span><span class="check-name">4 &middot; Ownership structure chart<small>MFH_structure_v3.pdf</small></span><span class="chip ok no-dot">Verified</span></div>
+                <div class="check-row pass"><span class="check-mark">&#10003;</span><span class="check-name">5 &middot; UBO declaration &mdash; J. Verstraete<small>signed 2026-07-19</small></span><span class="chip ok no-dot">Verified</span></div>
+                <div class="check-row pass"><span class="check-mark">&#10003;</span><span class="check-name">6 &middot; Passport copy &mdash; J. Verstraete<small>expires 2029-11-04</small></span><span class="chip ok no-dot">Verified</span></div>
+                <div class="check-row fail"><span class="check-mark">&#10007;</span><span class="check-name">7 &middot; Certified passport copy &mdash; M. A. Rahimi (UBO 2)<small>MISSING &middot; required: notarised, &lt; 3 months old</small></span><span class="chip crit no-dot">Missing</span></div>
+                <div class="check-row pass"><span class="check-mark">&#10003;</span><span class="check-name">8 &middot; Proof of registered address<small>utility bill 2026-06</small></span><span class="chip ok no-dot">Verified</span></div>
+                <div class="check-row pass"><span class="check-mark">&#10003;</span><span class="check-name">9 &middot; Audited financial statements FY2025<small>Deloitte NL &middot; unqualified</small></span><span class="chip ok no-dot">Verified</span></div>
+                <div class="check-row pass"><span class="check-mark">&#10003;</span><span class="check-name">10 &middot; Board resolution to open account<small>signed 2026-07-14</small></span><span class="chip ok no-dot">Verified</span></div>
+                <div class="check-row fail"><span class="check-mark">&#10007;</span><span class="check-name">11 &middot; Source-of-funds statement for Curaçao intermediate<small>MISSING &middot; required for any offshore layer (policy v3.2 §6.4)</small></span><span class="chip crit no-dot">Missing</span></div>
+                <div class="check-row na"><span class="check-mark">&ndash;</span><span class="check-name">12 &middot; Regulated-entity licence<small>Not applicable &mdash; non-financial counterparty</small></span><span class="chip no-dot">N/A</span></div>
+              </div>
+            </div>
+
+            <div class="panel">
+              <div class="panel-head"><h2>Outstanding items &mdash; returned to client</h2><span class="spacer"></span><span class="panel-note">2 items &middot; chase 1 of 3</span></div>
+              <div class="panel-body">
+                <div class="stack" style="gap:8px">
+                  <div class="callout warn">
+                    <div><span class="co-title">Item 7 &middot; Certified passport copy &mdash; M. A. Rahimi</span>
+                    Requested 2026-07-27 16:40 UTC from j.verstraete@meridianfreight.nl. Uncertified scan on file was rejected: no notary seal. Blocking &mdash; UBO with a live screening alert cannot be identity-verified without it.</div>
+                  </div>
+                  <div class="callout warn">
+                    <div><span class="co-title">Item 11 &middot; Source-of-funds statement (Curaçao L2)</span>
+                    Requested 2026-07-27 16:40 UTC. Mandatory for every offshore intermediate layer. Client indicated statement is in preparation by their tax advisor; no ETA recorded.</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          <div class="stack">
+            <div class="panel is-crit">
+              <div class="panel-head"><h2>Operational state</h2><span class="spacer"></span><span class="live-dot is-crit"></span></div>
+              <div class="panel-body">
+                <div class="tiles" style="grid-template-columns:repeat(2,1fr)">
+                  <div class="tile crit"><span class="tile-k">Risk score</span><span class="tile-v">74</span><span class="tile-m">High band &middot; 70&ndash;100</span></div>
+                  <div class="tile crit"><span class="tile-k">SLA left</span><span class="tile-v">0:41</span><span class="tile-m">of 8h high window</span></div>
+                  <div class="tile warn"><span class="tile-k">Age</span><span class="tile-v">29h</span><span class="tile-m">opened Jul 27 09:14</span></div>
+                  <div class="tile"><span class="tile-k">Memo</span><span class="tile-v">v4</span><span class="tile-m">not yet adopted</span></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="panel">
+              <div class="panel-head"><h2>Status &amp; routing</h2></div>
+              <div class="panel-body">
+                <dl class="kv">
+                  <dt>Status</dt><dd><span class="chip">Returned</span> <span class="faint mono">since 16:40 Jul 27</span></dd>
+                  <dt>Prior status</dt><dd class="mono dim">IN REVIEW</dd>
+                  <dt>Owner</dt><dd>P. Nkemdirim &middot; Senior Analyst</dd>
+                  <dt>Required tier</dt><dd><span class="chip crit no-dot">Tier 3 &middot; Compliance Officer</span></dd>
+                  <dt>Assigned approver</dt><dd>R. Castellanos <span class="faint">(on shift &rarr; 18:00)</span></dd>
+                  <dt>Escalation</dt><dd><span class="chip warn">Stage 1 open</span></dd>
+                  <dt>Next review due</dt><dd class="mono">2027-07-28</dd>
+                </dl>
+              </div>
+            </div>
+
+            <div class="panel">
+              <div class="panel-head"><h2>Escalation chain</h2><span class="spacer"></span><span class="panel-note">SLA-driven</span></div>
+              <div class="panel-body">
+                <div class="chain">
+                  <div class="chain-step done">
+                    <span class="chain-node">&#10003;</span>
+                    <span><span class="chain-t">Compliance Officer</span><span class="chain-m">R. Castellanos &middot; notified 14:02 UTC</span></span>
+                  </div>
+                  <div class="chain-step active">
+                    <span class="chain-node">!</span>
+                    <span><span class="chain-t">Head of Financial Crime</span><span class="chain-m">auto-notify at T-00:15 &middot; pending</span></span>
+                  </div>
+                  <div class="chain-step">
+                    <span class="chain-node">&middot;</span>
+                    <span><span class="chain-t">COO</span><span class="chain-m">on breach + 4h</span></span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="panel">
+              <div class="panel-head"><h2>Policy artifacts in force</h2></div>
+              <div class="panel-body">
+                <div class="ver-row"><span>Risk rating matrix</span><b>v2.1</b></div>
+                <div class="ver-row"><span>Document checklist</span><b>v2.0</b></div>
+                <div class="ver-row"><span>Onboarding policy</span><b>v3.2</b></div>
+                <div class="ver-row"><span>Sanctions list snapshot</span><b>2026-07-26</b></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="action-bar">
+        <span class="chip crit lg no-dot">&#128274; Approval locked</span>
+        <div class="lock-reason">
+          <span class="lr-t">Insufficient authority for this risk band</span>
+          <span class="lr-b">High band (74) requires <b>Compliance Officer &middot; Tier 3</b>. You are signed in as Senior Analyst &middot; Tier 2. Approval also blocked while status = RETURNED with 2 outstanding documents.</span>
+        </div>
+        <span class="spacer"></span>
+        <button class="btn sm">Chase documents</button>
+        <button class="btn sm">Route to R. Castellanos</button>
+        <button class="btn danger sm" disabled>Reject case</button>
+        <button class="btn primary" disabled>Approve &amp; change status</button>
+      </div>
+    </section>
+
+    <!-- ─────────────── 4. SCORE ─────────────── -->
+    <section class="screen" id="screen-score" aria-label="Risk score breakdown">
+      <div class="screen-head">
+        <div class="screen-title">
+          <span class="screen-eyebrow">Deterministic engine &middot; no model inference &middot; reproducible</span>
+          <h1 class="screen-h1">Risk Score Breakdown &middot; KYC-2026-0417</h1>
+        </div>
+        <div class="screen-head-spacer"></div>
+        <div class="screen-head-meta">
+          <span class="chip accent no-dot">Matrix v2.1</span>
+          <span class="chip">Computed 2026-07-27 16:38:02</span>
+          <span class="chip crit no-dot">Band HIGH</span>
+        </div>
+      </div>
+
+      <div class="screen-body">
+        <div class="tiles" style="margin-bottom:14px">
+          <div class="tile crit"><span class="tile-k">Weighted total</span><span class="tile-v">74.0</span><span class="tile-m">of 100.0 possible</span></div>
+          <div class="tile crit"><span class="tile-k">Assigned band</span><span class="tile-v">HIGH</span><span class="tile-m">70&ndash;100</span></div>
+          <div class="tile warn"><span class="tile-k">Band floor applied</span><span class="tile-v">YES</span><span class="tile-m">sanctions override</span></div>
+          <div class="tile"><span class="tile-k">Factors</span><span class="tile-v">5</span><span class="tile-m">weights sum 1.00</span></div>
+          <div class="tile"><span class="tile-k">SLA window</span><span class="tile-v">8h</span><span class="tile-m">high-band business hours</span></div>
+          <div class="tile"><span class="tile-k">Required tier</span><span class="tile-v">T3</span><span class="tile-m">Compliance Officer</span></div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head">
+            <h2>Factor contributions</h2>
+            <span class="spacer"></span>
+            <span class="panel-note">contribution = raw score &times; weight &middot; matrix v2.1</span>
+          </div>
+          <div class="panel-body is-flush">
+            <table class="tbl">
+              <thead>
+                <tr>
+                  <th style="width:180px">Factor</th>
+                  <th>Observed input</th>
+                  <th style="width:110px">Matrix rule</th>
+                  <th style="width:170px">Raw score (0&ndash;100)</th>
+                  <th style="width:80px" class="num">Weight</th>
+                  <th style="width:110px" class="num">Contribution</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><b>Jurisdiction</b><br><span class="faint mono">J-3</span></td>
+                  <td>Seat NL (low). 62% of declared volume via Panama and UAE &mdash; both enhanced-monitoring corridors. Highest applicable corridor governs.</td>
+                  <td class="mono dim">§J-3(c)</td>
+                  <td><div class="sev high"><span class="sev-num">85</span><span class="sev-track"><span class="sev-fill" style="width:85%"></span></span></div></td>
+                  <td class="num">0.30</td>
+                  <td class="num" style="color:var(--crit);font-weight:700">25.50</td>
+                </tr>
+                <tr>
+                  <td><b>Entity Structure</b><br><span class="faint mono">E-1</span></td>
+                  <td>4 ownership layers, offshore intermediate (Curaçao), nominee director at layer 3. UBOs traceable at 41% / 38%.</td>
+                  <td class="mono dim">§E-1(d)</td>
+                  <td><div class="sev high"><span class="sev-num">78</span><span class="sev-track"><span class="sev-fill" style="width:78%"></span></span></div></td>
+                  <td class="num">0.25</td>
+                  <td class="num" style="color:var(--crit);font-weight:700">19.50</td>
+                </tr>
+                <tr>
+                  <td><b>Industry</b><br><span class="faint mono">I-2</span></td>
+                  <td>Freight forwarding with bonded warehousing &mdash; elevated trade-based money laundering exposure; not on the prohibited list.</td>
+                  <td class="mono dim">§I-2(b)</td>
+                  <td><div class="sev med"><span class="sev-num">60</span><span class="sev-track"><span class="sev-fill" style="width:60%"></span></span></div></td>
+                  <td class="num">0.20</td>
+                  <td class="num" style="color:var(--warn);font-weight:700">12.00</td>
+                </tr>
+                <tr class="is-crit">
+                  <td><b>Sanctions Screening</b><br><span class="faint mono">S-1</span></td>
+                  <td>1 alert on UBO 2 (M. A. Rahimi), 91% fuzzy match to OFAC SDN. Adjudicated <b>true positive on a different individual</b> &mdash; DOB and nationality mismatch. Alert remains on record.</td>
+                  <td class="mono dim">§S-1(b)</td>
+                  <td><div class="sev high"><span class="sev-num">70</span><span class="sev-track"><span class="sev-fill" style="width:70%"></span></span></div></td>
+                  <td class="num">0.15</td>
+                  <td class="num" style="color:var(--crit);font-weight:700">10.50</td>
+                </tr>
+                <tr>
+                  <td><b>Expected Activity</b><br><span class="faint mono">E-2</span></td>
+                  <td>Declared EUR 18.4m annual turnover, 40&ndash;60 monthly payments, no cash. Falls in the 10&ndash;25m tier.</td>
+                  <td class="mono dim">§E-2(a)</td>
+                  <td><div class="sev med"><span class="sev-num">40</span><span class="sev-track"><span class="sev-fill" style="width:40%"></span></span></div></td>
+                  <td class="num">0.10</td>
+                  <td class="num" style="color:var(--ok);font-weight:700">4.00</td>
+                </tr>
+              </tbody>
+              <tfoot>
+                <tr>
+                  <td colspan="4">Weighted total &mdash; deterministic, reproducible from the inputs above</td>
+                  <td class="num">1.00</td>
+                  <td class="num" style="color:var(--crit);font-size:var(--fs-lg)">74.00</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </div>
+
+        <div class="grid g-2" style="margin-top:14px">
+          <div class="panel is-warn">
+            <div class="panel-head"><h2>Band override notice</h2><span class="spacer"></span><span class="chip warn no-dot">Applied</span></div>
+            <div class="panel-body">
+              <div class="callout warn">
+                <div>
+                  <span class="co-title">Sanctions true-positive floor &middot; matrix v2.1 §S-1(b)</span>
+                  Where a sanctions screening alert is adjudicated a true positive against <em>any</em> listed record &mdash; including a true positive on a different individual with a residual name match &mdash; the case is floored at <b>HIGH</b> regardless of weighted total, and approval authority is raised to Compliance Officer (Tier 3).
+                  <br><br>
+                  Weighted total here is 74.0, already inside the High band, so the floor is <b>non-binding on the band</b> but <b>binding on the approval tier</b>. It is recorded because it would have applied had the total fallen below 70.
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-head"><h2>Band thresholds &amp; consequences</h2><span class="spacer"></span><span class="panel-note">matrix v2.1</span></div>
+            <div class="panel-body is-flush">
+              <table class="tbl">
+                <thead><tr><th>Band</th><th class="num">Range</th><th>Approval authority</th><th class="num">SLA</th><th>This case</th></tr></thead>
+                <tbody>
+                  <tr><td><span class="chip ok no-dot">Low</span></td><td class="num">0 &ndash; 39</td><td>KYC Analyst &middot; Tier 1</td><td class="num">48h</td><td class="faint">&mdash;</td></tr>
+                  <tr><td><span class="chip warn no-dot">Medium</span></td><td class="num">40 &ndash; 69</td><td>Senior Analyst &middot; Tier 2</td><td class="num">24h</td><td class="faint">&mdash;</td></tr>
+                  <tr class="is-crit"><td><span class="chip crit no-dot">High</span></td><td class="num">70 &ndash; 100</td><td>Compliance Officer &middot; Tier 3</td><td class="num">8h</td><td><span class="chip crit">Assigned</span></td></tr>
+                </tbody>
+              </table>
+              <div class="panel-body">
+                <dl class="kv">
+                  <dt>Engine build</dt><dd class="mono">scoring-svc 4.7.2</dd>
+                  <dt>Matrix version</dt><dd class="mono">v2.1 (effective 2026-04-01)</dd>
+                  <dt>Input snapshot</dt><dd class="mono">0417-A &middot; sha 4b19&hellip;c8d0</dd>
+                  <dt>Recompute</dt><dd class="mono">idempotent &middot; last run 16:38:02</dd>
+                </dl>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="action-bar">
+        <span class="micro">Score is mechanical &mdash; no human or agent override path exists</span>
+        <span class="spacer"></span>
+        <button class="btn sm">Recompute from snapshot</button>
+        <button class="btn sm">Ask agent to explain</button>
+        <button class="btn sm ghost">Export breakdown (CSV)</button>
+      </div>
+    </section>
+
+    <!-- ─────────────── 5. MEMO ─────────────── -->
+    <section class="screen" id="screen-memo" aria-label="Risk assessment memo">
+      <div class="screen-head">
+        <div class="screen-title">
+          <span class="screen-eyebrow">Draft v4 &middot; generated 2026-07-28 13:58:47 UTC &middot; not yet adopted</span>
+          <h1 class="screen-h1">Risk Assessment Memo &middot; KYC-2026-0417</h1>
+        </div>
+        <div class="screen-head-spacer"></div>
+        <div class="screen-head-meta">
+          <span class="chip machine">Machine-drafted</span>
+          <span class="chip">5 citations</span>
+          <span class="chip warn no-dot">Adoption pending</span>
+        </div>
+      </div>
+
+      <div class="screen-body">
+        <div class="machine-banner" style="margin-bottom:14px">
+          <span class="mb-tag">&#9888; Machine-drafted</span>
+          <span class="mb-txt">This memo was generated by the assessment agent from case data and the policy corpus only. It is <b>not</b> a compliance conclusion and carries no decision weight until a human with the required authority adopts it. Every substantive claim below is traceable to a cited policy span; uncited claims are blocked at generation.</span>
+        </div>
+
+        <div class="grid g-memo">
+          <div class="panel">
+            <div class="panel-head"><h2>Memo body &mdash; draft v4</h2><span class="spacer"></span><span class="panel-note">1,284 words &middot; read time ~5 min</span></div>
+            <div class="memo-doc">
+              <h3>1 &middot; Purpose and scope</h3>
+              <p>This memo records the risk assessment supporting the onboarding decision for <b>Meridian Freight Holdings B.V.</b> (KYC-2026-0417), a Netherlands-registered freight forwarding and bonded warehousing group applying for corporate transaction banking. It is prepared under the corporate onboarding policy <span class="cite">[1] v3.2 §2.1</span> and applies the risk rating matrix in force at the date of computation <span class="cite">[2] v2.1</span>.</p>
+
+              <h3>2 &middot; Computed risk position</h3>
+              <p>The deterministic engine returned a weighted total of <b>74.0</b>, placing the case in the <b>High</b> band (70&ndash;100). The dominant contributions are Jurisdiction (25.50) and Entity Structure (19.50), which together account for 61% of the total. No component of this score was produced by the agent; the engine is reproducible from the input snapshot <span class="cite">[2] Risk Matrix v2.1 §J-3, §E-1</span>.</p>
+
+              <h3>3 &middot; Jurisdiction exposure</h3>
+              <p>The counterparty's registered seat is low risk. However, the declared trade pattern routes 62% of volume through Panama and the United Arab Emirates, both designated enhanced-monitoring corridors. The matrix requires the highest applicable corridor rating rather than the seat rating where declared volume through a listed corridor exceeds 25% <span class="cite">[1] Onboarding Policy v3.2 §4.2</span>, producing a raw factor score of 85.</p>
+              <ul>
+                <li>Panama &mdash; 38% of declared volume, bonded transhipment</li>
+                <li>United Arab Emirates &mdash; 24% of declared volume, free-zone consignee</li>
+                <li>Netherlands and intra-EU &mdash; 38%</li>
+              </ul>
+
+              <h3>4 &middot; Ownership and control</h3>
+              <p>Ownership runs through four layers with a Curaçao intermediate at layer 2 and a Malta entity at layer 3, where a nominee director is appointed. Beneficial ownership resolves to two natural persons holding 41.0% and 38.0%; the residual 21.0% is held by a Dutch employee foundation with no single controlling interest. The structure is legible but the offshore layer and nominee arrangement together attract a raw score of 78 <span class="cite">[4] Onboarding Policy v3.2 §6.1</span>. A source-of-funds statement for the Curaçao layer is mandatory and remains outstanding <span class="cite">[5] Document Checklist v2.0 item 11</span>.</p>
+
+              <h3>5 &middot; Sanctions screening outcome</h3>
+              <p>Screening produced a single alert on UBO 2, <b>M. A. Rahimi</b>, at 91% fuzzy match to an OFAC SDN record. The screening team adjudicated the alert on 2026-07-26 as a <b>true positive on a different individual</b>: date of birth differs by eleven years and nationality does not match the listed record. The counterparty UBO is therefore not the sanctioned person. Because a true-positive adjudication is recorded against the case, the band floor at <span class="cite">[3] Risk Matrix v2.1 §S-1(b)</span> applies and approval authority is raised to Compliance Officer irrespective of weighted total.</p>
+
+              <h3>6 &middot; Document completeness</h3>
+              <p>The completeness check returned <b>FAIL</b> at 9 of 11 applicable items. Outstanding: a certified passport copy for UBO 2 (item 7) and the Curaçao source-of-funds statement (item 11). The case was returned to the client on 2026-07-27 at 16:40 UTC and cannot advance to PENDING APPROVAL while either item is open <span class="cite">[5] Document Checklist v2.0</span>.</p>
+
+              <h3>7 &middot; Recommendation (machine-drafted, non-binding)</h3>
+              <p>Subject to receipt of items 7 and 11, the case supports onboarding with <b>enhanced due diligence</b>: annual review cycle rather than triennial, transaction monitoring calibrated to the Panama and UAE corridors, and a standing requirement to re-screen UBO 2 at each list refresh. Absent those documents the recommendation is to hold in RETURNED and chase per the standard three-attempt cadence. <em>This recommendation is machine-drafted and requires human adoption and approval by a Compliance Officer before any status change.</em></p>
+            </div>
+          </div>
+
+          <div class="stack">
+            <div class="panel">
+              <div class="panel-head"><h2>Traceable citations</h2><span class="spacer"></span><span class="chip ok no-dot">5 / 5 resolved</span></div>
+              <div class="panel-body is-flush">
+                <div class="cite-list">
+                  <div class="cite-item"><span class="cn">[1]</span><span><span class="ct">Onboarding Policy §4.2, §2.1</span><span class="cs">v3.2 &middot; eff 2026-01-15 &middot; p.11</span></span></div>
+                  <div class="cite-item"><span class="cn">[2]</span><span><span class="ct">Risk Rating Matrix §J-3, §E-1</span><span class="cs">v2.1 &middot; eff 2026-04-01 &middot; tbl 3</span></span></div>
+                  <div class="cite-item"><span class="cn">[3]</span><span><span class="ct">Risk Rating Matrix §S-1(b)</span><span class="cs">v2.1 &middot; band override clause</span></span></div>
+                  <div class="cite-item"><span class="cn">[4]</span><span><span class="ct">Onboarding Policy §6.1, §6.4</span><span class="cs">v3.2 &middot; offshore layers &middot; p.19</span></span></div>
+                  <div class="cite-item"><span class="cn">[5]</span><span><span class="ct">Document Checklist items 7, 11</span><span class="cs">v2.0 &middot; eff 2025-11-03</span></span></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="panel">
+              <div class="panel-head"><h2>Version history</h2><span class="spacer"></span><span class="panel-note">immutable &middot; append-only</span></div>
+              <div class="panel-body is-flush">
+                <div class="ver-list">
+                  <div class="ver-item is-current"><span class="vtag">v4</span><span><span class="vt">Agent draft &mdash; sanctions override rationale expanded</span><span class="vm">Jul 28 13:58:47 &middot; agent &middot; hash 9f3c&hellip;a71e</span></span></div>
+                  <div class="ver-item"><span class="vtag">v3</span><span><span class="vt">Human edit &mdash; corridor percentages restated</span><span class="vm">Jul 28 11:20:06 &middot; P. Nkemdirim &middot; hash 71ba&hellip;3c19</span></span></div>
+                  <div class="ver-item"><span class="vtag">v2</span><span><span class="vt">Agent redraft after checklist FAIL ingested</span><span class="vm">Jul 27 17:02:44 &middot; agent &middot; hash 22de&hellip;90f4</span></span></div>
+                  <div class="ver-item"><span class="vtag">v1</span><span><span class="vt">Initial agent draft on score publication</span><span class="vm">Jul 27 16:41:10 &middot; agent &middot; hash 0ac7&hellip;b552</span></span></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="panel">
+              <div class="panel-head"><h2>Adoption record</h2></div>
+              <div class="panel-body">
+                <dl class="kv">
+                  <dt>Adopted version</dt><dd><span class="chip warn no-dot">None</span></dd>
+                  <dt>Adopted by</dt><dd class="faint">&mdash;</dd>
+                  <dt>Adopted at</dt><dd class="faint">&mdash;</dd>
+                  <dt>Approval tier</dt><dd><span class="chip crit no-dot">Tier 3 required</span></dd>
+                </dl>
+                <div class="callout info" style="margin-top:10px">
+                  <div><span class="co-title">Two-step control</span>
+                  Adopting a draft makes it the memo of record and is available to you as Senior Analyst. Approving the case and changing its status is a separate action reserved to Tier 3 for High-band cases.</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="action-bar">
+        <span class="chip machine lg no-dot">Machine-drafted &middot; v4</span>
+        <div class="lock-reason">
+          <span class="lr-t">Approval requires Compliance Officer &middot; Tier 3</span>
+          <span class="lr-b">You may adopt this draft as the memo of record. Status change on a High-band case is outside your authority.</span>
+        </div>
+        <span class="spacer"></span>
+        <button class="btn sm">Request redraft</button>
+        <button class="btn sm">Edit as v5 (human)</button>
+        <button class="btn primary">Adopt v4 as memo of record</button>
+        <button class="btn" disabled>Approve case</button>
+      </div>
+    </section>
+
+    <!-- ─────────────── 6. AUDIT ─────────────── -->
+    <section class="screen" id="screen-audit" aria-label="Immutable audit trail">
+      <div class="screen-head">
+        <div class="screen-title">
+          <span class="screen-eyebrow">Append-only ledger &middot; hash-chained &middot; no edit or delete path exists</span>
+          <h1 class="screen-h1">Audit Trail &middot; KYC-2026-0417</h1>
+        </div>
+        <div class="screen-head-spacer"></div>
+        <div class="screen-head-meta">
+          <span class="chip ok">Chain intact</span>
+          <span class="chip">42 entries</span>
+          <span>head 9f3c&hellip;a71e</span>
+        </div>
+      </div>
+
+      <div class="toolbar">
+        <div class="seg"><span class="on">All events</span><span>Human</span><span>Agent</span><span>System</span><span>Status changes</span></div>
+        <span class="readonly-note" style="margin-left:auto">Immutable &middot; entries cannot be amended, only appended</span>
+        <button class="btn sm ghost">Verify hash chain</button>
+        <button class="btn sm ghost">Export ledger (CSV)</button>
+      </div>
+
+      <div class="screen-body is-flush">
+        <div class="ledger">
+
+          <div class="ledger-row ev-agent">
+            <div class="ledger-when"><span class="ledger-ts">2026-07-28 13:58:47</span><span class="ledger-seq">seq 00042</span></div>
+            <div class="ledger-who"><span class="ledger-actor">Assessment Agent</span><span class="ledger-role">Service &middot; no authority</span></div>
+            <div class="ledger-what">
+              <div class="ledger-action">Memo draft <b>v4</b> generated and written to immutable memo history. 5 citations resolved, 0 uncited claims.</div>
+              <span class="delta"><span class="micro" style="letter-spacing:.1em">memo.latest</span> <span class="before">v3</span><span class="arrow">&rarr;</span><span class="after">v4</span></span>
+              <span class="hash" style="margin-left:8px">hash 9f3c&hellip;a71e &middot; prev 71ba&hellip;3c19</span>
+            </div>
+          </div>
+
+          <div class="ledger-row ev-agent">
+            <div class="ledger-when"><span class="ledger-ts">2026-07-28 14:09:31</span><span class="ledger-seq">seq 00041</span></div>
+            <div class="ledger-who"><span class="ledger-actor">Assessment Agent</span><span class="ledger-role">Service &middot; no authority</span></div>
+            <div class="ledger-what">
+              <div class="ledger-action">Refused requested action <b>status.change</b> &mdash; agent holds no approval authority; High band requires Tier 3 human.</div>
+              <span class="delta"><span class="micro" style="letter-spacing:.1em">refusal</span> <span class="after">recorded</span></span>
+            </div>
+          </div>
+
+          <div class="ledger-row ev-escalate">
+            <div class="ledger-when"><span class="ledger-ts">2026-07-28 14:02:10</span><span class="ledger-seq">seq 00040</span></div>
+            <div class="ledger-who"><span class="ledger-actor">SLA Monitor</span><span class="ledger-role">System</span></div>
+            <div class="ledger-what">
+              <div class="ledger-action">Escalation stage 1 opened at 25% window remaining. Notified R. Castellanos (Compliance Officer) by email + console alert.</div>
+              <span class="delta"><span class="micro" style="letter-spacing:.1em">escalation.stage</span> <span class="before">0</span><span class="arrow">&rarr;</span><span class="after">1</span></span>
+            </div>
+          </div>
+
+          <div class="ledger-row">
+            <div class="ledger-when"><span class="ledger-ts">2026-07-28 11:20:06</span><span class="ledger-seq">seq 00039</span></div>
+            <div class="ledger-who"><span class="ledger-actor">P. Nkemdirim</span><span class="ledger-role">Senior Analyst &middot; T2</span></div>
+            <div class="ledger-what">
+              <div class="ledger-action">Human edit of memo saved as new immutable version <b>v3</b>; corridor volume percentages restated from client clarification email.</div>
+              <span class="delta"><span class="micro" style="letter-spacing:.1em">memo.latest</span> <span class="before">v2</span><span class="arrow">&rarr;</span><span class="after">v3</span></span>
+            </div>
+          </div>
+
+          <div class="ledger-row ev-system">
+            <div class="ledger-when"><span class="ledger-ts">2026-07-27 16:40:55</span><span class="ledger-seq">seq 00038</span></div>
+            <div class="ledger-who"><span class="ledger-actor">P. Nkemdirim</span><span class="ledger-role">Senior Analyst &middot; T2</span></div>
+            <div class="ledger-what">
+              <div class="ledger-action">Case returned to client with itemised document request (items 7, 11). Notification sent to j.verstraete@meridianfreight.nl.</div>
+              <span class="delta"><span class="micro" style="letter-spacing:.1em">status</span> <span class="before">IN REVIEW</span><span class="arrow">&rarr;</span><span class="after">RETURNED</span></span>
+            </div>
+          </div>
+
+          <div class="ledger-row ev-agent">
+            <div class="ledger-when"><span class="ledger-ts">2026-07-27 17:02:44</span><span class="ledger-seq">seq 00037</span></div>
+            <div class="ledger-who"><span class="ledger-actor">Assessment Agent</span><span class="ledger-role">Service &middot; no authority</span></div>
+            <div class="ledger-what">
+              <div class="ledger-action">Memo redrafted as <b>v2</b> after checklist FAIL result ingested into case context.</div>
+              <span class="delta"><span class="micro" style="letter-spacing:.1em">memo.latest</span> <span class="before">v1</span><span class="arrow">&rarr;</span><span class="after">v2</span></span>
+            </div>
+          </div>
+
+          <div class="ledger-row ev-system">
+            <div class="ledger-when"><span class="ledger-ts">2026-07-27 16:38:02</span><span class="ledger-seq">seq 00036</span></div>
+            <div class="ledger-who"><span class="ledger-actor">Scoring Engine 4.7.2</span><span class="ledger-role">System &middot; deterministic</span></div>
+            <div class="ledger-what">
+              <div class="ledger-action">Risk score computed from snapshot 0417-A using matrix v2.1. Band floor §S-1(b) evaluated and recorded as applicable.</div>
+              <span class="delta"><span class="micro" style="letter-spacing:.1em">risk.score</span> <span class="before">null</span><span class="arrow">&rarr;</span><span class="after">74.00 / HIGH</span></span>
+            </div>
+          </div>
+
+          <div class="ledger-row ev-system">
+            <div class="ledger-when"><span class="ledger-ts">2026-07-27 16:37:41</span><span class="ledger-seq">seq 00035</span></div>
+            <div class="ledger-who"><span class="ledger-actor">Completeness Check</span><span class="ledger-role">System &middot; deterministic</span></div>
+            <div class="ledger-what">
+              <div class="ledger-action">Document completeness check executed against checklist v2.0 &mdash; 9 of 11 applicable items verified, items 7 and 11 missing.</div>
+              <span class="delta"><span class="micro" style="letter-spacing:.1em">docs.result</span> <span class="before">PENDING</span><span class="arrow">&rarr;</span><span class="after">FAIL (2 missing)</span></span>
+            </div>
+          </div>
+
+          <div class="ledger-row ev-escalate">
+            <div class="ledger-when"><span class="ledger-ts">2026-07-26 15:12:19</span><span class="ledger-seq">seq 00034</span></div>
+            <div class="ledger-who"><span class="ledger-actor">D. Achterberg</span><span class="ledger-role">Sanctions Screening &middot; T2</span></div>
+            <div class="ledger-what">
+              <div class="ledger-action">Screening alert on UBO 2 (M. A. Rahimi) adjudicated: true positive on a different individual. DOB and nationality mismatch documented.</div>
+              <span class="delta"><span class="micro" style="letter-spacing:.1em">sanctions.alert</span> <span class="before">OPEN</span><span class="arrow">&rarr;</span><span class="after">ADJUDICATED / TP-OTHER</span></span>
+            </div>
+          </div>
+
+          <div class="ledger-row">
+            <div class="ledger-when"><span class="ledger-ts">2026-07-27 09:22:07</span><span class="ledger-seq">seq 00033</span></div>
+            <div class="ledger-who"><span class="ledger-actor">P. Nkemdirim</span><span class="ledger-role">Senior Analyst &middot; T2</span></div>
+            <div class="ledger-what">
+              <div class="ledger-action">Case claimed from unassigned queue; ownership set.</div>
+              <span class="delta"><span class="micro" style="letter-spacing:.1em">owner</span> <span class="before">unassigned</span><span class="arrow">&rarr;</span><span class="after">P. Nkemdirim</span></span>
+            </div>
+          </div>
+
+          <div class="ledger-row ev-system">
+            <div class="ledger-when"><span class="ledger-ts">2026-07-27 09:19:33</span><span class="ledger-seq">seq 00032</span></div>
+            <div class="ledger-who"><span class="ledger-actor">P. Nkemdirim</span><span class="ledger-role">Senior Analyst &middot; T2</span></div>
+            <div class="ledger-what">
+              <div class="ledger-action">Status advanced to IN REVIEW after intake validation.</div>
+              <span class="delta"><span class="micro" style="letter-spacing:.1em">status</span> <span class="before">NEW</span><span class="arrow">&rarr;</span><span class="after">IN REVIEW</span></span>
+            </div>
+          </div>
+
+          <div class="ledger-row ev-system">
+            <div class="ledger-when"><span class="ledger-ts">2026-07-27 09:14:02</span><span class="ledger-seq">seq 00031</span></div>
+            <div class="ledger-who"><span class="ledger-actor">Intake Service</span><span class="ledger-role">System</span></div>
+            <div class="ledger-what">
+              <div class="ledger-action">Case created from client submission 0417-A and document package (10 files, 6.4 MB). SLA clock started under provisional Medium window, revised to 8h on score publication.</div>
+              <span class="delta"><span class="micro" style="letter-spacing:.1em">case</span> <span class="arrow">&rarr;</span><span class="after">CREATED / NEW</span></span>
+              <span class="hash" style="margin-left:8px">genesis hash 0000&hellip;0001</span>
+            </div>
+          </div>
+
+          <div class="ledger-row ev-system">
+            <div class="ledger-when"><span class="ledger-ts">2026-07-28 10:05:12</span><span class="ledger-seq">seq 00030R</span></div>
+            <div class="ledger-who"><span class="ledger-actor">A. Lindqvist</span><span class="ledger-role">Auditor &middot; read-only</span></div>
+            <div class="ledger-what">
+              <div class="ledger-action">Read-only access to case file and memo history. No mutation permitted for this role; access itself is recorded.</div>
+              <span class="delta"><span class="micro" style="letter-spacing:.1em">access</span> <span class="after">VIEW &middot; case, memo, score</span></span>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <div class="action-bar">
+        <span class="micro">Ledger is append-only &mdash; this console exposes no edit or delete affordance for any role</span>
+        <span class="spacer"></span>
+        <span class="chip ok">Hash chain verified 14:30:11</span>
+        <button class="btn sm ghost">Copy head hash</button>
+        <button class="btn sm">Export ledger (CSV)</button>
+      </div>
+    </section>
+
+    <!-- ─────────────── 7. SEARCH ─────────────── -->
+    <section class="screen" id="screen-search" aria-label="Case search">
+      <div class="screen-head">
+        <div class="screen-title">
+          <span class="screen-eyebrow">Full case history &middot; 4,182 cases indexed &middot; retention 7 years</span>
+          <h1 class="screen-h1">Case Search &amp; Export</h1>
+        </div>
+        <div class="screen-head-spacer"></div>
+        <div class="screen-head-meta">
+          <span class="chip accent">128 matches</span>
+          <span>query 0.14s</span>
+        </div>
+      </div>
+
+      <div class="screen-body">
+        <div class="panel">
+          <div class="panel-head"><h2>Filters</h2><span class="spacer"></span><span class="panel-note">saved view: "High band closed &mdash; 2026 H1"</span></div>
+          <div class="panel-body">
+            <div class="filters">
+              <div class="field"><label>Free text</label><input type="text" value="freight OR logistics" placeholder="client, case ID, UBO"></div>
+              <div class="field"><label>Status</label><select><option>Any status</option><option>NEW</option><option>RETURNED</option><option>IN REVIEW</option><option selected>PENDING APPROVAL</option><option>APPROVED</option><option>REJECTED</option></select></div>
+              <div class="field"><label>Risk band</label><select><option>Any band</option><option>Low (0-39)</option><option>Medium (40-69)</option><option selected>High (70-100)</option></select></div>
+              <div class="field"><label>Score min</label><input class="mono" type="text" value="70"></div>
+              <div class="field"><label>Score max</label><input class="mono" type="text" value="100"></div>
+              <div class="field"><label>Approver</label><select><option selected>Any approver</option><option>R. Castellanos</option><option>P. Nkemdirim</option><option>K. Sorensen</option></select></div>
+              <div class="field"><label>Opened from</label><input class="mono" type="text" value="2026-01-01"></div>
+              <div class="field"><label>Opened to</label><input class="mono" type="text" value="2026-07-28"></div>
+              <div class="field"><label>SLA outcome</label><select><option selected>Any</option><option>Met</option><option>At risk</option><option>Breached</option></select></div>
+              <div class="field"><label>Jurisdiction</label><select><option selected>Any</option><option>NL</option><option>PA &mdash; enhanced</option><option>AE &mdash; enhanced</option><option>CY</option></select></div>
+            </div>
+            <div class="row" style="margin-top:12px">
+              <button class="btn primary sm">Run search</button>
+              <button class="btn sm ghost">Reset</button>
+              <button class="btn sm ghost">Save view</button>
+              <span class="spacer" style="flex:1"></span>
+              <span class="micro">Results respect role scope &mdash; auditors see all cases, read-only</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head">
+            <h2>Results &mdash; 128 cases</h2>
+            <span class="spacer"></span>
+            <span class="panel-note">showing 1&ndash;9</span>
+            <button class="btn primary sm">Export case file (CSV)</button>
+          </div>
+          <div class="panel-body is-flush">
+            <table class="tbl">
+              <thead>
+                <tr>
+                  <th style="width:34px"><span class="micro">Sel</span></th>
+                  <th style="width:120px">Case ID</th>
+                  <th>Client</th>
+                  <th style="width:130px">Status</th>
+                  <th style="width:80px" class="num">Score</th>
+                  <th style="width:78px">Band</th>
+                  <th style="width:140px">Decided by</th>
+                  <th style="width:96px">Opened</th>
+                  <th style="width:96px">Closed</th>
+                  <th style="width:88px">SLA</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr class="is-sel"><td class="mono accent">&#9632;</td><td class="id">KYC-2026-0417</td><td>Meridian Freight Holdings B.V.</td><td><span class="chip">Returned</span></td><td class="num">74</td><td><span class="chip crit no-dot">High</span></td><td class="dim">&mdash; open</td><td class="num dim">Jul 27</td><td class="num dim">&mdash;</td><td><span class="chip crit no-dot">At risk</span></td></tr>
+                <tr><td class="mono faint">&#9633;</td><td class="id">KYC-2026-0402</td><td>Aurelia Petrochem Trading DMCC</td><td><span class="chip warn">Pending approval</span></td><td class="num">88</td><td><span class="chip crit no-dot">High</span></td><td class="dim">&mdash; open</td><td class="num dim">Jul 26</td><td class="num dim">&mdash;</td><td><span class="chip crit no-dot">Breached</span></td></tr>
+                <tr><td class="mono faint">&#9633;</td><td class="id">KYC-2026-0374</td><td>Pacific Horizon Shipping Pte</td><td><span class="chip crit">Rejected</span></td><td class="num">91</td><td><span class="chip crit no-dot">High</span></td><td>R. Castellanos</td><td class="num dim">Jul 22</td><td class="num dim">Jul 24</td><td><span class="chip ok no-dot">Met</span></td></tr>
+                <tr><td class="mono faint">&#9633;</td><td class="id">KYC-2026-0341</td><td>Kestrel Bulk Carriers Ltd</td><td><span class="chip ok">Approved</span></td><td class="num">73</td><td><span class="chip crit no-dot">High</span></td><td>R. Castellanos</td><td class="num dim">Jul 09</td><td class="num dim">Jul 09</td><td><span class="chip ok no-dot">Met</span></td></tr>
+                <tr><td class="mono faint">&#9633;</td><td class="id">KYC-2026-0298</td><td>Transalpine Cargo Systems S.p.A.</td><td><span class="chip ok">Approved</span></td><td class="num">71</td><td><span class="chip crit no-dot">High</span></td><td>R. Castellanos</td><td class="num dim">Jun 18</td><td class="num dim">Jun 19</td><td><span class="chip crit no-dot">Breached</span></td></tr>
+                <tr><td class="mono faint">&#9633;</td><td class="id">KYC-2026-0264</td><td>Orion Freight Solutions FZE</td><td><span class="chip crit">Rejected</span></td><td class="num">84</td><td><span class="chip crit no-dot">High</span></td><td>M. Duarte</td><td class="num dim">Jun 02</td><td class="num dim">Jun 02</td><td><span class="chip ok no-dot">Met</span></td></tr>
+                <tr><td class="mono faint">&#9633;</td><td class="id">KYC-2026-0211</td><td>Baltic Container Lines UAB</td><td><span class="chip ok">Approved</span></td><td class="num">70</td><td><span class="chip crit no-dot">High</span></td><td>R. Castellanos</td><td class="num dim">May 14</td><td class="num dim">May 14</td><td><span class="chip ok no-dot">Met</span></td></tr>
+                <tr><td class="mono faint">&#9633;</td><td class="id">KYC-2026-0187</td><td>Cordillera Logistics S.A.</td><td><span class="chip ok">Approved</span></td><td class="num">77</td><td><span class="chip crit no-dot">High</span></td><td>M. Duarte</td><td class="num dim">Apr 28</td><td class="num dim">Apr 29</td><td><span class="chip ok no-dot">Met</span></td></tr>
+                <tr><td class="mono faint">&#9633;</td><td class="id">KYC-2026-0129</td><td>Sable Bay Warehousing Ltd</td><td><span class="chip crit">Rejected</span></td><td class="num">95</td><td><span class="chip crit no-dot">High</span></td><td>R. Castellanos</td><td class="num dim">Mar 30</td><td class="num dim">Mar 30</td><td><span class="chip ok no-dot">Met</span></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head"><h2>Export case file (CSV)</h2><span class="spacer"></span><span class="panel-note">exports are themselves audit events</span></div>
+          <div class="panel-body">
+            <div class="grid g-2">
+              <div>
+                <div class="micro" style="margin-bottom:6px">Included sections</div>
+                <div class="row tight">
+                  <span class="chip ok">Case header</span><span class="chip ok">Client &amp; entity</span><span class="chip ok">Document checklist</span>
+                  <span class="chip ok">Score breakdown</span><span class="chip ok">Memo versions</span><span class="chip ok">Audit ledger</span>
+                  <span class="chip ok">Escalation records</span><span class="chip">Attachments (manifest only)</span>
+                </div>
+              </div>
+              <dl class="kv">
+                <dt>Scope</dt><dd>1 selected case &middot; KYC-2026-0417</dd>
+                <dt>Format</dt><dd class="mono">CSV, UTF-8, RFC 4180</dd>
+                <dt>Estimated rows</dt><dd class="mono">312</dd>
+                <dt>Requested by</dt><dd>P. Nkemdirim &middot; Senior Analyst</dd>
+              </dl>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="action-bar">
+        <span class="micro">1 case selected &middot; 128 in result set</span>
+        <span class="spacer"></span>
+        <button class="btn sm ghost">Select all results</button>
+        <button class="btn sm">Export result set (CSV)</button>
+        <button class="btn primary">Export case file (CSV)</button>
+      </div>
+    </section>
+
+    <!-- ─────────────── 8. REPORTS ─────────────── -->
+    <section class="screen" id="screen-reports" aria-label="Weekly operations report">
+      <div class="screen-head">
+        <div class="screen-title">
+          <span class="screen-eyebrow">Period 2026-07-20 &rarr; 2026-07-26 &middot; generated 2026-07-27 06:00 UTC</span>
+          <h1 class="screen-h1">Weekly Operations Report &middot; W30</h1>
+        </div>
+        <div class="screen-head-spacer"></div>
+        <div class="screen-head-meta">
+          <span class="chip crit">2 SLA breaches</span>
+          <span class="chip warn">3 escalations</span>
+          <span class="chip ok">94.1% on time</span>
+        </div>
+      </div>
+
+      <div class="screen-body">
+        <div class="tiles" style="margin-bottom:14px">
+          <div class="tile"><span class="tile-k">Cases opened</span><span class="tile-v">41</span><span class="tile-m">&minus;6 vs W29</span></div>
+          <div class="tile ok"><span class="tile-k">Cases closed</span><span class="tile-v">34</span><span class="tile-m">21 approved / 13 rejected</span></div>
+          <div class="tile crit"><span class="tile-k">SLA breaches</span><span class="tile-v">2</span><span class="tile-m">both High band</span></div>
+          <div class="tile ok"><span class="tile-k">On-time rate</span><span class="tile-v">94.1<span style="font-size:var(--fs-md)">%</span></span><span class="tile-m">target 95.0%</span></div>
+          <div class="tile warn"><span class="tile-k">Escalations</span><span class="tile-v">3</span><span class="tile-m">1 reached Head of FinCrime</span></div>
+          <div class="tile"><span class="tile-k">Median cycle</span><span class="tile-v">6.4h</span><span class="tile-m">High band 5.1h</span></div>
+        </div>
+
+        <div class="panel is-crit">
+          <div class="panel-head"><h2>SLA breaches this period</h2><span class="spacer"></span><span class="chip crit">2 records</span><span class="panel-note">business-hours clock</span></div>
+          <div class="panel-body is-flush">
+            <table class="tbl">
+              <thead><tr><th style="width:120px">Case ID</th><th>Client</th><th style="width:78px">Band</th><th style="width:80px" class="num">Window</th><th style="width:96px" class="num">Elapsed</th><th style="width:88px" class="num">Overrun</th><th style="width:150px">Owner at breach</th><th>Root cause recorded</th></tr></thead>
+              <tbody>
+                <tr class="is-crit">
+                  <td class="id">KYC-2026-0402</td><td>Aurelia Petrochem Trading DMCC</td><td><span class="chip crit no-dot">High</span></td>
+                  <td class="num">8h</td><td class="num">14h 12m</td><td class="num" style="color:var(--crit)">+6h 12m</td><td>R. Castellanos</td>
+                  <td class="dim">Approver unavailable &mdash; single Tier 3 on shift; sanctions re-screen queued behind list refresh.</td>
+                </tr>
+                <tr class="is-crit">
+                  <td class="id">KYC-2026-0388</td><td>Zenith Maritime Group Ltd</td><td><span class="chip crit no-dot">High</span></td>
+                  <td class="num">8h</td><td class="num">9h 47m</td><td class="num" style="color:var(--crit)">+1h 47m</td><td>R. Castellanos</td>
+                  <td class="dim">Client document arrived at 16:52, outside the business-hours window; clock did not pause.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head"><h2>Escalation records</h2><span class="spacer"></span><span class="panel-note">who notified &middot; when &middot; acknowledged</span></div>
+          <div class="panel-body is-flush">
+            <table class="tbl">
+              <thead><tr><th style="width:120px">Case ID</th><th style="width:70px">Stage</th><th style="width:190px">Notified</th><th style="width:150px">Notified at</th><th style="width:150px">Acknowledged</th><th>Outcome</th></tr></thead>
+              <tbody>
+                <tr>
+                  <td class="id">KYC-2026-0402</td><td><span class="chip warn no-dot">2</span></td><td>S. Vaidya &mdash; Head of Financial Crime</td>
+                  <td class="num dim">Jul 24 15:40</td><td class="num">Jul 24 15:58</td>
+                  <td class="dim">Second Tier 3 approver seconded from the Dublin desk; case cleared Jul 25 09:12.</td>
+                </tr>
+                <tr>
+                  <td class="id">KYC-2026-0402</td><td><span class="chip no-dot">1</span></td><td>R. Castellanos &mdash; Compliance Officer</td>
+                  <td class="num dim">Jul 24 11:20</td><td class="num">Jul 24 11:24</td>
+                  <td class="dim">Acknowledged; unable to action before window close.</td>
+                </tr>
+                <tr>
+                  <td class="id">KYC-2026-0388</td><td><span class="chip no-dot">1</span></td><td>R. Castellanos &mdash; Compliance Officer</td>
+                  <td class="num dim">Jul 23 14:02</td><td class="num">Jul 23 14:11</td>
+                  <td class="dim">Acknowledged; breach recorded, no stage 2 required.</td>
+                </tr>
+                <tr>
+                  <td class="id">KYC-2026-0396</td><td><span class="chip no-dot">1</span></td><td>P. Nkemdirim &mdash; Senior Analyst</td>
+                  <td class="num dim">Jul 22 09:50</td><td class="num">Jul 22 09:52</td>
+                  <td class="dim">Cleared inside window; escalation closed without breach.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="grid g-2" style="margin-top:14px">
+          <div class="panel">
+            <div class="panel-head"><h2>Next review due</h2><span class="spacer"></span><span class="panel-note">periodic refresh cadence</span></div>
+            <div class="panel-body is-flush">
+              <table class="tbl">
+                <thead><tr><th style="width:120px">Case ID</th><th>Client</th><th style="width:78px">Band</th><th style="width:86px">Cadence</th><th style="width:104px">Due</th><th style="width:88px">In</th></tr></thead>
+                <tbody>
+                  <tr><td class="id">KYC-2025-0912</td><td>Halcyon Digital Payments Ltd</td><td><span class="chip crit no-dot">High</span></td><td class="mono">Annual</td><td class="num">2026-08-04</td><td class="num" style="color:var(--warn)">7d</td></tr>
+                  <tr><td class="id">KYC-2025-1104</td><td>Kestrel Bulk Carriers Ltd</td><td><span class="chip crit no-dot">High</span></td><td class="mono">Annual</td><td class="num">2026-08-19</td><td class="num">22d</td></tr>
+                  <tr><td class="id">KYC-2024-0733</td><td>Northwind Agritech AB</td><td><span class="chip warn no-dot">Medium</span></td><td class="mono">Biennial</td><td class="num">2026-09-02</td><td class="num">36d</td></tr>
+                  <tr><td class="id">KYC-2023-0450</td><td>Fjordline Logistics AS</td><td><span class="chip ok no-dot">Low</span></td><td class="mono">Triennial</td><td class="num">2026-11-15</td><td class="num">110d</td></tr>
+                  <tr><td class="id">KYC-2026-0417</td><td>Meridian Freight Holdings B.V.</td><td><span class="chip crit no-dot">High</span></td><td class="mono">Annual</td><td class="num">2027-07-28</td><td class="num dim">365d</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="stack">
+            <div class="panel">
+              <div class="panel-head"><h2>Throughput by band</h2></div>
+              <div class="panel-body">
+                <div class="stack" style="gap:10px">
+                  <div><div class="row" style="justify-content:space-between"><span class="micro">Low &middot; 48h window</span><span class="mono dim">18 closed &middot; 100% on time</span></div><div class="sev low" style="grid-template-columns:0 1fr"><span></span><span class="sev-track"><span class="sev-fill" style="width:100%"></span></span></div></div>
+                  <div><div class="row" style="justify-content:space-between"><span class="micro">Medium &middot; 24h window</span><span class="mono dim">11 closed &middot; 100% on time</span></div><div class="sev med" style="grid-template-columns:0 1fr"><span></span><span class="sev-track"><span class="sev-fill" style="width:100%"></span></span></div></div>
+                  <div><div class="row" style="justify-content:space-between"><span class="micro">High &middot; 8h window</span><span class="mono" style="color:var(--crit)">5 closed &middot; 60% on time</span></div><div class="sev high" style="grid-template-columns:0 1fr"><span></span><span class="sev-track"><span class="sev-fill" style="width:60%"></span></span></div></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="panel is-warn">
+              <div class="panel-head"><h2>Standing observation</h2></div>
+              <div class="panel-body">
+                <div class="callout warn">
+                  <div><span class="co-title">Tier 3 approver concentration</span>
+                  Both breaches this period trace to a single Compliance Officer covering all High-band approvals on the EMEA day shift. 9 of 27 live cases currently require Tier 3. Recorded for the operations review on 2026-07-30.</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="action-bar">
+        <span class="micro">Report W30 &middot; 2026-07-20 &rarr; 2026-07-26 &middot; figures derived from the immutable ledger</span>
+        <span class="spacer"></span>
+        <button class="btn sm ghost">Previous period</button>
+        <button class="btn sm">Export report (CSV)</button>
+        <button class="btn primary sm">Circulate to Head of Financial Crime</button>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ============ RIGHT UTILITY DRAWER ============ -->
+  <aside class="drawer">
+    <div class="drawer-head"><span class="live-dot"></span> Watch drawer <span style="flex:1"></span> <span class="mono faint">14:32</span></div>
+
+    <div class="drawer-sec">
+      <h3>Breach watch <span class="spacer"></span> <span class="chip crit no-dot">2</span></h3>
+      <div class="q-row">
+        <span><span class="q-id">KYC-2026-0402</span><span class="q-sub">Aurelia Petrochem &middot; High 88</span></span>
+        <div class="countdown crit" style="min-width:70px"><span class="countdown-v">-06:12</span><span class="countdown-track"><span class="countdown-fill" style="width:100%"></span></span></div>
+      </div>
+      <div class="q-row">
+        <span><span class="q-id">KYC-2026-0388</span><span class="q-sub">Zenith Maritime &middot; High 79</span></span>
+        <div class="countdown crit" style="min-width:70px"><span class="countdown-v">-01:47</span><span class="countdown-track"><span class="countdown-fill" style="width:100%"></span></span></div>
+      </div>
+      <div class="q-row">
+        <span><span class="q-id">KYC-2026-0417</span><span class="q-sub">Meridian Freight &middot; High 74</span></span>
+        <div class="countdown crit" style="min-width:70px"><span class="countdown-v">00:41</span><span class="countdown-track"><span class="countdown-fill" style="width:9%"></span></span></div>
+      </div>
+      <div class="q-row">
+        <span><span class="q-id">KYC-2026-0424</span><span class="q-sub">Halcyon Digital &middot; High 72</span></span>
+        <div class="countdown warn" style="min-width:70px"><span class="countdown-v">02:04</span><span class="countdown-track"><span class="countdown-fill" style="width:26%"></span></span></div>
+      </div>
+      <div class="q-row">
+        <span><span class="q-id">KYC-2026-0421</span><span class="q-sub">Northwind Agritech &middot; Med 61</span></span>
+        <div class="countdown warn" style="min-width:70px"><span class="countdown-v">04:22</span><span class="countdown-track"><span class="countdown-fill" style="width:18%"></span></span></div>
+      </div>
+    </div>
+
+    <div class="drawer-sec">
+      <h3>Active case &middot; 0417</h3>
+      <div class="q-row"><span>Band <span class="q-sub">weighted total 74.0</span></span><span class="chip crit no-dot">High</span></div>
+      <div class="q-row"><span>Status <span class="q-sub">2 documents outstanding</span></span><span class="chip no-dot">Returned</span></div>
+      <div class="q-row"><span>Memo <span class="q-sub">machine-drafted, unadopted</span></span><span class="chip machine no-dot">v4</span></div>
+      <div class="q-row"><span>Your authority <span class="q-sub">Tier 3 required</span></span><span class="chip crit no-dot">Locked</span></div>
+    </div>
+
+    <div class="drawer-sec">
+      <h3>Escalation chain</h3>
+      <div class="chain">
+        <div class="chain-step done"><span class="chain-node">&#10003;</span><span><span class="chain-t">Compliance Officer</span><span class="chain-m">R. Castellanos &middot; 14:02 ack</span></span></div>
+        <div class="chain-step active"><span class="chain-node">!</span><span><span class="chain-t">Head of Financial Crime</span><span class="chain-m">S. Vaidya &middot; auto at T-00:15</span></span></div>
+        <div class="chain-step"><span class="chain-node">&middot;</span><span><span class="chain-t">COO</span><span class="chain-m">M. Bergqvist &middot; breach +4h</span></span></div>
+      </div>
+    </div>
+
+    <div class="drawer-sec">
+      <h3>Shift roster</h3>
+      <div class="q-row"><span>R. Castellanos <span class="q-sub">Compliance Officer &middot; T3</span></span><span class="chip warn no-dot">Load 9</span></div>
+      <div class="q-row"><span>P. Nkemdirim <span class="q-sub">Senior Analyst &middot; T2 &middot; you</span></span><span class="chip ok no-dot">Load 11</span></div>
+      <div class="q-row"><span>K. Sorensen <span class="q-sub">KYC Analyst &middot; T1</span></span><span class="chip ok no-dot">Load 7</span></div>
+      <div class="q-row"><span>A. Lindqvist <span class="q-sub">Auditor</span></span><span class="chip no-dot">Read-only</span></div>
+    </div>
+
+    <div class="drawer-sec">
+      <h3>Policy artifacts</h3>
+      <div class="ver-row"><span>Risk rating matrix</span><b>v2.1</b></div>
+      <div class="ver-row"><span>Document checklist</span><b>v2.0</b></div>
+      <div class="ver-row"><span>Onboarding policy</span><b>v3.2</b></div>
+      <div class="ver-row"><span>Sanctions snapshot</span><b>2026-07-26</b></div>
+      <div class="ver-row"><span>Scoring engine</span><b>4.7.2</b></div>
+    </div>
+
+    <div class="drawer-sec">
+      <h3>Keyboard</h3>
+      <div class="hot">
+        <kbd>1&ndash;8</kbd><span>Jump to screen</span>
+        <kbd>J / K</kbd><span>Next / prev case in queue</span>
+        <kbd>A</kbd><span>Approve (if authorised)</span>
+        <kbd>R</kbd><span>Return with document request</span>
+        <kbd>E</kbd><span>Escalate one stage</span>
+        <kbd>G</kbd><span>Ask agent about this case</span>
+        <kbd>&#8984;K</kbd><span>Command palette</span>
+      </div>
+    </div>
+
+    <div class="drawer-sec" style="border-bottom:0">
+      <h3>Session</h3>
+      <div class="ver-row"><span>Signed in</span><b>13:02 UTC</b></div>
+      <div class="ver-row"><span>Role</span><b>Senior Analyst</b></div>
+      <div class="ver-row"><span>Approve up to</span><b>Medium</b></div>
+      <div class="ver-row"><span>Actions logged</span><b>27</b></div>
+    </div>
+  </aside>
+
+</div>
+
+<script>
+/* Optional ergonomic layer only — the shell is fully functional without JS.
+   Number keys 1-8 jump between screens, matching the rail hints. */
+(function () {
+  var order = ['chat','worklist','case','score','memo','audit','search','reports'];
+  document.addEventListener('keydown', function (e) {
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    var t = e.target;
+    if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT')) return;
+    var i = parseInt(e.key, 10);
+    if (i >= 1 && i <= 8) {
+      var el = document.getElementById('nav-' + order[i - 1]);
+      if (el) { el.checked = true; }
+    }
+  });
+  var composer = document.getElementById('composer');
+  if (composer) composer.addEventListener('submit', function (e) { e.preventDefault(); });
+})();
+</script>
+
+</body>
+</html>

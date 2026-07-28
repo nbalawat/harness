@@ -1,0 +1,1814 @@
+{
+  "architecture": {
+    "path": "/Users/nbalawat/development/harness/fsi-kyc-desk/artifacts/architecture/architecture.json",
+    "data": {
+      "deploy_target": "local",
+      "modules": [
+        "persistence-core",
+        "agent-runtime",
+        "chat-shell",
+        "sqlite-adapter",
+        "migrations",
+        "env-config",
+        "seed-data",
+        "auth-basic",
+        "rbac",
+        "audit-log",
+        "audit-view",
+        "row-history",
+        "approval-flow",
+        "workflow-engine",
+        "state-machine",
+        "assignment",
+        "sla-timers",
+        "scheduling",
+        "notifications-ui",
+        "blob-store",
+        "file-upload",
+        "checklists",
+        "forms-engine",
+        "rag-core",
+        "citation-tracker",
+        "tool-registry",
+        "eval-harness",
+        "versioned-drafts",
+        "search-index",
+        "export-csv",
+        "data-table",
+        "record-detail",
+        "screen-router"
+      ],
+      "rationale": {
+        "pack_basis": "pack-document-review — the app's shape is exactly ingest a document package -> mechanical check -> human review queue -> decision trail. Started from its 10 modules, then applied the deltas below.",
+        "agent_runtime_choice": "agent-runtime (Claude Agent SDK default). Neither the intake nor any policy document mandates a department framework, so no LangGraph/ADK/Strands adapter is swapped in. The single memo-drafting agent needs no framework-specific graph machinery.",
+        "pack_removals": [
+          {
+            "module": "doc-extract",
+            "reason": "GAP-003 answered metadata-only: the completeness check inspects declared presence and user-supplied metadata; document content extraction and date/figure inspection are explicitly out of scope. The memo agent's grounding corpus is plain text/markdown policy files, which rag-core chunks directly."
+          },
+          {
+            "module": "table-extract",
+            "reason": "Depends on doc-extract and serves content parsing, which GAP-003 put out of scope."
+          }
+        ],
+        "pack_additions": [
+          {
+            "module": "workflow-engine",
+            "reason": "REQ-003/REQ-016 demand a DETERMINISTIC workflow with the AI confined to one node. This is the certified event-sourced workflow with agentic nodes — building it by hand is the single largest avoidable build cost."
+          },
+          {
+            "module": "sqlite-adapter",
+            "reason": "deploy_target=local (REQ-094) with indefinite retention (REQ-067): laptop-class durability without a database server. postgres-adapter is deliberately not chosen."
+          },
+          {
+            "module": "rag-core + citation-tracker",
+            "reason": "REQ-038 restricts retrieval to the versioned policy set; REQ-031/REQ-032 require auditor-traceable citations. citation-tracker's source attribution structure is the citation contract."
+          },
+          {
+            "module": "rbac + auth-basic",
+            "reason": "REQ-075..REQ-085 are a full least-privilege role model with server-side enforcement and named-individual attribution."
+          },
+          {
+            "module": "sla-timers + scheduling + notifications-ui",
+            "reason": "REQ-050..REQ-063 plus REQ-095: at-risk flagging, permanent breach records and escalation stepping must run on a recurring background evaluator, and each notification must persist with recipient and timestamp."
+          },
+          {
+            "module": "checklists",
+            "reason": "The Document Checklist (REQ-004..REQ-011) is literally a structured item list with completion tracking, and REQ-089 needs the itemized missing-item view."
+          },
+          {
+            "module": "versioned-drafts",
+            "reason": "REQ-039/REQ-069: each memo redraft is retained as an immutable version; 'live' and 'working copy' must never be the same row."
+          },
+          {
+            "module": "tool-registry + eval-harness",
+            "reason": "REQ-037/REQ-046 make the memo agent advisory-only — roster enforcement checked at invoke time is the mechanism that makes 'no tool to approve' structural rather than prompted. eval-harness keeps the grounding/label contract (REQ-033/REQ-036) honest across changes."
+          },
+          {
+            "module": "state-machine, assignment, forms-engine, search-index, export-csv, data-table, record-detail, audit-view, screen-router, env-config, seed-data, migrations",
+            "reason": "Each maps to a named requirement: declarative transitions (REQ-012/REQ-013), assigned approver and escalation chain (REQ-051/REQ-060), blocking-required-field validation shared with the backend (REQ-043/REQ-048), past-case search (REQ-072), CSV export (REQ-073/REQ-074), worklist and detail/score-breakdown screens (REQ-086/REQ-091), chronological trail view (REQ-090), multi-screen navigation, configurable business-hours window (REQ-056), one seeded named account per role (REQ-084), and safe schema evolution over indefinitely retained data (REQ-067)."
+          }
+        ],
+        "deliberate_exclusions": [
+          "data-retention / soft-delete — REQ-067 retains everything indefinitely and REQ-066 forbids trail deletion; a purge engine would be an anti-requirement.",
+          "pii-redaction / guardrails-io / transcript-store — auditors need the unredacted record (REQ-068/REQ-074); no requirement asks for masking, and transcript-store would drag pii-redaction in for no requirement.",
+          "agent-router / conversation-memory — one agent, one single-shot drafting task.",
+          "email-send / slack-notify — REQ-049/REQ-063 require persisted, addressable notification records with recipient and timestamp; local deploy (REQ-094) assumes no SMTP or webhook dependency, so notifications-ui carries them.",
+          "pdf-render — REQ-073/REQ-074 name CSV as the export format.",
+          "permissions-ui / admin-console — REQ-084 seeds one account per role locally; no role-administration requirement.",
+          "postgres-adapter, multi-env, queue-bridge, cache-layer, rate-limit, request-metrics, health-plus — cloud/scale concerns the local target (REQ-094) does not carry.",
+          "file-preview, ocr-bridge, import-mapper, spreadsheet-io — content inspection of client documents is out of scope per GAP-003."
+        ]
+      },
+      "module_coverage": [
+        {
+          "module": "persistence-core",
+          "addresses": [
+            "REQ-039",
+            "REQ-055",
+            "REQ-063",
+            "REQ-067",
+            "REQ-069",
+            "REQ-070",
+            "REQ-071"
+          ]
+        },
+        {
+          "module": "agent-runtime",
+          "addresses": [
+            "REQ-029",
+            "REQ-030",
+            "REQ-033",
+            "REQ-036",
+            "REQ-037",
+            "REQ-038"
+          ]
+        },
+        {
+          "module": "chat-shell",
+          "addresses": [
+            "REQ-034",
+            "REQ-086",
+            "REQ-087",
+            "REQ-088",
+            "REQ-089"
+          ]
+        },
+        {
+          "module": "sqlite-adapter",
+          "addresses": [
+            "REQ-067",
+            "REQ-068",
+            "REQ-094"
+          ]
+        },
+        {
+          "module": "migrations",
+          "addresses": [
+            "REQ-067",
+            "REQ-094"
+          ]
+        },
+        {
+          "module": "env-config",
+          "addresses": [
+            "REQ-056",
+            "REQ-094"
+          ]
+        },
+        {
+          "module": "seed-data",
+          "addresses": [
+            "REQ-083",
+            "REQ-084"
+          ]
+        },
+        {
+          "module": "auth-basic",
+          "addresses": [
+            "REQ-075",
+            "REQ-083",
+            "REQ-084"
+          ]
+        },
+        {
+          "module": "rbac",
+          "addresses": [
+            "REQ-014",
+            "REQ-015",
+            "REQ-040",
+            "REQ-046",
+            "REQ-075",
+            "REQ-076",
+            "REQ-077",
+            "REQ-078",
+            "REQ-079",
+            "REQ-080",
+            "REQ-081",
+            "REQ-082",
+            "REQ-085"
+          ]
+        },
+        {
+          "module": "audit-log",
+          "addresses": [
+            "REQ-047",
+            "REQ-061",
+            "REQ-064",
+            "REQ-065",
+            "REQ-066",
+            "REQ-067"
+          ]
+        },
+        {
+          "module": "audit-view",
+          "addresses": [
+            "REQ-068",
+            "REQ-074",
+            "REQ-090"
+          ]
+        },
+        {
+          "module": "row-history",
+          "addresses": [
+            "REQ-065",
+            "REQ-071",
+            "REQ-090"
+          ]
+        },
+        {
+          "module": "approval-flow",
+          "addresses": [
+            "REQ-025",
+            "REQ-035",
+            "REQ-040",
+            "REQ-041",
+            "REQ-042",
+            "REQ-043",
+            "REQ-044",
+            "REQ-045",
+            "REQ-046",
+            "REQ-047",
+            "REQ-048",
+            "REQ-062",
+            "REQ-085",
+            "REQ-088"
+          ]
+        },
+        {
+          "module": "workflow-engine",
+          "addresses": [
+            "REQ-001",
+            "REQ-002",
+            "REQ-003",
+            "REQ-004",
+            "REQ-016",
+            "REQ-017",
+            "REQ-018",
+            "REQ-019",
+            "REQ-020",
+            "REQ-021",
+            "REQ-022",
+            "REQ-023",
+            "REQ-024",
+            "REQ-025",
+            "REQ-026",
+            "REQ-027",
+            "REQ-028",
+            "REQ-029",
+            "REQ-093"
+          ]
+        },
+        {
+          "module": "state-machine",
+          "addresses": [
+            "REQ-004",
+            "REQ-012",
+            "REQ-013",
+            "REQ-044",
+            "REQ-062"
+          ]
+        },
+        {
+          "module": "assignment",
+          "addresses": [
+            "REQ-051",
+            "REQ-060",
+            "REQ-086"
+          ]
+        },
+        {
+          "module": "sla-timers",
+          "addresses": [
+            "REQ-050",
+            "REQ-052",
+            "REQ-053",
+            "REQ-054",
+            "REQ-055",
+            "REQ-057",
+            "REQ-058",
+            "REQ-059",
+            "REQ-060",
+            "REQ-061",
+            "REQ-062",
+            "REQ-086"
+          ]
+        },
+        {
+          "module": "scheduling",
+          "addresses": [
+            "REQ-092",
+            "REQ-093",
+            "REQ-095"
+          ]
+        },
+        {
+          "module": "notifications-ui",
+          "addresses": [
+            "REQ-049",
+            "REQ-051",
+            "REQ-057",
+            "REQ-061",
+            "REQ-063"
+          ]
+        },
+        {
+          "module": "blob-store",
+          "addresses": [
+            "REQ-001",
+            "REQ-002",
+            "REQ-067"
+          ]
+        },
+        {
+          "module": "file-upload",
+          "addresses": [
+            "REQ-001",
+            "REQ-002",
+            "REQ-089"
+          ]
+        },
+        {
+          "module": "checklists",
+          "addresses": [
+            "REQ-004",
+            "REQ-005",
+            "REQ-006",
+            "REQ-007",
+            "REQ-008",
+            "REQ-009",
+            "REQ-010",
+            "REQ-011",
+            "REQ-012",
+            "REQ-014",
+            "REQ-089"
+          ]
+        },
+        {
+          "module": "forms-engine",
+          "addresses": [
+            "REQ-002",
+            "REQ-014",
+            "REQ-015",
+            "REQ-043",
+            "REQ-048",
+            "REQ-088"
+          ]
+        },
+        {
+          "module": "rag-core",
+          "addresses": [
+            "REQ-029",
+            "REQ-036",
+            "REQ-038"
+          ]
+        },
+        {
+          "module": "citation-tracker",
+          "addresses": [
+            "REQ-031",
+            "REQ-032",
+            "REQ-036",
+            "REQ-087"
+          ]
+        },
+        {
+          "module": "tool-registry",
+          "addresses": [
+            "REQ-027",
+            "REQ-037",
+            "REQ-046"
+          ]
+        },
+        {
+          "module": "eval-harness",
+          "addresses": [
+            "REQ-028",
+            "REQ-033",
+            "REQ-036"
+          ]
+        },
+        {
+          "module": "versioned-drafts",
+          "addresses": [
+            "REQ-035",
+            "REQ-039",
+            "REQ-069",
+            "REQ-070"
+          ]
+        },
+        {
+          "module": "search-index",
+          "addresses": [
+            "REQ-068",
+            "REQ-072"
+          ]
+        },
+        {
+          "module": "export-csv",
+          "addresses": [
+            "REQ-034",
+            "REQ-059",
+            "REQ-073",
+            "REQ-074",
+            "REQ-092"
+          ]
+        },
+        {
+          "module": "data-table",
+          "addresses": [
+            "REQ-051",
+            "REQ-072",
+            "REQ-086"
+          ]
+        },
+        {
+          "module": "record-detail",
+          "addresses": [
+            "REQ-087",
+            "REQ-089",
+            "REQ-090",
+            "REQ-091"
+          ]
+        },
+        {
+          "module": "screen-router",
+          "addresses": [
+            "REQ-086",
+            "REQ-087",
+            "REQ-090",
+            "REQ-091"
+          ]
+        }
+      ],
+      "build_budget_plan": {
+        "nodes": {
+          "slice-1": 2.6,
+          "slice-2": 2.4,
+          "slice-3": 2.9,
+          "slice-4": 2.6,
+          "slice-5": 2.4,
+          "slice-6": 2.1
+        },
+        "total_usd": 15
+      },
+      "build_budget_notes": {
+        "envelope_usd": 40,
+        "dag_slice_allocation_usd": 18,
+        "basis": "33 composed modules mean each slice is mostly wiring and policy data (checklist items, factor weights, role tiers, SLA windows) rather than generated subsystems, so every slice is planned below its 3.00 DAG allocation.",
+        "per_node": {
+          "slice-1": "Case opening + document package upload + deterministic completeness check + RETURNED with missing-item list. Composes file-upload/blob-store/checklists/state-machine/forms-engine; new code is checklist data and the conditional-requirement rules.",
+          "slice-2": "Deterministic risk scoring: five weighted factors, band assignment, sanctions true-positive override, per-factor inputs and matrix version persisted. Pure function inside workflow-engine; cheapest kind of node to build and test.",
+          "slice-3": "Memo agent grounded in the policy corpus with citations, machine-drafted label, immutable versions. Highest estimate: agent node plus rag-core wiring, tool-registry roster restriction, and eval rubrics.",
+          "slice-4": "RBAC roles, tiered approval authority, rationale/reason required fields, decision records carrying role-at-decision-time, server-side enforcement. Composes rbac/approval-flow/audit-log; mostly role-tier policy data.",
+          "slice-5": "SLA clocks from case-ready, 80% at-risk flagging, permanent breach records, escalation chain stepping, persisted notifications. Composes sla-timers/scheduling/notifications-ui; new code is the business-hours calendar config.",
+          "slice-6": "Search, CSV export for analysts and auditors, chronological audit view, score-breakdown view, weekly operations report. Almost entirely composition of search-index/export-csv/audit-view/record-detail; lowest estimate."
+        }
+      }
+    }
+  },
+  "design_review": {
+    "path": "/Users/nbalawat/development/harness/fsi-kyc-desk/artifacts/design-review/design_review.json",
+    "data": {
+      "approve_design": "yes"
+    }
+  },
+  "design_choice": {
+    "path": "/Users/nbalawat/development/harness/fsi-kyc-desk/artifacts/design-select/design_choice.json",
+    "data": {
+      "chosen_option": "option-1"
+    }
+  },
+  "designs_dir": {
+    "path": "/Users/nbalawat/development/harness/fsi-kyc-desk/artifacts/design-options/designs"
+  },
+  "designs": {
+    "path": "/Users/nbalawat/development/harness/fsi-kyc-desk/artifacts/design-options/designs.json",
+    "data": {
+      "options": [
+        {
+          "id": "option-1",
+          "name": "Dossier — Editorial Compliance Record",
+          "screens": [
+            "chat",
+            "worklist",
+            "case",
+            "score",
+            "memo",
+            "audit",
+            "search",
+            "reports"
+          ],
+          "addresses": [
+            "REQ-012",
+            "REQ-014",
+            "REQ-029",
+            "REQ-031",
+            "REQ-033",
+            "REQ-034",
+            "REQ-039",
+            "REQ-043",
+            "REQ-044",
+            "REQ-045",
+            "REQ-048",
+            "REQ-050",
+            "REQ-051",
+            "REQ-057",
+            "REQ-058",
+            "REQ-059",
+            "REQ-060",
+            "REQ-064",
+            "REQ-065",
+            "REQ-069",
+            "REQ-071",
+            "REQ-072",
+            "REQ-073",
+            "REQ-074",
+            "REQ-075",
+            "REQ-076",
+            "REQ-081",
+            "REQ-086",
+            "REQ-087",
+            "REQ-088",
+            "REQ-089",
+            "REQ-090",
+            "REQ-091",
+            "REQ-092",
+            "REQ-093"
+          ],
+          "tokens_file": "designs/option-1/tokens.css",
+          "preview_file": "designs/option-1/index.html"
+        },
+        {
+          "id": "option-2",
+          "name": "Watchfloor — Operational Compliance Console",
+          "screens": [
+            "chat",
+            "worklist",
+            "case",
+            "score",
+            "memo",
+            "audit",
+            "search",
+            "reports"
+          ],
+          "addresses": [
+            "REQ-012",
+            "REQ-014",
+            "REQ-029",
+            "REQ-031",
+            "REQ-033",
+            "REQ-034",
+            "REQ-039",
+            "REQ-043",
+            "REQ-044",
+            "REQ-045",
+            "REQ-048",
+            "REQ-050",
+            "REQ-051",
+            "REQ-057",
+            "REQ-058",
+            "REQ-059",
+            "REQ-060",
+            "REQ-064",
+            "REQ-065",
+            "REQ-069",
+            "REQ-071",
+            "REQ-072",
+            "REQ-073",
+            "REQ-074",
+            "REQ-075",
+            "REQ-076",
+            "REQ-081",
+            "REQ-086",
+            "REQ-087",
+            "REQ-088",
+            "REQ-089",
+            "REQ-090",
+            "REQ-091",
+            "REQ-092",
+            "REQ-093"
+          ],
+          "tokens_file": "designs/option-2/tokens.css",
+          "preview_file": "designs/option-2/index.html"
+        },
+        {
+          "id": "option-3",
+          "name": "Panorama — Risk Data Board",
+          "screens": [
+            "chat",
+            "worklist",
+            "case",
+            "score",
+            "memo",
+            "audit",
+            "search",
+            "reports"
+          ],
+          "addresses": [
+            "REQ-012",
+            "REQ-014",
+            "REQ-029",
+            "REQ-031",
+            "REQ-033",
+            "REQ-034",
+            "REQ-039",
+            "REQ-043",
+            "REQ-044",
+            "REQ-045",
+            "REQ-048",
+            "REQ-050",
+            "REQ-051",
+            "REQ-057",
+            "REQ-058",
+            "REQ-059",
+            "REQ-060",
+            "REQ-064",
+            "REQ-065",
+            "REQ-069",
+            "REQ-071",
+            "REQ-072",
+            "REQ-073",
+            "REQ-074",
+            "REQ-075",
+            "REQ-076",
+            "REQ-081",
+            "REQ-086",
+            "REQ-087",
+            "REQ-088",
+            "REQ-089",
+            "REQ-090",
+            "REQ-091",
+            "REQ-092",
+            "REQ-093"
+          ],
+          "tokens_file": "designs/option-3/tokens.css",
+          "preview_file": "designs/option-3/index.html"
+        },
+        {
+          "id": "option-4",
+          "name": "Ledger — Minimal Terminal Desk",
+          "screens": [
+            "chat",
+            "worklist",
+            "case",
+            "score",
+            "memo",
+            "audit",
+            "search",
+            "reports"
+          ],
+          "addresses": [
+            "REQ-012",
+            "REQ-014",
+            "REQ-029",
+            "REQ-031",
+            "REQ-033",
+            "REQ-034",
+            "REQ-039",
+            "REQ-043",
+            "REQ-044",
+            "REQ-045",
+            "REQ-048",
+            "REQ-050",
+            "REQ-051",
+            "REQ-057",
+            "REQ-058",
+            "REQ-059",
+            "REQ-060",
+            "REQ-064",
+            "REQ-065",
+            "REQ-069",
+            "REQ-071",
+            "REQ-072",
+            "REQ-073",
+            "REQ-074",
+            "REQ-075",
+            "REQ-076",
+            "REQ-081",
+            "REQ-086",
+            "REQ-087",
+            "REQ-088",
+            "REQ-089",
+            "REQ-090",
+            "REQ-091",
+            "REQ-092",
+            "REQ-093"
+          ],
+          "tokens_file": "designs/option-4/tokens.css",
+          "preview_file": "designs/option-4/index.html"
+        }
+      ]
+    }
+  },
+  "data_model": {
+    "path": "/Users/nbalawat/development/harness/fsi-kyc-desk/artifacts/data-design/data_model.json",
+    "data": {
+      "tables": [
+        {
+          "name": "cases",
+          "addresses": [
+            "REQ-001",
+            "REQ-002",
+            "REQ-004",
+            "REQ-012",
+            "REQ-055",
+            "REQ-064",
+            "REQ-067",
+            "REQ-069",
+            "REQ-070"
+          ],
+          "columns": [
+            {
+              "name": "id",
+              "type": "string"
+            },
+            {
+              "name": "created_at",
+              "type": "timestamp"
+            },
+            {
+              "name": "status",
+              "type": "enum"
+            },
+            {
+              "name": "client_name",
+              "type": "string"
+            },
+            {
+              "name": "case_ready_timestamp",
+              "type": "timestamp"
+            },
+            {
+              "name": "completeness_passed_at",
+              "type": "timestamp"
+            },
+            {
+              "name": "sla_breached",
+              "type": "boolean"
+            },
+            {
+              "name": "is_at_risk",
+              "type": "boolean"
+            },
+            {
+              "name": "assigned_approver_id",
+              "type": "string"
+            },
+            {
+              "name": "risk_matrix_version",
+              "type": "string"
+            },
+            {
+              "name": "document_checklist_version",
+              "type": "string"
+            },
+            {
+              "name": "onboarding_policy_version",
+              "type": "string"
+            },
+            {
+              "name": "next_review_due_date",
+              "type": "date"
+            }
+          ]
+        },
+        {
+          "name": "risk_scores",
+          "addresses": [
+            "REQ-016",
+            "REQ-017",
+            "REQ-018",
+            "REQ-019",
+            "REQ-020",
+            "REQ-021",
+            "REQ-022",
+            "REQ-023",
+            "REQ-024",
+            "REQ-025",
+            "REQ-026",
+            "REQ-027",
+            "REQ-028",
+            "REQ-069",
+            "REQ-071"
+          ],
+          "columns": [
+            {
+              "name": "id",
+              "type": "string"
+            },
+            {
+              "name": "case_id",
+              "type": "string"
+            },
+            {
+              "name": "jurisdiction_factor_score",
+              "type": "integer"
+            },
+            {
+              "name": "jurisdiction_raw_input",
+              "type": "string"
+            },
+            {
+              "name": "entity_structure_factor_score",
+              "type": "integer"
+            },
+            {
+              "name": "entity_structure_raw_input",
+              "type": "string"
+            },
+            {
+              "name": "industry_factor_score",
+              "type": "integer"
+            },
+            {
+              "name": "industry_raw_input",
+              "type": "string"
+            },
+            {
+              "name": "sanctions_screening_factor_score",
+              "type": "integer"
+            },
+            {
+              "name": "sanctions_screening_raw_input",
+              "type": "string"
+            },
+            {
+              "name": "expected_activity_factor_score",
+              "type": "integer"
+            },
+            {
+              "name": "expected_activity_raw_input",
+              "type": "string"
+            },
+            {
+              "name": "total_risk_score",
+              "type": "decimal"
+            },
+            {
+              "name": "risk_band",
+              "type": "enum"
+            },
+            {
+              "name": "sanctions_true_positive_override_applied",
+              "type": "boolean"
+            },
+            {
+              "name": "computed_at",
+              "type": "timestamp"
+            }
+          ]
+        },
+        {
+          "name": "documents",
+          "addresses": [
+            "REQ-003",
+            "REQ-004",
+            "REQ-005",
+            "REQ-006",
+            "REQ-007",
+            "REQ-008",
+            "REQ-009",
+            "REQ-010",
+            "REQ-011",
+            "REQ-012"
+          ],
+          "columns": [
+            {
+              "name": "id",
+              "type": "string"
+            },
+            {
+              "name": "case_id",
+              "type": "string"
+            },
+            {
+              "name": "document_type",
+              "type": "enum"
+            },
+            {
+              "name": "required",
+              "type": "boolean"
+            },
+            {
+              "name": "conditionally_required",
+              "type": "boolean"
+            },
+            {
+              "name": "condition_trigger",
+              "type": "string"
+            },
+            {
+              "name": "received",
+              "type": "boolean"
+            },
+            {
+              "name": "received_at",
+              "type": "timestamp"
+            }
+          ]
+        },
+        {
+          "name": "missing_documents",
+          "addresses": [
+            "REQ-012",
+            "REQ-089"
+          ],
+          "columns": [
+            {
+              "name": "id",
+              "type": "string"
+            },
+            {
+              "name": "case_id",
+              "type": "string"
+            },
+            {
+              "name": "document_type",
+              "type": "enum"
+            },
+            {
+              "name": "recorded_at",
+              "type": "timestamp"
+            }
+          ]
+        },
+        {
+          "name": "assessment_memos",
+          "addresses": [
+            "REQ-029",
+            "REQ-030",
+            "REQ-031",
+            "REQ-032",
+            "REQ-033",
+            "REQ-034",
+            "REQ-035",
+            "REQ-036",
+            "REQ-037",
+            "REQ-038",
+            "REQ-039",
+            "REQ-087"
+          ],
+          "columns": [
+            {
+              "name": "id",
+              "type": "string"
+            },
+            {
+              "name": "case_id",
+              "type": "string"
+            },
+            {
+              "name": "version",
+              "type": "integer"
+            },
+            {
+              "name": "memo_text",
+              "type": "text"
+            },
+            {
+              "name": "generated_at",
+              "type": "timestamp"
+            },
+            {
+              "name": "is_machine_drafted",
+              "type": "boolean"
+            },
+            {
+              "name": "policy_citations",
+              "type": "json"
+            },
+            {
+              "name": "approved_at",
+              "type": "timestamp"
+            },
+            {
+              "name": "approved_by_user_id",
+              "type": "string"
+            },
+            {
+              "name": "approved_by_role",
+              "type": "string"
+            },
+            {
+              "name": "is_approved",
+              "type": "boolean"
+            }
+          ]
+        },
+        {
+          "name": "approvals",
+          "addresses": [
+            "REQ-041",
+            "REQ-042",
+            "REQ-043",
+            "REQ-044",
+            "REQ-045",
+            "REQ-046",
+            "REQ-047",
+            "REQ-048",
+            "REQ-085"
+          ],
+          "columns": [
+            {
+              "name": "id",
+              "type": "string"
+            },
+            {
+              "name": "case_id",
+              "type": "string"
+            },
+            {
+              "name": "decision_type",
+              "type": "enum"
+            },
+            {
+              "name": "decided_by_user_id",
+              "type": "string"
+            },
+            {
+              "name": "decided_by_role",
+              "type": "string"
+            },
+            {
+              "name": "decided_at",
+              "type": "timestamp"
+            },
+            {
+              "name": "required_role_tier",
+              "type": "enum"
+            },
+            {
+              "name": "reason",
+              "type": "text"
+            },
+            {
+              "name": "memo_version_id",
+              "type": "string"
+            }
+          ]
+        },
+        {
+          "name": "compliance_exceptions",
+          "addresses": [
+            "REQ-014",
+            "REQ-015"
+          ],
+          "columns": [
+            {
+              "name": "id",
+              "type": "string"
+            },
+            {
+              "name": "case_id",
+              "type": "string"
+            },
+            {
+              "name": "exception_type",
+              "type": "enum"
+            },
+            {
+              "name": "granted_by_user_id",
+              "type": "string"
+            },
+            {
+              "name": "granted_at",
+              "type": "timestamp"
+            },
+            {
+              "name": "reason",
+              "type": "text"
+            },
+            {
+              "name": "affected_documents",
+              "type": "json"
+            }
+          ]
+        },
+        {
+          "name": "audit_trail",
+          "addresses": [
+            "REQ-064",
+            "REQ-065",
+            "REQ-066",
+            "REQ-067",
+            "REQ-068",
+            "REQ-090"
+          ],
+          "columns": [
+            {
+              "name": "id",
+              "type": "string"
+            },
+            {
+              "name": "case_id",
+              "type": "string"
+            },
+            {
+              "name": "action_type",
+              "type": "enum"
+            },
+            {
+              "name": "performed_by_user_id",
+              "type": "string"
+            },
+            {
+              "name": "performed_by_role",
+              "type": "string"
+            },
+            {
+              "name": "timestamp",
+              "type": "timestamp"
+            },
+            {
+              "name": "field_name",
+              "type": "string"
+            },
+            {
+              "name": "old_value",
+              "type": "text"
+            },
+            {
+              "name": "new_value",
+              "type": "text"
+            },
+            {
+              "name": "details",
+              "type": "json"
+            }
+          ]
+        },
+        {
+          "name": "escalations",
+          "addresses": [
+            "REQ-050",
+            "REQ-060",
+            "REQ-061",
+            "REQ-095"
+          ],
+          "columns": [
+            {
+              "name": "id",
+              "type": "string"
+            },
+            {
+              "name": "case_id",
+              "type": "string"
+            },
+            {
+              "name": "escalation_level",
+              "type": "integer"
+            },
+            {
+              "name": "escalated_to_role",
+              "type": "enum"
+            },
+            {
+              "name": "escalated_to_user_id",
+              "type": "string"
+            },
+            {
+              "name": "escalated_at",
+              "type": "timestamp"
+            },
+            {
+              "name": "reason",
+              "type": "enum"
+            }
+          ]
+        },
+        {
+          "name": "notifications",
+          "addresses": [
+            "REQ-049",
+            "REQ-051",
+            "REQ-057",
+            "REQ-063"
+          ],
+          "columns": [
+            {
+              "name": "id",
+              "type": "string"
+            },
+            {
+              "name": "case_id",
+              "type": "string"
+            },
+            {
+              "name": "notification_type",
+              "type": "enum"
+            },
+            {
+              "name": "recipient_user_id",
+              "type": "string"
+            },
+            {
+              "name": "sent_at",
+              "type": "timestamp"
+            },
+            {
+              "name": "message",
+              "type": "text"
+            },
+            {
+              "name": "read_at",
+              "type": "timestamp"
+            }
+          ]
+        },
+        {
+          "name": "sla_tracking",
+          "addresses": [
+            "REQ-052",
+            "REQ-053",
+            "REQ-054",
+            "REQ-055",
+            "REQ-056",
+            "REQ-057",
+            "REQ-058",
+            "REQ-062"
+          ],
+          "columns": [
+            {
+              "name": "id",
+              "type": "string"
+            },
+            {
+              "name": "case_id",
+              "type": "string"
+            },
+            {
+              "name": "sla_start_timestamp",
+              "type": "timestamp"
+            },
+            {
+              "name": "sla_due_timestamp",
+              "type": "timestamp"
+            },
+            {
+              "name": "risk_band",
+              "type": "enum"
+            },
+            {
+              "name": "sla_hours",
+              "type": "integer"
+            },
+            {
+              "name": "flagged_at_risk_at",
+              "type": "timestamp"
+            },
+            {
+              "name": "breached_at",
+              "type": "timestamp"
+            },
+            {
+              "name": "breached",
+              "type": "boolean"
+            }
+          ]
+        },
+        {
+          "name": "users",
+          "addresses": [
+            "REQ-075",
+            "REQ-078",
+            "REQ-079",
+            "REQ-080",
+            "REQ-081",
+            "REQ-082",
+            "REQ-083",
+            "REQ-084"
+          ],
+          "columns": [
+            {
+              "name": "id",
+              "type": "string"
+            },
+            {
+              "name": "username",
+              "type": "string"
+            },
+            {
+              "name": "full_name",
+              "type": "string"
+            },
+            {
+              "name": "role",
+              "type": "enum"
+            },
+            {
+              "name": "created_at",
+              "type": "timestamp"
+            },
+            {
+              "name": "is_active",
+              "type": "boolean"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "agent_roster": {
+    "path": "/Users/nbalawat/development/harness/fsi-kyc-desk/artifacts/agent-design/agent_roster.json",
+    "data": {
+      "agents": [
+        {
+          "name": "Risk Assessment Memo Assistant",
+          "role": "Drafts the risk assessment memo for a KYC case, grounded strictly in the versioned policy set and the case's own recorded data, with a citation for every policy-based claim and a permanent machine-drafted label; produces a draft only — it never changes case status, scores, or approvals.",
+          "tools": [
+            "read_case_record",
+            "read_policy_corpus",
+            "resolve_policy_citation",
+            "save_memo_draft"
+          ],
+          "denied_tools": [
+            "update_case_status",
+            "record_approval_or_rejection",
+            "edit_risk_score",
+            "edit_case_data",
+            "waive_document_requirement",
+            "record_policy_exception",
+            "send_notification",
+            "delete_or_edit_audit_trail",
+            "overwrite_previous_memo_version",
+            "access_external_web_or_third_party_data"
+          ],
+          "system_prompt": "You are the Risk Assessment Memo Assistant for the KYC case desk. Draft a risk assessment memo for one case at a time, grounded only in the versioned policy documents (KYC Onboarding Policy, Document Checklist, Escalation/SLA Policy, Risk Rating Matrix) and that case's own record — never on outside knowledge or other cases. Cover beneficial ownership, jurisdiction exposure, sanctions screening results, and the computed score and band exactly as recorded, cite the specific policy provision behind every policy-based statement, and say plainly that a fact is not available in the record rather than inferring or estimating it. Always open the memo with a clear 'MACHINE-DRAFTED — requires human approval' label, and remember you are advisory only: you draft text for a human reviewer and never change a case's status, alter its risk score, record an approval, or take any other action.",
+          "addresses": [
+            "REQ-029",
+            "REQ-030",
+            "REQ-031",
+            "REQ-032",
+            "REQ-033",
+            "REQ-034",
+            "REQ-036",
+            "REQ-037",
+            "REQ-038",
+            "REQ-039",
+            "REQ-087"
+          ],
+          "eval_criteria": [
+            "Reply opens with a prominent machine-drafted disclosure, e.g. containing the phrase 'MACHINE-DRAFTED' (or 'AI-DRAFTED') together with 'requires human approval' or equivalent wording.",
+            "Reply contains a section or paragraph addressing beneficial ownership.",
+            "Reply contains a section or paragraph addressing jurisdiction exposure.",
+            "Reply contains a section or paragraph addressing sanctions screening results.",
+            "Reply states the case's computed risk score and risk band, matching the values supplied in the case record rather than a recomputed or different value.",
+            "Reply includes at least one inline citation naming a specific source policy document and section/provision (e.g. 'Risk Rating Matrix §...') for each policy-based claim it makes.",
+            "When a fact needed for the memo is not present in the supplied case record or policy documents, reply explicitly states it is missing or not available rather than inferring, estimating, or omitting the gap silently.",
+            "Reply contains no first-person claim of having taken an action, such as approving, rejecting, changing status, altering the score, or waiving a requirement (no phrases like 'I have approved', 'status updated to', or 'score adjusted').",
+            "Reply does not introduce facts, figures, or claims beyond what is present in the supplied case record and named policy documents (no external or general-knowledge claims).",
+            "Reply stays scoped to the single case it was asked to draft for and does not reference or pull in data from any other case."
+          ]
+        }
+      ]
+    }
+  },
+  "workflows": {
+    "path": "/Users/nbalawat/development/harness/fsi-kyc-desk/artifacts/workflow-design/workflows.json",
+    "data": {
+      "workflows": [
+        {
+          "name": "case-intake-and-risk-scoring",
+          "description": "A client submission opens a case, the document package is checked for completeness by a purely mechanical step, and only a complete case is marked ready, scored against the risk rating matrix and put under an SLA clock. An incomplete case is RETURNED with its itemized missing-document list — never parked and never waived.",
+          "addresses": [
+            "REQ-001",
+            "REQ-002",
+            "REQ-003",
+            "REQ-004",
+            "REQ-005",
+            "REQ-006",
+            "REQ-007",
+            "REQ-008",
+            "REQ-009",
+            "REQ-010",
+            "REQ-011",
+            "REQ-012",
+            "REQ-013",
+            "REQ-014",
+            "REQ-016",
+            "REQ-017",
+            "REQ-018",
+            "REQ-019",
+            "REQ-020",
+            "REQ-021",
+            "REQ-022",
+            "REQ-023",
+            "REQ-024",
+            "REQ-025",
+            "REQ-026",
+            "REQ-027",
+            "REQ-028",
+            "REQ-052",
+            "REQ-053",
+            "REQ-054",
+            "REQ-055",
+            "REQ-056",
+            "REQ-064",
+            "REQ-065",
+            "REQ-070",
+            "REQ-071",
+            "REQ-089"
+          ],
+          "nodes": [
+            {
+              "id": "open_case",
+              "kind": "deterministic",
+              "handler": "open_case_from_submission",
+              "output_schema": {
+                "required": [
+                  "case_id",
+                  "client_name",
+                  "status",
+                  "created_at",
+                  "document_checklist_version",
+                  "risk_matrix_version",
+                  "onboarding_policy_version",
+                  "audit_entry_id"
+                ]
+              }
+            },
+            {
+              "id": "completeness_check",
+              "kind": "deterministic",
+              "handler": "run_document_completeness_check",
+              "output_schema": {
+                "required": [
+                  "case_id",
+                  "is_complete",
+                  "required_document_types",
+                  "received_document_types",
+                  "missing_documents",
+                  "conditional_triggers_applied",
+                  "document_checklist_version"
+                ]
+              }
+            },
+            {
+              "id": "completeness_gate",
+              "kind": "condition",
+              "path": "completeness_check.is_complete",
+              "equals": true,
+              "on_false": "incomplete_branch"
+            },
+            {
+              "id": "mark_ready",
+              "kind": "deterministic",
+              "handler": "mark_case_ready",
+              "output_schema": {
+                "required": [
+                  "case_id",
+                  "status",
+                  "case_ready_timestamp",
+                  "completeness_passed_at",
+                  "audit_entry_id"
+                ]
+              }
+            },
+            {
+              "id": "score_case",
+              "kind": "deterministic",
+              "handler": "compute_risk_score_from_matrix",
+              "output_schema": {
+                "required": [
+                  "case_id",
+                  "risk_score_id",
+                  "factor_inputs",
+                  "factor_scores",
+                  "factor_weights",
+                  "factor_contributions",
+                  "total_risk_score",
+                  "risk_band",
+                  "sanctions_true_positive_override_applied",
+                  "risk_matrix_version",
+                  "computed_at",
+                  "audit_entry_id"
+                ]
+              }
+            },
+            {
+              "id": "start_sla",
+              "kind": "deterministic",
+              "handler": "start_sla_clock",
+              "output_schema": {
+                "required": [
+                  "case_id",
+                  "sla_tracking_id",
+                  "sla_start_timestamp",
+                  "sla_due_timestamp",
+                  "sla_hours",
+                  "risk_band",
+                  "required_approver_role",
+                  "assigned_approver_id",
+                  "business_hours_config",
+                  "audit_entry_id"
+                ]
+              }
+            },
+            {
+              "id": "incomplete_branch",
+              "kind": "condition",
+              "path": "completeness_check.is_complete",
+              "equals": false,
+              "on_false": "end"
+            },
+            {
+              "id": "return_case",
+              "kind": "deterministic",
+              "handler": "return_case_with_missing_documents",
+              "output_schema": {
+                "required": [
+                  "case_id",
+                  "status",
+                  "missing_documents",
+                  "returned_at",
+                  "notification_id",
+                  "audit_entry_id"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "risk-memo-and-approval",
+          "description": "For a ready, scored case an AI agent drafts the risk assessment memo grounded only in the versioned policy corpus and the case record, the draft is persisted as an immutable machine-drafted version with its citations mechanically resolved, and a named human at the tier the risk band requires approves or rejects. Every state change after the human decision is deterministic and recorded.",
+          "addresses": [
+            "REQ-029",
+            "REQ-030",
+            "REQ-031",
+            "REQ-032",
+            "REQ-033",
+            "REQ-034",
+            "REQ-035",
+            "REQ-036",
+            "REQ-037",
+            "REQ-038",
+            "REQ-039",
+            "REQ-040",
+            "REQ-041",
+            "REQ-042",
+            "REQ-043",
+            "REQ-044",
+            "REQ-045",
+            "REQ-046",
+            "REQ-047",
+            "REQ-048",
+            "REQ-049",
+            "REQ-067",
+            "REQ-069",
+            "REQ-085",
+            "REQ-087",
+            "REQ-088",
+            "REQ-093"
+          ],
+          "nodes": [
+            {
+              "id": "load_case",
+              "kind": "deterministic",
+              "handler": "load_case_for_assessment",
+              "output_schema": {
+                "required": [
+                  "case_id",
+                  "client_name",
+                  "status",
+                  "beneficial_ownership_summary",
+                  "jurisdiction_exposure",
+                  "sanctions_screening_result",
+                  "factor_breakdown",
+                  "total_risk_score",
+                  "risk_band",
+                  "required_approver_role",
+                  "policy_versions",
+                  "policy_corpus_refs"
+                ]
+              }
+            },
+            {
+              "id": "draft_memo",
+              "kind": "agent",
+              "prompt": "Draft the risk assessment memo for KYC case ${load_case_case_id} (client: ${load_case_client_name}). Ground every statement ONLY in the versioned policy corpus ${load_case_policy_corpus_refs} (versions ${load_case_policy_versions}) and this case record — never outside knowledge and never another case. Open with a prominent 'MACHINE-DRAFTED — requires human approval' label. Cover: beneficial ownership (${load_case_beneficial_ownership_summary}); jurisdiction exposure (${load_case_jurisdiction_exposure}); sanctions screening results (${load_case_sanctions_screening_result}); and the computed score and band exactly as recorded — total ${load_case_total_risk_score}, band ${load_case_risk_band}, per-factor breakdown ${load_case_factor_breakdown}. Do not recompute or adjust the score. Cite the specific policy provision behind every policy-based claim in a form an auditor can trace to the source document. Where a fact needed for the memo is absent from the record, state plainly that it is not available rather than inferring or estimating it. You are advisory only: do not change case status, alter the score, or record an approval."
+            },
+            {
+              "id": "persist_memo",
+              "kind": "deterministic",
+              "handler": "persist_memo_version",
+              "output_schema": {
+                "required": [
+                  "case_id",
+                  "memo_version_id",
+                  "version",
+                  "memo_text",
+                  "policy_citations",
+                  "is_machine_drafted",
+                  "generated_at",
+                  "audit_entry_id"
+                ]
+              }
+            },
+            {
+              "id": "validate_citations",
+              "kind": "deterministic",
+              "handler": "validate_memo_citations",
+              "output_schema": {
+                "required": [
+                  "memo_version_id",
+                  "citations_resolved",
+                  "resolved_citations",
+                  "unresolved_citations",
+                  "machine_drafted_label_present"
+                ]
+              }
+            },
+            {
+              "id": "approval_decision",
+              "kind": "human",
+              "question": "Case ${load_case_case_id} (${load_case_client_name}) scored ${load_case_total_risk_score} — band ${load_case_risk_band}, which requires a ${load_case_required_approver_role} decision. Review the MACHINE-DRAFTED memo (version ${persist_memo_version}, label present: ${validate_citations_machine_drafted_label_present}; unresolved citations: ${validate_citations_unresolved_citations}):\n\n${persist_memo_memo_text}\n\nApproving adopts this memo text as your own. Approve or reject? A rejection requires a rejection reason, and a High-band approval requires a documented rationale."
+            },
+            {
+              "id": "record_decision",
+              "kind": "deterministic",
+              "handler": "record_approval_decision",
+              "output_schema": {
+                "required": [
+                  "case_id",
+                  "approval_id",
+                  "decision",
+                  "decided_by_user_id",
+                  "decided_by_role",
+                  "required_role_tier",
+                  "role_substitution",
+                  "decided_at",
+                  "reason",
+                  "memo_version_id",
+                  "case_status",
+                  "audit_entry_id"
+                ]
+              }
+            },
+            {
+              "id": "approved_gate",
+              "kind": "condition",
+              "path": "record_decision.decision",
+              "equals": "approved",
+              "on_false": "rejection_branch"
+            },
+            {
+              "id": "finalize_approval",
+              "kind": "deterministic",
+              "handler": "finalize_approved_case",
+              "output_schema": {
+                "required": [
+                  "case_id",
+                  "case_status",
+                  "memo_adopted",
+                  "approved_memo_version_id",
+                  "review_cadence",
+                  "next_review_due_date",
+                  "audit_entry_id"
+                ]
+              }
+            },
+            {
+              "id": "rejection_branch",
+              "kind": "condition",
+              "path": "record_decision.decision",
+              "equals": "rejected",
+              "on_false": "end"
+            },
+            {
+              "id": "record_rejection",
+              "kind": "deterministic",
+              "handler": "record_rejection_and_notify_relationship_team",
+              "output_schema": {
+                "required": [
+                  "case_id",
+                  "case_status",
+                  "rejection_reason",
+                  "notification_id",
+                  "recipient_user_id",
+                  "audit_entry_id"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "sla-escalation-monitor",
+          "description": "A recurring evaluator measures each undecided ready case against its band's business-hour SLA, flags it AT RISK to the assigned approver at 80% consumed, records a breach permanently once the window passes, and steps unactioned high-risk cases up the escalation chain — without ever recording a decision itself.",
+          "addresses": [
+            "REQ-050",
+            "REQ-051",
+            "REQ-057",
+            "REQ-058",
+            "REQ-059",
+            "REQ-060",
+            "REQ-061",
+            "REQ-062",
+            "REQ-063",
+            "REQ-086",
+            "REQ-095"
+          ],
+          "nodes": [
+            {
+              "id": "evaluate_sla",
+              "kind": "deterministic",
+              "handler": "evaluate_case_sla_status",
+              "output_schema": {
+                "required": [
+                  "case_id",
+                  "risk_band",
+                  "sla_hours",
+                  "sla_start_timestamp",
+                  "sla_due_timestamp",
+                  "elapsed_business_hours",
+                  "percent_consumed",
+                  "sla_state",
+                  "decision_recorded",
+                  "assigned_approver_id"
+                ]
+              }
+            },
+            {
+              "id": "at_risk_gate",
+              "kind": "condition",
+              "path": "evaluate_sla.sla_state",
+              "equals": "at_risk",
+              "on_false": "breach_gate"
+            },
+            {
+              "id": "flag_at_risk",
+              "kind": "deterministic",
+              "handler": "flag_case_at_risk_and_notify",
+              "output_schema": {
+                "required": [
+                  "case_id",
+                  "is_at_risk",
+                  "flagged_at_risk_at",
+                  "notification_id",
+                  "recipient_user_id",
+                  "audit_entry_id"
+                ]
+              }
+            },
+            {
+              "id": "breach_gate",
+              "kind": "condition",
+              "path": "evaluate_sla.sla_state",
+              "equals": "breached",
+              "on_false": "end"
+            },
+            {
+              "id": "record_breach",
+              "kind": "deterministic",
+              "handler": "record_sla_breach",
+              "output_schema": {
+                "required": [
+                  "case_id",
+                  "breached",
+                  "breached_at",
+                  "permanent",
+                  "weekly_report_period",
+                  "audit_entry_id"
+                ]
+              }
+            },
+            {
+              "id": "high_risk_escalation_gate",
+              "kind": "condition",
+              "path": "evaluate_sla.risk_band",
+              "equals": "High",
+              "on_false": "end"
+            },
+            {
+              "id": "escalate",
+              "kind": "deterministic",
+              "handler": "advance_escalation_chain",
+              "output_schema": {
+                "required": [
+                  "case_id",
+                  "escalation_id",
+                  "escalation_level",
+                  "escalated_to_role",
+                  "escalated_to_user_id",
+                  "escalated_at",
+                  "reason",
+                  "notification_id",
+                  "audit_entry_id"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "intake": {
+    "path": "/Users/nbalawat/development/harness/fsi-kyc-desk/artifacts/intake/intake.json",
+    "data": {
+      "project_name": "KYC Review Desk",
+      "problem_statement": "Our compliance team onboards corporate clients through a manual KYC review that is slow and hard to audit. We need an application where: cases are created from a client submission; a DETERMINISTIC workflow runs the document completeness check and computes the risk score mechanically from our risk rating matrix; an AI agent drafts the risk assessment memo grounded ONLY in our policy documents and the case data, with citations and a clear machine-drafted label; decision authority follows risk bands (analyst / senior analyst / compliance officer) with explicit human approval required before any status change; high-risk cases escalate with SLA tracking and at-risk warnings; every action lands in an immutable audit trail satisfying our regulator requirements; analysts can search past cases and export full case files as CSV; access is role-based and auditors are read-only.",
+      "documents_dir": "/Users/nbalawat/development/harness/fsi-inputs/docs",
+      "deploy_target": "local"
+    }
+  }
+}

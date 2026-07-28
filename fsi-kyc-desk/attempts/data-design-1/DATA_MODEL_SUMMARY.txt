@@ -1,0 +1,158 @@
+=================================================================
+FSI KYC DESK - DATA MODEL SUMMARY
+=================================================================
+
+Total tables: 12
+Total columns: 107
+Requirement addresses mapped: 81 / 98
+
+=================================================================
+TABLE OVERVIEW
+=================================================================
+
+1. CASES
+   Primary case entity tracking status, risk assessment, and lifecycle.
+   Addresses: Case opening (REQ-001/002), completeness tracking (REQ-004),
+             policy versions (REQ-070), next review (REQ-093).
+
+2. RISK_SCORES
+   Immutable record of all factor inputs, raw scores, and final score.
+   Addresses: Mechanical risk scoring (REQ-016-028), factor breakdown,
+             reproducibility (REQ-069), factor versioning (REQ-071).
+
+3. DOCUMENTS
+   Document inventory with required/conditional status and receipt tracking.
+   Addresses: Document checklist (REQ-003-011), completeness enforcement (REQ-004).
+
+4. MISSING_DOCUMENTS
+   Immutable record of documents missing when a case fails completeness.
+   Addresses: Failed completeness return with itemized list (REQ-012, REQ-089).
+
+5. ASSESSMENT_MEMOS
+   Versioned AI-drafted memos with approval status and machine-drafted label.
+   Addresses: AI memo drafting (REQ-029-039), citations (REQ-031-032),
+             machine-drafted label (REQ-033-034), approval adoption (REQ-035),
+             version retention (REQ-039, REQ-067).
+
+6. APPROVALS
+   Decision records with required role tier, decision maker, and rationale.
+   Addresses: Role-based approval authority (REQ-041-043), explicit human
+             approval (REQ-044-045), auto-approval prohibition (REQ-046),
+             role capture (REQ-047), rejection reason (REQ-048).
+
+7. COMPLIANCE_EXCEPTIONS
+   Policy exception records granted by Compliance Officer.
+   Addresses: Mechanical check enforcement (REQ-014), policy exceptions (REQ-015).
+
+8. AUDIT_TRAIL
+   Append-only immutable event log for all case actions.
+   Addresses: Complete action trail (REQ-065), immutability (REQ-066),
+             indefinite retention (REQ-067), full reviewability (REQ-068).
+
+9. ESCALATIONS
+   Escalation chain tracking for high-risk cases.
+   Addresses: Escalation chain (REQ-060), escalation recording (REQ-061),
+             SLA evaluation (REQ-095).
+
+10. NOTIFICATIONS
+    Addressable notification records (at-risk, escalation, rejection).
+    Addresses: Rejection notification (REQ-049), at-risk notification (REQ-051),
+              at-risk flagging (REQ-057), audit trail of notification (REQ-063).
+
+11. SLA_TRACKING
+    SLA windows, at-risk thresholds, and breach records.
+    Addresses: SLA requirements by risk band (REQ-052-054), case-ready
+              timestamp (REQ-055), at-risk flagging (REQ-057), breach
+              recording (REQ-058), SLA pressure prohibition (REQ-062).
+
+12. USERS
+    Role-based user registry with authentication identity.
+    Addresses: Role-based access (REQ-075), role-specific permissions
+              (REQ-078-081), authenticated identity (REQ-083), local
+              user store (REQ-084).
+
+=================================================================
+UNADDRESSED REQUIREMENTS - RATIONALE
+=================================================================
+
+Category: UI/UX (handled by presentation layer, not data model)
+  - REQ-072: Case search       → Search logic in application layer
+  - REQ-073: CSV export        → Export formatter in application layer
+  - REQ-074: Auditor export    → Export formatter in application layer
+  - REQ-086: Case worklist     → Composite view from cases + risk_scores + sla_tracking
+  - REQ-088: Approval disable  → UI state logic based on role + risk_band
+  - REQ-091: Score breakdown   → Computed view from risk_scores
+  - REQ-092: Weekly report     → Report generator from sla_tracking.breached
+
+Category: Role/Access Enforcement (implemented via RBAC + app logic)
+  - REQ-040: Decision authority  → Roles define approval tiers (see APPROVALS)
+  - REQ-076: Auditor read-only   → Enforced via app authorization layer
+  - REQ-077: Least privilege     → Enforced via role-based permission mapping
+
+Category: Operational (deployment/infrastructure, not data model)
+  - REQ-094: Local deployment → Deployment target, not data model
+  - REQ-095: Background SLA evaluator → Scheduled task, not data model
+
+Category: Clarification Questions (require domain decision)
+  - REQ-096: Sanctions source → External vs. internal screening
+  - REQ-097: Submission portal → Portal, API, or file drop
+  - REQ-098: Completeness check depth → Presence vs. content verification
+
+Category: Policy Implicit in Data
+  - REQ-013: RETURNED status → No "pending" state; status enum captures this
+  - REQ-093: Review cadence → Computed from risk_band, stored in cases.next_review_due_date
+
+=================================================================
+KEY DATA MODEL DECISIONS
+=================================================================
+
+1. VERSIONING
+   - Assessment memos are versioned (REQ-039) via version column + immutable rows.
+   - Policy versions are stored on cases (REQ-070) to freeze the applicable rules.
+   - Risk scores include the matrix version for reproducibility (REQ-069).
+
+2. IMMUTABILITY
+   - Audit trail rows are never updated or deleted (REQ-066).
+   - Missing documents recorded once at failure (REQ-012) are immutable.
+   - Assessment memo versions are immutable once created (REQ-039).
+   - Approvals are recorded once and immutable (REQ-044-045).
+
+3. ROLE-BASED APPROVAL
+   - Approvals table records the role held at decision time (REQ-047).
+   - Required role tier is recorded separately from actual role (REQ-085).
+   - Compliance Officer decisions require stored rationale (REQ-043).
+
+4. SLA TRACKING
+   - Case-ready timestamp is separate from created_at (REQ-055).
+   - SLA breach is permanent and not cleared by later decision (REQ-058).
+   - At-risk flagging is recorded at 80% threshold (REQ-057).
+   - SLA windows are tied to risk band at the time of computation (REQ-052-054).
+
+5. AUDIT TRAIL DESIGN
+   - Single audit_trail table captures all action types (policy change, status change, approval, etc.).
+   - Before/after values support full change history (REQ-065).
+   - Timestamp + performer identity enable complete traceability (REQ-045).
+
+6. MEMO ADOPTION
+   - Approval of a memo records approval_by_user_id on the memo itself.
+   - The approver "adopts" the text (REQ-035); no separate memo_approval table.
+   - Prior versions remain immutable in the table (REQ-039).
+
+=================================================================
+COMPOSITION WITH PERSISTENCE-CORE
+=================================================================
+
+Tables defined here become models.TABLES in persistence-core.
+
+The data model supports:
+  ✓ Complete regulatory audit trail
+  ✓ Reproducible risk scoring (immutable factor inputs, scores, matrix version)
+  ✓ Immutable memo versioning and approval adoption
+  ✓ SLA breach tracking and escalation chain
+  ✓ Role-based approval authority enforcement
+  ✓ Least-privilege access control
+  ✓ Document completeness verification with itemized returns
+
+All core compliance and regulatory requirements are modeled.
+
+=================================================================

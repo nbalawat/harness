@@ -1,0 +1,117 @@
+/* ============================================================
+   Panorama — Risk Data Board
+   Design tokens for KYC Review Desk (option-3)
+   Direction: analytical control board. Light, airy, quantitative.
+   ============================================================ */
+
+:root {
+  /* ---- Required contract tokens ---- */
+  --primary: #1f5fd8;
+  --on-primary: #ffffff;
+  --bg: #f4f6fa;
+  --fg: #0f1729;
+  --surface: #ffffff;
+  --border: #dfe4ee;
+  --font: "Inter", "SF Pro Display", "Segoe UI", "Helvetica Neue", Arial, system-ui, sans-serif;
+
+  /* ---- Extended neutral ramp (cool slate) ---- */
+  --canvas-deep: #eaeef6;
+  --canvas: #f4f6fa;
+  --surface-2: #fafbfd;
+  --surface-sunk: #f0f3f9;
+  --surface-tint: #eef3fd;
+  --border-soft: #ebeef5;
+  --border-strong: #c7d0e0;
+  --ink-900: #0f1729;
+  --ink-700: #33405c;
+  --ink-500: #5d6b87;
+  --ink-400: #7c89a3;
+  --ink-300: #9aa5bc;
+
+  /* ---- Brand accents ---- */
+  --primary-700: #17469f;
+  --primary-600: #1f5fd8;
+  --primary-300: #8fb2f2;
+  --primary-100: #dbe7fd;
+  --primary-050: #eef3fe;
+
+  /* ---- Chromatic categorical palette: one hue per risk factor ---- */
+  --f-jurisdiction: #4361ee;
+  --f-jurisdiction-soft: #e3e8fd;
+  --f-structure: #7b2ff7;
+  --f-structure-soft: #efe4fe;
+  --f-industry: #0d9488;
+  --f-industry-soft: #d6f2ef;
+  --f-sanctions: #e5484d;
+  --f-sanctions-soft: #fce1e2;
+  --f-activity: #d97706;
+  --f-activity-soft: #fdeed6;
+
+  /* ---- Risk band semantics ---- */
+  --band-low: #0f9d58;
+  --band-low-soft: #dcf3e6;
+  --band-low-ink: #076b3b;
+  --band-med: #d98324;
+  --band-med-soft: #fbeed8;
+  --band-med-ink: #8a5109;
+  --band-high: #d92d3c;
+  --band-high-soft: #fbe0e2;
+  --band-high-ink: #8c1620;
+
+  /* ---- Status chips ---- */
+  --st-new: #5b6b8c;
+  --st-new-soft: #e7ebf3;
+  --st-returned: #b45309;
+  --st-returned-soft: #fdeed6;
+  --st-review: #1f5fd8;
+  --st-review-soft: #dbe7fd;
+  --st-pending: #7b2ff7;
+  --st-pending-soft: #efe4fe;
+  --st-approved: #0f9d58;
+  --st-approved-soft: #dcf3e6;
+  --st-rejected: #d92d3c;
+  --st-rejected-soft: #fbe0e2;
+
+  /* ---- SLA signal ---- */
+  --sla-ok: #0f9d58;
+  --sla-atrisk: #d98324;
+  --sla-breached: #d92d3c;
+
+  /* ---- Typography scale ---- */
+  --font-mono: "SF Mono", "JetBrains Mono", "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+  --fs-metric-xl: 54px;
+  --fs-metric: 34px;
+  --fs-metric-sm: 24px;
+  --fs-h1: 21px;
+  --fs-h2: 15px;
+  --fs-body: 13.5px;
+  --fs-sm: 12.5px;
+  --fs-xs: 11px;
+  --fs-cap: 10px;
+  --tracking-cap: 0.1em;
+
+  /* ---- Geometry ---- */
+  --r-sm: 6px;
+  --r-md: 10px;
+  --r-lg: 14px;
+  --r-xl: 20px;
+  --r-pill: 999px;
+
+  /* ---- Spacing rhythm ---- */
+  --s1: 4px;
+  --s2: 8px;
+  --s3: 12px;
+  --s4: 16px;
+  --s5: 22px;
+  --s6: 30px;
+  --s7: 44px;
+
+  /* ---- Elevation by tint, not shadow ---- */
+  --elev-1: 0 1px 0 rgba(15, 23, 41, 0.04);
+  --elev-2: 0 1px 2px rgba(15, 23, 41, 0.05), 0 0 0 1px rgba(15, 23, 41, 0.03);
+  --elev-pop: 0 8px 28px -12px rgba(15, 23, 41, 0.22);
+
+  /* ---- Grid ---- */
+  --grid-gap: 14px;
+  --board-max: 1560px;
+}

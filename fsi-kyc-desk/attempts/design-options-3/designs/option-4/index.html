@@ -1,0 +1,1450 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>KYC Review Desk — Ledger / Minimal Terminal Desk</title>
+<link rel="stylesheet" href="tokens.css">
+<style>
+/* ==========================================================================
+   LEDGER — MINIMAL TERMINAL DESK
+   Structural CSS. Everything sits on a 20px baseline and a character grid.
+   No radii, no shadows, no gradients, no pills. Hairlines and glyphs only.
+   ========================================================================== */
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html { background: var(--bg); }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font);
+  font-size: var(--fs);
+  line-height: var(--lh);
+  letter-spacing: var(--tracking);
+  font-variant-ligatures: none;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* faint scanline field — the tube, not decoration */
+body::before {
+  content: "";
+  position: fixed; inset: 0;
+  pointer-events: none;
+  z-index: 60;
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(255,255,255,0.014) 0px,
+    rgba(255,255,255,0.014) 1px,
+    transparent 1px,
+    transparent 3px);
+}
+
+::selection { background: var(--primary); color: var(--on-primary); }
+
+a { color: var(--primary); text-decoration: none; }
+
+/* ---- tab machinery: radios drive the eight screens ----------------- */
+.tabs { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+
+/* ==========================================================================
+   SHELL
+   ========================================================================== */
+.term {
+  min-height: 100vh;
+  display: grid;
+  grid-template-rows: auto auto 1fr auto;
+  max-width: 1520px;
+  margin: 0 auto;
+  border-left: var(--rule) solid var(--border);
+  border-right: var(--rule) solid var(--border);
+}
+
+/* ---- header line ---------------------------------------------------- */
+.hdr {
+  display: flex;
+  align-items: stretch;
+  min-height: var(--header-h);
+  border-bottom: var(--rule) solid var(--border-hard);
+  background: var(--surface);
+}
+.hdr-mark {
+  display: flex; align-items: center; gap: 1ch;
+  padding: 0 var(--u4);
+  border-right: var(--rule) solid var(--border);
+  white-space: nowrap;
+}
+.hdr-mark .glyph { color: var(--primary); font-size: var(--fs-lg); }
+.hdr-name {
+  color: var(--fg-bright);
+  font-size: var(--fs-lg);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+.hdr-sub {
+  color: var(--fg-faint);
+  padding-left: 1ch;
+  border-left: var(--rule) solid var(--border);
+  margin-left: 1ch;
+  font-size: var(--fs-sm);
+}
+.hdr-meta {
+  display: flex; align-items: center; gap: 3ch;
+  padding: 0 var(--u4);
+  color: var(--fg-dim);
+  font-size: var(--fs-sm);
+  flex: 1;
+  overflow: hidden;
+}
+.hdr-meta b { color: var(--fg); font-weight: 400; }
+.hdr-mode {
+  display: flex; align-items: center; gap: 1ch;
+  padding: 0 var(--u3) 0 var(--u4);
+  border-left: var(--rule) solid var(--border);
+  white-space: nowrap;
+}
+.hdr-mode label { color: var(--fg-faint); font-size: var(--fs-sm); letter-spacing: var(--tracking-wide); }
+
+/* the agent-mode selector — a bracketed terminal field */
+#agent-mode {
+  appearance: none; -webkit-appearance: none;
+  font-family: var(--font);
+  font-size: var(--fs-sm);
+  letter-spacing: var(--tracking-wide);
+  color: var(--primary);
+  background: var(--bg);
+  border: var(--rule) solid var(--primary-dim);
+  border-radius: var(--radius);
+  padding: 3px 2.2ch 3px 1ch;
+  line-height: 16px;
+  outline: none;
+}
+#agent-mode:focus { background: var(--primary); color: var(--on-primary); }
+#agent-mode option { background: var(--bg); color: var(--fg); }
+.hdr-mode .caret { color: var(--primary-dim); }
+
+/* ---- key bar / command palette ------------------------------------- */
+.keybar {
+  display: flex; align-items: stretch; flex-wrap: wrap;
+  min-height: var(--keybar-h);
+  border-bottom: var(--rule) solid var(--border);
+  background: var(--bg);
+  font-size: var(--fs-sm);
+}
+.keybar .prompt {
+  display: flex; align-items: center;
+  padding: 0 1.5ch;
+  color: var(--fg-faint);
+  border-right: var(--rule) solid var(--border);
+  letter-spacing: var(--tracking-wide);
+}
+.key {
+  display: flex; align-items: center; gap: 0.8ch;
+  padding: 0 1.6ch;
+  color: var(--fg-dim);
+  border-right: var(--rule) solid var(--border);
+  cursor: pointer;
+  user-select: none;
+  letter-spacing: var(--tracking-wide);
+  white-space: nowrap;
+}
+.key .k { color: var(--fg-faint); }
+.key:hover { background: var(--surface-2); color: var(--fg-bright); }
+.key:hover .k { color: var(--primary-dim); }
+.keybar .spacer { flex: 1; border-right: var(--rule) solid var(--border); }
+.keybar .hint {
+  display: flex; align-items: center; padding: 0 1.5ch;
+  color: var(--fg-ghost); letter-spacing: var(--tracking-wide);
+}
+
+/* active key */
+#t-chat:checked     ~ .term .key[for="t-chat"],
+#t-worklist:checked ~ .term .key[for="t-worklist"],
+#t-case:checked     ~ .term .key[for="t-case"],
+#t-score:checked    ~ .term .key[for="t-score"],
+#t-memo:checked     ~ .term .key[for="t-memo"],
+#t-audit:checked    ~ .term .key[for="t-audit"],
+#t-search:checked   ~ .term .key[for="t-search"],
+#t-reports:checked  ~ .term .key[for="t-reports"] {
+  background: var(--primary);
+  color: var(--on-primary);
+}
+#t-chat:checked     ~ .term .key[for="t-chat"] .k,
+#t-worklist:checked ~ .term .key[for="t-worklist"] .k,
+#t-case:checked     ~ .term .key[for="t-case"] .k,
+#t-score:checked    ~ .term .key[for="t-score"] .k,
+#t-memo:checked     ~ .term .key[for="t-memo"] .k,
+#t-audit:checked    ~ .term .key[for="t-audit"] .k,
+#t-search:checked   ~ .term .key[for="t-search"] .k,
+#t-reports:checked  ~ .term .key[for="t-reports"] .k { color: var(--on-primary); }
+
+/* ---- screen host ---------------------------------------------------- */
+.viewport { position: relative; min-width: 0; }
+.screen { display: none; padding: 0; }
+#t-chat:checked     ~ .term #screen-chat,
+#t-worklist:checked ~ .term #screen-worklist,
+#t-case:checked     ~ .term #screen-case,
+#t-score:checked    ~ .term #screen-score,
+#t-memo:checked     ~ .term #screen-memo,
+#t-audit:checked    ~ .term #screen-audit,
+#t-search:checked   ~ .term #screen-search,
+#t-reports:checked  ~ .term #screen-reports { display: block; }
+
+/* ---- status line ---------------------------------------------------- */
+.statusline {
+  position: sticky; bottom: 0; z-index: 50;
+  display: flex; align-items: stretch; flex-wrap: wrap;
+  min-height: var(--status-h);
+  border-top: var(--rule) solid var(--border-hard);
+  background: var(--surface);
+  font-size: var(--fs-sm);
+  letter-spacing: var(--tracking-wide);
+}
+.st {
+  display: flex; align-items: center; gap: 1ch;
+  padding: 0 1.6ch;
+  border-right: var(--rule) solid var(--border);
+  color: var(--fg-dim);
+  white-space: nowrap;
+}
+.st .lbl { color: var(--fg-ghost); }
+.st b { font-weight: 400; color: var(--fg); }
+.st.-accent { background: var(--primary); color: var(--on-primary); }
+.st.-accent .lbl, .st.-accent b { color: var(--on-primary); }
+.st.-push { flex: 1; justify-content: flex-end; border-right: 0; color: var(--fg-ghost); }
+.st .blink { color: var(--primary); animation: blink 1.15s steps(1) infinite; }
+@keyframes blink { 0%,49% { opacity: 1 } 50%,100% { opacity: 0 } }
+
+/* ==========================================================================
+   TYPOGRAPHIC PRIMITIVES
+   ========================================================================== */
+.scr-head {
+  display: flex; align-items: baseline; gap: 2ch; flex-wrap: wrap;
+  padding: var(--u3) var(--u4) var(--u2);
+  border-bottom: var(--rule) solid var(--border);
+}
+.scr-title {
+  color: var(--fg-bright);
+  font-size: var(--fs);
+  font-weight: 700;
+  letter-spacing: var(--tracking-wide);
+  margin: 0;
+}
+.scr-title::before { content: "▌ "; color: var(--primary); }
+.scr-path { color: var(--fg-faint); font-size: var(--fs-sm); }
+.scr-note { color: var(--fg-dim); font-size: var(--fs-sm); margin-left: auto; }
+
+.rulehead {
+  display: flex; align-items: center; gap: 1.4ch;
+  color: var(--fg-faint);
+  font-size: var(--fs-sm);
+  letter-spacing: var(--tracking-wide);
+  padding: var(--u3) var(--u4) var(--u);
+}
+.rulehead::after {
+  content: "";
+  flex: 1; height: 0;
+  border-top: var(--rule) solid var(--border);
+}
+.rulehead .n { color: var(--primary-dim); }
+
+.pad { padding: var(--u3) var(--u4); }
+.dim { color: var(--fg-dim); }
+.faint { color: var(--fg-faint); }
+.bright { color: var(--fg-bright); }
+.amber { color: var(--primary); }
+.tree { color: var(--fg-faint); white-space: pre; }
+.mono-block {
+  white-space: pre;
+  color: var(--fg-dim);
+  line-height: var(--lh);
+  font-size: var(--fs-sm);
+  overflow-x: auto;
+}
+
+.inv { background: var(--primary); color: var(--on-primary); padding: 0 0.7ch; }
+.box { border: var(--rule) solid var(--border); background: var(--surface); }
+.cols { display: grid; gap: 0; }
+.cols.-2 { grid-template-columns: 1fr 1fr; }
+.cols.-2 > * + * { border-left: var(--rule) solid var(--border); }
+.cols.-38 { grid-template-columns: minmax(0,1fr) minmax(0,0.62fr); }
+.cols.-38 > * + * { border-left: var(--rule) solid var(--border); }
+@media (max-width: 1080px) {
+  .cols.-2, .cols.-38 { grid-template-columns: 1fr; }
+  .cols.-2 > * + *, .cols.-38 > * + * { border-left: 0; border-top: var(--rule) solid var(--border); }
+}
+
+/* ---- fixed-width tables --------------------------------------------- */
+table.grid {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--fs-sm);
+  font-variant-numeric: tabular-nums;
+}
+table.grid th {
+  text-align: left;
+  font-weight: 400;
+  color: var(--fg-ghost);
+  letter-spacing: var(--tracking-wide);
+  padding: var(--u) 1.2ch;
+  border-bottom: var(--rule) solid var(--border-hard);
+  background: var(--surface-2);
+  white-space: nowrap;
+}
+table.grid td {
+  padding: 2px 1.2ch;
+  border-bottom: var(--rule) solid var(--border);
+  color: var(--fg-dim);
+  vertical-align: top;
+  line-height: var(--lh);
+  white-space: nowrap;
+}
+table.grid td.wrap { white-space: normal; }
+table.grid td.num { text-align: right; font-variant-numeric: tabular-nums; }
+table.grid th.num { text-align: right; }
+table.grid tr:hover td { background: var(--surface-hi); color: var(--fg); }
+table.grid td.id { color: var(--fg-bright); }
+table.grid .sig { width: 3ch; color: var(--fg-ghost); text-align: center; padding-left: 0.6ch; padding-right: 0.6ch; }
+tr.-sel td { background: var(--surface-hi); color: var(--fg-bright); }
+tr.-sel td.id { color: var(--primary); }
+tr.-sel .sig { color: var(--primary); }
+tr.-watch .sig { color: var(--primary-dim); }
+tr.-crit .sig { background: var(--primary); color: var(--on-primary); }
+tr.-mute td { color: var(--fg-faint); }
+
+.flag { letter-spacing: var(--tracking-wide); }
+.flag.-breach { background: var(--primary); color: var(--on-primary); padding: 0 0.7ch; }
+.flag.-risk { color: var(--primary-dim); }
+.flag.-none { color: var(--fg-ghost); }
+
+/* ---- key/value ledger ------------------------------------------------ */
+dl.kv { margin: 0; font-size: var(--fs-sm); }
+dl.kv div {
+  display: grid;
+  grid-template-columns: 22ch minmax(0,1fr);
+  border-bottom: var(--rule) solid var(--border);
+}
+dl.kv dt {
+  color: var(--fg-ghost);
+  padding: 2px 1.2ch;
+  letter-spacing: var(--tracking-wide);
+  border-right: var(--rule) solid var(--border);
+}
+dl.kv dd { margin: 0; padding: 2px 1.2ch; color: var(--fg); }
+
+/* ---- terminal buttons ------------------------------------------------ */
+.btn {
+  display: inline-flex; align-items: center; gap: 1ch;
+  font-family: var(--font);
+  font-size: var(--fs-sm);
+  letter-spacing: var(--tracking-wide);
+  color: var(--fg);
+  background: transparent;
+  border: var(--rule) solid var(--border-hard);
+  border-radius: var(--radius);
+  padding: 3px 1.4ch;
+  cursor: pointer;
+  line-height: 18px;
+}
+.btn:hover { border-color: var(--primary-dim); color: var(--fg-bright); background: var(--surface-2); }
+.btn.-primary { background: var(--primary); color: var(--on-primary); border-color: var(--primary); font-weight: 700; }
+.btn.-primary:hover { background: var(--primary); color: var(--on-primary); filter: brightness(1.12); }
+.btn.-ghost { color: var(--fg-faint); border-color: var(--border); }
+.btn[disabled] { color: var(--fg-ghost); border-color: var(--border); cursor: not-allowed; }
+.btn .k { color: var(--fg-faint); }
+.btn.-primary .k { color: var(--on-primary); opacity: 0.72; }
+
+.actionbar {
+  display: flex; align-items: center; gap: 1.4ch; flex-wrap: wrap;
+  padding: var(--u2) var(--u4);
+  border-top: var(--rule) solid var(--border);
+  background: var(--surface);
+}
+.actionbar .why { color: var(--fg-faint); font-size: var(--fs-sm); margin-left: auto; }
+
+/* ==========================================================================
+   SCREEN 1 — AGENT / CHAT
+   ========================================================================== */
+.chat-wrap { display: grid; grid-template-columns: minmax(0,1fr) 44ch; }
+@media (max-width: 1080px) { .chat-wrap { grid-template-columns: 1fr; } }
+.chat-side { border-left: var(--rule) solid var(--border); background: var(--surface); }
+
+ul#messages {
+  list-style: none;
+  margin: 0;
+  padding: var(--u3) var(--u4) var(--u4);
+  display: block;
+}
+ul#messages > li {
+  padding: 0 0 var(--u3) 0;
+  border-bottom: var(--rule) dotted var(--border);
+  margin-bottom: var(--u3);
+  max-width: 104ch;
+}
+ul#messages > li:last-child { border-bottom: 0; }
+.msg-line {
+  display: flex; gap: 1ch; align-items: baseline; flex-wrap: wrap;
+  font-size: var(--fs-sm);
+  color: var(--fg-ghost);
+  letter-spacing: var(--tracking-wide);
+}
+.msg-line .who { color: var(--fg-dim); }
+.msg-line .arrow { color: var(--primary-dim); }
+li.-agent .msg-line .who { color: var(--primary); }
+.msg-body { color: var(--fg); padding-left: 0; margin-top: 2px; }
+.msg-body p { margin: 0 0 var(--lh) 0; }
+.msg-body p:last-child { margin-bottom: 0; }
+.msg-body .quote {
+  border-left: 2px solid var(--border-hard);
+  padding-left: 1.4ch;
+  color: var(--fg-dim);
+}
+.mach-banner {
+  display: inline-block;
+  border: var(--rule) solid var(--primary-dim);
+  color: var(--primary);
+  padding: 0 1ch;
+  font-size: var(--fs-sm);
+  letter-spacing: var(--tracking-wide);
+  margin-bottom: var(--u);
+}
+.cites { list-style: none; margin: var(--u) 0 0; padding: 0; font-size: var(--fs-sm); }
+.cites li { color: var(--fg-dim); white-space: normal; padding-left: 4ch; text-indent: -4ch; }
+.cites li .ref { color: var(--primary-dim); }
+
+form#composer {
+  display: grid;
+  grid-template-columns: auto minmax(0,1fr) auto auto;
+  align-items: center;
+  gap: 0;
+  border-top: var(--rule) solid var(--border-hard);
+  background: var(--surface-2);
+  padding: 0;
+  position: sticky; bottom: var(--status-h);
+}
+form#composer .caret {
+  padding: 0 1ch 0 var(--u4);
+  color: var(--primary);
+  font-weight: 700;
+}
+input#input {
+  font-family: var(--font);
+  font-size: var(--fs);
+  letter-spacing: var(--tracking);
+  color: var(--fg-bright);
+  background: transparent;
+  border: 0;
+  outline: none;
+  padding: var(--u2) 1ch;
+  width: 100%;
+  caret-color: var(--caret);
+}
+input#input::placeholder { color: var(--fg-ghost); }
+form#composer .ctx {
+  color: var(--fg-ghost);
+  font-size: var(--fs-sm);
+  padding: 0 1.4ch;
+  border-left: var(--rule) solid var(--border);
+  white-space: nowrap;
+}
+form#composer button[type="submit"] {
+  font-family: var(--font);
+  font-size: var(--fs-sm);
+  letter-spacing: var(--tracking-wide);
+  background: var(--primary);
+  color: var(--on-primary);
+  border: 0;
+  border-radius: var(--radius);
+  padding: var(--u2) 2ch;
+  cursor: pointer;
+  font-weight: 700;
+  align-self: stretch;
+}
+form#composer button[type="submit"]:hover { filter: brightness(1.12); }
+
+.side-block { border-bottom: var(--rule) solid var(--border); padding: var(--u2) var(--u4) var(--u3); }
+.side-block h3 {
+  margin: 0 0 var(--u) 0;
+  font-size: var(--fs-sm);
+  font-weight: 400;
+  color: var(--fg-ghost);
+  letter-spacing: var(--tracking-wide);
+}
+.side-list { list-style: none; margin: 0; padding: 0; font-size: var(--fs-sm); }
+.side-list li { color: var(--fg-dim); display: flex; gap: 1ch; }
+.side-list li .b { color: var(--fg-faint); }
+.side-list li.-on { color: var(--fg-bright); }
+.side-list li.-on .b { color: var(--primary); }
+
+/* ==========================================================================
+   MEMO
+   ========================================================================== */
+.memo-banner {
+  display: flex; align-items: center; gap: 1.5ch; flex-wrap: wrap;
+  background: var(--primary);
+  color: var(--on-primary);
+  padding: var(--u) var(--u4);
+  font-size: var(--fs-sm);
+  letter-spacing: var(--tracking-wide);
+  font-weight: 700;
+}
+.memo-banner .sub { font-weight: 400; opacity: 0.8; }
+.memo-body { padding: var(--u3) var(--u4); max-width: 96ch; }
+.memo-body h4 {
+  margin: var(--u4) 0 var(--u) 0;
+  font-size: var(--fs-sm);
+  font-weight: 400;
+  color: var(--primary-dim);
+  letter-spacing: var(--tracking-wide);
+}
+.memo-body h4:first-child { margin-top: 0; }
+.memo-body p { margin: 0 0 var(--lh) 0; color: var(--fg); }
+.memo-body sup a { color: var(--primary); }
+.memo-body ul { margin: 0 0 var(--lh); padding-left: 3ch; }
+.memo-body li { margin-bottom: 2px; color: var(--fg); }
+
+/* ==========================================================================
+   AUDIT LOG STREAM
+   ========================================================================== */
+.logstream {
+  padding: var(--u2) var(--u4) var(--u4);
+  font-size: var(--fs-sm);
+  font-variant-numeric: tabular-nums;
+}
+.logline {
+  display: grid;
+  grid-template-columns: 21ch 3ch 18ch 24ch minmax(0,1fr);
+  border-bottom: var(--rule) dotted var(--border);
+  padding: 1px 0;
+}
+.logline:hover { background: var(--surface-hi); }
+.logline .ts { color: var(--fg-faint); }
+.logline .sq { color: var(--fg-ghost); }
+.logline .who { color: var(--fg); }
+.logline .what { color: var(--primary-dim); letter-spacing: var(--tracking-wide); }
+.logline .delta { color: var(--fg-dim); white-space: normal; }
+.logline .delta .from { color: var(--fg-faint); }
+.logline .delta .to { color: var(--fg-bright); }
+.logline .delta .ar { color: var(--primary-dim); padding: 0 0.6ch; }
+@media (max-width: 1080px) {
+  .logline { grid-template-columns: 1fr; }
+  .logline > * { padding-left: 0; }
+}
+.log-foot {
+  padding: var(--u2) var(--u4);
+  border-top: var(--rule) solid var(--border);
+  color: var(--fg-faint);
+  font-size: var(--fs-sm);
+  letter-spacing: var(--tracking-wide);
+}
+
+/* ==========================================================================
+   SEARCH FILTERS
+   ========================================================================== */
+.filters {
+  display: flex; flex-wrap: wrap; align-items: stretch;
+  border-bottom: var(--rule) solid var(--border);
+  background: var(--surface);
+}
+.f {
+  display: flex; align-items: center; gap: 1ch;
+  padding: var(--u) 1.4ch;
+  border-right: var(--rule) solid var(--border);
+  font-size: var(--fs-sm);
+}
+.f label { color: var(--fg-ghost); letter-spacing: var(--tracking-wide); }
+.f select, .f input {
+  font-family: var(--font);
+  font-size: var(--fs-sm);
+  color: var(--fg-bright);
+  background: var(--bg);
+  border: var(--rule) solid var(--border);
+  border-radius: var(--radius);
+  padding: 2px 1ch;
+  outline: none;
+}
+.f select:focus, .f input:focus { border-color: var(--primary-dim); }
+.f.-push { margin-left: auto; border-right: 0; }
+
+/* ---- misc ------------------------------------------------------------ */
+.callout {
+  border: var(--rule) solid var(--border-hard);
+  border-left: 2px solid var(--primary);
+  background: var(--surface);
+  padding: var(--u2) var(--u3);
+  font-size: var(--fs-sm);
+  color: var(--fg-dim);
+  margin: 0 var(--u4) var(--u3);
+}
+.callout b { color: var(--primary); font-weight: 400; letter-spacing: var(--tracking-wide); }
+.readonly-strip {
+  padding: var(--u) var(--u4);
+  border-bottom: var(--rule) solid var(--border);
+  color: var(--fg-faint);
+  font-size: var(--fs-sm);
+  letter-spacing: var(--tracking-wide);
+  background: var(--surface-2);
+}
+.bar {
+  display: inline-block;
+  color: var(--primary-dim);
+  letter-spacing: -0.06em;
+}
+.spark { color: var(--fg-faint); letter-spacing: -0.06em; }
+</style>
+</head>
+<body>
+
+<!-- ── screen selection: eight radios, keyboard-addressable ──────────── -->
+<input class="tabs" type="radio" name="scr" id="t-chat" checked>
+<input class="tabs" type="radio" name="scr" id="t-worklist">
+<input class="tabs" type="radio" name="scr" id="t-case">
+<input class="tabs" type="radio" name="scr" id="t-score">
+<input class="tabs" type="radio" name="scr" id="t-memo">
+<input class="tabs" type="radio" name="scr" id="t-audit">
+<input class="tabs" type="radio" name="scr" id="t-search">
+<input class="tabs" type="radio" name="scr" id="t-reports">
+
+<div class="term">
+
+  <!-- ═══ HEADER ═══════════════════════════════════════════════════════ -->
+  <header class="hdr">
+    <div class="hdr-mark">
+      <span class="glyph">▚</span>
+      <span class="hdr-name">KYC Review Desk</span>
+      <span class="hdr-sub">ledger&nbsp;/&nbsp;minimal&nbsp;terminal&nbsp;desk</span>
+    </div>
+    <div class="hdr-meta">
+      <span><span class="faint">host</span> <b>desk-03.fincrime.int</b></span>
+      <span><span class="faint">user</span> <b>a.osei</b> <span class="faint">·</span> Compliance Officer</span>
+      <span><span class="faint">case</span> <b>KYC-2026-0417</b></span>
+      <span><span class="faint">policy</span> <b>onboarding v3.2</b> <span class="faint">·</span> matrix v2.1 <span class="faint">·</span> checklist v2.0</span>
+    </div>
+    <div class="hdr-mode">
+      <label for="agent-mode">agent-mode</label>
+      <span class="caret">[</span>
+      <select id="agent-mode" title="Agent operating mode">
+        <option selected>DRAFT MEMO</option>
+        <option>EXPLAIN SCORE</option>
+        <option>CITE POLICY</option>
+        <option>READ-ONLY</option>
+      </select>
+      <span class="caret">]</span>
+    </div>
+  </header>
+
+  <!-- ═══ KEY BAR / COMMAND PALETTE ════════════════════════════════════ -->
+  <nav class="keybar" aria-label="Screens">
+    <span class="prompt">:nav</span>
+    <label class="key" for="t-worklist"><span class="k">[1]</span> worklist</label>
+    <label class="key" for="t-case"><span class="k">[2]</span> case</label>
+    <label class="key" for="t-score"><span class="k">[3]</span> score</label>
+    <label class="key" for="t-memo"><span class="k">[4]</span> memo</label>
+    <label class="key" for="t-audit"><span class="k">[5]</span> audit</label>
+    <label class="key" for="t-search"><span class="k">[6]</span> search</label>
+    <label class="key" for="t-reports"><span class="k">[7]</span> reports</label>
+    <label class="key" for="t-chat"><span class="k">[0]</span> agent</label>
+    <span class="spacer"></span>
+    <span class="hint">press 0–7 · / focuses input · esc clears</span>
+  </nav>
+
+  <!-- ═══ VIEWPORT ═════════════════════════════════════════════════════ -->
+  <main class="viewport">
+
+  <!-- ───────────────────────────────────────────────────────────────────
+       [0] AGENT WORKSPACE
+       ─────────────────────────────────────────────────────────────── -->
+  <section class="screen" id="screen-chat" aria-label="Agent workspace">
+    <div class="scr-head">
+      <h1 class="scr-title">AGENT WORKSPACE</h1>
+      <span class="scr-path">~/cases/KYC-2026-0417/memo · session 8f21c4 · grounded corpus: policy + case data only</span>
+      <span class="scr-note">retrieval scope locked · no open-web · 5 sources indexed</span>
+    </div>
+
+    <div class="chat-wrap">
+      <div>
+        <ul id="messages">
+
+          <li class="-user">
+            <div class="msg-line"><span class="who">a.osei@desk</span><span class="arrow">▸</span><span>2026-07-27 09:41:06Z</span><span>·</span><span>mode DRAFT MEMO</span></div>
+            <div class="msg-body">
+              <p>Open KYC-2026-0417 (Halden Marine Group Ltd). Draft the risk assessment memo. Ground it in the onboarding policy and the computed matrix only — do not infer beyond the case file.</p>
+            </div>
+          </li>
+
+          <li class="-agent">
+            <div class="msg-line"><span class="who">agent</span><span class="arrow">▸</span><span>2026-07-27 09:41:11Z</span><span>·</span><span>1.9s</span><span>·</span><span>5 sources</span></div>
+            <div class="msg-body">
+              <span class="mach-banner">[ MACHINE-DRAFTED — NOT A COMPLIANCE DECISION — REQUIRES NAMED HUMAN APPROVAL ]</span>
+              <p>Draft v3 prepared for KYC-2026-0417. Weighted risk total <span class="amber">78.0</span> → band <span class="amber">High</span> (matrix v2.1). Deterministic engine output adopted verbatim; I did not recompute or adjust any factor.</p>
+              <p class="quote">Summary: Halden Marine Group Ltd is a Marshall Islands incorporated marine freight and bunkering operator with a four-layer ownership chain terminating in a Cyprus family trust. Jurisdiction and entity-structure factors dominate the score. One sanctions screening alert was adjudicated a false positive; the true-positive band override was therefore not applied.</p>
+              <ul class="cites">
+                <li><span class="ref">[1]</span> Onboarding Policy v3.2 § 4.3 — Enhanced due diligence triggers for offshore incorporation.</li>
+                <li><span class="ref">[2]</span> Risk Rating Matrix v2.1, Table 2 — Jurisdiction band values, Marshall Islands = 88.</li>
+                <li><span class="ref">[3]</span> Onboarding Policy v3.2 § 6.1 — Beneficial ownership disclosure at ≥ 3 layers.</li>
+                <li><span class="ref">[4]</span> Case file KYC-2026-0417 / doc 07 — Trust deed, Halden Family Trust, dated 2019-03-11.</li>
+                <li><span class="ref">[5]</span> Sanctions Adjudication SOP v1.4 § 3 — False-positive closure evidence standard.</li>
+              </ul>
+            </div>
+          </li>
+
+          <li class="-user">
+            <div class="msg-line"><span class="who">a.osei@desk</span><span class="arrow">▸</span><span>2026-07-27 09:46:22Z</span></div>
+            <div class="msg-body">
+              <p>Justify the Entity Structure raw score of 82. Cite the exact clause.</p>
+            </div>
+          </li>
+
+          <li class="-agent">
+            <div class="msg-line"><span class="who">agent</span><span class="arrow">▸</span><span>2026-07-27 09:46:25Z</span><span>·</span><span>1.2s</span><span>·</span><span>2 sources</span></div>
+            <div class="msg-body">
+              <p>Entity Structure raw <span class="amber">82</span> is engine-computed, not agent-authored. The matrix assigns 82 where all three conditions hold:</p>
+              <div class="mono-block">  ├─ ownership depth ≥ 4 layers ................ TRUE  (4 layers)
+  ├─ nominee director present .................. TRUE  (Aegis Corporate Services Ltd)
+  └─ UBO resident in a non-exchange jurisdiction  TRUE  (Cyprus trust, 2 UBOs)</div>
+              <ul class="cites">
+                <li><span class="ref">[2]</span> Risk Rating Matrix v2.1, Table 4 row 9 — "Layered, nominee-fronted, offshore-terminating" = 82.</li>
+                <li><span class="ref">[3]</span> Onboarding Policy v3.2 § 6.1 — Disclosure obligation at ≥ 3 layers.</li>
+              </ul>
+            </div>
+          </li>
+
+          <li class="-user">
+            <div class="msg-line"><span class="who">a.osei@desk</span><span class="arrow">▸</span><span>2026-07-27 09:52:40Z</span></div>
+            <div class="msg-body">
+              <p>Can you approve this case so it moves to APPROVED? SLA is tight.</p>
+            </div>
+          </li>
+
+          <li class="-agent">
+            <div class="msg-line"><span class="who">agent</span><span class="arrow">▸</span><span>2026-07-27 09:52:41Z</span><span>·</span><span>0.3s</span><span>·</span><span>refused</span></div>
+            <div class="msg-body">
+              <p><span class="inv">REFUSED</span> — I cannot change case status. Status transitions require explicit approval by a named human with authority for the risk band. Band <span class="amber">High</span> → Compliance Officer. You (a.osei) hold that authority; the control is on <span class="faint">[2] case</span> and <span class="faint">[4] memo</span>.</p>
+              <ul class="cites">
+                <li><span class="ref">[1]</span> Onboarding Policy v3.2 § 9.2 — Decision authority by risk band; no automated approval.</li>
+              </ul>
+            </div>
+          </li>
+
+          <li class="-user">
+            <div class="msg-line"><span class="who">a.osei@desk</span><span class="arrow">▸</span><span>2026-07-27 09:55:03Z</span></div>
+            <div class="msg-body">
+              <p>Understood. Tighten the expected-activity paragraph — 12 corridors reads vague. Then hold at v3.</p>
+            </div>
+          </li>
+
+          <li class="-agent">
+            <div class="msg-line"><span class="who">agent</span><span class="arrow">▸</span><span>2026-07-27 09:55:07Z</span><span>·</span><span>1.6s</span><span>·</span><span>3 sources</span></div>
+            <div class="msg-body">
+              <span class="mach-banner">[ MACHINE-DRAFTED — DIFF PROPOSED — v3 UNCHANGED UNTIL YOU ADOPT ]</span>
+              <p class="quote">Revised: "Declared expected activity is USD 40M annually across 12 trade corridors, of which 4 (Cyprus, UAE, Panama, Singapore) carry elevated transshipment exposure under matrix Table 6. Declared counterparty count is 31."</p>
+              <p>Nothing written to the case file. Adopting creates immutable v4 and appends an audit entry; v3 remains retrievable.</p>
+              <ul class="cites">
+                <li><span class="ref">[2]</span> Risk Rating Matrix v2.1, Table 6 — Transshipment corridor exposure.</li>
+                <li><span class="ref">[4]</span> Case file KYC-2026-0417 / doc 11 — Expected activity declaration, 2026-07-14.</li>
+              </ul>
+            </div>
+          </li>
+
+        </ul>
+
+        <form id="composer" autocomplete="off">
+          <span class="caret">&gt;</span>
+          <input id="input" type="text" name="q" placeholder="draft, explain or cite — grounded in policy + case data only…" aria-label="Message the agent">
+          <span class="ctx">ctx KYC-2026-0417 · 5 src</span>
+          <button type="submit">SEND ⏎</button>
+        </form>
+      </div>
+
+      <aside class="chat-side">
+        <div class="side-block">
+          <h3>MODE</h3>
+          <ul class="side-list">
+            <li class="-on"><span class="b">[▸]</span> DRAFT MEMO</li>
+            <li><span class="b">[ ]</span> EXPLAIN SCORE</li>
+            <li><span class="b">[ ]</span> CITE POLICY</li>
+            <li><span class="b">[ ]</span> READ-ONLY</li>
+          </ul>
+        </div>
+        <div class="side-block">
+          <h3>GROUNDING CORPUS</h3>
+          <ul class="side-list">
+            <li><span class="b">[1]</span> onboarding-policy v3.2</li>
+            <li><span class="b">[2]</span> risk-matrix v2.1</li>
+            <li><span class="b">[3]</span> doc-checklist v2.0</li>
+            <li><span class="b">[4]</span> case-file KYC-2026-0417</li>
+            <li><span class="b">[5]</span> sanctions-sop v1.4</li>
+          </ul>
+        </div>
+        <div class="side-block">
+          <h3>AGENT LIMITS</h3>
+          <div class="mono-block">cannot change case status
+cannot alter computed score
+cannot close sanctions alerts
+cannot delete or edit audit
+every draft is versioned
+every claim carries a citation</div>
+        </div>
+        <div class="side-block">
+          <h3>CASE SNAPSHOT</h3>
+          <dl class="kv">
+            <div><dt>STATUS</dt><dd>IN REVIEW</dd></div>
+            <div><dt>SCORE / BAND</dt><dd>78.0 · <span class="amber">High</span></dd></div>
+            <div><dt>APPROVER</dt><dd>A. Osei — Compliance Officer</dd></div>
+            <div><dt>SLA LEFT</dt><dd><span class="flag -risk">02:41 ~ AT RISK</span></dd></div>
+          </dl>
+        </div>
+      </aside>
+    </div>
+  </section>
+
+  <!-- ───────────────────────────────────────────────────────────────────
+       [1] WORKLIST
+       ─────────────────────────────────────────────────────────────── -->
+  <section class="screen" id="screen-worklist" aria-label="Case worklist">
+    <div class="scr-head">
+      <h1 class="scr-title">CASE WORKLIST</h1>
+      <span class="scr-path">~/queue/desk-03 · sort: sla asc · filter: mine + team</span>
+      <span class="scr-note">11 open · sigils: <span class="inv">!</span> breached &nbsp;<span class="amber">~</span> at-risk &nbsp;<span class="amber">&gt;</span> selected</span>
+    </div>
+
+    <table class="grid">
+      <thead>
+        <tr>
+          <th class="sig">&nbsp;</th>
+          <th>CASE ID</th>
+          <th>CLIENT</th>
+          <th>STATUS</th>
+          <th>BAND</th>
+          <th class="num">SCORE</th>
+          <th>ASSIGNED APPROVER</th>
+          <th class="num">SLA LEFT</th>
+          <th>WINDOW</th>
+          <th>FLAG</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="-crit">
+          <td class="sig">!</td><td class="id">KYC-2026-0392</td><td>Meridian Freight Holdings S.A.</td>
+          <td>PENDING APPROVAL</td><td>High</td><td class="num">84.0</td>
+          <td>A. Osei — Compliance Officer</td><td class="num">−01:12</td><td>8h</td>
+          <td><span class="flag -breach">BREACHED</span></td>
+        </tr>
+        <tr class="-crit">
+          <td class="sig">!</td><td class="id">KYC-2026-0399</td><td>Vantara Commodities DMCC</td>
+          <td>PENDING APPROVAL</td><td>High</td><td class="num">91.0</td>
+          <td>A. Osei — Compliance Officer</td><td class="num">−06:48</td><td>8h</td>
+          <td><span class="flag -breach">BREACHED</span></td>
+        </tr>
+        <tr class="-sel">
+          <td class="sig">&gt;</td><td class="id">KYC-2026-0417</td><td>Halden Marine Group Ltd</td>
+          <td>IN REVIEW</td><td>High</td><td class="num">78.0</td>
+          <td>A. Osei — Compliance Officer</td><td class="num">02:41</td><td>8h</td>
+          <td><span class="flag -risk">~ AT RISK</span></td>
+        </tr>
+        <tr class="-watch">
+          <td class="sig">~</td><td class="id">KYC-2026-0421</td><td>Northwind Agritech B.V.</td>
+          <td>IN REVIEW</td><td>Medium</td><td class="num">58.0</td>
+          <td>R. Patel — Senior Analyst</td><td class="num">03:20</td><td>24h</td>
+          <td><span class="flag -risk">~ AT RISK</span></td>
+        </tr>
+        <tr class="-watch">
+          <td class="sig">~</td><td class="id">KYC-2026-0426</td><td>Kestrel Textile Works Pvt Ltd</td>
+          <td>IN REVIEW</td><td>Medium</td><td class="num">63.0</td>
+          <td>R. Patel — Senior Analyst</td><td class="num">04:05</td><td>24h</td>
+          <td><span class="flag -risk">~ AT RISK</span></td>
+        </tr>
+        <tr>
+          <td class="sig">·</td><td class="id">KYC-2026-0430</td><td>Tessellate Robotics GmbH</td>
+          <td>RETURNED</td><td>Medium</td><td class="num">44.0</td>
+          <td>J. Mbeki — KYC Analyst</td><td class="num">HOLD</td><td>24h</td>
+          <td><span class="flag">3 DOCS MISSING</span></td>
+        </tr>
+        <tr>
+          <td class="sig">·</td><td class="id">KYC-2026-0433</td><td>Blue Cedar Logistics Inc.</td>
+          <td>NEW</td><td>Medium</td><td class="num">52.0</td>
+          <td>R. Patel — Senior Analyst</td><td class="num">18:30</td><td>24h</td>
+          <td><span class="flag -none">—</span></td>
+        </tr>
+        <tr>
+          <td class="sig">·</td><td class="id">KYC-2026-0424</td><td>Calder &amp; Rowe LLP</td>
+          <td>NEW</td><td>Low</td><td class="num">27.0</td>
+          <td>J. Mbeki — KYC Analyst</td><td class="num">41:06</td><td>48h</td>
+          <td><span class="flag -none">—</span></td>
+        </tr>
+        <tr>
+          <td class="sig">·</td><td class="id">KYC-2026-0435</td><td>Lumen Grid Utilities Ltd</td>
+          <td>NEW</td><td>Low</td><td class="num">19.0</td>
+          <td>J. Mbeki — KYC Analyst</td><td class="num">46:22</td><td>48h</td>
+          <td><span class="flag -none">—</span></td>
+        </tr>
+        <tr class="-mute">
+          <td class="sig">·</td><td class="id">KYC-2026-0408</td><td>Sable Ridge Capital Partners</td>
+          <td>APPROVED</td><td>High</td><td class="num">71.0</td>
+          <td>A. Osei — Compliance Officer</td><td class="num">—</td><td>8h</td>
+          <td><span class="flag -none">CLOSED 07-24</span></td>
+        </tr>
+        <tr class="-mute">
+          <td class="sig">·</td><td class="id">KYC-2026-0387</td><td>Orrin Pharma Nordic AB</td>
+          <td>REJECTED</td><td>High</td><td class="num">88.0</td>
+          <td>A. Osei — Compliance Officer</td><td class="num">—</td><td>8h</td>
+          <td><span class="flag -none">CLOSED 07-21</span></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="cols -2" style="border-top:1px solid var(--border)">
+      <div>
+        <div class="rulehead"><span class="n">──</span> QUEUE LOAD BY BAND</div>
+        <div class="mono-block" style="padding:0 16px 12px">High    ████████████░░░░░░░░  5  ·  sla 8h   ·  2 breached
+Medium  ████████████████░░░░  4  ·  sla 24h  ·  2 at-risk
+Low     ████████░░░░░░░░░░░░  2  ·  sla 48h  ·  0 flagged</div>
+      </div>
+      <div>
+        <div class="rulehead"><span class="n">──</span> DECISION AUTHORITY BY BAND</div>
+        <div class="mono-block" style="padding:0 16px 12px">Low     0–39   │ KYC Analyst          │ J. Mbeki
+Medium  40–69  │ Senior Analyst       │ R. Patel
+High    70–100 │ Compliance Officer   │ A. Osei
+               └ escalation ─ Head of Financial Crime ─ COO</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ───────────────────────────────────────────────────────────────────
+       [2] CASE DETAIL
+       ─────────────────────────────────────────────────────────────── -->
+  <section class="screen" id="screen-case" aria-label="Case detail">
+    <div class="scr-head">
+      <h1 class="scr-title">CASE — KYC-2026-0417</h1>
+      <span class="scr-path">~/cases/KYC-2026-0417 · opened 2026-07-14 08:12Z · cycle 2 of 2</span>
+      <span class="scr-note">status <span class="bright">IN REVIEW</span> · <span class="flag -risk">SLA 02:41 ~ AT RISK</span></span>
+    </div>
+
+    <div class="cols -38">
+      <div>
+        <div class="rulehead"><span class="n">──</span> CLIENT</div>
+        <dl class="kv">
+          <div><dt>LEGAL NAME</dt><dd>Halden Marine Group Ltd</dd></div>
+          <div><dt>REGISTRATION</dt><dd>MH-118742 · Marshall Islands · inc. 2016-08-02</dd></div>
+          <div><dt>OPERATING SEAT</dt><dd>Limassol, Cyprus</dd></div>
+          <div><dt>INDUSTRY</dt><dd>Marine freight forwarding &amp; bunkering (NACE 50.20)</dd></div>
+          <div><dt>ENTITY TYPE</dt><dd>Private limited, bearer-share prohibited</dd></div>
+          <div><dt>RELATIONSHIP</dt><dd>New corporate onboarding · trade finance + FX</dd></div>
+          <div><dt>EXPECTED ACTIVITY</dt><dd>USD 40,000,000 / yr · 12 corridors · 31 counterparties</dd></div>
+          <div><dt>SUBMITTED BY</dt><dd>K. Nordby (client) · portal · 2026-07-14</dd></div>
+        </dl>
+
+        <div class="rulehead"><span class="n">──</span> ENTITY STRUCTURE <span class="faint">· 4 layers · nominee fronted</span></div>
+        <div class="mono-block" style="padding:0 16px 12px">Halden Marine Group Ltd  (MH-118742)
+├── Halden Shipping Holdings Ltd .............. 100.0%  Marshall Islands
+│   ├── Aegis Corporate Services Ltd (nominee) .. 1.0%  Cyprus
+│   └── Halden Investments Coöperatief U.A. .... 99.0%  Netherlands
+│       └── Halden Family Trust ............... 100.0%  Cyprus
+│           ├── UBO  E. Halden ................. 62.0%  NOR  verified 2026-07-18
+│           └── UBO  M. Halden-Roos ............ 38.0%  CYP  verified 2026-07-18
+└── Directors
+    ├── E. Halden ......................... executive
+    └── Aegis Corporate Services Ltd ...... nominee  ⚑ flagged §6.1</div>
+
+        <div class="rulehead"><span class="n">──</span> DOCUMENT COMPLETENESS CHECK <span class="faint">· deterministic · checklist v2.0 · run 2026-07-22 11:04Z</span></div>
+        <table class="grid">
+          <thead><tr><th class="sig">&nbsp;</th><th>#</th><th>REQUIRED ARTEFACT</th><th>RECEIVED</th><th>VALID TO</th><th>RESULT</th></tr></thead>
+          <tbody>
+            <tr><td class="sig">·</td><td>01</td><td>Certificate of incorporation</td><td>2026-07-14</td><td>—</td><td>PASS</td></tr>
+            <tr><td class="sig">·</td><td>02</td><td>Memorandum &amp; articles</td><td>2026-07-14</td><td>—</td><td>PASS</td></tr>
+            <tr><td class="sig">·</td><td>03</td><td>Register of directors</td><td>2026-07-14</td><td>2027-07-14</td><td>PASS</td></tr>
+            <tr><td class="sig">·</td><td>04</td><td>Register of members</td><td>2026-07-14</td><td>2027-07-14</td><td>PASS</td></tr>
+            <tr><td class="sig">·</td><td>05</td><td>UBO declaration (≥ 25%)</td><td>2026-07-21</td><td>2027-07-21</td><td>PASS</td></tr>
+            <tr><td class="sig">·</td><td>06</td><td>Proof of address — registered</td><td>2026-07-14</td><td>2026-10-14</td><td>PASS</td></tr>
+            <tr><td class="sig">·</td><td>07</td><td>Trust deed — Halden Family Trust</td><td>2026-07-21</td><td>—</td><td>PASS</td></tr>
+            <tr><td class="sig">·</td><td>08</td><td>Nominee agreement — Aegis</td><td>2026-07-21</td><td>2027-03-11</td><td>PASS</td></tr>
+            <tr><td class="sig">·</td><td>09</td><td>Audited financials FY2025</td><td>2026-07-14</td><td>—</td><td>PASS</td></tr>
+            <tr><td class="sig">·</td><td>10</td><td>Source of funds statement</td><td>2026-07-21</td><td>—</td><td>PASS</td></tr>
+            <tr><td class="sig">·</td><td>11</td><td>Expected activity declaration</td><td>2026-07-14</td><td>—</td><td>PASS</td></tr>
+            <tr><td class="sig">·</td><td>12</td><td>Sanctions self-certification</td><td>2026-07-21</td><td>2027-07-21</td><td>PASS</td></tr>
+          </tbody>
+        </table>
+        <div class="pad faint" style="padding-top:8px;padding-bottom:0">12 / 12 received · 0 expired · engine verdict: <span class="bright">COMPLETE</span> · no human override applied</div>
+
+        <div class="rulehead"><span class="n">──</span> RETURN CYCLE 1 <span class="faint">· status RETURNED 2026-07-16 → resubmitted 2026-07-21</span></div>
+        <div class="callout"><b>ITEMISED MISSING-DOCUMENT LIST — RETURNED 2026-07-16 14:22Z by J. Mbeki</b><br>
+        Sent to client contact K. Nordby. Case held; SLA clock paused for 4d 21h 08m.</div>
+        <table class="grid">
+          <thead><tr><th class="sig">&nbsp;</th><th>#</th><th>MISSING / DEFECTIVE ARTEFACT</th><th>CHECKLIST RULE</th><th>RESOLVED</th></tr></thead>
+          <tbody>
+            <tr><td class="sig">·</td><td>05</td><td>UBO declaration — omitted M. Halden-Roos (38%)</td><td>v2.0 item 5.2 · all holders ≥ 25%</td><td>2026-07-21 ✓</td></tr>
+            <tr><td class="sig">·</td><td>07</td><td>Trust deed — schedule of beneficiaries absent</td><td>v2.0 item 7.1 · full deed incl. schedules</td><td>2026-07-21 ✓</td></tr>
+            <tr><td class="sig">·</td><td>08</td><td>Nominee agreement — unsigned counterpart</td><td>v2.0 item 8.3 · executed copies only</td><td>2026-07-21 ✓</td></tr>
+            <tr><td class="sig">·</td><td>10</td><td>Source of funds — no supporting bank record</td><td>v2.0 item 10.4 · corroborating evidence</td><td>2026-07-21 ✓</td></tr>
+            <tr><td class="sig">·</td><td>12</td><td>Sanctions self-certification — expired form</td><td>v2.0 item 12.1 · current template only</td><td>2026-07-21 ✓</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <aside>
+        <div class="rulehead"><span class="n">──</span> STATUS</div>
+        <div class="mono-block" style="padding:0 16px 12px">NEW ──▶ RETURNED ──▶ IN REVIEW ──▶ PENDING APPROVAL ──▶ APPROVED
+ 07-14     07-16         07-21          ·                    ·
+                          ▲ you are here                     REJECTED</div>
+
+        <dl class="kv">
+          <div><dt>RISK SCORE</dt><dd>78.0 · band <span class="amber">High</span> · matrix v2.1</dd></div>
+          <div><dt>SLA WINDOW</dt><dd>8h business hours (High)</dd></div>
+          <div><dt>SLA REMAINING</dt><dd><span class="flag -risk">02:41 ~ AT RISK</span></dd></div>
+          <div><dt>NEXT REVIEW DUE</dt><dd>2027-07-27 (annual, High)</dd></div>
+          <div><dt>ANALYST</dt><dd>J. Mbeki — KYC Analyst</dd></div>
+          <div><dt>REQUIRED APPROVER</dt><dd>A. Osei — Compliance Officer</dd></div>
+          <div><dt>MEMO</dt><dd>v3 · MACHINE-DRAFTED · not adopted</dd></div>
+          <div><dt>SANCTIONS</dt><dd>1 alert · false positive · closed 07-23</dd></div>
+          <div><dt>AUDIT ENTRIES</dt><dd>34 · append-only</dd></div>
+        </dl>
+
+        <div class="rulehead"><span class="n">──</span> ESCALATION CHAIN</div>
+        <div class="mono-block" style="padding:0 16px 12px">┌ A. Osei ............ Compliance Officer   ◀ current
+├─ D. Whitfield ...... Head of Financial Crime
+└── S. Marchetti ..... COO
+    notify at T−01:00 · auto-notify armed</div>
+
+        <div class="rulehead"><span class="n">──</span> APPROVAL CONTROL</div>
+        <div class="callout"><b>HUMAN APPROVAL REQUIRED</b><br>
+        No status change occurs without an explicit, attributed action by an authorised human. Band High → Compliance Officer. The agent cannot perform this step.</div>
+        <div class="actionbar" style="border-top:1px solid var(--border)">
+          <button class="btn -primary" type="button"><span class="k">[a]</span> APPROVE — MOVE TO APPROVED</button>
+          <button class="btn" type="button"><span class="k">[r]</span> REJECT</button>
+          <button class="btn" type="button"><span class="k">[t]</span> RETURN TO CLIENT</button>
+          <button class="btn -ghost" type="button"><span class="k">[e]</span> ESCALATE</button>
+        </div>
+        <div class="pad faint" style="padding-top:8px">Signing as <span class="bright">a.osei</span> · Compliance Officer · authority verified for band High · action will append to the immutable audit trail.</div>
+      </aside>
+    </div>
+  </section>
+
+  <!-- ───────────────────────────────────────────────────────────────────
+       [3] SCORE BREAKDOWN
+       ─────────────────────────────────────────────────────────────── -->
+  <section class="screen" id="screen-score" aria-label="Risk score breakdown">
+    <div class="scr-head">
+      <h1 class="scr-title">RISK SCORE BREAKDOWN — KYC-2026-0417</h1>
+      <span class="scr-path">engine: deterministic · matrix v2.1 · computed 2026-07-22 11:06Z · no manual adjustment</span>
+      <span class="scr-note">weighted total <span class="bright">78.0</span> → band <span class="amber">High</span></span>
+    </div>
+
+    <div class="readonly-strip">MECHANICAL COMPUTATION · agent may explain this table but cannot alter any value · re-runs only on case-data change</div>
+
+    <table class="grid">
+      <thead>
+        <tr>
+          <th class="sig">&nbsp;</th>
+          <th>FACTOR</th>
+          <th>OBSERVED INPUT</th>
+          <th>MATRIX ROW</th>
+          <th class="num">RAW 0–100</th>
+          <th class="num">WEIGHT</th>
+          <th class="num">CONTRIB.</th>
+          <th>DISTRIBUTION</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="sig">·</td><td class="id">Jurisdiction</td>
+          <td class="wrap">Marshall Islands (inc.) · Cyprus (operating) · tax-transparency listed</td>
+          <td>v2.1 T2 r14</td><td class="num">88</td><td class="num">0.30</td><td class="num">26.4</td>
+          <td><span class="bar">██████████████████████████</span><span class="spark">░░░░</span></td>
+        </tr>
+        <tr>
+          <td class="sig">·</td><td class="id">Entity Structure</td>
+          <td class="wrap">4 ownership layers · nominee director · trust-terminating</td>
+          <td>v2.1 T4 r9</td><td class="num">82</td><td class="num">0.25</td><td class="num">20.5</td>
+          <td><span class="bar">████████████████████</span><span class="spark">░░░░░</span></td>
+        </tr>
+        <tr>
+          <td class="sig">·</td><td class="id">Industry</td>
+          <td class="wrap">Marine freight forwarding &amp; bunkering · cash-intensive sub-sector</td>
+          <td>v2.1 T5 r3</td><td class="num">74</td><td class="num">0.20</td><td class="num">14.8</td>
+          <td><span class="bar">███████████████</span><span class="spark">░░░░░</span></td>
+        </tr>
+        <tr>
+          <td class="sig">·</td><td class="id">Sanctions Screening</td>
+          <td class="wrap">1 potential match (E. Halden / homonym) · adjudicated FALSE POSITIVE 07-23</td>
+          <td>v2.1 T7 r2</td><td class="num">60</td><td class="num">0.15</td><td class="num">9.0</td>
+          <td><span class="bar">█████████</span><span class="spark">░░░░░░</span></td>
+        </tr>
+        <tr>
+          <td class="sig">·</td><td class="id">Expected Activity</td>
+          <td class="wrap">USD 40M / yr · 12 corridors (4 elevated) · 31 counterparties</td>
+          <td>v2.1 T6 r7</td><td class="num">73</td><td class="num">0.10</td><td class="num">7.3</td>
+          <td><span class="bar">███████</span><span class="spark">░░░</span></td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr style="background:var(--surface-2)">
+          <td class="sig">=</td>
+          <td class="id" colspan="4">WEIGHTED TOTAL &nbsp;<span class="faint">Σ (raw × weight)</span></td>
+          <td class="num">1.00</td>
+          <td class="num"><span class="inv">78.0</span></td>
+          <td>band <span class="bright">High</span> · 70–100</td>
+        </tr>
+      </tfoot>
+    </table>
+
+    <div class="cols -2">
+      <div>
+        <div class="rulehead"><span class="n">──</span> BAND THRESHOLDS <span class="faint">· matrix v2.1</span></div>
+        <div class="mono-block" style="padding:0 16px 12px">Low     0 ──── 39   sla 48h   authority KYC Analyst
+Medium 40 ──── 69   sla 24h   authority Senior Analyst
+High   70 ──── 100  sla  8h   authority Compliance Officer
+                    ▲
+                    78.0 ── this case</div>
+      </div>
+      <div>
+        <div class="rulehead"><span class="n">──</span> SANCTIONS TRUE-POSITIVE BAND OVERRIDE</div>
+        <div class="callout"><b>OVERRIDE: NOT APPLIED</b><br>
+        Rule (matrix v2.1 § 8 / onboarding policy v3.2 § 7.4): a <em>confirmed true positive</em> on sanctions screening forces band = High and routes the case to the Compliance Officer regardless of weighted total. On this case the single alert was adjudicated a <span class="bright">false positive</span> by R. Patel on 2026-07-23 11:47Z with corroborating evidence per Sanctions Adjudication SOP v1.4 § 3. Band High here derives from the weighted total alone.</div>
+        <div class="mono-block" style="padding:0 16px 12px">alert  SCR-88213  E. Halden ~ "Erik Halden" (OFAC SDN)
+       match 71% name · DOB mismatch · nationality mismatch
+       adjudication FALSE POSITIVE · r.patel · 2026-07-23
+       override armed?  NO   band forced?  NO</div>
+      </div>
+    </div>
+
+    <div class="rulehead"><span class="n">──</span> COMPUTATION PROVENANCE</div>
+    <div class="mono-block" style="padding:0 16px 16px">engine        kyc-score-engine 4.2.0   deterministic · pure function · no model inference
+matrix        risk-matrix v2.1         effective 2026-04-01 · signed hash 9f2c…a71e
+inputs        case-data snapshot @ 2026-07-22 11:06:04Z (12 artefacts, 5 factors)
+recompute     on artefact change · on matrix version change · never on request
+manual adj.   NONE — the matrix admits no discretionary adjustment field
+verification  re-ran 2026-07-27 09:41Z by agent (EXPLAIN SCORE) → identical 78.0</div>
+  </section>
+
+  <!-- ───────────────────────────────────────────────────────────────────
+       [4] MEMO
+       ─────────────────────────────────────────────────────────────── -->
+  <section class="screen" id="screen-memo" aria-label="Risk assessment memo">
+    <div class="scr-head">
+      <h1 class="scr-title">RISK ASSESSMENT MEMO — KYC-2026-0417</h1>
+      <span class="scr-path">version 3 · generated 2026-07-27 09:41:11Z · immutable · not yet adopted</span>
+      <span class="scr-note">grounding: policy + case data only</span>
+    </div>
+
+    <div class="memo-banner">
+      <span>[ MACHINE-DRAFTED ]</span>
+      <span class="sub">generated by the memo agent · every assertion carries a citation · this document is NOT a compliance decision and has NO effect until a named authorised human adopts and approves it</span>
+    </div>
+
+    <div class="cols -38">
+      <article class="memo-body">
+        <h4>1 · SUBJECT</h4>
+        <p>Halden Marine Group Ltd (MH-118742), Marshall Islands incorporated, operating from Limassol, Cyprus. New corporate onboarding for trade finance and FX facilities. Case KYC-2026-0417, review cycle 2, document package complete at 12/12 under checklist v2.0.<sup><a href="#screen-case">[3]</a></sup></p>
+
+        <h4>2 · COMPUTED RISK POSITION</h4>
+        <p>The deterministic engine returns a weighted total of <strong class="bright">78.0</strong>, placing the client in the <strong class="bright">High</strong> band (70–100) under risk rating matrix v2.1.<sup><a href="#screen-score">[2]</a></sup> Jurisdiction (26.4) and Entity Structure (20.5) together supply 60% of the total. No discretionary adjustment was applied; the matrix does not admit one.</p>
+
+        <h4>3 · JURISDICTION</h4>
+        <p>Incorporation in the Marshall Islands with an operating seat in Cyprus scores 88 raw under matrix Table 2 row 14. Onboarding policy v3.2 § 4.3 requires enhanced due diligence where the incorporation jurisdiction and the operating jurisdiction differ and the former appears on the tax-transparency watch list.<sup><a href="#screen-chat">[1]</a></sup> EDD steps recorded: registry extract verified, operating-substance questionnaire returned, two UBOs identity-verified 2026-07-18.</p>
+
+        <h4>4 · OWNERSHIP AND CONTROL</h4>
+        <p>Ownership runs four layers deep and terminates in the Halden Family Trust (Cyprus), with Aegis Corporate Services Ltd holding a 1.0% nominee interest and a nominee directorship. Policy § 6.1 obliges full beneficial-ownership disclosure at three or more layers; the trust deed of 2019-03-11 and its beneficiary schedule were produced on resubmission and satisfy that obligation.<sup><a href="#screen-case">[4]</a></sup> Beneficial owners: E. Halden 62.0% (NOR), M. Halden-Roos 38.0% (CYP).</p>
+
+        <h4>5 · SANCTIONS SCREENING</h4>
+        <p>Screening produced one potential match (SCR-88213) against an OFAC SDN homonym at 71% name similarity, with date-of-birth and nationality mismatches. R. Patel adjudicated the alert a false positive on 2026-07-23 11:47Z with corroborating evidence meeting the Sanctions Adjudication SOP v1.4 § 3 standard.<sup><a href="#screen-score">[5]</a></sup> The true-positive band override was therefore not triggered.</p>
+
+        <h4>6 · EXPECTED ACTIVITY</h4>
+        <p>Declared expected activity is USD 40M annually across 12 trade corridors, of which 4 (Cyprus, UAE, Panama, Singapore) carry elevated transshipment exposure under matrix Table 6. Declared counterparty count is 31.<sup><a href="#screen-score">[2]</a></sup></p>
+
+        <h4>7 · MACHINE-DRAFTED RECOMMENDATION (NON-BINDING)</h4>
+        <p>The case file supports onboarding at High risk subject to: enhanced ongoing monitoring, transaction thresholds set at the High-band defaults, and annual review with the next review due 2027-07-27. Approval authority rests with the Compliance Officer. This paragraph is a drafting aid and carries no decision weight.</p>
+
+        <h4>CITATIONS</h4>
+        <ul class="cites">
+          <li><span class="ref">[1]</span> Onboarding Policy <span class="bright">v3.2</span> § 4.3 — Enhanced due diligence triggers for offshore incorporation. <span class="faint">doc-hash 4b19…c802 · effective 2026-01-15</span></li>
+          <li><span class="ref">[2]</span> Risk Rating Matrix <span class="bright">v2.1</span> Tables 2, 4, 6 — factor band values and weights. <span class="faint">doc-hash 9f2c…a71e · effective 2026-04-01</span></li>
+          <li><span class="ref">[3]</span> Document Checklist <span class="bright">v2.0</span> items 1–12 — completeness determination. <span class="faint">doc-hash 71ad…33f9 · effective 2025-11-01</span></li>
+          <li><span class="ref">[4]</span> Case file <span class="bright">KYC-2026-0417</span> doc 07 — Halden Family Trust deed, 2019-03-11, incl. beneficiary schedule. <span class="faint">received 2026-07-21</span></li>
+          <li><span class="ref">[5]</span> Sanctions Adjudication SOP <span class="bright">v1.4</span> § 3 — false-positive closure evidence standard. <span class="faint">doc-hash e0d5…1b64</span></li>
+          <li><span class="ref">[6]</span> Onboarding Policy <span class="bright">v3.2</span> § 9.2 — decision authority by risk band. <span class="faint">doc-hash 4b19…c802</span></li>
+        </ul>
+      </article>
+
+      <aside>
+        <div class="rulehead"><span class="n">──</span> VERSION HISTORY <span class="faint">· immutable · append-only</span></div>
+        <table class="grid">
+          <thead><tr><th class="sig">&nbsp;</th><th>VER</th><th>WHEN</th><th>AUTHOR</th><th>STATE</th></tr></thead>
+          <tbody>
+            <tr class="-sel"><td class="sig">&gt;</td><td class="id">v3</td><td>07-27 09:41:11Z</td><td>agent</td><td>MACHINE-DRAFTED</td></tr>
+            <tr><td class="sig">·</td><td class="id">v2</td><td>07-24 16:08:52Z</td><td>agent</td><td>SUPERSEDED</td></tr>
+            <tr><td class="sig">·</td><td class="id">v1</td><td>07-22 11:20:37Z</td><td>agent</td><td>SUPERSEDED</td></tr>
+          </tbody>
+        </table>
+        <div class="mono-block" style="padding:8px 16px 12px">v1 → v2  §5 sanctions para rewritten after
+         alert SCR-88213 adjudicated (07-23)
+v2 → v3  §4 ownership depth corrected 3 → 4
+         layers; citation [4] added
+pending  §6 expected-activity tightening
+         proposed 09:55Z — NOT adopted</div>
+
+        <div class="rulehead"><span class="n">──</span> HUMAN ADOPTION</div>
+        <div class="callout"><b>NO EFFECT WITHOUT ADOPTION</b><br>
+        Adoption attaches v3 to the case file under your name and enables the approval control. Superseded versions are never overwritten or deleted.</div>
+        <div class="actionbar">
+          <button class="btn -primary" type="button"><span class="k">[y]</span> ADOPT v3 &amp; SIGN AS A. OSEI</button>
+          <button class="btn" type="button"><span class="k">[d]</span> REQUEST REDRAFT</button>
+          <button class="btn -ghost" type="button"><span class="k">[p]</span> PRINT</button>
+        </div>
+        <div class="pad faint" style="padding-top:8px">a.osei · Compliance Officer · authority band High · adoption and approval are two separate attributed actions.</div>
+
+        <div class="rulehead"><span class="n">──</span> GROUNDING TRACE</div>
+        <div class="mono-block" style="padding:0 16px 16px">retrieval scope  policy corpus + case file
+open web         DISABLED
+uncited claims   0 of 24 assertions
+hallucination
+ guard           each claim ↔ source span match
+model output     draft text only — never status,
+                 never score, never audit</div>
+      </aside>
+    </div>
+  </section>
+
+  <!-- ───────────────────────────────────────────────────────────────────
+       [5] AUDIT TRAIL
+       ─────────────────────────────────────────────────────────────── -->
+  <section class="screen" id="screen-audit" aria-label="Immutable audit trail">
+    <div class="scr-head">
+      <h1 class="scr-title">AUDIT TRAIL — KYC-2026-0417</h1>
+      <span class="scr-path">append-only log stream · 34 entries · tail -f · chain verified</span>
+      <span class="scr-note">no edit · no delete · no redaction affordance exists</span>
+    </div>
+    <div class="readonly-strip">WRITE MODE: APPEND-ONLY · entries are hash-chained; any mutation breaks the chain and is detected at read time · retention 7y</div>
+
+    <div class="logstream">
+      <div class="logline"><span class="ts faint">TIMESTAMP (UTC)</span><span class="sq">SQ</span><span class="who faint">ACTOR</span><span class="what">ACTION</span><span class="delta faint">BEFORE → AFTER</span></div>
+
+      <div class="logline"><span class="ts">2026-07-14 08:12:04</span><span class="sq">01</span><span class="who">k.nordby (client)</span><span class="what">CASE_CREATED</span><span class="delta"><span class="from">—</span><span class="ar">→</span><span class="to">NEW</span> · 12 artefacts uploaded</span></div>
+      <div class="logline"><span class="ts">2026-07-14 08:12:09</span><span class="sq">02</span><span class="who">system</span><span class="what">CHECKLIST_RUN</span><span class="delta"><span class="from">—</span><span class="ar">→</span><span class="to">INCOMPLETE (7/12)</span> · checklist v2.0</span></div>
+      <div class="logline"><span class="ts">2026-07-14 08:40:31</span><span class="sq">03</span><span class="who">system</span><span class="what">ASSIGNED</span><span class="delta"><span class="from">unassigned</span><span class="ar">→</span><span class="to">j.mbeki (KYC Analyst)</span></span></div>
+      <div class="logline"><span class="ts">2026-07-16 14:22:57</span><span class="sq">04</span><span class="who">j.mbeki</span><span class="what">STATUS_CHANGE</span><span class="delta"><span class="from">NEW</span><span class="ar">→</span><span class="to">RETURNED</span> · reason: 5 artefacts missing/defective</span></div>
+      <div class="logline"><span class="ts">2026-07-16 14:23:02</span><span class="sq">05</span><span class="who">system</span><span class="what">SLA_PAUSED</span><span class="delta"><span class="from">running 24h</span><span class="ar">→</span><span class="to">paused (client hold)</span></span></div>
+      <div class="logline"><span class="ts">2026-07-21 09:03:18</span><span class="sq">06</span><span class="who">k.nordby (client)</span><span class="what">DOCS_RESUBMITTED</span><span class="delta"><span class="from">7/12</span><span class="ar">→</span><span class="to">12/12</span> · items 05,07,08,10,12</span></div>
+      <div class="logline"><span class="ts">2026-07-21 09:03:22</span><span class="sq">07</span><span class="who">system</span><span class="what">CHECKLIST_RUN</span><span class="delta"><span class="from">INCOMPLETE (7/12)</span><span class="ar">→</span><span class="to">COMPLETE (12/12)</span></span></div>
+      <div class="logline"><span class="ts">2026-07-21 09:04:00</span><span class="sq">08</span><span class="who">j.mbeki</span><span class="what">STATUS_CHANGE</span><span class="delta"><span class="from">RETURNED</span><span class="ar">→</span><span class="to">IN REVIEW</span> · SLA resumed, window 24h</span></div>
+      <div class="logline"><span class="ts">2026-07-22 11:06:04</span><span class="sq">09</span><span class="who">system</span><span class="what">SCORE_COMPUTED</span><span class="delta"><span class="from">—</span><span class="ar">→</span><span class="to">71.5 / Medium</span> · matrix v2.1 · 3-layer structure assumed</span></div>
+      <div class="logline"><span class="ts">2026-07-22 11:20:37</span><span class="sq">10</span><span class="who">agent</span><span class="what">MEMO_DRAFTED</span><span class="delta"><span class="from">—</span><span class="ar">→</span><span class="to">v1 (machine-drafted)</span> · 19 assertions, 19 cited</span></div>
+      <div class="logline"><span class="ts">2026-07-23 10:31:45</span><span class="sq">11</span><span class="who">system</span><span class="what">SANCTIONS_ALERT</span><span class="delta"><span class="from">clean</span><span class="ar">→</span><span class="to">1 potential match SCR-88213</span> · 71% name</span></div>
+      <div class="logline"><span class="ts">2026-07-23 11:47:12</span><span class="sq">12</span><span class="who">r.patel</span><span class="what">ALERT_ADJUDICATED</span><span class="delta"><span class="from">POTENTIAL MATCH</span><span class="ar">→</span><span class="to">FALSE POSITIVE</span> · SOP v1.4 §3 evidence attached</span></div>
+      <div class="logline"><span class="ts">2026-07-23 11:47:13</span><span class="sq">13</span><span class="who">system</span><span class="what">OVERRIDE_EVALUATED</span><span class="delta"><span class="from">override armed</span><span class="ar">→</span><span class="to">NOT APPLIED</span> · no confirmed true positive</span></div>
+      <div class="logline"><span class="ts">2026-07-24 15:52:09</span><span class="sq">14</span><span class="who">j.mbeki</span><span class="what">CASE_DATA_EDIT</span><span class="delta"><span class="from">ownership depth 3</span><span class="ar">→</span><span class="to">4</span> · source: trust deed doc 07</span></div>
+      <div class="logline"><span class="ts">2026-07-24 15:52:11</span><span class="sq">15</span><span class="who">system</span><span class="what">SCORE_RECOMPUTED</span><span class="delta"><span class="from">71.5 / Medium</span><span class="ar">→</span><span class="to">78.0 / High</span> · entity structure 68 → 82</span></div>
+      <div class="logline"><span class="ts">2026-07-24 15:52:12</span><span class="sq">16</span><span class="who">system</span><span class="what">AUTHORITY_ROUTED</span><span class="delta"><span class="from">r.patel (Senior Analyst)</span><span class="ar">→</span><span class="to">a.osei (Compliance Officer)</span></span></div>
+      <div class="logline"><span class="ts">2026-07-24 15:52:12</span><span class="sq">17</span><span class="who">system</span><span class="what">SLA_RETIERED</span><span class="delta"><span class="from">24h (Medium)</span><span class="ar">→</span><span class="to">8h (High)</span> · deadline 2026-07-27 12:22Z</span></div>
+      <div class="logline"><span class="ts">2026-07-24 16:08:52</span><span class="sq">18</span><span class="who">agent</span><span class="what">MEMO_DRAFTED</span><span class="delta"><span class="from">v1</span><span class="ar">→</span><span class="to">v2 (machine-drafted)</span> · v1 retained, immutable</span></div>
+      <div class="logline"><span class="ts">2026-07-27 09:41:11</span><span class="sq">19</span><span class="who">agent</span><span class="what">MEMO_DRAFTED</span><span class="delta"><span class="from">v2</span><span class="ar">→</span><span class="to">v3 (machine-drafted)</span> · 24 assertions, 24 cited</span></div>
+      <div class="logline"><span class="ts">2026-07-27 09:52:41</span><span class="sq">20</span><span class="who">agent</span><span class="what">ACTION_REFUSED</span><span class="delta"><span class="from">requested: STATUS→APPROVED</span><span class="ar">→</span><span class="to">REFUSED</span> · policy v3.2 §9.2 human-only</span></div>
+      <div class="logline"><span class="ts">2026-07-27 10:15:00</span><span class="sq">21</span><span class="who">system</span><span class="what">SLA_AT_RISK</span><span class="delta"><span class="from">04:00 remaining</span><span class="ar">→</span><span class="to">02:41 remaining</span> · threshold 03:00 crossed</span></div>
+      <div class="logline"><span class="ts">2026-07-27 10:15:01</span><span class="sq">22</span><span class="who">system</span><span class="what">ESCALATION_ARMED</span><span class="delta"><span class="from">none</span><span class="ar">→</span><span class="to">notify d.whitfield at T−01:00</span></span></div>
+      <div class="logline"><span class="ts">2026-07-27 10:22:34</span><span class="sq">23</span><span class="who">v.arundel (auditor)</span><span class="what">READ</span><span class="delta"><span class="from">—</span><span class="ar">→</span><span class="to">viewed memo v3, score, audit</span> · role read-only</span></div>
+    </div>
+    <div class="log-foot">tail · 23 of 34 shown · chain head 3d1f…9ba0 · verified 2026-07-27 10:23:11Z · older entries: <span class="amber">[PgUp]</span> · export: <span class="amber">[6] search → export case file (CSV)</span></div>
+  </section>
+
+  <!-- ───────────────────────────────────────────────────────────────────
+       [6] SEARCH
+       ─────────────────────────────────────────────────────────────── -->
+  <section class="screen" id="screen-search" aria-label="Search past cases">
+    <div class="scr-head">
+      <h1 class="scr-title">SEARCH — PAST CASES</h1>
+      <span class="scr-path">index: 4,812 cases · 2019-01-01 → 2026-07-27 · full-text + structured</span>
+      <span class="scr-note">query returned 6 rows in 41ms</span>
+    </div>
+
+    <div class="filters">
+      <div class="f"><label for="f-q">query</label><input id="f-q" type="text" size="26" value="jurisdiction:MH AND nominee:true"></div>
+      <div class="f"><label for="f-status">status</label>
+        <select id="f-status"><option>ANY</option><option>NEW</option><option>RETURNED</option><option>IN REVIEW</option><option>PENDING APPROVAL</option><option selected>APPROVED</option><option>REJECTED</option></select>
+      </div>
+      <div class="f"><label for="f-band">band</label>
+        <select id="f-band"><option>ANY</option><option>Low 0–39</option><option>Medium 40–69</option><option selected>High 70–100</option></select>
+      </div>
+      <div class="f"><label for="f-from">from</label><input id="f-from" type="text" size="10" value="2025-01-01"></div>
+      <div class="f"><label for="f-to">to</label><input id="f-to" type="text" size="10" value="2026-07-27"></div>
+      <div class="f"><label for="f-appr">approver</label>
+        <select id="f-appr"><option>ANY</option><option selected>A. Osei — Compliance Officer</option><option>R. Patel — Senior Analyst</option><option>J. Mbeki — KYC Analyst</option></select>
+      </div>
+      <div class="f -push">
+        <button class="btn" type="button"><span class="k">[/]</span> RUN QUERY</button>
+        <button class="btn -primary" type="button"><span class="k">[x]</span> EXPORT CASE FILE (CSV)</button>
+      </div>
+    </div>
+
+    <table class="grid">
+      <thead>
+        <tr><th class="sig">&nbsp;</th><th>CASE ID</th><th>CLIENT</th><th>JURIS.</th><th>OPENED</th><th>CLOSED</th><th>STATUS</th><th>BAND</th><th class="num">SCORE</th><th>DECIDED BY</th><th>ARTEFACTS</th></tr>
+      </thead>
+      <tbody>
+        <tr class="-sel"><td class="sig">&gt;</td><td class="id">KYC-2026-0408</td><td>Sable Ridge Capital Partners</td><td>MH</td><td>2026-06-30</td><td>2026-07-24</td><td>APPROVED</td><td>High</td><td class="num">71.0</td><td>a.osei</td><td>14 · memo v2</td></tr>
+        <tr><td class="sig">·</td><td class="id">KYC-2026-0341</td><td>Corveth Bulk Carriers Ltd</td><td>MH</td><td>2026-05-12</td><td>2026-05-19</td><td>APPROVED</td><td>High</td><td class="num">76.5</td><td>a.osei</td><td>12 · memo v3</td></tr>
+        <tr><td class="sig">·</td><td class="id">KYC-2026-0288</td><td>Ardent Bunkering Services SA</td><td>MH</td><td>2026-04-02</td><td>2026-04-11</td><td>APPROVED</td><td>High</td><td class="num">81.0</td><td>a.osei</td><td>16 · memo v4</td></tr>
+        <tr><td class="sig">·</td><td class="id">KYC-2025-1174</td><td>Pelagic Chartering Holdings</td><td>MH</td><td>2025-11-18</td><td>2025-11-27</td><td>APPROVED</td><td>High</td><td class="num">73.5</td><td>a.osei</td><td>13 · memo v2</td></tr>
+        <tr><td class="sig">·</td><td class="id">KYC-2025-0902</td><td>Thorvald Shipmanagement Ltd</td><td>MH</td><td>2025-09-04</td><td>2025-09-15</td><td>APPROVED</td><td>High</td><td class="num">79.0</td><td>a.osei</td><td>15 · memo v3</td></tr>
+        <tr><td class="sig">·</td><td class="id">KYC-2025-0611</td><td>Halden Marine Chartering AS</td><td>NO</td><td>2025-06-20</td><td>2025-06-28</td><td>APPROVED</td><td>Medium</td><td class="num">61.0</td><td>r.patel</td><td>11 · memo v2</td></tr>
+      </tbody>
+    </table>
+
+    <div class="cols -2" style="border-top:1px solid var(--border)">
+      <div>
+        <div class="rulehead"><span class="n">──</span> EXPORT — CASE FILE (CSV)</div>
+        <div class="mono-block" style="padding:0 16px 12px">scope     6 selected cases · full case file
+includes  header, client, entity tree, checklist result,
+          factor table (raw/weight/contribution), memo
+          versions + citations, full audit trail, SLA log
+format    RFC-4180 · UTF-8 · one file per case + manifest
+integrity manifest carries per-case audit chain head
+egress    logged as AUDIT_EXPORT with actor + row count</div>
+        <div class="actionbar">
+          <button class="btn -primary" type="button"><span class="k">[x]</span> EXPORT 6 CASE FILES (CSV)</button>
+          <button class="btn -ghost" type="button"><span class="k">[m]</span> MANIFEST ONLY</button>
+          <span class="why">exports are read operations · they never mutate a case</span>
+        </div>
+      </div>
+      <div>
+        <div class="rulehead"><span class="n">──</span> RELATED-ENTITY MATCH <span class="faint">· heuristic · advisory only</span></div>
+        <div class="mono-block" style="padding:0 16px 12px">KYC-2026-0417  Halden Marine Group Ltd
+└── name + UBO overlap
+    └── KYC-2025-0611  Halden Marine Chartering AS
+        ├── shared UBO   E. Halden (62% / 55%)
+        ├── band         Medium 61.0  (2025 matrix v2.0)
+        └── outcome      APPROVED · r.patel · 2025-06-28
+            ⚑ re-review under matrix v2.1 due 2026-06-20
+               STATUS: overdue 37d</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ───────────────────────────────────────────────────────────────────
+       [7] REPORTS
+       ─────────────────────────────────────────────────────────────── -->
+  <section class="screen" id="screen-reports" aria-label="Weekly operations report">
+    <div class="scr-head">
+      <h1 class="scr-title">WEEKLY OPERATIONS REPORT</h1>
+      <span class="scr-path">period 2026-W30 · Mon 2026-07-20 → Sun 2026-07-26 · desk-03 · generated 2026-07-27 06:00Z</span>
+      <span class="scr-note">47 cases touched · 31 decided · 4 SLA breaches</span>
+    </div>
+
+    <div class="cols -2">
+      <div>
+        <div class="rulehead"><span class="n">──</span> THROUGHPUT</div>
+        <div class="mono-block" style="padding:0 16px 12px">          opened  decided  approved  rejected  returned
+Low          14       12        12         0         2
+Medium       19       13        11         2         4
+High         14        6         4         2         3
+          ──────────────────────────────────────────────
+total        47       31        27         4         9
+
+median time to decision   Low 19h04 · Med 11h37 · High 06h12
+sla attainment            Low 100% · Med  94% · High  71%</div>
+      </div>
+      <div>
+        <div class="rulehead"><span class="n">──</span> SLA ATTAINMENT BY BAND</div>
+        <div class="mono-block" style="padding:0 16px 12px">Low     48h  ████████████████████  100%   12/12
+Medium  24h  ███████████████████░   94%   17/18
+High     8h  ██████████████░░░░░░   71%   10/14
+                                   ▲ target 95%</div>
+      </div>
+    </div>
+
+    <div class="rulehead"><span class="n">──</span> BREACHED SLAs — PERIOD 2026-W30 <span class="faint">· 4 records</span></div>
+    <table class="grid">
+      <thead><tr><th class="sig">&nbsp;</th><th>CASE ID</th><th>CLIENT</th><th>BAND</th><th>WINDOW</th><th>DEADLINE (UTC)</th><th class="num">OVERRUN</th><th>STATE AT BREACH</th><th>ROOT CAUSE</th></tr></thead>
+      <tbody>
+        <tr class="-crit"><td class="sig">!</td><td class="id">KYC-2026-0392</td><td>Meridian Freight Holdings S.A.</td><td>High</td><td>8h</td><td>2026-07-24 16:00</td><td class="num">01:12</td><td>PENDING APPROVAL</td><td>approver unavailable</td></tr>
+        <tr class="-crit"><td class="sig">!</td><td class="id">KYC-2026-0399</td><td>Vantara Commodities DMCC</td><td>High</td><td>8h</td><td>2026-07-25 11:30</td><td class="num">06:48</td><td>PENDING APPROVAL</td><td>sanctions re-screen queue</td></tr>
+        <tr class="-crit"><td class="sig">!</td><td class="id">KYC-2026-0371</td><td>Lyra Precision Metals Kft.</td><td>High</td><td>8h</td><td>2026-07-22 09:15</td><td class="num">03:05</td><td>IN REVIEW</td><td>late document resubmission</td></tr>
+        <tr class="-crit"><td class="sig">!</td><td class="id">KYC-2026-0356</td><td>Grindstone Aggregates Ltd</td><td>Medium</td><td>24h</td><td>2026-07-23 14:45</td><td class="num">02:19</td><td>IN REVIEW</td><td>analyst reassignment</td></tr>
+      </tbody>
+    </table>
+
+    <div class="cols -38">
+      <div>
+        <div class="rulehead"><span class="n">──</span> ESCALATION RECORDS <span class="faint">· who notified, when, acknowledged</span></div>
+        <table class="grid">
+          <thead><tr><th class="sig">&nbsp;</th><th>CASE ID</th><th>TIER</th><th>NOTIFIED</th><th>SENT (UTC)</th><th>ACK</th><th>CHANNEL</th></tr></thead>
+          <tbody>
+            <tr><td class="sig">·</td><td class="id">KYC-2026-0392</td><td>1</td><td>A. Osei — Compliance Officer</td><td>2026-07-24 15:00</td><td>15:04</td><td>desk + mail</td></tr>
+            <tr><td class="sig">·</td><td class="id">KYC-2026-0392</td><td>2</td><td>D. Whitfield — Head of Financial Crime</td><td>2026-07-24 16:00</td><td>16:31</td><td>mail + SMS</td></tr>
+            <tr><td class="sig">·</td><td class="id">KYC-2026-0399</td><td>1</td><td>A. Osei — Compliance Officer</td><td>2026-07-25 10:30</td><td>10:33</td><td>desk</td></tr>
+            <tr><td class="sig">·</td><td class="id">KYC-2026-0399</td><td>2</td><td>D. Whitfield — Head of Financial Crime</td><td>2026-07-25 11:30</td><td>11:58</td><td>mail + SMS</td></tr>
+            <tr class="-crit"><td class="sig">!</td><td class="id">KYC-2026-0399</td><td>3</td><td>S. Marchetti — COO</td><td>2026-07-25 17:30</td><td>—</td><td>mail</td></tr>
+            <tr><td class="sig">·</td><td class="id">KYC-2026-0371</td><td>1</td><td>A. Osei — Compliance Officer</td><td>2026-07-22 08:15</td><td>08:20</td><td>desk</td></tr>
+            <tr><td class="sig">·</td><td class="id">KYC-2026-0356</td><td>1</td><td>R. Patel — Senior Analyst</td><td>2026-07-23 13:45</td><td>13:47</td><td>desk</td></tr>
+          </tbody>
+        </table>
+        <div class="pad faint" style="padding-top:8px;padding-bottom:0">Tier 3 on KYC-2026-0399 remains unacknowledged 41h after dispatch. Escalation records are audit entries and cannot be amended.</div>
+      </div>
+      <aside>
+        <div class="rulehead"><span class="n">──</span> ESCALATION CHAIN</div>
+        <div class="mono-block" style="padding:0 16px 12px">┌ A. Osei .......... Compliance Officer
+│                   T−01:00 before breach
+├─ D. Whitfield .... Head of Financial Crime
+│                   T+00:00 at breach
+└── S. Marchetti ... COO
+                    T+06:00 after breach</div>
+
+        <div class="rulehead"><span class="n">──</span> NEXT REVIEW DUE <span class="faint">· rolling 60d</span></div>
+        <table class="grid">
+          <thead><tr><th class="sig">&nbsp;</th><th>CASE ID</th><th>CLIENT</th><th>BAND</th><th>DUE</th><th class="num">IN</th></tr></thead>
+          <tbody>
+            <tr class="-crit"><td class="sig">!</td><td class="id">KYC-2025-0611</td><td>Halden Marine Chartering AS</td><td>Medium</td><td>2026-06-20</td><td class="num">−37d</td></tr>
+            <tr class="-watch"><td class="sig">~</td><td class="id">KYC-2025-0902</td><td>Thorvald Shipmanagement Ltd</td><td>High</td><td>2026-08-04</td><td class="num">8d</td></tr>
+            <tr class="-watch"><td class="sig">~</td><td class="id">KYC-2025-0947</td><td>Bright Harbour Trading Ltd</td><td>High</td><td>2026-08-12</td><td class="num">16d</td></tr>
+            <tr><td class="sig">·</td><td class="id">KYC-2025-1174</td><td>Pelagic Chartering Holdings</td><td>High</td><td>2026-08-27</td><td class="num">31d</td></tr>
+            <tr><td class="sig">·</td><td class="id">KYC-2024-0733</td><td>Anselm Grain Traders BV</td><td>Medium</td><td>2026-09-09</td><td class="num">44d</td></tr>
+            <tr><td class="sig">·</td><td class="id">KYC-2026-0288</td><td>Ardent Bunkering Services SA</td><td>High</td><td>2026-09-18</td><td class="num">53d</td></tr>
+          </tbody>
+        </table>
+        <div class="actionbar">
+          <button class="btn -primary" type="button"><span class="k">[x]</span> EXPORT REPORT (CSV)</button>
+          <button class="btn -ghost" type="button"><span class="k">[s]</span> SIGN OFF W30</button>
+          <span class="why">sign-off appends to audit</span>
+        </div>
+      </aside>
+    </div>
+  </section>
+
+  </main>
+
+  <!-- ═══ STATUS LINE ══════════════════════════════════════════════════ -->
+  <footer class="statusline">
+    <span class="st -accent"><b>READ-WRITE</b></span>
+    <span class="st"><span class="lbl">role</span><b>Compliance Officer</b><span class="lbl">a.osei</span></span>
+    <span class="st"><span class="lbl">mode</span><b>DRAFT MEMO</b></span>
+    <span class="st"><span class="lbl">sla</span><b>2 breached</b><span class="lbl">·</span><b>3 at-risk</b><span class="lbl">·</span>11 open</span>
+    <span class="st"><span class="lbl">case</span><b>KYC-2026-0417</b><span class="lbl">78.0 High</span></span>
+    <span class="st"><span class="lbl">audit</span><b>append-only</b><span class="lbl">chain ok</span></span>
+    <span class="st"><span class="lbl">matrix</span><b>v2.1</b><span class="lbl">·</span>policy v3.2<span class="lbl">·</span>checklist v2.0</span>
+    <span class="st -push">2026-07-27 10:23:44Z<span class="blink">█</span></span>
+  </footer>
+
+</div>
+
+<script>
+// Keyboard-first navigation: 0–7 select screens, "/" focuses the composer.
+(function () {
+  var map = { '0':'t-chat','1':'t-worklist','2':'t-case','3':'t-score',
+              '4':'t-memo','5':'t-audit','6':'t-search','7':'t-reports' };
+  document.addEventListener('keydown', function (e) {
+    var tag = (e.target.tagName || '').toLowerCase();
+    var typing = tag === 'input' || tag === 'select' || tag === 'textarea';
+    if (e.key === '/' && !typing) { e.preventDefault(); var i = document.getElementById('input'); if (i) { document.getElementById('t-chat').checked = true; i.focus(); } return; }
+    if (e.key === 'Escape' && tag === 'input') { e.target.value = ''; e.target.blur(); return; }
+    if (typing || e.metaKey || e.ctrlKey || e.altKey) return;
+    var id = map[e.key];
+    if (id) { e.preventDefault(); document.getElementById(id).checked = true; }
+  });
+  var f = document.getElementById('composer');
+  if (f) f.addEventListener('submit', function (e) { e.preventDefault(); });
+})();
+</script>
+
+</body>
+</html>

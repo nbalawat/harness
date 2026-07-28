@@ -1,0 +1,95 @@
+/* ============================================================
+   KYC Review Desk — Design Tokens
+   Direction: THE COMPLIANCE QUARTERLY (editorial print)
+   A warm paper stock, ink-dark text, one restrained accent
+   drawn from red editorial correction ink.
+   ============================================================ */
+
+:root {
+  /* ---- Contract tokens (required) ---- */
+  --primary: #8c2f27;          /* correction-ink red, the single accent */
+  --on-primary: #fbf7ef;       /* paper white on ink */
+  --bg: #f4efe3;               /* warm uncoated paper stock */
+  --fg: #1c1a17;               /* ink, not pure black */
+  --surface: #fbf8f1;          /* laid sheet, one stop brighter than bg */
+  --border: #ccc2ae;           /* hairline rule, dried-ink grey-tan */
+  --font: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua",
+          Georgia, "Times New Roman", serif;
+
+  /* ---- Extended palette ---- */
+  --paper-deep: #eae3d3;       /* margin / gutter tint */
+  --paper-tint: #f0e9d9;       /* pull-quote and sidenote wash */
+  --ink-soft: #4a453c;         /* secondary prose */
+  --ink-faint: #7d7466;        /* captions, folio numbers, meta */
+  --ink-ghost: #a79c88;        /* disabled, watermarks */
+  --rule-hair: #ddd4c1;        /* the thinnest rule */
+  --rule-strong: #1c1a17;      /* masthead rule */
+
+  --accent: var(--primary);
+  --accent-wash: #f2e2df;      /* red at 8% over paper */
+  --accent-deep: #5e1f1a;
+
+  /* Editorial semantic inks — desaturated, print-plate-like */
+  --ink-low: #3f6146;          /* pressroom green — low band */
+  --ink-low-wash: #e5ecdf;
+  --ink-med: #8a6415;          /* ochre — medium band */
+  --ink-med-wash: #f2e9d4;
+  --ink-high: #8c2f27;         /* correction red — high band */
+  --ink-high-wash: #f2e2df;
+  --ink-info: #2f4f6b;         /* proof blue — informational */
+  --ink-info-wash: #e0e8ef;
+
+  /* ---- Typography ---- */
+  --font-display: "Iowan Old Style", "Palatino Linotype", Palatino,
+                  "Book Antiqua", Georgia, "Times New Roman", serif;
+  --font-text: var(--font);
+  --font-mono: "SF Mono", "IBM Plex Mono", Menlo, Consolas,
+               "Courier New", monospace;
+  --font-sans: "Helvetica Neue", Helvetica, Arial, sans-serif;
+
+  --fs-folio: 0.6875rem;       /* 11px — folio / marginalia */
+  --fs-caption: 0.75rem;       /* 12px */
+  --fs-small: 0.8125rem;       /* 13px */
+  --fs-body: 0.9375rem;        /* 15px — the reading size */
+  --fs-lead: 1.0625rem;        /* 17px — standfirst */
+  --fs-h4: 1.0625rem;
+  --fs-h3: 1.375rem;
+  --fs-h2: 1.875rem;
+  --fs-h1: 2.875rem;
+  --fs-display: 4rem;
+
+  --lh-tight: 1.18;
+  --lh-body: 1.62;
+  --lh-loose: 1.8;
+
+  --tracking-caps: 0.13em;     /* small-caps label tracking */
+  --tracking-display: -0.014em;
+
+  /* ---- Measure & rhythm ---- */
+  --measure: 34rem;            /* ~66 characters, the reading column */
+  --measure-narrow: 22rem;
+  --baseline: 0.5rem;
+  --gutter: 2.5rem;
+  --margin-col: 13rem;         /* the marginal-note column */
+
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --space-7: 3rem;
+  --space-8: 4.5rem;
+
+  /* ---- Rules (this direction uses rules, not boxes) ---- */
+  --rule-thin: 1px solid var(--rule-hair);
+  --rule: 1px solid var(--border);
+  --rule-thick: 2px solid var(--rule-strong);
+  --rule-double: 3px double var(--border);
+
+  --radius: 0;                 /* print has no rounded corners */
+  --radius-pill: 999px;        /* except stamps */
+
+  --shadow-sheet: 0 1px 0 var(--rule-hair);
+  --shadow-lift: 0 12px 34px -18px rgba(28, 26, 23, 0.45);
+}

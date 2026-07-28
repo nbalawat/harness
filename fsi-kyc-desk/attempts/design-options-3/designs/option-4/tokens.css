@@ -1,0 +1,68 @@
+/* ============================================================================
+   Ledger — Minimal Terminal Desk
+   Design tokens. Option 4 / KYC Review Desk.
+
+   Discipline: one background, one foreground, hairline rules, ONE phosphor
+   accent (amber). Criticality is expressed with inverse video, never with a
+   second hue. No radii. No shadows. No gradients. Character grid only.
+   ========================================================================== */
+
+:root {
+  /* ---- required contract tokens ------------------------------------- */
+  --primary:      #ffb000;   /* amber phosphor — active line, caret, keys  */
+  --on-primary:   #0a0b0a;   /* text laid over the phosphor (inverse video)*/
+  --bg:           #0a0b0a;   /* the tube                                    */
+  --fg:           #cfd2cb;   /* resting glyph                               */
+  --surface:      #101210;   /* panel wells, one step off the tube          */
+  --border:       #262a25;   /* hairline rule                               */
+  --font: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Monaco,
+          "Cascadia Mono", "DejaVu Sans Mono", "Liberation Mono",
+          Consolas, monospace;
+
+  /* ---- extended greyscale ladder ------------------------------------ */
+  --fg-bright:    #f2f4ef;   /* headings, selected row                     */
+  --fg-dim:       #8c9089;   /* labels, secondary columns                  */
+  --fg-faint:     #565b54;   /* rules text, box-drawing, disabled          */
+  --fg-ghost:     #33372f;   /* watermarks, empty cells                    */
+  --surface-2:    #161816;   /* nested well / table head                   */
+  --surface-hi:   #1d1f1c;   /* hover + selected row bed                   */
+  --border-hard:  #3a3f38;   /* emphasised rule                            */
+
+  /* ---- phosphor derivatives (accent used sparingly) ------------------ */
+  --primary-dim:  #b57c07;   /* accent at rest                             */
+  --primary-ink:  #2a1e02;   /* accent bed under bright accent text        */
+  --caret:        #ffb000;
+
+  /* ---- state semantics: monochrome + inverse video ------------------- */
+  --state-ok:     var(--fg-dim);      /* nothing to report                 */
+  --state-watch:  var(--primary-dim); /* ~ at risk                         */
+  --state-crit-bg: var(--primary);    /* ! breached -> inverse video       */
+  --state-crit-fg: var(--on-primary);
+
+  /* ---- character grid ------------------------------------------------ */
+  --fs:           13px;      /* base cell width driver                     */
+  --fs-sm:        11.5px;
+  --fs-lg:        15px;
+  --lh:           20px;      /* strict baseline: every row is 20px         */
+  --lh-tight:     18px;
+  --tracking:     0.02em;
+  --tracking-wide: 0.14em;   /* section headers / access keys              */
+
+  /* ---- spacing quantised to the grid --------------------------------- */
+  --u:            4px;
+  --u2:           8px;
+  --u3:           12px;
+  --u4:           16px;
+  --u5:           20px;
+  --u6:           24px;
+  --u8:           32px;
+  --gutter:       2ch;
+
+  /* ---- chrome geometry ----------------------------------------------- */
+  --rule:         1px;
+  --header-h:     40px;
+  --keybar-h:     28px;
+  --status-h:     26px;
+  --radius:       0;         /* structural constant: never round anything  */
+  --shadow:       none;      /* structural constant: never cast a shadow   */
+}

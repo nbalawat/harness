@@ -1,0 +1,120 @@
+/* ============================================================
+   KYC Review Desk — Option 2 "Slate Watchfloor"
+   Design tokens: operational console / deep-slate chrome
+   ============================================================ */
+
+:root {
+  /* ---- Contract tokens (required) ---- */
+  --primary: #2f81f7;
+  --on-primary: #06121f;
+  --bg: #0b1017;
+  --fg: #dbe3ec;
+  --surface: #121924;
+  --border: #22303f;
+  --font: "Inter", "SF Pro Text", -apple-system, BlinkMacSystemFont,
+          "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+
+  /* ---- Extended chrome ramp (deep slate) ---- */
+  --chrome-000: #05080d;   /* window edge / rail base */
+  --chrome-050: #080d14;   /* status strip */
+  --chrome-100: #0b1017;   /* app background */
+  --chrome-200: #101722;   /* panel background */
+  --chrome-300: #121924;   /* surface */
+  --chrome-400: #172130;   /* raised surface / toolbar */
+  --chrome-500: #1d293a;   /* hover */
+  --chrome-600: #243448;   /* active / selected row */
+  --chrome-700: #2c3f57;   /* pressed */
+
+  --border-soft: #1a2330;
+  --border-strong: #2e4056;
+  --border-focus: #3d6fb5;
+
+  /* ---- Text ramp ---- */
+  --fg-hi: #eef3f9;
+  --fg-mid: #9fb0c4;
+  --fg-dim: #6f8098;
+  --fg-faint: #4c5c72;
+
+  /* ---- Semantic status ---- */
+  --ok: #3fb950;
+  --ok-bg: rgba(63, 185, 80, 0.13);
+  --ok-border: rgba(63, 185, 80, 0.38);
+
+  --warn: #e3a008;
+  --warn-bg: rgba(227, 160, 8, 0.14);
+  --warn-border: rgba(227, 160, 8, 0.42);
+
+  --risk: #f0883e;          /* AT RISK amber-orange */
+  --risk-bg: rgba(240, 136, 62, 0.15);
+  --risk-border: rgba(240, 136, 62, 0.45);
+
+  --crit: #f85149;          /* BREACHED red */
+  --crit-bg: rgba(248, 81, 73, 0.15);
+  --crit-border: rgba(248, 81, 73, 0.45);
+
+  --info: #58a6ff;
+  --info-bg: rgba(88, 166, 255, 0.13);
+  --info-border: rgba(88, 166, 255, 0.40);
+
+  --machine: #a371f7;       /* machine-drafted violet */
+  --machine-bg: rgba(163, 113, 247, 0.14);
+  --machine-border: rgba(163, 113, 247, 0.45);
+
+  --neutral-chip-bg: rgba(159, 176, 196, 0.10);
+  --neutral-chip-border: rgba(159, 176, 196, 0.28);
+
+  /* ---- Risk bands ---- */
+  --band-low: #3fb950;
+  --band-low-bg: rgba(63, 185, 80, 0.14);
+  --band-med: #e3a008;
+  --band-med-bg: rgba(227, 160, 8, 0.14);
+  --band-high: #f85149;
+  --band-high-bg: rgba(248, 81, 73, 0.15);
+
+  /* ---- Typography ---- */
+  --font-mono: "SF Mono", "JetBrains Mono", "Menlo", "Consolas",
+               "Liberation Mono", monospace;
+  --fs-micro: 9.5px;
+  --fs-tiny: 10.5px;
+  --fs-xs: 11px;
+  --fs-sm: 12px;
+  --fs-md: 13px;
+  --fs-lg: 15px;
+  --fs-xl: 18px;
+  --fs-xxl: 23px;
+  --lh-tight: 1.25;
+  --lh-body: 1.55;
+  --ls-caps: 0.09em;
+  --ls-wide: 0.045em;
+
+  /* ---- Geometry ---- */
+  --rail-w: 74px;
+  --nav-w: 210px;
+  --strip-h: 30px;
+  --header-h: 46px;
+  --toolbar-h: 40px;
+  --row-h: 30px;
+  --radius-xs: 2px;
+  --radius-sm: 3px;
+  --radius-md: 5px;
+  --radius-lg: 8px;
+  --radius-pill: 999px;
+
+  /* ---- Spacing scale ---- */
+  --sp-1: 3px;
+  --sp-2: 6px;
+  --sp-3: 9px;
+  --sp-4: 12px;
+  --sp-5: 16px;
+  --sp-6: 22px;
+  --sp-7: 30px;
+
+  /* ---- Effects ---- */
+  --shadow-panel: 0 1px 0 rgba(255,255,255,0.03) inset,
+                  0 8px 24px rgba(0,0,0,0.45);
+  --shadow-pop: 0 12px 36px rgba(0,0,0,0.6);
+  --glow-primary: 0 0 0 1px rgba(47,129,247,0.55),
+                  0 0 14px rgba(47,129,247,0.25);
+  --scanline: rgba(255, 255, 255, 0.018);
+  --grid-line: rgba(120, 150, 190, 0.055);
+}

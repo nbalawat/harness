@@ -1,0 +1,110 @@
+/* ============================================================
+   KYC Review Desk — Option 3 "Meridian Data Board"
+   Design tokens: bright analytical canvas, calm multi-hue.
+   ============================================================ */
+
+:root {
+  /* ---- Contract tokens ---- */
+  --primary: #2f6df6;
+  --on-primary: #ffffff;
+  --bg: #f4f6fb;
+  --fg: #10192b;
+  --surface: #ffffff;
+  --border: #e2e7f0;
+  --font: "Avenir Next", Avenir, "Century Gothic", "Futura", "Trebuchet MS",
+    "Segoe UI", system-ui, sans-serif;
+
+  /* ---- Extended neutrals ---- */
+  --bg-deep: #eaeef7;
+  --surface-2: #fafbfe;
+  --surface-sunk: #f6f8fc;
+  --border-soft: #edf1f7;
+  --border-strong: #ccd5e4;
+  --fg-2: #47536b;
+  --fg-3: #77839a;
+  --fg-4: #9aa5b9;
+
+  /* ---- Brand ramp ---- */
+  --primary-050: #eef4ff;
+  --primary-100: #dbe6ff;
+  --primary-200: #b9cdff;
+  --primary-400: #5b8bf8;
+  --primary-600: #2054d6;
+  --primary-700: #1a41a8;
+
+  /* ---- Multi-hue analytic palette (chart series) ---- */
+  --hue-1: #2f6df6; /* jurisdiction  */
+  --hue-2: #14b3a6; /* entity        */
+  --hue-3: #f5a524; /* industry      */
+  --hue-4: #8b5cf6; /* sanctions     */
+  --hue-5: #ec6a9c; /* activity      */
+  --hue-1-soft: #e2ebfe;
+  --hue-2-soft: #d8f4f1;
+  --hue-3-soft: #fdefd6;
+  --hue-4-soft: #ece3fd;
+  --hue-5-soft: #fce0eb;
+
+  /* ---- Semantic / band ---- */
+  --low: #0f9d76;
+  --low-soft: #dcf5ec;
+  --low-line: #9adcc6;
+  --medium: #c47a06;
+  --medium-soft: #fdf0d6;
+  --medium-line: #f0cd85;
+  --high: #d93d4a;
+  --high-soft: #fde4e6;
+  --high-line: #f5aeb4;
+  --info: #2f6df6;
+  --info-soft: #e6eefe;
+  --neutral-soft: #eef1f6;
+
+  --ok: #0f9d76;
+  --warn: #c47a06;
+  --danger: #d93d4a;
+  --machine: #7c4dff;
+  --machine-soft: #efe9ff;
+  --machine-line: #c9b6ff;
+
+  /* ---- Type scale ---- */
+  --font-mono: "SFMono-Regular", "SF Mono", Menlo, Consolas,
+    "Liberation Mono", monospace;
+  --fs-mega: 46px;
+  --fs-xl: 30px;
+  --fs-lg: 21px;
+  --fs-md: 15px;
+  --fs-sm: 13px;
+  --fs-xs: 11.5px;
+  --fs-micro: 10.5px;
+  --lh-tight: 1.15;
+  --lh-body: 1.55;
+  --tracking-cap: 0.09em;
+
+  /* ---- Geometry ---- */
+  --r-xs: 6px;
+  --r-sm: 9px;
+  --r-md: 13px;
+  --r-lg: 18px;
+  --r-xl: 24px;
+  --r-pill: 999px;
+
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 22px;
+  --sp-6: 30px;
+  --sp-7: 40px;
+  --sp-8: 56px;
+
+  /* ---- Elevation (soft, airy) ---- */
+  --shadow-1: 0 1px 2px rgba(16, 25, 43, 0.04),
+    0 1px 3px rgba(16, 25, 43, 0.05);
+  --shadow-2: 0 2px 6px rgba(16, 25, 43, 0.05),
+    0 8px 20px -8px rgba(16, 25, 43, 0.1);
+  --shadow-3: 0 4px 12px rgba(16, 25, 43, 0.06),
+    0 22px 44px -20px rgba(16, 25, 43, 0.18);
+  --ring: 0 0 0 3px rgba(47, 109, 246, 0.22);
+
+  --nav-w: 232px;
+  --header-h: 62px;
+}

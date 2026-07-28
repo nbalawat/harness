@@ -1,0 +1,107 @@
+/* ==============================================================
+   KYC Review Desk — Design Tokens
+   Direction: AMBER PHOSPHOR TERMINAL
+   Two-tone: bone-white type on ink-black ground.
+   ONE signal color: amber. Everything else is alignment,
+   spacing, box-drawing characters and type intensity.
+   No radii. No shadows. No gradients.
+   ============================================================== */
+
+:root {
+  /* ---- Contract tokens (required) ---- */
+  --primary: #ffb000;            /* amber phosphor — the ONLY signal color */
+  --on-primary: #0a0b0c;         /* ink, for use on amber fills */
+  --bg: #0a0b0c;                 /* ink-black ground */
+  --fg: #d7d4cb;                 /* bone phosphor, the reading intensity */
+  --surface: #121314;            /* one stop up: panes, rows, wells */
+  --border: #2b2e30;             /* rule grey — hairlines and box-draw */
+  --font: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Monaco,
+          "Cascadia Mono", "DejaVu Sans Mono", "Liberation Mono",
+          Consolas, "Courier New", monospace;
+
+  /* ---- Intensity ladder (the whole palette is this ladder) ---- */
+  --fg-max: #f4f2ec;             /* headings, active row, key values */
+  --fg-hi: var(--fg);            /* body */
+  --fg-mid: #94918a;             /* labels, column heads */
+  --fg-dim: #6a6862;             /* meta, timestamps, secondary */
+  --fg-ghost: #45443f;           /* disabled, empty cells, rule text */
+
+  --surface-2: #17191a;          /* nested well */
+  --surface-3: #1d1f21;          /* hover / selected row */
+  --surface-inset: #060708;      /* prompt trough, code wells */
+
+  --border-hi: #3d4144;          /* emphasised box edge */
+  --border-dim: #1e2123;         /* faint internal grid line */
+
+  /* ---- The one signal, in graded strengths ---- */
+  --amber: var(--primary);
+  --amber-hi: #ffc94d;
+  --amber-dim: #a8760a;           /* amber at reading weight */
+  --amber-ghost: #4a3607;         /* amber structure lines */
+  --amber-wash: #1f1704;          /* amber ground fill, very low */
+  --amber-rule: #6d4d06;
+
+  /* ---- Semantic status: intensity, not hue ---- */
+  --ok-fg: var(--fg-mid);         /* [OK]      — quiet on purpose */
+  --info-fg: var(--fg-hi);        /* [PENDING] */
+  --warn-fg: var(--amber);        /* [AT-RISK] */
+  --crit-fg: var(--on-primary);   /* [BREACHED] — inverted on amber */
+  --crit-bg: var(--amber);
+  --locked-fg: var(--fg-ghost);   /* [LOCKED] / disabled */
+
+  /* ---- Risk bands: LOW/MED quiet, HIGH takes the signal ---- */
+  --band-low: var(--fg-mid);
+  --band-med: var(--fg-max);
+  --band-high: var(--amber);
+
+  /* ---- Typography: one family, one grid ---- */
+  --font-mono: var(--font);
+  --ch: 1ch;
+  --fs-micro: 10px;
+  --fs-meta: 11px;
+  --fs-sm: 12px;
+  --fs-base: 13px;
+  --fs-md: 14px;
+  --fs-lg: 16px;
+  --fs-xl: 20px;
+  --fs-xxl: 26px;
+
+  --lh-tight: 1.15;
+  --lh-grid: 1.55;               /* the character-grid line box */
+  --lh-loose: 1.75;
+
+  --tracking-caps: 0.16em;       /* [BRACKETED] labels and column heads */
+  --tracking-head: 0.28em;       /* the masthead */
+  --tracking-tight: 0.01em;
+
+  /* ---- Fixed character grid ---- */
+  --col-nav: 25ch;               /* left command column */
+  --col-aside: 40ch;             /* right inspector column */
+  --measure: 96ch;               /* max reading measure for prose */
+  --row-h: 22px;                 /* table row = one grid cell */
+  --bar-h: 26px;                 /* status / rail bars */
+
+  --sp-0: 0px;
+  --sp-1: 2px;
+  --sp-2: 4px;
+  --sp-3: 8px;
+  --sp-4: 12px;
+  --sp-5: 16px;
+  --sp-6: 24px;
+  --sp-7: 32px;
+  --sp-8: 48px;
+
+  /* ---- Rules: hairlines only, never boxes with soft edges ---- */
+  --rule: 1px solid var(--border);
+  --rule-dim: 1px solid var(--border-dim);
+  --rule-hi: 1px solid var(--border-hi);
+  --rule-amber: 1px solid var(--amber-rule);
+  --rule-dash: 1px dashed var(--border-hi);
+
+  --radius: 0;                   /* terminals have corners */
+  --shadow: none;                /* and no shadows */
+
+  --caret: var(--amber);
+  --select-bg: var(--amber-wash);
+  --focus-ring: 1px solid var(--amber);
+}

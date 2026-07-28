@@ -1,0 +1,605 @@
+{
+  "tables": [
+    {
+      "name": "cases",
+      "addresses": [
+        "REQ-001",
+        "REQ-002",
+        "REQ-004",
+        "REQ-012",
+        "REQ-055",
+        "REQ-064",
+        "REQ-067",
+        "REQ-069",
+        "REQ-070"
+      ],
+      "columns": [
+        {
+          "name": "id",
+          "type": "string"
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp"
+        },
+        {
+          "name": "status",
+          "type": "enum"
+        },
+        {
+          "name": "client_name",
+          "type": "string"
+        },
+        {
+          "name": "case_ready_timestamp",
+          "type": "timestamp"
+        },
+        {
+          "name": "completeness_passed_at",
+          "type": "timestamp"
+        },
+        {
+          "name": "sla_breached",
+          "type": "boolean"
+        },
+        {
+          "name": "is_at_risk",
+          "type": "boolean"
+        },
+        {
+          "name": "assigned_approver_id",
+          "type": "string"
+        },
+        {
+          "name": "risk_matrix_version",
+          "type": "string"
+        },
+        {
+          "name": "document_checklist_version",
+          "type": "string"
+        },
+        {
+          "name": "onboarding_policy_version",
+          "type": "string"
+        },
+        {
+          "name": "next_review_due_date",
+          "type": "date"
+        }
+      ]
+    },
+    {
+      "name": "risk_scores",
+      "addresses": [
+        "REQ-016",
+        "REQ-017",
+        "REQ-018",
+        "REQ-019",
+        "REQ-020",
+        "REQ-021",
+        "REQ-022",
+        "REQ-023",
+        "REQ-024",
+        "REQ-025",
+        "REQ-026",
+        "REQ-027",
+        "REQ-028",
+        "REQ-069",
+        "REQ-071"
+      ],
+      "columns": [
+        {
+          "name": "id",
+          "type": "string"
+        },
+        {
+          "name": "case_id",
+          "type": "string"
+        },
+        {
+          "name": "jurisdiction_factor_score",
+          "type": "integer"
+        },
+        {
+          "name": "jurisdiction_raw_input",
+          "type": "string"
+        },
+        {
+          "name": "entity_structure_factor_score",
+          "type": "integer"
+        },
+        {
+          "name": "entity_structure_raw_input",
+          "type": "string"
+        },
+        {
+          "name": "industry_factor_score",
+          "type": "integer"
+        },
+        {
+          "name": "industry_raw_input",
+          "type": "string"
+        },
+        {
+          "name": "sanctions_screening_factor_score",
+          "type": "integer"
+        },
+        {
+          "name": "sanctions_screening_raw_input",
+          "type": "string"
+        },
+        {
+          "name": "expected_activity_factor_score",
+          "type": "integer"
+        },
+        {
+          "name": "expected_activity_raw_input",
+          "type": "string"
+        },
+        {
+          "name": "total_risk_score",
+          "type": "decimal"
+        },
+        {
+          "name": "risk_band",
+          "type": "enum"
+        },
+        {
+          "name": "sanctions_true_positive_override_applied",
+          "type": "boolean"
+        },
+        {
+          "name": "computed_at",
+          "type": "timestamp"
+        }
+      ]
+    },
+    {
+      "name": "documents",
+      "addresses": [
+        "REQ-003",
+        "REQ-004",
+        "REQ-005",
+        "REQ-006",
+        "REQ-007",
+        "REQ-008",
+        "REQ-009",
+        "REQ-010",
+        "REQ-011",
+        "REQ-012"
+      ],
+      "columns": [
+        {
+          "name": "id",
+          "type": "string"
+        },
+        {
+          "name": "case_id",
+          "type": "string"
+        },
+        {
+          "name": "document_type",
+          "type": "enum"
+        },
+        {
+          "name": "required",
+          "type": "boolean"
+        },
+        {
+          "name": "conditionally_required",
+          "type": "boolean"
+        },
+        {
+          "name": "condition_trigger",
+          "type": "string"
+        },
+        {
+          "name": "received",
+          "type": "boolean"
+        },
+        {
+          "name": "received_at",
+          "type": "timestamp"
+        }
+      ]
+    },
+    {
+      "name": "missing_documents",
+      "addresses": [
+        "REQ-012",
+        "REQ-089"
+      ],
+      "columns": [
+        {
+          "name": "id",
+          "type": "string"
+        },
+        {
+          "name": "case_id",
+          "type": "string"
+        },
+        {
+          "name": "document_type",
+          "type": "enum"
+        },
+        {
+          "name": "recorded_at",
+          "type": "timestamp"
+        }
+      ]
+    },
+    {
+      "name": "assessment_memos",
+      "addresses": [
+        "REQ-029",
+        "REQ-030",
+        "REQ-031",
+        "REQ-032",
+        "REQ-033",
+        "REQ-034",
+        "REQ-035",
+        "REQ-036",
+        "REQ-037",
+        "REQ-038",
+        "REQ-039",
+        "REQ-087"
+      ],
+      "columns": [
+        {
+          "name": "id",
+          "type": "string"
+        },
+        {
+          "name": "case_id",
+          "type": "string"
+        },
+        {
+          "name": "version",
+          "type": "integer"
+        },
+        {
+          "name": "memo_text",
+          "type": "text"
+        },
+        {
+          "name": "generated_at",
+          "type": "timestamp"
+        },
+        {
+          "name": "is_machine_drafted",
+          "type": "boolean"
+        },
+        {
+          "name": "policy_citations",
+          "type": "json"
+        },
+        {
+          "name": "approved_at",
+          "type": "timestamp"
+        },
+        {
+          "name": "approved_by_user_id",
+          "type": "string"
+        },
+        {
+          "name": "approved_by_role",
+          "type": "string"
+        },
+        {
+          "name": "is_approved",
+          "type": "boolean"
+        }
+      ]
+    },
+    {
+      "name": "approvals",
+      "addresses": [
+        "REQ-041",
+        "REQ-042",
+        "REQ-043",
+        "REQ-044",
+        "REQ-045",
+        "REQ-046",
+        "REQ-047",
+        "REQ-048",
+        "REQ-085"
+      ],
+      "columns": [
+        {
+          "name": "id",
+          "type": "string"
+        },
+        {
+          "name": "case_id",
+          "type": "string"
+        },
+        {
+          "name": "decision_type",
+          "type": "enum"
+        },
+        {
+          "name": "decided_by_user_id",
+          "type": "string"
+        },
+        {
+          "name": "decided_by_role",
+          "type": "string"
+        },
+        {
+          "name": "decided_at",
+          "type": "timestamp"
+        },
+        {
+          "name": "required_role_tier",
+          "type": "enum"
+        },
+        {
+          "name": "reason",
+          "type": "text"
+        },
+        {
+          "name": "memo_version_id",
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "name": "compliance_exceptions",
+      "addresses": [
+        "REQ-014",
+        "REQ-015"
+      ],
+      "columns": [
+        {
+          "name": "id",
+          "type": "string"
+        },
+        {
+          "name": "case_id",
+          "type": "string"
+        },
+        {
+          "name": "exception_type",
+          "type": "enum"
+        },
+        {
+          "name": "granted_by_user_id",
+          "type": "string"
+        },
+        {
+          "name": "granted_at",
+          "type": "timestamp"
+        },
+        {
+          "name": "reason",
+          "type": "text"
+        },
+        {
+          "name": "affected_documents",
+          "type": "json"
+        }
+      ]
+    },
+    {
+      "name": "audit_trail",
+      "addresses": [
+        "REQ-064",
+        "REQ-065",
+        "REQ-066",
+        "REQ-067",
+        "REQ-068",
+        "REQ-090"
+      ],
+      "columns": [
+        {
+          "name": "id",
+          "type": "string"
+        },
+        {
+          "name": "case_id",
+          "type": "string"
+        },
+        {
+          "name": "action_type",
+          "type": "enum"
+        },
+        {
+          "name": "performed_by_user_id",
+          "type": "string"
+        },
+        {
+          "name": "performed_by_role",
+          "type": "string"
+        },
+        {
+          "name": "timestamp",
+          "type": "timestamp"
+        },
+        {
+          "name": "field_name",
+          "type": "string"
+        },
+        {
+          "name": "old_value",
+          "type": "text"
+        },
+        {
+          "name": "new_value",
+          "type": "text"
+        },
+        {
+          "name": "details",
+          "type": "json"
+        }
+      ]
+    },
+    {
+      "name": "escalations",
+      "addresses": [
+        "REQ-050",
+        "REQ-060",
+        "REQ-061",
+        "REQ-095"
+      ],
+      "columns": [
+        {
+          "name": "id",
+          "type": "string"
+        },
+        {
+          "name": "case_id",
+          "type": "string"
+        },
+        {
+          "name": "escalation_level",
+          "type": "integer"
+        },
+        {
+          "name": "escalated_to_role",
+          "type": "enum"
+        },
+        {
+          "name": "escalated_to_user_id",
+          "type": "string"
+        },
+        {
+          "name": "escalated_at",
+          "type": "timestamp"
+        },
+        {
+          "name": "reason",
+          "type": "enum"
+        }
+      ]
+    },
+    {
+      "name": "notifications",
+      "addresses": [
+        "REQ-049",
+        "REQ-051",
+        "REQ-057",
+        "REQ-063"
+      ],
+      "columns": [
+        {
+          "name": "id",
+          "type": "string"
+        },
+        {
+          "name": "case_id",
+          "type": "string"
+        },
+        {
+          "name": "notification_type",
+          "type": "enum"
+        },
+        {
+          "name": "recipient_user_id",
+          "type": "string"
+        },
+        {
+          "name": "sent_at",
+          "type": "timestamp"
+        },
+        {
+          "name": "message",
+          "type": "text"
+        },
+        {
+          "name": "read_at",
+          "type": "timestamp"
+        }
+      ]
+    },
+    {
+      "name": "sla_tracking",
+      "addresses": [
+        "REQ-052",
+        "REQ-053",
+        "REQ-054",
+        "REQ-055",
+        "REQ-056",
+        "REQ-057",
+        "REQ-058",
+        "REQ-062"
+      ],
+      "columns": [
+        {
+          "name": "id",
+          "type": "string"
+        },
+        {
+          "name": "case_id",
+          "type": "string"
+        },
+        {
+          "name": "sla_start_timestamp",
+          "type": "timestamp"
+        },
+        {
+          "name": "sla_due_timestamp",
+          "type": "timestamp"
+        },
+        {
+          "name": "risk_band",
+          "type": "enum"
+        },
+        {
+          "name": "sla_hours",
+          "type": "integer"
+        },
+        {
+          "name": "flagged_at_risk_at",
+          "type": "timestamp"
+        },
+        {
+          "name": "breached_at",
+          "type": "timestamp"
+        },
+        {
+          "name": "breached",
+          "type": "boolean"
+        }
+      ]
+    },
+    {
+      "name": "users",
+      "addresses": [
+        "REQ-075",
+        "REQ-078",
+        "REQ-079",
+        "REQ-080",
+        "REQ-081",
+        "REQ-082",
+        "REQ-083",
+        "REQ-084"
+      ],
+      "columns": [
+        {
+          "name": "id",
+          "type": "string"
+        },
+        {
+          "name": "username",
+          "type": "string"
+        },
+        {
+          "name": "full_name",
+          "type": "string"
+        },
+        {
+          "name": "role",
+          "type": "enum"
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp"
+        },
+        {
+          "name": "is_active",
+          "type": "boolean"
+        }
+      ]
+    }
+  ]
+}

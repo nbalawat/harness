@@ -1,0 +1,258 @@
+{
+  "deploy_target": "local",
+  "modules": [
+    "persistence-core",
+    "agent-runtime",
+    "chat-shell",
+    "sqlite-adapter",
+    "migrations",
+    "env-config",
+    "seed-data",
+    "auth-basic",
+    "rbac",
+    "audit-log",
+    "audit-view",
+    "row-history",
+    "approval-flow",
+    "workflow-engine",
+    "state-machine",
+    "assignment",
+    "sla-timers",
+    "scheduling",
+    "notifications-ui",
+    "blob-store",
+    "file-upload",
+    "checklists",
+    "forms-engine",
+    "rag-core",
+    "citation-tracker",
+    "tool-registry",
+    "eval-harness",
+    "versioned-drafts",
+    "search-index",
+    "export-csv",
+    "data-table",
+    "record-detail",
+    "screen-router"
+  ],
+  "rationale": {
+    "pack_basis": "pack-document-review — the app's shape is exactly ingest a document package -> mechanical check -> human review queue -> decision trail. Started from its 10 modules, then applied the deltas below.",
+    "agent_runtime_choice": "agent-runtime (Claude Agent SDK default). Neither the intake nor any policy document mandates a department framework, so no LangGraph/ADK/Strands adapter is swapped in. The single memo-drafting agent needs no framework-specific graph machinery.",
+    "pack_removals": [
+      {
+        "module": "doc-extract",
+        "reason": "GAP-003 answered metadata-only: the completeness check inspects declared presence and user-supplied metadata; document content extraction and date/figure inspection are explicitly out of scope. The memo agent's grounding corpus is plain text/markdown policy files, which rag-core chunks directly."
+      },
+      {
+        "module": "table-extract",
+        "reason": "Depends on doc-extract and serves content parsing, which GAP-003 put out of scope."
+      }
+    ],
+    "pack_additions": [
+      {
+        "module": "workflow-engine",
+        "reason": "REQ-003/REQ-016 demand a DETERMINISTIC workflow with the AI confined to one node. This is the certified event-sourced workflow with agentic nodes — building it by hand is the single largest avoidable build cost."
+      },
+      {
+        "module": "sqlite-adapter",
+        "reason": "deploy_target=local (REQ-094) with indefinite retention (REQ-067): laptop-class durability without a database server. postgres-adapter is deliberately not chosen."
+      },
+      {
+        "module": "rag-core + citation-tracker",
+        "reason": "REQ-038 restricts retrieval to the versioned policy set; REQ-031/REQ-032 require auditor-traceable citations. citation-tracker's source attribution structure is the citation contract."
+      },
+      {
+        "module": "rbac + auth-basic",
+        "reason": "REQ-075..REQ-085 are a full least-privilege role model with server-side enforcement and named-individual attribution."
+      },
+      {
+        "module": "sla-timers + scheduling + notifications-ui",
+        "reason": "REQ-050..REQ-063 plus REQ-095: at-risk flagging, permanent breach records and escalation stepping must run on a recurring background evaluator, and each notification must persist with recipient and timestamp."
+      },
+      {
+        "module": "checklists",
+        "reason": "The Document Checklist (REQ-004..REQ-011) is literally a structured item list with completion tracking, and REQ-089 needs the itemized missing-item view."
+      },
+      {
+        "module": "versioned-drafts",
+        "reason": "REQ-039/REQ-069: each memo redraft is retained as an immutable version; 'live' and 'working copy' must never be the same row."
+      },
+      {
+        "module": "tool-registry + eval-harness",
+        "reason": "REQ-037/REQ-046 make the memo agent advisory-only — roster enforcement checked at invoke time is the mechanism that makes 'no tool to approve' structural rather than prompted. eval-harness keeps the grounding/label contract (REQ-033/REQ-036) honest across changes."
+      },
+      {
+        "module": "state-machine, assignment, forms-engine, search-index, export-csv, data-table, record-detail, audit-view, screen-router, env-config, seed-data, migrations",
+        "reason": "Each maps to a named requirement: declarative transitions (REQ-012/REQ-013), assigned approver and escalation chain (REQ-051/REQ-060), blocking-required-field validation shared with the backend (REQ-043/REQ-048), past-case search (REQ-072), CSV export (REQ-073/REQ-074), worklist and detail/score-breakdown screens (REQ-086/REQ-091), chronological trail view (REQ-090), multi-screen navigation, configurable business-hours window (REQ-056), one seeded named account per role (REQ-084), and safe schema evolution over indefinitely retained data (REQ-067)."
+      }
+    ],
+    "deliberate_exclusions": [
+      "data-retention / soft-delete — REQ-067 retains everything indefinitely and REQ-066 forbids trail deletion; a purge engine would be an anti-requirement.",
+      "pii-redaction / guardrails-io / transcript-store — auditors need the unredacted record (REQ-068/REQ-074); no requirement asks for masking, and transcript-store would drag pii-redaction in for no requirement.",
+      "agent-router / conversation-memory — one agent, one single-shot drafting task.",
+      "email-send / slack-notify — REQ-049/REQ-063 require persisted, addressable notification records with recipient and timestamp; local deploy (REQ-094) assumes no SMTP or webhook dependency, so notifications-ui carries them.",
+      "pdf-render — REQ-073/REQ-074 name CSV as the export format.",
+      "permissions-ui / admin-console — REQ-084 seeds one account per role locally; no role-administration requirement.",
+      "postgres-adapter, multi-env, queue-bridge, cache-layer, rate-limit, request-metrics, health-plus — cloud/scale concerns the local target (REQ-094) does not carry.",
+      "file-preview, ocr-bridge, import-mapper, spreadsheet-io — content inspection of client documents is out of scope per GAP-003."
+    ]
+  },
+  "module_coverage": [
+    {
+      "module": "persistence-core",
+      "addresses": ["REQ-039", "REQ-055", "REQ-063", "REQ-067", "REQ-069", "REQ-070", "REQ-071"]
+    },
+    {
+      "module": "agent-runtime",
+      "addresses": ["REQ-029", "REQ-030", "REQ-033", "REQ-036", "REQ-037", "REQ-038"]
+    },
+    {
+      "module": "chat-shell",
+      "addresses": ["REQ-034", "REQ-086", "REQ-087", "REQ-088", "REQ-089"]
+    },
+    {
+      "module": "sqlite-adapter",
+      "addresses": ["REQ-067", "REQ-068", "REQ-094"]
+    },
+    {
+      "module": "migrations",
+      "addresses": ["REQ-067", "REQ-094"]
+    },
+    {
+      "module": "env-config",
+      "addresses": ["REQ-056", "REQ-094"]
+    },
+    {
+      "module": "seed-data",
+      "addresses": ["REQ-083", "REQ-084"]
+    },
+    {
+      "module": "auth-basic",
+      "addresses": ["REQ-075", "REQ-083", "REQ-084"]
+    },
+    {
+      "module": "rbac",
+      "addresses": ["REQ-014", "REQ-015", "REQ-040", "REQ-046", "REQ-075", "REQ-076", "REQ-077", "REQ-078", "REQ-079", "REQ-080", "REQ-081", "REQ-082", "REQ-085"]
+    },
+    {
+      "module": "audit-log",
+      "addresses": ["REQ-047", "REQ-061", "REQ-064", "REQ-065", "REQ-066", "REQ-067"]
+    },
+    {
+      "module": "audit-view",
+      "addresses": ["REQ-068", "REQ-074", "REQ-090"]
+    },
+    {
+      "module": "row-history",
+      "addresses": ["REQ-065", "REQ-071", "REQ-090"]
+    },
+    {
+      "module": "approval-flow",
+      "addresses": ["REQ-025", "REQ-035", "REQ-040", "REQ-041", "REQ-042", "REQ-043", "REQ-044", "REQ-045", "REQ-046", "REQ-047", "REQ-048", "REQ-062", "REQ-085", "REQ-088"]
+    },
+    {
+      "module": "workflow-engine",
+      "addresses": ["REQ-001", "REQ-002", "REQ-003", "REQ-004", "REQ-016", "REQ-017", "REQ-018", "REQ-019", "REQ-020", "REQ-021", "REQ-022", "REQ-023", "REQ-024", "REQ-025", "REQ-026", "REQ-027", "REQ-028", "REQ-029", "REQ-093"]
+    },
+    {
+      "module": "state-machine",
+      "addresses": ["REQ-004", "REQ-012", "REQ-013", "REQ-044", "REQ-062"]
+    },
+    {
+      "module": "assignment",
+      "addresses": ["REQ-051", "REQ-060", "REQ-086"]
+    },
+    {
+      "module": "sla-timers",
+      "addresses": ["REQ-050", "REQ-052", "REQ-053", "REQ-054", "REQ-055", "REQ-057", "REQ-058", "REQ-059", "REQ-060", "REQ-061", "REQ-062", "REQ-086"]
+    },
+    {
+      "module": "scheduling",
+      "addresses": ["REQ-092", "REQ-093", "REQ-095"]
+    },
+    {
+      "module": "notifications-ui",
+      "addresses": ["REQ-049", "REQ-051", "REQ-057", "REQ-061", "REQ-063"]
+    },
+    {
+      "module": "blob-store",
+      "addresses": ["REQ-001", "REQ-002", "REQ-067"]
+    },
+    {
+      "module": "file-upload",
+      "addresses": ["REQ-001", "REQ-002", "REQ-089"]
+    },
+    {
+      "module": "checklists",
+      "addresses": ["REQ-004", "REQ-005", "REQ-006", "REQ-007", "REQ-008", "REQ-009", "REQ-010", "REQ-011", "REQ-012", "REQ-014", "REQ-089"]
+    },
+    {
+      "module": "forms-engine",
+      "addresses": ["REQ-002", "REQ-014", "REQ-015", "REQ-043", "REQ-048", "REQ-088"]
+    },
+    {
+      "module": "rag-core",
+      "addresses": ["REQ-029", "REQ-036", "REQ-038"]
+    },
+    {
+      "module": "citation-tracker",
+      "addresses": ["REQ-031", "REQ-032", "REQ-036", "REQ-087"]
+    },
+    {
+      "module": "tool-registry",
+      "addresses": ["REQ-027", "REQ-037", "REQ-046"]
+    },
+    {
+      "module": "eval-harness",
+      "addresses": ["REQ-028", "REQ-033", "REQ-036"]
+    },
+    {
+      "module": "versioned-drafts",
+      "addresses": ["REQ-035", "REQ-039", "REQ-069", "REQ-070"]
+    },
+    {
+      "module": "search-index",
+      "addresses": ["REQ-068", "REQ-072"]
+    },
+    {
+      "module": "export-csv",
+      "addresses": ["REQ-034", "REQ-059", "REQ-073", "REQ-074", "REQ-092"]
+    },
+    {
+      "module": "data-table",
+      "addresses": ["REQ-051", "REQ-072", "REQ-086"]
+    },
+    {
+      "module": "record-detail",
+      "addresses": ["REQ-087", "REQ-089", "REQ-090", "REQ-091"]
+    },
+    {
+      "module": "screen-router",
+      "addresses": ["REQ-086", "REQ-087", "REQ-090", "REQ-091"]
+    }
+  ],
+  "build_budget_plan": {
+    "nodes": {
+      "slice-1": 2.6,
+      "slice-2": 2.4,
+      "slice-3": 2.9,
+      "slice-4": 2.6,
+      "slice-5": 2.4,
+      "slice-6": 2.1
+    },
+    "total_usd": 15.0
+  },
+  "build_budget_notes": {
+    "envelope_usd": 40.0,
+    "dag_slice_allocation_usd": 18.0,
+    "basis": "33 composed modules mean each slice is mostly wiring and policy data (checklist items, factor weights, role tiers, SLA windows) rather than generated subsystems, so every slice is planned below its 3.00 DAG allocation.",
+    "per_node": {
+      "slice-1": "Case opening + document package upload + deterministic completeness check + RETURNED with missing-item list. Composes file-upload/blob-store/checklists/state-machine/forms-engine; new code is checklist data and the conditional-requirement rules.",
+      "slice-2": "Deterministic risk scoring: five weighted factors, band assignment, sanctions true-positive override, per-factor inputs and matrix version persisted. Pure function inside workflow-engine; cheapest kind of node to build and test.",
+      "slice-3": "Memo agent grounded in the policy corpus with citations, machine-drafted label, immutable versions. Highest estimate: agent node plus rag-core wiring, tool-registry roster restriction, and eval rubrics.",
+      "slice-4": "RBAC roles, tiered approval authority, rationale/reason required fields, decision records carrying role-at-decision-time, server-side enforcement. Composes rbac/approval-flow/audit-log; mostly role-tier policy data.",
+      "slice-5": "SLA clocks from case-ready, 80% at-risk flagging, permanent breach records, escalation chain stepping, persisted notifications. Composes sla-timers/scheduling/notifications-ui; new code is the business-hours calendar config.",
+      "slice-6": "Search, CSV export for analysts and auditors, chronological audit view, score-breakdown view, weekly operations report. Almost entirely composition of search-index/export-csv/audit-view/record-detail; lowest estimate."
+    }
+  }
+}

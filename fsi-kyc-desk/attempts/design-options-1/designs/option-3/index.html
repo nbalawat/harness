@@ -1,0 +1,2122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>KYC Review Desk — Portfolio Atlas</title>
+<link rel="stylesheet" href="tokens.css">
+<style>
+/* ==========================================================================
+   PORTFOLIO ATLAS — structural CSS for the KYC Review Desk data board
+   ========================================================================== */
+
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font);
+  font-size: var(--fs-body);
+  line-height: 1.5;
+  font-feature-settings: "tnum" 1, "cv05" 1;
+  -webkit-font-smoothing: antialiased;
+}
+h1, h2, h3, h4, p, ul, ol, figure, dl, dd { margin: 0; }
+ul, ol { list-style: none; padding: 0; }
+button, input, select, textarea { font: inherit; color: inherit; }
+a { color: var(--primary-700); }
+svg { display: block; }
+.tnum { font-variant-numeric: tabular-nums; }
+
+/* ---------- Global chrome -------------------------------------------- */
+.topbar {
+  position: sticky; top: 0; z-index: 40;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  box-shadow: var(--shadow-1);
+}
+.topbar__row {
+  max-width: 1500px; margin: 0 auto;
+  padding: 14px var(--gutter-lg);
+  display: flex; align-items: center; gap: 22px; flex-wrap: wrap;
+}
+.brand { display: flex; align-items: center; gap: 13px; min-width: 0; }
+.brand__mark {
+  width: 40px; height: 40px; border-radius: 11px;
+  background: linear-gradient(145deg, var(--primary-400), var(--primary-700));
+  display: grid; place-items: center; flex: none;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.28);
+}
+.brand__name {
+  font-size: var(--fs-h1); font-weight: 700; letter-spacing: -0.022em;
+  color: var(--fg-strong); white-space: nowrap;
+}
+.brand__sub {
+  display: block; font-size: var(--fs-label); font-weight: 600;
+  letter-spacing: var(--tracking-label); text-transform: uppercase;
+  color: var(--fg-faint); margin-top: 1px;
+}
+.topbar__spacer { flex: 1 1 auto; }
+
+.agentmode {
+  display: flex; align-items: center; gap: 10px;
+  background: var(--primary-050);
+  border: 1px solid var(--primary-100);
+  border-radius: var(--r-pill);
+  padding: 5px 8px 5px 14px;
+}
+.agentmode__label {
+  font-size: var(--fs-label); font-weight: 700;
+  letter-spacing: var(--tracking-label); text-transform: uppercase;
+  color: var(--primary-700); white-space: nowrap;
+}
+#agent-mode {
+  appearance: none;
+  background: var(--surface);
+  border: 1px solid var(--primary-200);
+  border-radius: var(--r-pill);
+  padding: 6px 32px 6px 13px;
+  font-size: var(--fs-sm); font-weight: 650; color: var(--primary-800);
+  cursor: pointer;
+  background-image: linear-gradient(45deg, transparent 50%, var(--primary-600) 50%),
+                    linear-gradient(135deg, var(--primary-600) 50%, transparent 50%);
+  background-position: calc(100% - 16px) 52%, calc(100% - 11px) 52%;
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+}
+#agent-mode:focus-visible { outline: none; box-shadow: var(--ring); }
+
+.whoami {
+  display: flex; align-items: center; gap: 10px;
+  padding: 5px 14px 5px 6px;
+  border: 1px solid var(--border); border-radius: var(--r-pill);
+  background: var(--surface-3);
+}
+.whoami__avatar {
+  width: 30px; height: 30px; border-radius: 50%; flex: none;
+  background: var(--primary-600); color: var(--on-primary);
+  display: grid; place-items: center;
+  font-size: var(--fs-xs); font-weight: 700; letter-spacing: .02em;
+}
+.whoami__name { font-size: var(--fs-sm); font-weight: 650; line-height: 1.2; }
+.whoami__role {
+  display: block; font-size: var(--fs-label); font-weight: 600;
+  letter-spacing: .06em; text-transform: uppercase; color: var(--fg-faint);
+}
+
+/* ---------- Nav ------------------------------------------------------- */
+.nav { background: var(--surface); border-bottom: 1px solid var(--border); }
+.nav__inner {
+  max-width: 1500px; margin: 0 auto; padding: 0 var(--gutter-lg);
+  display: flex; gap: 4px; overflow-x: auto;
+}
+.nav__btn {
+  appearance: none; background: none; border: 0;
+  border-bottom: 3px solid transparent;
+  padding: 12px 15px 11px; cursor: pointer; white-space: nowrap;
+  font-size: var(--fs-sm); font-weight: 650; color: var(--fg-muted);
+  display: flex; align-items: center; gap: 8px;
+  border-radius: var(--r-sm) var(--r-sm) 0 0;
+}
+.nav__btn:hover { background: var(--surface-3); color: var(--fg-strong); }
+.nav__btn:focus-visible { outline: none; box-shadow: var(--ring); }
+.nav__btn[aria-current="page"] {
+  color: var(--primary-700); border-bottom-color: var(--primary-600);
+  background: var(--primary-tint);
+}
+.nav__count {
+  font-size: var(--fs-label); font-weight: 700; padding: 1px 7px;
+  border-radius: var(--r-pill); background: var(--canvas-deep); color: var(--fg-muted);
+}
+.nav__btn[aria-current="page"] .nav__count { background: var(--primary-600); color: var(--on-primary); }
+.nav__count--alert { background: var(--signal-breach-soft); color: var(--signal-breach); }
+
+/* ---------- Screens & layout ----------------------------------------- */
+.board { max-width: 1500px; margin: 0 auto; padding: 26px var(--gutter-lg) 72px; }
+.screen { display: none; }
+.screen.is-active { display: block; animation: rise .22s ease-out both; }
+@keyframes rise { from { opacity: 0; transform: translateY(6px); } }
+
+.screenhead { display: flex; align-items: flex-end; gap: 20px; flex-wrap: wrap; margin-bottom: 20px; }
+.screenhead__title { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; }
+.screenhead__meta { font-size: var(--fs-sm); color: var(--fg-muted); margin-top: 3px; }
+.screenhead__actions { margin-left: auto; display: flex; gap: 9px; flex-wrap: wrap; }
+
+.grid { display: grid; gap: var(--gutter); }
+.grid--kpi { grid-template-columns: repeat(4, minmax(0, 1fr)); margin-bottom: var(--gutter); }
+.grid--kpi5 { grid-template-columns: repeat(5, minmax(0, 1fr)); margin-bottom: var(--gutter); }
+.grid--2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.grid--3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.grid--2-1 { grid-template-columns: 2fr 1fr; }
+.grid--1-2 { grid-template-columns: 1fr 2fr; }
+.grid--12-8 { grid-template-columns: 1.5fr 1fr; }
+.mt { margin-top: var(--gutter); }
+
+/* ---------- Cards ----------------------------------------------------- */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-2);
+  padding: var(--pad-card);
+  min-width: 0;
+}
+.card--flush { padding: 0; overflow: hidden; }
+.card--tint { background: var(--surface-2); }
+.card__head { display: flex; align-items: baseline; gap: 12px; margin-bottom: 14px; }
+.card--flush .card__head { padding: var(--pad-card) var(--pad-card) 0; margin-bottom: 12px; }
+.card__title { font-size: var(--fs-h2); font-weight: 700; letter-spacing: -0.012em; }
+.card__note { font-size: var(--fs-xs); color: var(--fg-faint); margin-left: auto; text-align: right; }
+.card__sub { font-size: var(--fs-sm); color: var(--fg-muted); margin-top: -8px; margin-bottom: 14px; }
+.eyebrow {
+  font-size: var(--fs-label); font-weight: 700; letter-spacing: var(--tracking-label);
+  text-transform: uppercase; color: var(--fg-faint);
+}
+
+/* ---------- KPI tiles ------------------------------------------------- */
+.kpi {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--r-lg); box-shadow: var(--shadow-2);
+  padding: 16px 18px 14px; position: relative; overflow: hidden;
+}
+.kpi::after {
+  content: ""; position: absolute; inset: 0 auto 0 0; width: 4px;
+  background: var(--primary-600);
+}
+.kpi--low::after { background: var(--band-low); }
+.kpi--med::after { background: var(--band-medium); }
+.kpi--high::after { background: var(--band-high); }
+.kpi--alert::after { background: var(--signal-breach); }
+.kpi--warn::after { background: var(--signal-atrisk); }
+.kpi__label {
+  font-size: var(--fs-label); font-weight: 700; letter-spacing: var(--tracking-label);
+  text-transform: uppercase; color: var(--fg-muted);
+}
+.kpi__value {
+  font-size: var(--fs-kpi); font-weight: 700; letter-spacing: var(--tracking-kpi);
+  line-height: 1.05; margin-top: 6px; font-variant-numeric: tabular-nums;
+}
+.kpi__value small { font-size: 16px; font-weight: 650; color: var(--fg-muted); margin-left: 3px; }
+.kpi__foot { display: flex; align-items: flex-end; gap: 10px; margin-top: 8px; }
+.kpi__delta { font-size: var(--fs-xs); font-weight: 650; color: var(--fg-muted); }
+.kpi__delta--good { color: var(--band-low-ink); }
+.kpi__delta--bad { color: var(--band-high-ink); }
+.kpi__spark { margin-left: auto; }
+
+/* ---------- Badges, pills, flags ------------------------------------- */
+.pill {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 2px 9px; border-radius: var(--r-pill);
+  font-size: var(--fs-xs); font-weight: 700; letter-spacing: .02em;
+  white-space: nowrap; border: 1px solid transparent;
+}
+.pill__dot { width: 7px; height: 7px; border-radius: 2px; flex: none; }
+.pill--low   { background: var(--band-low-soft); color: var(--band-low-ink); border-color: #bfe6d3; }
+.pill--low .pill__dot { background: var(--band-low); border-radius: 50%; }
+.pill--med   { background: var(--band-medium-soft); color: var(--band-medium-ink); border-color: #f0dcb4; }
+.pill--med .pill__dot { background: var(--band-medium); border-radius: 1px; }
+.pill--high  { background: var(--band-high-soft); color: var(--band-high-ink); border-color: #f0c8cd; }
+.pill--high .pill__dot { background: var(--band-high); border-radius: 0; transform: rotate(45deg); }
+
+.state {
+  display: inline-flex; align-items: center; padding: 2px 9px;
+  border-radius: var(--r-sm); font-size: var(--fs-xs); font-weight: 700;
+  letter-spacing: .05em; text-transform: uppercase; white-space: nowrap;
+}
+.state--open      { background: var(--state-open-soft); color: var(--state-open); }
+.state--review    { background: var(--state-review-soft); color: var(--state-review); }
+.state--escalated { background: var(--state-escalated-soft); color: var(--state-escalated); }
+.state--approved  { background: var(--state-approved-soft); color: var(--band-low-ink); }
+.state--rejected  { background: var(--state-rejected-soft); color: var(--state-rejected); }
+.state--returned  { background: var(--state-returned-soft); color: var(--state-returned); }
+
+.flag {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 2px 8px; border-radius: var(--r-sm);
+  font-size: var(--fs-label); font-weight: 800; letter-spacing: .07em; text-transform: uppercase;
+}
+.flag--breach { background: var(--signal-breach); color: #fff; }
+.flag--atrisk { background: var(--signal-atrisk-soft); color: var(--signal-atrisk); border: 1px solid #f0d59a; }
+.flag--ok     { background: var(--band-low-soft); color: var(--band-low-ink); border: 1px solid #bfe6d3; }
+.flag--lock   { background: var(--canvas-deep); color: var(--fg-muted); border: 1px solid var(--border-strong); }
+
+.chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 3px 10px; border-radius: var(--r-pill);
+  background: var(--surface-3); border: 1px solid var(--border);
+  font-size: var(--fs-xs); font-weight: 600; color: var(--fg-muted);
+}
+
+/* ---------- Buttons --------------------------------------------------- */
+.btn {
+  appearance: none; cursor: pointer;
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 8px 15px; border-radius: var(--r-md);
+  border: 1px solid var(--border-strong); background: var(--surface);
+  font-size: var(--fs-sm); font-weight: 650; color: var(--fg);
+  box-shadow: var(--shadow-1);
+}
+.btn:hover { background: var(--surface-3); border-color: var(--fg-faint); }
+.btn:focus-visible { outline: none; box-shadow: var(--ring); }
+.btn--primary { background: var(--primary-600); color: var(--on-primary); border-color: var(--primary-700); }
+.btn--primary:hover { background: var(--primary-700); }
+.btn--danger { background: var(--surface); color: var(--band-high-ink); border-color: #e6b6bc; }
+.btn--ghost { background: transparent; box-shadow: none; }
+.btn--sm { padding: 5px 11px; font-size: var(--fs-xs); border-radius: var(--r-sm); }
+.btn[disabled], .btn[aria-disabled="true"] {
+  cursor: not-allowed; opacity: .62; background: var(--canvas-deep);
+  color: var(--fg-faint); border-color: var(--border); box-shadow: none;
+}
+.btn[disabled]:hover { background: var(--canvas-deep); border-color: var(--border); }
+
+/* ---------- Filter bar ------------------------------------------------ */
+.filters {
+  display: flex; gap: 10px; flex-wrap: wrap; align-items: center;
+  padding: 14px var(--pad-card); border-bottom: 1px solid var(--border);
+  background: var(--surface-2);
+}
+.field { display: flex; flex-direction: column; gap: 4px; }
+.field__label {
+  font-size: var(--fs-label); font-weight: 700; letter-spacing: var(--tracking-label);
+  text-transform: uppercase; color: var(--fg-faint);
+}
+.input, .select, .textarea {
+  padding: 7px 11px; border-radius: var(--r-md);
+  border: 1px solid var(--border-strong); background: var(--surface);
+  font-size: var(--fs-sm); min-width: 0;
+}
+.input:focus, .select:focus, .textarea:focus { outline: none; box-shadow: var(--ring); border-color: var(--primary-400); }
+.input--search { min-width: 300px; }
+.textarea { width: 100%; resize: vertical; font-family: var(--font); }
+.req { color: var(--band-high); font-weight: 800; }
+
+/* ---------- Tables ---------------------------------------------------- */
+.tablewrap { overflow-x: auto; }
+table.data { width: 100%; border-collapse: collapse; font-size: var(--fs-sm); }
+table.data th {
+  text-align: left; font-size: var(--fs-label); font-weight: 700;
+  letter-spacing: var(--tracking-label); text-transform: uppercase; color: var(--fg-muted);
+  padding: 10px 14px; border-bottom: 1px solid var(--border-strong);
+  background: var(--surface-2); white-space: nowrap; position: sticky; top: 0;
+}
+table.data td {
+  padding: 11px 14px; border-bottom: 1px solid var(--border-faint); vertical-align: middle;
+}
+table.data tbody tr:hover { background: var(--primary-tint); }
+table.data tbody tr:last-child td { border-bottom: 0; }
+table.data .num { text-align: right; font-variant-numeric: tabular-nums; font-weight: 650; }
+table.data .ref { font-family: var(--font-mono); font-size: var(--fs-xs); font-weight: 600; color: var(--primary-700); }
+table.data .client { font-weight: 650; color: var(--fg-strong); }
+.row--breach { background: #fff7f7; }
+.row--breach:hover { background: #ffeeef; }
+.row--atrisk { background: #fffcf3; }
+.tfoot td { font-weight: 700; background: var(--surface-2); border-top: 2px solid var(--border-strong); }
+
+/* ---------- Chart scaffolding ---------------------------------------- */
+.chartfig { margin: 0; }
+.legend { display: flex; gap: 16px; flex-wrap: wrap; margin: 12px 0 0; }
+.legend__item { display: inline-flex; align-items: center; gap: 7px; font-size: var(--fs-xs); font-weight: 600; color: var(--fg-muted); }
+.legend__swatch { width: 12px; height: 12px; flex: none; }
+.legend__swatch--low { background: var(--band-low); border-radius: 50%; }
+.legend__swatch--med { background: var(--band-medium); border-radius: 2px; }
+.legend__swatch--high { background: var(--band-high); transform: rotate(45deg); }
+.chartsummary {
+  margin-top: 12px; padding: 11px 13px; border-radius: var(--r-md);
+  background: var(--surface-3); border: 1px solid var(--border-faint);
+  font-size: var(--fs-xs); color: var(--fg-muted); line-height: 1.55;
+}
+.chartsummary b { color: var(--fg); }
+.axislabel { font-size: 10px; fill: var(--fg-faint); font-weight: 600; }
+.vallabel { font-size: 11px; fill: var(--fg); font-weight: 700; }
+.vallabel--inv { fill: #fff; }
+.catlabel { font-size: 11px; fill: var(--fg-muted); font-weight: 650; }
+.gridline { stroke: var(--gridline); stroke-width: 1; }
+.axisline { stroke: var(--axis); stroke-width: 1; }
+
+/* ---------- Meters ---------------------------------------------------- */
+.meter { display: flex; gap: 4px; }
+.meter__cell { height: 12px; flex: 1; border-radius: 3px; background: var(--canvas-deep); }
+.meter__cell--pass { background: var(--band-low); }
+.meter__cell--fail { background: var(--band-high); }
+.meter__cell--na { background: var(--border-strong); }
+
+/* ---------- Checklist ------------------------------------------------- */
+.checklist { display: grid; gap: 8px; }
+.checkitem {
+  display: grid; grid-template-columns: 26px 1fr auto; gap: 12px; align-items: center;
+  padding: 11px 14px; border: 1px solid var(--border); border-radius: var(--r-md);
+  background: var(--surface-2);
+}
+.checkitem--fail { border-color: #eec3c8; background: #fff8f8; }
+.checkitem--na { opacity: .8; }
+.checkitem__icon {
+  width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center;
+  font-size: 13px; font-weight: 800; color: #fff; background: var(--band-low);
+}
+.checkitem--fail .checkitem__icon { background: var(--band-high); }
+.checkitem--na .checkitem__icon { background: var(--border-strong); color: var(--fg-muted); }
+.checkitem__name { font-weight: 650; font-size: var(--fs-sm); }
+.checkitem__meta { font-size: var(--fs-xs); color: var(--fg-muted); }
+
+/* ---------- Callouts -------------------------------------------------- */
+.callout {
+  border-radius: var(--r-md); padding: 13px 15px; font-size: var(--fs-sm);
+  border: 1px solid var(--border); background: var(--surface-3); line-height: 1.55;
+}
+.callout--warn { background: var(--signal-atrisk-soft); border-color: #f0d59a; color: #6b4304; }
+.callout--danger { background: var(--signal-breach-soft); border-color: #f0c0c5; color: var(--band-high-ink); }
+.callout--info { background: var(--primary-050); border-color: var(--primary-100); color: var(--primary-800); }
+.callout--lock { background: var(--canvas-deep); border-color: var(--border-strong); color: var(--fg-muted); }
+.callout__title {
+  font-size: var(--fs-label); font-weight: 800; letter-spacing: var(--tracking-label);
+  text-transform: uppercase; display: block; margin-bottom: 5px;
+}
+
+/* ---------- Definition rows ------------------------------------------ */
+.deflist { display: grid; grid-template-columns: auto 1fr; gap: 9px 18px; font-size: var(--fs-sm); }
+.deflist dt { font-size: var(--fs-xs); font-weight: 700; color: var(--fg-faint); text-transform: uppercase; letter-spacing: .06em; align-self: center; }
+.deflist dd { font-weight: 600; }
+
+/* ---------- Memo ------------------------------------------------------ */
+.machinebanner {
+  display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+  padding: 16px 20px; border-radius: var(--r-lg);
+  background: repeating-linear-gradient(135deg, var(--signal-machine-soft) 0 14px, #eae4fa 14px 28px);
+  border: 2px solid var(--signal-machine); margin-bottom: var(--gutter);
+}
+.machinebanner__tag {
+  background: var(--signal-machine); color: #fff; padding: 7px 14px; border-radius: var(--r-sm);
+  font-size: var(--fs-h3); font-weight: 800; letter-spacing: .1em; text-transform: uppercase;
+}
+.machinebanner__text { font-size: var(--fs-sm); color: #3b2c68; font-weight: 600; max-width: 76ch; }
+.memo { font-size: 14.5px; line-height: 1.72; }
+.memo h4 { font-size: var(--fs-h3); font-weight: 800; letter-spacing: .04em; text-transform: uppercase; color: var(--primary-700); margin: 20px 0 7px; }
+.memo h4:first-child { margin-top: 0; }
+.memo p { margin-bottom: 11px; color: #22313f; }
+.cite {
+  display: inline-block; vertical-align: super; font-size: 10px; font-weight: 800;
+  color: var(--primary-700); background: var(--primary-050); border: 1px solid var(--primary-100);
+  border-radius: 4px; padding: 0 4px; margin-left: 2px; line-height: 1.5; cursor: help;
+}
+.gap-note {
+  border-left: 4px solid var(--signal-atrisk); background: var(--signal-atrisk-soft);
+  padding: 11px 14px; border-radius: 0 var(--r-md) var(--r-md) 0; margin: 14px 0;
+  font-size: var(--fs-sm); color: #6b4304;
+}
+.versions { display: grid; gap: 9px; }
+.version {
+  display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: center;
+  padding: 11px 13px; border: 1px solid var(--border); border-radius: var(--r-md); background: var(--surface-2);
+}
+.version--current { border-color: var(--primary-400); background: var(--primary-050); }
+.version__id { font-family: var(--font-mono); font-weight: 800; font-size: var(--fs-sm); color: var(--primary-700); }
+.version__meta { font-size: var(--fs-xs); color: var(--fg-muted); }
+
+/* ---------- Chat ------------------------------------------------------ */
+.chatshell { display: grid; grid-template-columns: 1fr 340px; gap: var(--gutter); align-items: start; }
+.chatcard { display: flex; flex-direction: column; height: 620px; }
+#messages { flex: 1 1 auto; overflow-y: auto; padding: var(--pad-card); display: flex; flex-direction: column; gap: 16px; }
+#messages li { display: grid; grid-template-columns: 34px 1fr; gap: 11px; }
+#messages li.msg--me { grid-template-columns: 1fr 34px; }
+.msg__av {
+  width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center;
+  font-size: var(--fs-label); font-weight: 800; color: #fff; background: var(--fg-muted);
+}
+.msg--agent .msg__av { background: var(--signal-machine); }
+.msg--me .msg__av { background: var(--primary-600); grid-column: 2; grid-row: 1; }
+.msg--me .msg__body { grid-column: 1; grid-row: 1; }
+.msg__body {
+  background: var(--surface-2); border: 1px solid var(--border);
+  border-radius: 4px var(--r-md) var(--r-md) var(--r-md); padding: 12px 14px; font-size: var(--fs-sm); line-height: 1.62;
+}
+.msg--me .msg__body { background: var(--primary-050); border-color: var(--primary-100); border-radius: var(--r-md) 4px var(--r-md) var(--r-md); }
+.msg--agent .msg__body { border-left: 3px solid var(--signal-machine); }
+.msg--refusal .msg__body { background: var(--signal-atrisk-soft); border-color: #f0d59a; border-left-color: var(--signal-atrisk); }
+.msg__who { display: flex; align-items: center; gap: 8px; margin-bottom: 5px; }
+.msg__name { font-size: var(--fs-xs); font-weight: 750; }
+.msg__time { font-size: var(--fs-label); color: var(--fg-faint); font-variant-numeric: tabular-nums; }
+.msg__sources { margin-top: 9px; padding-top: 8px; border-top: 1px dashed var(--border-strong); display: flex; gap: 6px; flex-wrap: wrap; }
+.src {
+  font-size: var(--fs-label); font-weight: 700; padding: 2px 8px; border-radius: var(--r-pill);
+  background: var(--primary-050); color: var(--primary-800); border: 1px solid var(--primary-100);
+}
+#composer {
+  border-top: 1px solid var(--border); background: var(--surface-2);
+  padding: 13px var(--pad-card); display: flex; gap: 10px; align-items: center;
+}
+#input {
+  flex: 1 1 auto; padding: 10px 14px; border-radius: var(--r-pill);
+  border: 1px solid var(--border-strong); background: var(--surface); font-size: var(--fs-sm);
+}
+#input:focus { outline: none; box-shadow: var(--ring); border-color: var(--primary-400); }
+#composer button[type="submit"] {
+  appearance: none; cursor: pointer; border: 1px solid var(--primary-700);
+  background: var(--primary-600); color: var(--on-primary);
+  padding: 10px 20px; border-radius: var(--r-pill); font-size: var(--fs-sm); font-weight: 700;
+}
+#composer button[type="submit"]:hover { background: var(--primary-700); }
+
+/* ---------- Audit ----------------------------------------------------- */
+.beforeafter { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; font-size: var(--fs-xs); }
+.ba { padding: 1px 7px; border-radius: 4px; font-family: var(--font-mono); font-size: 11px; }
+.ba--before { background: var(--canvas-deep); color: var(--fg-muted); text-decoration: line-through; text-decoration-color: var(--fg-faint); }
+.ba--after { background: var(--band-low-soft); color: var(--band-low-ink); font-weight: 700; }
+.ba--none { background: transparent; color: var(--fg-faint); font-style: italic; text-decoration: none; }
+.arrow { color: var(--fg-faint); font-weight: 800; }
+.hash { font-family: var(--font-mono); font-size: 10.5px; color: var(--fg-faint); }
+.timeline { position: relative; padding-left: 26px; display: grid; gap: 2px; }
+.timeline::before { content: ""; position: absolute; left: 8px; top: 8px; bottom: 8px; width: 2px; background: var(--border-strong); }
+.tl { position: relative; padding: 9px 0 9px 4px; font-size: var(--fs-xs); }
+.tl::before {
+  content: ""; position: absolute; left: -22px; top: 13px; width: 10px; height: 10px;
+  border-radius: 50%; background: var(--surface); border: 2px solid var(--primary-600);
+}
+.tl--alert::before { border-color: var(--signal-breach); background: var(--signal-breach); }
+.tl--warn::before { border-color: var(--signal-atrisk); background: var(--signal-atrisk); }
+.tl--ok::before { border-color: var(--band-low); background: var(--band-low); }
+.tl__t { font-family: var(--font-mono); font-size: 10.5px; color: var(--fg-faint); }
+.tl__a { font-weight: 700; font-size: var(--fs-sm); }
+
+/* ---------- Permission matrix ---------------------------------------- */
+table.matrix { width: 100%; border-collapse: collapse; font-size: var(--fs-sm); }
+table.matrix th, table.matrix td { border: 1px solid var(--border); padding: 9px 12px; text-align: center; }
+table.matrix th { background: var(--surface-2); font-size: var(--fs-xs); font-weight: 700; letter-spacing: .04em; }
+table.matrix td:first-child, table.matrix th:first-child { text-align: left; }
+table.matrix tbody th { text-align: left; font-weight: 650; font-size: var(--fs-sm); letter-spacing: 0; }
+.perm { font-weight: 800; font-size: 13px; }
+.perm--yes { color: var(--band-low); }
+.perm--no { color: var(--border-strong); }
+.perm--ro { color: var(--state-open); font-size: 10px; font-weight: 800; letter-spacing: .06em; }
+.col--auditor { background: var(--state-open-soft); }
+
+/* ---------- Utility --------------------------------------------------- */
+.stack { display: grid; gap: 12px; }
+.stack--sm { gap: 8px; }
+.row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.muted { color: var(--fg-muted); }
+.small { font-size: var(--fs-xs); }
+.divider { height: 1px; background: var(--border); margin: 16px 0; border: 0; }
+.locked { position: relative; }
+.locked__ribbon {
+  position: absolute; top: 10px; right: 10px; font-size: var(--fs-label); font-weight: 800;
+  letter-spacing: .1em; text-transform: uppercase; color: var(--fg-faint);
+  border: 1px dashed var(--border-strong); border-radius: var(--r-sm); padding: 3px 9px; background: var(--surface-2);
+}
+
+@media (max-width: 1180px) {
+  .grid--kpi, .grid--kpi5 { grid-template-columns: repeat(2, minmax(0,1fr)); }
+  .grid--2, .grid--3, .grid--2-1, .grid--1-2, .grid--12-8, .chatshell { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar__row">
+    <div class="brand">
+      <span class="brand__mark" aria-hidden="true">
+        <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+          <rect x="2" y="11" width="4" height="9" rx="1" fill="#fff" opacity=".65"/>
+          <rect x="9" y="6" width="4" height="14" rx="1" fill="#fff" opacity=".85"/>
+          <rect x="16" y="2" width="4" height="18" rx="1" fill="#fff"/>
+        </svg>
+      </span>
+      <div>
+        <h1 class="brand__name">KYC Review Desk</h1>
+        <span class="brand__sub">Corporate Onboarding &middot; Portfolio Board</span>
+      </div>
+    </div>
+
+    <div class="topbar__spacer"></div>
+
+    <div class="agentmode">
+      <label class="agentmode__label" for="agent-mode">Memo agent</label>
+      <select id="agent-mode" aria-describedby="agent-mode-hint">
+        <option value="draft" selected>Draft &mdash; agent writes v-next</option>
+        <option value="suggest">Suggest &mdash; inline hints only</option>
+        <option value="off">Off &mdash; no agent involvement</option>
+      </select>
+    </div>
+    <span id="agent-mode-hint" class="chip" title="The agent is advisory only in every mode.">
+      <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><circle cx="6" cy="6" r="5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M6 5.2v3.2M6 3.4v.9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      Advisory only &mdash; cannot approve
+    </span>
+
+    <div class="whoami">
+      <span class="whoami__avatar">MA</span>
+      <div>
+        <span class="whoami__name">Maya Adeyemi</span>
+        <span class="whoami__role">KYC Analyst &middot; EMEA</span>
+      </div>
+    </div>
+  </div>
+</header>
+
+<nav class="nav" aria-label="Primary">
+  <div class="nav__inner">
+    <button class="nav__btn" data-screen="worklist" aria-current="page" type="button">Worklist <span class="nav__count">112</span></button>
+    <button class="nav__btn" data-screen="case" type="button">Case file <span class="nav__count">0412</span></button>
+    <button class="nav__btn" data-screen="memo" type="button">Risk memo <span class="nav__count">v3</span></button>
+    <button class="nav__btn" data-screen="score" type="button">Score model <span class="nav__count">76</span></button>
+    <button class="nav__btn" data-screen="audit" type="button">Audit trail <span class="nav__count">31</span></button>
+    <button class="nav__btn" data-screen="chat" type="button">Agent chat</button>
+    <button class="nav__btn" data-screen="reports" type="button">Reports <span class="nav__count nav__count--alert">3</span></button>
+    <button class="nav__btn" data-screen="admin" type="button">Access &amp; admin</button>
+  </div>
+</nav>
+
+<main class="board" id="board">
+<!-- ================= WORKLIST ================= -->
+<section class="screen is-active" id="screen-worklist" aria-label="Worklist">
+  <div class="screenhead">
+    <div>
+      <h2 class="screenhead__title">Portfolio worklist</h2>
+      <p class="screenhead__meta">Live corporate onboarding queue &middot; EMEA book &middot; refreshed 28 Jul 2026, 09:14 UTC</p>
+    </div>
+    <div class="screenhead__actions">
+      <button class="btn" type="button" data-goto="reports">Weekly ops report</button>
+      <button class="btn btn--primary" type="button">New case from submission</button>
+    </div>
+  </div>
+
+  <!-- KPI strip -->
+  <div class="grid grid--kpi">
+    <div class="kpi">
+      <div class="kpi__label">Open cases</div>
+      <div class="kpi__value tnum">112</div>
+      <div class="kpi__foot">
+        <span class="kpi__delta">+7 vs. last week</span>
+        <svg class="kpi__spark" width="120" height="32" viewBox="0 0 120 32" role="img" aria-label="Open-case volume trend, weeks 22 to 27: 96, 99, 103, 105, 108, 112.">
+          <polyline points="4,26 26,23 48,19 70,16 92,12 114,6" fill="none" stroke="var(--spark)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <circle cx="114" cy="6" r="3" fill="var(--spark)"/>
+        </svg>
+      </div>
+    </div>
+    <div class="kpi kpi--warn">
+      <div class="kpi__label">At risk (&lt; 25% SLA left)</div>
+      <div class="kpi__value tnum">9</div>
+      <div class="kpi__foot">
+        <span class="kpi__delta kpi__delta--bad">+2 vs. last week</span>
+        <svg class="kpi__spark" width="120" height="32" viewBox="0 0 120 32" role="img" aria-label="At-risk count trend, weeks 22 to 27: 5, 6, 4, 7, 7, 9.">
+          <polyline points="4,20 26,17 48,23 70,14 92,14 114,8" fill="none" stroke="var(--signal-atrisk)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <circle cx="114" cy="8" r="3" fill="var(--signal-atrisk)"/>
+        </svg>
+      </div>
+    </div>
+    <div class="kpi kpi--alert">
+      <div class="kpi__label">SLA breached</div>
+      <div class="kpi__value tnum">3</div>
+      <div class="kpi__foot">
+        <span class="kpi__delta kpi__delta--bad">2 high band, 1 medium</span>
+        <svg class="kpi__spark" width="120" height="32" viewBox="0 0 120 32" role="img" aria-label="Breach count trend, weeks 22 to 27: 1, 2, 1, 2, 4, 3.">
+          <polyline points="4,26 26,20 48,26 70,20 92,8 114,14" fill="none" stroke="var(--signal-breach)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <circle cx="114" cy="14" r="3" fill="var(--signal-breach)"/>
+        </svg>
+      </div>
+    </div>
+    <div class="kpi kpi--low">
+      <div class="kpi__label">Median decision time</div>
+      <div class="kpi__value tnum">4.4<small>days</small></div>
+      <div class="kpi__foot">
+        <span class="kpi__delta kpi__delta--good">&minus;1.7 d vs. week 22</span>
+        <svg class="kpi__spark" width="120" height="32" viewBox="0 0 120 32" role="img" aria-label="Median decision time in days, weeks 22 to 27: 6.1, 5.8, 6.4, 5.2, 4.9, 4.4. Falling.">
+          <polyline points="4,9 26,13 48,6 70,19 92,23 114,28" fill="none" stroke="var(--band-low)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <circle cx="114" cy="28" r="3" fill="var(--band-low)"/>
+        </svg>
+      </div>
+    </div>
+  </div>
+
+  <!-- Charts row -->
+  <div class="grid grid--12-8">
+    <figure class="card chartfig">
+      <div class="card__head">
+        <h3 class="card__title">Risk band distribution &mdash; 112 open cases</h3>
+        <span class="card__note">Risk Rating Matrix v2.1</span>
+      </div>
+      <svg viewBox="0 0 760 168" width="100%" height="168" role="img"
+           aria-label="Stacked band distribution of 112 open cases: Low band 34 cases, 30.4 percent; Medium band 52 cases, 46.4 percent; High band 26 cases, 23.2 percent.">
+        <!-- axis ticks -->
+        <g class="axislabel">
+          <text x="20" y="14">0%</text>
+          <text x="196" y="14">25%</text>
+          <text x="376" y="14">50%</text>
+          <text x="556" y="14">75%</text>
+          <text x="712" y="14">100%</text>
+        </g>
+        <g>
+          <line class="gridline" x1="20" y1="20" x2="20" y2="118"/>
+          <line class="gridline" x1="200" y1="20" x2="200" y2="118"/>
+          <line class="gridline" x1="380" y1="20" x2="380" y2="118"/>
+          <line class="gridline" x1="560" y1="20" x2="560" y2="118"/>
+          <line class="gridline" x1="740" y1="20" x2="740" y2="118"/>
+        </g>
+        <!-- stacked bar: 720px wide from x=20 -->
+        <rect x="20"    y="30" width="218.6" height="60" fill="var(--band-low)" rx="4"/>
+        <rect x="238.6" y="30" width="334.3" height="60" fill="var(--band-medium)"/>
+        <rect x="572.9" y="30" width="167.1" height="60" fill="var(--band-high)" rx="4"/>
+        <!-- shape overlays so colour is never the only signal -->
+        <g fill="#fff" opacity=".9">
+          <circle cx="40" cy="60" r="5"/>
+          <rect x="253" y="55" width="10" height="10"/>
+          <rect x="588" y="55" width="10" height="10" transform="rotate(45 593 60)"/>
+        </g>
+        <g class="vallabel vallabel--inv">
+          <text x="60" y="57">Low</text><text x="60" y="72">34 &middot; 30.4%</text>
+          <text x="272" y="57">Medium</text><text x="272" y="72">52 &middot; 46.4%</text>
+          <text x="607" y="57">High</text><text x="607" y="72">26 &middot; 23.2%</text>
+        </g>
+        <line class="axisline" x1="20" y1="98" x2="740" y2="98"/>
+        <!-- of which flagged -->
+        <g class="catlabel"><text x="20" y="122">Of which flagged</text></g>
+        <rect x="140" y="110" width="58" height="16" fill="var(--signal-atrisk)" rx="3"/>
+        <text class="vallabel vallabel--inv" x="148" y="122">9 at risk</text>
+        <rect x="206" y="110" width="70" height="16" fill="var(--signal-breach)" rx="3"/>
+        <text class="vallabel vallabel--inv" x="214" y="122">3 breached</text>
+        <g class="axislabel"><text x="286" y="122">remaining 100 cases inside SLA</text></g>
+        <line class="axisline" x1="20" y1="140" x2="740" y2="140"/>
+        <g class="catlabel"><text x="20" y="158">Review cadence by band &mdash; Low: 3 years &nbsp;|&nbsp; Medium: annual &nbsp;|&nbsp; High: 6 months + Compliance Officer approval</text></g>
+      </svg>
+      <figcaption>
+        <div class="legend">
+          <span class="legend__item"><span class="legend__swatch legend__swatch--low"></span>Low 0&ndash;39 (circle)</span>
+          <span class="legend__item"><span class="legend__swatch legend__swatch--med"></span>Medium 40&ndash;69 (square)</span>
+          <span class="legend__item"><span class="legend__swatch legend__swatch--high"></span>High 70&ndash;100 (diamond)</span>
+        </div>
+        <p class="chartsummary"><b>Text summary.</b> Of 112 open cases, <b>34 are Low band (30.4%)</b>, <b>52 Medium (46.4%)</b> and <b>26 High (23.2%)</b>. High-band share is up 4.1 points on week 22. Nine cases are at risk of SLA breach and three have already breached; the remaining 100 are inside SLA.</p>
+      </figcaption>
+    </figure>
+
+    <figure class="card chartfig">
+      <div class="card__head">
+        <h3 class="card__title">SLA burn-down</h3>
+        <span class="card__note">Escalation &amp; SLA Policy</span>
+      </div>
+      <svg viewBox="0 0 240 168" width="100%" height="168" role="img"
+           aria-label="SLA burn-down gauge: 62 percent of the aggregate open-case SLA budget consumed. At-risk threshold at 75 percent.">
+        <path d="M 38 120 A 82 82 0 0 1 202 120" fill="none" stroke="var(--canvas-deep)" stroke-width="20" stroke-linecap="round"/>
+        <path d="M 38 120 A 82 82 0 0 1 202 120" fill="none" stroke="var(--primary-600)" stroke-width="20"
+              stroke-linecap="round" stroke-dasharray="159.7 257.6"/>
+        <!-- at-risk threshold tick at 75% -->
+        <line x1="176.0" y1="43.0" x2="188.0" y2="34.5" stroke="var(--signal-atrisk)" stroke-width="3" stroke-linecap="round"/>
+        <text class="axislabel" x="160" y="26" fill="var(--signal-atrisk)">75% at-risk</text>
+        <text x="120" y="108" text-anchor="middle" style="font-size:40px;font-weight:700;fill:var(--fg-strong);letter-spacing:-.02em">62%</text>
+        <text class="catlabel" x="120" y="126" text-anchor="middle">budget consumed</text>
+        <g class="axislabel"><text x="26" y="140">0%</text><text x="196" y="140">100%</text></g>
+        <line class="axisline" x1="20" y1="150" x2="220" y2="150"/>
+        <text class="catlabel" x="20" y="164">Mean clock left: 1 d 19 h</text>
+      </svg>
+      <figcaption>
+        <p class="chartsummary"><b>Text summary.</b> Across all open cases <b>62%</b> of the aggregate SLA budget is consumed, below the 75% at-risk threshold. Mean remaining clock is <b>1 day 19 hours</b>. Three cases sit beyond 100% and are recorded as breached.</p>
+      </figcaption>
+    </figure>
+  </div>
+
+  <!-- Case table -->
+  <section class="card card--flush mt">
+    <div class="card__head">
+      <h3 class="card__title">Cases</h3>
+      <span class="card__note">Search covers open and closed cases &mdash; full history retained</span>
+    </div>
+    <div class="filters">
+      <div class="field" style="flex:1 1 320px">
+        <label class="field__label" for="wl-search">Search past &amp; present cases</label>
+        <input class="input input--search" id="wl-search" type="search" placeholder="Case ref, client name, approver, jurisdiction…">
+      </div>
+      <div class="field">
+        <label class="field__label" for="wl-band">Risk band</label>
+        <select class="select" id="wl-band">
+          <option value="all">All bands</option>
+          <option value="low">Low (0&ndash;39)</option>
+          <option value="medium">Medium (40&ndash;69)</option>
+          <option value="high">High (70&ndash;100)</option>
+        </select>
+      </div>
+      <div class="field">
+        <label class="field__label" for="wl-status">Status</label>
+        <select class="select" id="wl-status">
+          <option value="all">All statuses</option>
+          <option value="OPEN">Open</option>
+          <option value="RETURNED">Returned</option>
+          <option value="IN REVIEW">In review</option>
+          <option value="ESCALATED">Escalated</option>
+          <option value="APPROVED">Approved</option>
+          <option value="REJECTED">Rejected</option>
+        </select>
+      </div>
+      <div class="field">
+        <span class="field__label">Matching</span>
+        <span class="chip"><b id="wl-count" class="tnum">10</b>&nbsp;of 10 shown</span>
+      </div>
+      <div class="field" style="margin-left:auto">
+        <span class="field__label">&nbsp;</span>
+        <button class="btn" type="button" data-goto="reports">Export results as CSV</button>
+      </div>
+    </div>
+    <div class="tablewrap">
+      <table class="data">
+        <thead>
+          <tr>
+            <th scope="col">Case ref</th>
+            <th scope="col">Client</th>
+            <th scope="col">Status</th>
+            <th scope="col">Risk band</th>
+            <th scope="col" class="num">Score</th>
+            <th scope="col">Assigned approver</th>
+            <th scope="col">SLA remaining</th>
+            <th scope="col">Flags</th>
+          </tr>
+        </thead>
+        <tbody id="wl-body">
+          <tr data-band="high" data-status="ESCALATED" class="row--breach">
+            <td><a class="ref" href="#case" data-goto="case">KYC-2026-0412</a></td>
+            <td class="client">Meridian Freight Holdings Ltd</td>
+            <td><span class="state state--escalated">Escalated</span></td>
+            <td><span class="pill pill--high"><span class="pill__dot"></span>High</span></td>
+            <td class="num">76</td>
+            <td>Priya Raman &middot; <span class="muted small">Compliance Officer</span></td>
+            <td class="num" style="color:var(--signal-breach)">&minus;6 h 20 m</td>
+            <td><span class="flag flag--breach">SLA breached</span></td>
+          </tr>
+          <tr data-band="high" data-status="ESCALATED" class="row--atrisk">
+            <td><span class="ref">KYC-2026-0409</span></td>
+            <td class="client">Verdant Mineral Trading FZE</td>
+            <td><span class="state state--escalated">Escalated</span></td>
+            <td><span class="pill pill--high"><span class="pill__dot"></span>High</span></td>
+            <td class="num">73</td>
+            <td>Priya Raman &middot; <span class="muted small">Compliance Officer</span></td>
+            <td class="num" style="color:var(--signal-atrisk)">2 h 15 m</td>
+            <td><span class="flag flag--atrisk">At risk</span></td>
+          </tr>
+          <tr data-band="medium" data-status="IN REVIEW" class="row--atrisk">
+            <td><span class="ref">KYC-2026-0407</span></td>
+            <td class="client">Northwind Analytics GmbH</td>
+            <td><span class="state state--review">In review</span></td>
+            <td><span class="pill pill--med"><span class="pill__dot"></span>Medium</span></td>
+            <td class="num">58</td>
+            <td>Daniel Osei &middot; <span class="muted small">Senior Analyst</span></td>
+            <td class="num" style="color:var(--signal-atrisk)">9 h 45 m</td>
+            <td><span class="flag flag--atrisk">At risk</span></td>
+          </tr>
+          <tr data-band="high" data-status="ESCALATED">
+            <td><span class="ref">KYC-2026-0418</span></td>
+            <td class="client">Calder Bay Logistics SA</td>
+            <td><span class="state state--escalated">Escalated</span></td>
+            <td><span class="pill pill--high"><span class="pill__dot"></span>High</span></td>
+            <td class="num">81</td>
+            <td>Priya Raman &middot; <span class="muted small">Compliance Officer</span></td>
+            <td class="num">21 h 10 m</td>
+            <td><span class="flag flag--ok">Inside SLA</span></td>
+          </tr>
+          <tr data-band="medium" data-status="RETURNED">
+            <td><span class="ref">KYC-2026-0399</span></td>
+            <td class="client">Sable Grove Nominees Ltd</td>
+            <td><span class="state state--returned">Returned</span></td>
+            <td><span class="pill pill--med"><span class="pill__dot"></span>Medium</span></td>
+            <td class="num">61</td>
+            <td>Laura Whitfield &middot; <span class="muted small">Senior Analyst</span></td>
+            <td class="num muted">Clock paused</td>
+            <td><span class="flag flag--lock">3 docs missing</span></td>
+          </tr>
+          <tr data-band="medium" data-status="IN REVIEW">
+            <td><span class="ref">KYC-2026-0402</span></td>
+            <td class="client">Pinehurst Care Group Ltd</td>
+            <td><span class="state state--review">In review</span></td>
+            <td><span class="pill pill--med"><span class="pill__dot"></span>Medium</span></td>
+            <td class="num">47</td>
+            <td>Daniel Osei &middot; <span class="muted small">Senior Analyst</span></td>
+            <td class="num">1 d 03 h</td>
+            <td><span class="flag flag--ok">Inside SLA</span></td>
+          </tr>
+          <tr data-band="low" data-status="OPEN">
+            <td><span class="ref">KYC-2026-0421</span></td>
+            <td class="client">Harrow &amp; Finch Advisory LLP</td>
+            <td><span class="state state--open">Open</span></td>
+            <td><span class="pill pill--low"><span class="pill__dot"></span>Low</span></td>
+            <td class="num">24</td>
+            <td class="muted">Unassigned</td>
+            <td class="num">4 d 02 h</td>
+            <td><span class="flag flag--ok">Inside SLA</span></td>
+          </tr>
+          <tr data-band="low" data-status="IN REVIEW">
+            <td><span class="ref">KYC-2026-0416</span></td>
+            <td class="client">Blue Larkspur Foods Ltd</td>
+            <td><span class="state state--review">In review</span></td>
+            <td><span class="pill pill--low"><span class="pill__dot"></span>Low</span></td>
+            <td class="num">37</td>
+            <td>Maya Adeyemi &middot; <span class="muted small">KYC Analyst</span></td>
+            <td class="num">2 d 06 h</td>
+            <td><span class="flag flag--ok">Inside SLA</span></td>
+          </tr>
+          <tr data-band="low" data-status="APPROVED">
+            <td><span class="ref">KYC-2026-0388</span></td>
+            <td class="client">Tessellate Robotics Inc</td>
+            <td><span class="state state--approved">Approved</span></td>
+            <td><span class="pill pill--low"><span class="pill__dot"></span>Low</span></td>
+            <td class="num">31</td>
+            <td>Maya Adeyemi &middot; <span class="muted small">KYC Analyst</span></td>
+            <td class="num muted">Closed in 3 d 04 h</td>
+            <td><span class="chip">Next review 2029-07-14</span></td>
+          </tr>
+          <tr data-band="high" data-status="REJECTED">
+            <td><span class="ref">KYC-2026-0375</span></td>
+            <td class="client">Ovrland Commodities DMCC</td>
+            <td><span class="state state--rejected">Rejected</span></td>
+            <td><span class="pill pill--high"><span class="pill__dot"></span>High</span></td>
+            <td class="num">88</td>
+            <td>Priya Raman &middot; <span class="muted small">Compliance Officer</span></td>
+            <td class="num muted">Closed in 6 d 11 h</td>
+            <td><span class="chip">Reason recorded</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</section>
+<!-- ================= CASE ================= -->
+<section class="screen" id="screen-case" aria-label="Case file" hidden>
+  <div class="screenhead">
+    <div>
+      <h2 class="screenhead__title">KYC-2026-0412 &middot; Meridian Freight Holdings Ltd</h2>
+      <p class="screenhead__meta">Created from client submission SUB-88214 on 21 Jul 2026 &middot; deterministic completeness check and scoring completed automatically</p>
+    </div>
+    <div class="screenhead__actions">
+      <button class="btn" type="button" data-goto="score">Score breakdown</button>
+      <button class="btn" type="button" data-goto="memo">Risk memo v3</button>
+      <button class="btn" type="button" data-goto="audit">Audit trail</button>
+    </div>
+  </div>
+
+  <div class="grid grid--kpi5">
+    <div class="kpi kpi--high">
+      <div class="kpi__label">Computed score</div>
+      <div class="kpi__value tnum">76</div>
+      <div class="kpi__foot"><span class="pill pill--high"><span class="pill__dot"></span>High band</span></div>
+    </div>
+    <div class="kpi kpi--alert">
+      <div class="kpi__label">SLA status</div>
+      <div class="kpi__value tnum" style="color:var(--signal-breach)">&minus;6:20</div>
+      <div class="kpi__foot"><span class="flag flag--breach">Breached</span></div>
+    </div>
+    <div class="kpi">
+      <div class="kpi__label">Documents complete</div>
+      <div class="kpi__value tnum">5<small>/ 6</small></div>
+      <div class="kpi__foot"><span class="kpi__delta kpi__delta--bad">1 conditional item outstanding</span></div>
+    </div>
+    <div class="kpi kpi--med">
+      <div class="kpi__label">Escalation stage</div>
+      <div class="kpi__value tnum">2<small>of 3</small></div>
+      <div class="kpi__foot"><span class="kpi__delta">Head of Financial Crime notified</span></div>
+    </div>
+    <div class="kpi">
+      <div class="kpi__label">Next review due</div>
+      <div class="kpi__value" style="font-size:26px">2027-01-21</div>
+      <div class="kpi__foot"><span class="kpi__delta">High band cadence: 6 months</span></div>
+    </div>
+  </div>
+
+  <div class="grid grid--12-8">
+    <div class="stack">
+      <!-- Client identity -->
+      <section class="card">
+        <div class="card__head">
+          <h3 class="card__title">Client identity</h3>
+          <span class="card__note">Sourced from client submission &middot; read-only after case creation</span>
+        </div>
+        <dl class="deflist">
+          <dt>Legal name</dt><dd>Meridian Freight Holdings Ltd</dd>
+          <dt>Entity type</dt><dd>Private limited company, 4-layer holding structure</dd>
+          <dt>Registration</dt><dd>HE 418 992 &middot; Republic of Cyprus &middot; incorporated 14 Mar 2019</dd>
+          <dt>Registered address</dt><dd>17 Arch. Makariou III, Nicosia 1065, Cyprus</dd>
+          <dt>Operating hubs</dt><dd>Nicosia (CY), Jebel Ali Free Zone (AE), Rotterdam (NL)</dd>
+          <dt>Industry</dt><dd>Freight forwarding &amp; trade finance intermediation (SIC 52290)</dd>
+          <dt>Expected activity</dt><dd>&pound;4.2 m annual throughput across 12 corridors</dd>
+          <dt>Relationship owner</dt><dd>Ines Faro &middot; Corporate Banking, Client Relationship Team</dd>
+        </dl>
+      </section>
+
+      <!-- Document checklist -->
+      <section class="card">
+        <div class="card__head">
+          <h3 class="card__title">Document completeness check</h3>
+          <span class="card__note">Document Checklist v2.0 &middot; deterministic &mdash; no agent involvement</span>
+        </div>
+        <div class="row" style="margin-bottom:14px">
+          <div class="meter" style="flex:1 1 320px" role="img" aria-label="Completeness meter: 5 of 6 required items pass, 1 fails, plus 1 not applicable.">
+            <span class="meter__cell meter__cell--pass"></span>
+            <span class="meter__cell meter__cell--pass"></span>
+            <span class="meter__cell meter__cell--pass"></span>
+            <span class="meter__cell meter__cell--pass"></span>
+            <span class="meter__cell meter__cell--pass"></span>
+            <span class="meter__cell meter__cell--fail"></span>
+          </div>
+          <span class="chip"><b>83%</b>&nbsp;complete</span>
+          <span class="flag flag--atrisk">1 item failing</span>
+        </div>
+
+        <ul class="checklist">
+          <li class="checkitem">
+            <span class="checkitem__icon" aria-hidden="true">&#10003;</span>
+            <span>
+              <span class="checkitem__name">Certificate of incorporation</span><br>
+              <span class="checkitem__meta">CY-HE418992-COI.pdf &middot; verified against registry extract 21 Jul 2026</span>
+            </span>
+            <span class="pill pill--low"><span class="pill__dot"></span>Pass</span>
+          </li>
+          <li class="checkitem">
+            <span class="checkitem__icon" aria-hidden="true">&#10003;</span>
+            <span>
+              <span class="checkitem__name">Register of directors</span><br>
+              <span class="checkitem__meta">6 directors listed, 2 flagged as nominee appointments &middot; dated 09 Jul 2026</span>
+            </span>
+            <span class="pill pill--low"><span class="pill__dot"></span>Pass</span>
+          </li>
+          <li class="checkitem">
+            <span class="checkitem__icon" aria-hidden="true">&#10003;</span>
+            <span>
+              <span class="checkitem__name">Beneficial ownership declaration (&ge; 25% holdings)</span><br>
+              <span class="checkitem__meta">3 UBOs declared: 41%, 27%, 25% &middot; residual 7% held by employee trust</span>
+            </span>
+            <span class="pill pill--low"><span class="pill__dot"></span>Pass</span>
+          </li>
+          <li class="checkitem">
+            <span class="checkitem__icon" aria-hidden="true">&#10003;</span>
+            <span>
+              <span class="checkitem__name">Proof of registered address (dated within 3 months)</span><br>
+              <span class="checkitem__meta">Utility statement dated 02 Jul 2026 &mdash; 26 days old, inside the 3-month window</span>
+            </span>
+            <span class="pill pill--low"><span class="pill__dot"></span>Pass</span>
+          </li>
+          <li class="checkitem">
+            <span class="checkitem__icon" aria-hidden="true">&#10003;</span>
+            <span>
+              <span class="checkitem__name">Group structure chart <em class="muted">(conditional: multi-layer structures)</em></span><br>
+              <span class="checkitem__meta">Condition triggered &mdash; 4 layers exceeds the 2-layer threshold &middot; chart received 23 Jul 2026</span>
+            </span>
+            <span class="pill pill--low"><span class="pill__dot"></span>Pass</span>
+          </li>
+          <li class="checkitem checkitem--fail">
+            <span class="checkitem__icon" aria-hidden="true">&#10007;</span>
+            <span>
+              <span class="checkitem__name">Operating licence <em class="muted">(conditional: regulated freight / customs brokerage)</em></span><br>
+              <span class="checkitem__meta">Condition triggered by SIC 52290 &mdash; DMCC customs brokerage licence not supplied for the Jebel Ali entity</span>
+            </span>
+            <span class="pill pill--high"><span class="pill__dot"></span>Fail</span>
+          </li>
+        </ul>
+      </section>
+
+      <!-- Returned case example -->
+      <section class="card">
+        <div class="card__head">
+          <h3 class="card__title">Returned-to-client register</h3>
+          <span class="card__note">Comparison case KYC-2026-0399 &middot; Sable Grove Nominees Ltd</span>
+        </div>
+        <div class="callout callout--warn" style="margin-bottom:14px">
+          <span class="callout__title">Status: Returned &mdash; SLA clock paused</span>
+          Returned to the client relationship team on 24 Jul 2026 at 15:02 UTC by Laura Whitfield (Senior Analyst) with the itemised list below. The clock resumes on resubmission.
+        </div>
+        <ol class="checklist">
+          <li class="checkitem checkitem--fail">
+            <span class="checkitem__icon" aria-hidden="true">1</span>
+            <span><span class="checkitem__name">Beneficial ownership declaration &ge; 25%</span><br>
+              <span class="checkitem__meta">Declaration accounts for 68% of shareholding; 32% unattributed. Full chain to natural persons required.</span></span>
+            <span class="pill pill--high"><span class="pill__dot"></span>Missing</span>
+          </li>
+          <li class="checkitem checkitem--fail">
+            <span class="checkitem__icon" aria-hidden="true">2</span>
+            <span><span class="checkitem__name">Proof of registered address dated within 3 months</span><br>
+              <span class="checkitem__meta">Document supplied is dated 11 Feb 2026 &mdash; 163 days old, outside the permitted window.</span></span>
+            <span class="pill pill--high"><span class="pill__dot"></span>Stale</span>
+          </li>
+          <li class="checkitem checkitem--fail">
+            <span class="checkitem__icon" aria-hidden="true">3</span>
+            <span><span class="checkitem__name">Group structure chart (conditional)</span><br>
+              <span class="checkitem__meta">Condition triggered by nominee shareholder arrangement; no chart received.</span></span>
+            <span class="pill pill--high"><span class="pill__dot"></span>Not supplied</span>
+          </li>
+        </ol>
+      </section>
+    </div>
+
+    <!-- Decision column -->
+    <div class="stack">
+      <section class="card">
+        <div class="card__head">
+          <h3 class="card__title">Decision authority</h3>
+        </div>
+        <svg viewBox="0 0 300 120" width="100%" height="120" role="img"
+             aria-label="Decision authority ladder. Low band: KYC Analyst. Medium band: Senior Analyst. High band: Compliance Officer. This case is High band, so a Compliance Officer must approve.">
+          <g>
+            <rect x="6" y="8" width="288" height="30" rx="6" fill="var(--band-low-soft)" stroke="#bfe6d3"/>
+            <circle cx="24" cy="23" r="5" fill="var(--band-low)"/>
+            <text class="catlabel" x="38" y="27" style="fill:var(--band-low-ink)">Low 0&ndash;39 &rarr; KYC Analyst may approve</text>
+            <rect x="6" y="44" width="288" height="30" rx="6" fill="var(--band-medium-soft)" stroke="#f0dcb4"/>
+            <rect x="19" y="54" width="10" height="10" fill="var(--band-medium)"/>
+            <text class="catlabel" x="38" y="63" style="fill:var(--band-medium-ink)">Medium 40&ndash;69 &rarr; Senior Analyst may approve</text>
+            <rect x="6" y="80" width="288" height="32" rx="6" fill="var(--band-high-soft)" stroke="var(--band-high)" stroke-width="2"/>
+            <rect x="19" y="90" width="10" height="10" fill="var(--band-high)" transform="rotate(45 24 95)"/>
+            <text class="catlabel" x="38" y="94" style="fill:var(--band-high-ink);font-weight:800">High 70&ndash;100 &rarr; Compliance Officer only</text>
+            <text class="axislabel" x="38" y="107" style="fill:var(--band-high-ink)">&#9656; THIS CASE &mdash; score 76</text>
+          </g>
+        </svg>
+        <p class="chartsummary"><b>Text summary.</b> This case scores <b>76</b>, placing it in the <b>High</b> band. Under the Risk Rating Matrix v2.1 only a <b>Compliance Officer</b> may record the approval decision.</p>
+      </section>
+
+      <section class="card">
+        <div class="card__head">
+          <h3 class="card__title">Approval</h3>
+          <span class="card__note">Explicit human action required</span>
+        </div>
+        <div class="callout callout--danger" style="margin-bottom:14px">
+          <span class="callout__title">Approval unavailable to you</span>
+          <b>High band requires Compliance Officer approval &mdash; your role: KYC Analyst.</b>
+          The control below is disabled for display purposes only; the authorization decision is enforced server-side and a request submitted directly to the API would be rejected the same way.
+        </div>
+
+        <div class="stack stack--sm">
+          <label class="field">
+            <span class="field__label">Approval rationale <span class="req">&#42; required for High band</span></span>
+            <textarea class="textarea" rows="3" placeholder="Record the reasoning that supports approving a High-band relationship, including mitigating controls applied." disabled></textarea>
+          </label>
+          <button class="btn btn--primary" type="button" disabled aria-disabled="true"
+                  title="High band requires Compliance Officer approval — your role: KYC Analyst">
+            Approve case &mdash; requires Compliance Officer
+          </button>
+          <p class="small muted">Approval records the approver's named identity, the role held at that moment, the score and matrix version applied, and the rationale text. No job, workflow step or agent may record an approval.</p>
+        </div>
+
+        <hr class="divider">
+
+        <div class="stack stack--sm">
+          <label class="field">
+            <span class="field__label">Rejection reason <span class="req">&#42; required</span></span>
+            <textarea class="textarea" rows="3" placeholder="A rejection cannot be recorded without a written reason. This text is sent to the client relationship team and stored in the audit trail."></textarea>
+          </label>
+          <button class="btn btn--danger" type="button">Reject case &amp; notify relationship team</button>
+        </div>
+
+        <hr class="divider">
+
+        <div class="stack stack--sm">
+          <span class="eyebrow">Policy exception path</span>
+          <div class="callout callout--lock">
+            <b>No waive action exists for KYC Analyst or Senior Analyst roles.</b>
+            A failing checklist item can only be dispositioned through a recorded <b>policy exception</b>, which is a
+            <b>Compliance-Officer-only</b> capability requiring a written justification and an expiry date. Exceptions
+            appear in the audit trail and in the weekly operations report.
+          </div>
+          <button class="btn" type="button" disabled aria-disabled="true">Raise policy exception &mdash; Compliance Officer only</button>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="card__head"><h3 class="card__title">Escalation &amp; SLA</h3></div>
+        <div class="stack stack--sm">
+          <div class="row"><span class="flag flag--breach">SLA breached</span><span class="small muted">High-band target: 48 h to decision</span></div>
+          <dl class="deflist">
+            <dt>Opened</dt><dd>21 Jul 2026, 08:40 UTC</dd>
+            <dt>Target</dt><dd>25 Jul 2026, 08:40 UTC</dd>
+            <dt>Overdue by</dt><dd style="color:var(--signal-breach)">6 h 20 m</dd>
+            <dt>Step 1</dt><dd>Compliance Officer notified &mdash; 24 Jul, 20:40</dd>
+            <dt>Step 2</dt><dd>Head of Financial Crime notified &mdash; 25 Jul, 08:41</dd>
+            <dt>Step 3</dt><dd class="muted">COO &mdash; due 26 Jul, 08:41</dd>
+          </dl>
+        </div>
+      </section>
+    </div>
+  </div>
+</section>
+<!-- ================= MEMO ================= -->
+<section class="screen" id="screen-memo" aria-label="Risk assessment memo" hidden>
+  <div class="screenhead">
+    <div>
+      <h2 class="screenhead__title">Risk assessment memo &middot; KYC-2026-0412</h2>
+      <p class="screenhead__meta">Meridian Freight Holdings Ltd &middot; version 3 &middot; generated 26 Jul 2026, 11:07 UTC</p>
+    </div>
+    <div class="screenhead__actions">
+      <button class="btn" type="button">Print</button>
+      <button class="btn" type="button" data-goto="reports">Export PDF / CSV</button>
+      <button class="btn btn--primary" type="button">Adopt memo as my assessment</button>
+    </div>
+  </div>
+
+  <div class="machinebanner">
+    <span class="machinebanner__tag">Machine-drafted</span>
+    <p class="machinebanner__text">
+      This memo was drafted by the KYC memo agent, not by a person. The label is part of the memo record itself:
+      it <b>persists on screen, on every printed page, and in every export</b> (PDF, CSV, API) and cannot be removed
+      by any role. It is cleared only when a named human adopts the text as their own assessment, at which point the
+      record shows both the machine draft and the adopting human.
+    </p>
+  </div>
+
+  <div class="grid grid--kpi">
+    <div class="kpi">
+      <div class="kpi__label">Grounding coverage</div>
+      <div class="kpi__value tnum">94<small>%</small></div>
+      <div class="kpi__foot"><span class="kpi__delta">16 of 17 claims cite a source</span></div>
+    </div>
+    <div class="kpi kpi--warn">
+      <div class="kpi__label">Evidence gaps declared</div>
+      <div class="kpi__value tnum">1</div>
+      <div class="kpi__foot"><span class="kpi__delta kpi__delta--bad">Stated, not inferred</span></div>
+    </div>
+    <div class="kpi">
+      <div class="kpi__label">Resolvable citations</div>
+      <div class="kpi__value tnum">7<small>/ 7</small></div>
+      <div class="kpi__foot"><span class="kpi__delta kpi__delta--good">All resolve to a version id</span></div>
+    </div>
+    <div class="kpi">
+      <div class="kpi__label">Versions retained</div>
+      <div class="kpi__value tnum">3</div>
+      <div class="kpi__foot"><span class="kpi__delta">v1 and v2 immutable</span></div>
+    </div>
+  </div>
+
+  <div class="grid grid--12-8">
+    <article class="card memo">
+      <div class="card__head">
+        <h3 class="card__title">Memo body &mdash; v3</h3>
+        <span class="card__note">Agent mode: <span data-agent-mode-readout>Draft</span></span>
+      </div>
+
+      <h4>1. Beneficial ownership</h4>
+      <p>
+        The client declares three beneficial owners at or above the 25% threshold: a 41% holding by
+        M. Aristidou (Cyprus resident), a 27% holding by R. Al-Fahim (UAE resident) and a 25% holding by
+        Larkmoor Trust Company Ltd (Jersey). A residual 7% sits with an employee benefit trust and therefore falls
+        below the declaration threshold.<span class="cite" title="KYC Onboarding Policy v3.2, §4.1 — beneficial ownership disclosure at 25%">1</span>
+        The ownership chain traverses four corporate layers, which exceeds the two-layer threshold at which a group
+        structure chart becomes mandatory; the chart was supplied on 23 Jul 2026 and reconciles to the declaration
+        without residual gaps.<span class="cite" title="Document Checklist v2.0, §2.6 — conditional structure chart">2</span>
+        Two of the six registered directors are nominee appointments, which the matrix treats as an
+        entity-structure aggravating factor rather than a stand-alone adverse finding.<span class="cite" title="Risk Rating Matrix v2.1, factor 2 — entity structure, nominee arrangements">3</span>
+      </p>
+
+      <h4>2. Jurisdiction exposure</h4>
+      <p>
+        The client is incorporated in Cyprus with operating hubs in the Jebel Ali Free Zone (UAE) and Rotterdam
+        (Netherlands). The UAE free-zone nexus combined with trade-finance intermediation places the relationship in
+        the elevated jurisdiction tier, scoring 82 of 100 on the jurisdiction factor before weighting.<span class="cite" title="Risk Rating Matrix v2.1, factor 1 — jurisdiction, elevated tier definitions">4</span>
+        Twelve declared trade corridors include two transiting jurisdictions subject to enhanced monitoring under the
+        firm's country list.<span class="cite" title="KYC Onboarding Policy v3.2, §6.3 — enhanced monitoring country list">5</span>
+      </p>
+
+      <h4>3. Sanctions screening results</h4>
+      <p>
+        Screening returned one <b>true positive</b> against the 27% beneficial owner, matched to a designated party
+        listed under a sectoral programme. Under the matrix a confirmed true positive forces the case into the High
+        band irrespective of the weighted arithmetic; here the weighted total of 76 already sits in the High band, so
+        the override is confirmatory rather than determinative.<span class="cite" title="Risk Rating Matrix v2.1, §5 — sanctions true-positive override to High band">3</span>
+        Two further hits were dispositioned as false positives on date-of-birth and middle-name mismatch, with the
+        disposition rationale recorded against each hit.<span class="cite" title="KYC Onboarding Policy v3.2, §7.2 — screening hit disposition">1</span>
+      </p>
+
+      <div class="gap-note">
+        <b>Evidence not present in the grounding set.</b> The DMCC customs brokerage licence for the Jebel Ali entity
+        is a conditional checklist item that has not been supplied. No adverse-media search results for
+        R. Al-Fahim were retrievable from the case record. This memo therefore makes <b>no assertion</b> about the
+        regulatory standing of the Jebel Ali entity or about adverse media exposure for that owner. The gap must be
+        closed by a human before an approval decision is recorded.<span class="cite" title="Document Checklist v2.0, §3.1 — conditional operating licence">2</span>
+      </div>
+
+      <h4>4. Computed score</h4>
+      <p>
+        The deterministic engine computed a total of <b>76</b> using Risk Rating Matrix <b>v2.1</b>: jurisdiction
+        82 &times; 0.30 = 24.6; entity structure 76 &times; 0.25 = 19.0; industry 68 &times; 0.20 = 13.6; sanctions
+        screening 90 &times; 0.15 = 13.5; expected activity 55 &times; 0.10 = 5.5.<span class="cite" title="Risk Rating Matrix v2.1, weighting table">3</span>
+        A total of 76 falls in the High band (70&ndash;100), which sets a six-month review cadence and requires
+        Compliance Officer approval, and which set the 48-hour decision SLA now breached by 6 h 20 m.<span class="cite" title="Escalation & SLA Policy, §2 — high-band decision targets and notification ladder">6</span>
+        The agent did not compute, adjust or propose any element of this score; it reports the engine output.<span class="cite" title="KYC Onboarding Policy v3.2, §9.4 — agent may not influence scoring">7</span>
+      </p>
+
+      <h4>5. Recommendation</h4>
+      <p>
+        On the grounded evidence the relationship presents elevated but not prohibitive risk, subject to closing the
+        licence gap and applying enhanced ongoing monitoring on the two flagged corridors. This is a drafting
+        recommendation only; the decision rests with a Compliance Officer.<span class="cite" title="KYC Onboarding Policy v3.2, §10 — decision authority">1</span>
+      </p>
+
+      <hr class="divider">
+      <div class="callout callout--info">
+        <span class="callout__title">Adoption &mdash; human takes ownership of this text</span>
+        Adopting the memo records that a named individual has read the draft, accepts the wording as their own
+        professional assessment, and takes responsibility for it. Adoption does <b>not</b> approve the case and does
+        <b>not</b> change its status. The machine-drafted provenance stays on the record permanently.
+        <div class="row" style="margin-top:12px">
+          <button class="btn btn--primary" type="button">Adopt as my assessment</button>
+          <button class="btn" type="button">Edit before adopting</button>
+          <button class="btn btn--ghost" type="button">Request a re-draft</button>
+        </div>
+      </div>
+    </article>
+
+    <div class="stack">
+      <!-- Grounding coverage chart -->
+      <figure class="card chartfig">
+        <div class="card__head"><h3 class="card__title">Grounding coverage</h3></div>
+        <svg viewBox="0 0 300 130" width="100%" height="130" role="img"
+             aria-label="Grounding coverage: 16 of 17 memo claims are supported by a cited source, one claim is explicitly declared as an evidence gap, zero claims are unsupported.">
+          <g class="axislabel"><text x="6" y="12">0</text><text x="140" y="12">50%</text><text x="272" y="12">100%</text></g>
+          <line class="gridline" x1="6" y1="18" x2="6" y2="96"/>
+          <line class="gridline" x1="150" y1="18" x2="150" y2="96"/>
+          <line class="gridline" x1="294" y1="18" x2="294" y2="96"/>
+          <text class="catlabel" x="6" y="34">Cited to a versioned source</text>
+          <rect x="6" y="38" width="271" height="14" rx="3" fill="var(--primary-600)"/>
+          <text class="vallabel" x="283" y="49">16</text>
+          <text class="catlabel" x="6" y="70">Declared evidence gap</text>
+          <rect x="6" y="74" width="17" height="14" rx="3" fill="var(--signal-atrisk)"/>
+          <text class="vallabel" x="29" y="85">1</text>
+          <text class="catlabel" x="6" y="106">Unsupported assertion</text>
+          <rect x="6" y="110" width="2" height="14" rx="1" fill="var(--border-strong)"/>
+          <text class="vallabel" x="14" y="121">0</text>
+        </svg>
+        <figcaption>
+          <p class="chartsummary"><b>Text summary.</b> Sixteen of seventeen claims resolve to a named policy provision with a version id. One item is published as an explicit gap. <b>No claim is asserted without a source.</b> Retrieval was restricted to the four versioned policy documents plus this case record.</p>
+        </figcaption>
+      </figure>
+
+      <!-- Citations -->
+      <section class="card">
+        <div class="card__head">
+          <h3 class="card__title">Citations</h3>
+          <span class="card__note">Each marker resolves</span>
+        </div>
+        <div class="tablewrap">
+          <table class="data">
+            <thead><tr><th>#</th><th>Provision</th><th>Source &amp; version</th></tr></thead>
+            <tbody>
+              <tr><td class="ref">1</td><td>&sect;4.1, &sect;7.2, &sect;10 &mdash; UBO disclosure, hit disposition, decision authority</td><td>KYC Onboarding Policy <b>v3.2</b></td></tr>
+              <tr><td class="ref">2</td><td>&sect;2.6, &sect;3.1 &mdash; conditional structure chart, conditional operating licence</td><td>Document Checklist <b>v2.0</b></td></tr>
+              <tr><td class="ref">3</td><td>Factor 2, factor weighting table, &sect;5 true-positive override</td><td>Risk Rating Matrix <b>v2.1</b></td></tr>
+              <tr><td class="ref">4</td><td>Factor 1 &mdash; jurisdiction tiers</td><td>Risk Rating Matrix <b>v2.1</b></td></tr>
+              <tr><td class="ref">5</td><td>&sect;6.3 &mdash; enhanced monitoring country list</td><td>KYC Onboarding Policy <b>v3.2</b></td></tr>
+              <tr><td class="ref">6</td><td>&sect;2 &mdash; high-band decision targets, notification ladder</td><td>Escalation &amp; SLA Policy <b>v1.4</b></td></tr>
+              <tr><td class="ref">7</td><td>&sect;9.4 &mdash; agent may not influence scoring</td><td>KYC Onboarding Policy <b>v3.2</b></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Version history -->
+      <section class="card locked">
+        <span class="locked__ribbon">Immutable</span>
+        <div class="card__head"><h3 class="card__title">Version history</h3></div>
+        <div class="versions">
+          <div class="version version--current">
+            <span class="version__id">v3</span>
+            <span>
+              <b>Current draft</b><br>
+              <span class="version__meta">26 Jul 2026, 11:07 UTC &middot; machine-drafted &middot; regenerated after structure chart received</span>
+            </span>
+            <span class="pill pill--high"><span class="pill__dot"></span>Score 76</span>
+          </div>
+          <div class="version">
+            <span class="version__id">v2</span>
+            <span>
+              Superseded &mdash; retained in full<br>
+              <span class="version__meta">24 Jul 2026, 16:22 UTC &middot; machine-drafted &middot; two evidence gaps declared</span>
+            </span>
+            <button class="btn btn--sm" type="button">View v2</button>
+          </div>
+          <div class="version">
+            <span class="version__id">v1</span>
+            <span>
+              Superseded &mdash; retained in full<br>
+              <span class="version__meta">22 Jul 2026, 09:58 UTC &middot; machine-drafted &middot; pre-screening, provisional score 71</span>
+            </span>
+            <button class="btn btn--sm" type="button">View v1</button>
+          </div>
+        </div>
+        <p class="small muted" style="margin-top:12px">Prior versions are never overwritten or deleted. Each is stored with its own machine-drafted label, its citation set and the policy versions in force at generation time.</p>
+      </section>
+    </div>
+  </div>
+</section>
+<!-- ================= SCORE ================= -->
+<section class="screen" id="screen-score" aria-label="Score model" hidden>
+  <div class="screenhead">
+    <div>
+      <h2 class="screenhead__title">Risk score computation &middot; KYC-2026-0412</h2>
+      <p class="screenhead__meta">Deterministic engine &middot; Risk Rating Matrix <b>v2.1</b> applied and recorded on the case &middot; computed 22 Jul 2026, 09:12 UTC</p>
+    </div>
+    <div class="screenhead__actions">
+      <button class="btn" type="button" data-goto="audit">Show computation in audit trail</button>
+      <button class="btn" type="button" data-goto="case">Back to case</button>
+    </div>
+  </div>
+
+  <div class="callout callout--danger" style="margin-bottom:var(--gutter)">
+    <span class="callout__title">Sanctions true-positive &rarr; High band override</span>
+    Screening returned a <b>confirmed true positive</b> against beneficial owner R. Al-Fahim (27% holding).
+    Under Risk Rating Matrix v2.1 &sect;5, a confirmed true positive <b>forces the case into the High band regardless of
+    the weighted total</b>. The weighted total here is 76, which is already High, so the override is confirmatory.
+    The override cannot be cleared by re-scoring; it clears only if the hit is re-dispositioned as a false positive by a Compliance Officer, which is itself an audited action.
+  </div>
+
+  <div class="grid grid--kpi5">
+    <div class="kpi kpi--high">
+      <div class="kpi__label">Total weighted score</div>
+      <div class="kpi__value tnum">76</div>
+      <div class="kpi__foot"><span class="kpi__delta">Sum of 5 weighted contributions</span></div>
+    </div>
+    <div class="kpi kpi--high">
+      <div class="kpi__label">Band</div>
+      <div class="kpi__value" style="font-size:30px">High</div>
+      <div class="kpi__foot"><span class="kpi__delta">70&ndash;100</span></div>
+    </div>
+    <div class="kpi">
+      <div class="kpi__label">Review cadence</div>
+      <div class="kpi__value tnum">6<small>months</small></div>
+      <div class="kpi__foot"><span class="kpi__delta">Next: 2027-01-21</span></div>
+    </div>
+    <div class="kpi">
+      <div class="kpi__label">Required approver</div>
+      <div class="kpi__value" style="font-size:19px;line-height:1.25;margin-top:10px">Compliance<br>Officer</div>
+      <div class="kpi__foot"><span class="kpi__delta">Mandatory for High band</span></div>
+    </div>
+    <div class="kpi">
+      <div class="kpi__label">Matrix version applied</div>
+      <div class="kpi__value" style="font-size:30px">v2.1</div>
+      <div class="kpi__foot"><span class="kpi__delta">Recorded on the case record</span></div>
+    </div>
+  </div>
+
+  <!-- Factor contribution chart -->
+  <figure class="card chartfig">
+    <div class="card__head">
+      <h3 class="card__title">Factor contribution to the total</h3>
+      <span class="card__note">Bar length = weighted contribution &middot; hollow remainder = unused headroom for that factor</span>
+    </div>
+    <svg viewBox="0 0 800 300" width="100%" height="300" role="img"
+         aria-label="Horizontal bar chart of weighted factor contributions. Jurisdiction 24.6 of a possible 30. Entity structure 19.0 of 25. Industry 13.6 of 20. Sanctions screening 13.5 of 15. Expected activity 5.5 of 10. Total 76.2, rounded to 76.">
+      <!-- x axis -->
+      <g class="axislabel">
+        <text x="238" y="14">0</text>
+        <text x="316" y="14">7.5</text>
+        <text x="398" y="14">15</text>
+        <text x="478" y="14">22.5</text>
+        <text x="556" y="14">30 pts</text>
+      </g>
+      <g>
+        <line class="axisline" x1="240" y1="20" x2="240" y2="248"/>
+        <line class="gridline" x1="320" y1="20" x2="320" y2="248"/>
+        <line class="gridline" x1="400" y1="20" x2="400" y2="248"/>
+        <line class="gridline" x1="480" y1="20" x2="480" y2="248"/>
+        <line class="gridline" x1="560" y1="20" x2="560" y2="248"/>
+      </g>
+
+      <!-- Jurisdiction: 24.6 / max 30 -->
+      <text class="catlabel" x="10" y="46" style="font-weight:700;fill:var(--fg)">Jurisdiction</text>
+      <text class="axislabel" x="10" y="59">raw 82 &times; weight 0.30</text>
+      <rect x="240" y="32" width="320" height="26" rx="4" fill="none" stroke="var(--border-strong)" stroke-dasharray="3 3"/>
+      <rect x="240" y="32" width="262.4" height="26" rx="4" fill="var(--band-high)"/>
+      <text class="vallabel vallabel--inv" x="252" y="49">24.6 pts</text>
+      <text class="vallabel" x="570" y="49">32.3% of total</text>
+
+      <!-- Entity structure: 19.0 / 25 -->
+      <text class="catlabel" x="10" y="90" style="font-weight:700;fill:var(--fg)">Entity structure</text>
+      <text class="axislabel" x="10" y="103">raw 76 &times; weight 0.25</text>
+      <rect x="240" y="76" width="266.7" height="26" rx="4" fill="none" stroke="var(--border-strong)" stroke-dasharray="3 3"/>
+      <rect x="240" y="76" width="202.7" height="26" rx="4" fill="var(--band-high)" opacity=".82"/>
+      <text class="vallabel vallabel--inv" x="252" y="93">19.0 pts</text>
+      <text class="vallabel" x="570" y="93">24.9% of total</text>
+
+      <!-- Industry: 13.6 / 20 -->
+      <text class="catlabel" x="10" y="134" style="font-weight:700;fill:var(--fg)">Industry</text>
+      <text class="axislabel" x="10" y="147">raw 68 &times; weight 0.20</text>
+      <rect x="240" y="120" width="213.3" height="26" rx="4" fill="none" stroke="var(--border-strong)" stroke-dasharray="3 3"/>
+      <rect x="240" y="120" width="145.1" height="26" rx="4" fill="var(--band-medium)"/>
+      <text class="vallabel vallabel--inv" x="252" y="137">13.6 pts</text>
+      <text class="vallabel" x="570" y="137">17.8% of total</text>
+
+      <!-- Sanctions: 13.5 / 15 -->
+      <text class="catlabel" x="10" y="178" style="font-weight:700;fill:var(--fg)">Sanctions screening</text>
+      <text class="axislabel" x="10" y="191">raw 90 &times; weight 0.15</text>
+      <rect x="240" y="164" width="160" height="26" rx="4" fill="none" stroke="var(--border-strong)" stroke-dasharray="3 3"/>
+      <rect x="240" y="164" width="144" height="26" rx="4" fill="var(--band-high)"/>
+      <text class="vallabel vallabel--inv" x="252" y="181">13.5 pts</text>
+      <g transform="translate(392,171)"><rect width="12" height="12" fill="var(--band-high)" transform="rotate(45 6 6)"/></g>
+      <text class="vallabel" x="570" y="181">17.7% &middot; override source</text>
+
+      <!-- Expected activity: 5.5 / 10 -->
+      <text class="catlabel" x="10" y="222" style="font-weight:700;fill:var(--fg)">Expected activity</text>
+      <text class="axislabel" x="10" y="235">raw 55 &times; weight 0.10</text>
+      <rect x="240" y="208" width="106.7" height="26" rx="4" fill="none" stroke="var(--border-strong)" stroke-dasharray="3 3"/>
+      <rect x="240" y="208" width="58.7" height="26" rx="4" fill="var(--band-medium)" opacity=".8"/>
+      <text class="vallabel" x="306" y="225">5.5 pts</text>
+      <text class="vallabel" x="570" y="225">7.2% of total</text>
+
+      <!-- total -->
+      <line class="axisline" x1="10" y1="252" x2="780" y2="252" stroke="var(--border-strong)" stroke-width="2"/>
+      <text class="catlabel" x="10" y="274" style="font-weight:800;fill:var(--fg);font-size:13px">TOTAL</text>
+      <text class="vallabel" x="240" y="274" style="font-size:15px">24.6 + 19.0 + 13.6 + 13.5 + 5.5 = 76.2 &rarr; rounded to 76</text>
+      <text class="vallabel" x="570" y="274" style="fill:var(--band-high-ink);font-size:13px">&#9670; HIGH BAND</text>
+      <text class="axislabel" x="10" y="290">Weights sum to 1.00 &middot; maximum attainable total 100</text>
+    </svg>
+    <figcaption>
+      <div class="legend">
+        <span class="legend__item"><span class="legend__swatch legend__swatch--low"></span>Low-range factor (raw 0&ndash;39)</span>
+        <span class="legend__item"><span class="legend__swatch legend__swatch--med"></span>Medium-range factor (raw 40&ndash;69)</span>
+        <span class="legend__item"><span class="legend__swatch legend__swatch--high"></span>High-range factor (raw 70&ndash;100)</span>
+        <span class="legend__item"><span class="legend__swatch" style="background:none;border:1px dashed var(--border-strong)"></span>Unused headroom</span>
+      </div>
+      <p class="chartsummary"><b>Text summary.</b> Jurisdiction is the largest single contributor at <b>24.6 points (32.3% of the total)</b>, followed by entity structure at 19.0. Sanctions screening contributes 13.5 of a possible 15 &mdash; the factor is near-saturated because of the confirmed true positive, which also triggers the High-band override. Expected activity is the smallest contributor at 5.5. The five contributions sum to <b>76.2</b>, rounded to <b>76</b>.</p>
+    </figcaption>
+  </figure>
+
+  <div class="grid grid--12-8 mt">
+    <!-- Auditable computation table -->
+    <section class="card card--flush locked">
+      <span class="locked__ribbon">Engine output &mdash; not editable</span>
+      <div class="card__head">
+        <h3 class="card__title">Auditable computation</h3>
+      </div>
+      <div class="tablewrap">
+        <table class="data">
+          <thead>
+            <tr>
+              <th scope="col">Factor</th>
+              <th scope="col">Input from case record</th>
+              <th scope="col" class="num">Raw 0&ndash;100</th>
+              <th scope="col" class="num">Weight</th>
+              <th scope="col" class="num">Weighted contribution</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="pill pill--high"><span class="pill__dot"></span>Jurisdiction</span></td>
+              <td>Cyprus incorporation; Jebel Ali Free Zone hub; 2 of 12 corridors on the enhanced-monitoring list</td>
+              <td class="num">82</td><td class="num">0.30</td><td class="num">24.6</td>
+            </tr>
+            <tr>
+              <td><span class="pill pill--high"><span class="pill__dot"></span>Entity structure</span></td>
+              <td>4-layer holding chain; 3 UBOs &ge; 25%; 2 of 6 directors are nominee appointments</td>
+              <td class="num">76</td><td class="num">0.25</td><td class="num">19.0</td>
+            </tr>
+            <tr>
+              <td><span class="pill pill--med"><span class="pill__dot"></span>Industry</span></td>
+              <td>Freight forwarding with trade-finance intermediation (SIC 52290) &mdash; MSB-adjacent</td>
+              <td class="num">68</td><td class="num">0.20</td><td class="num">13.6</td>
+            </tr>
+            <tr>
+              <td><span class="pill pill--high"><span class="pill__dot"></span>Sanctions screening</span></td>
+              <td>1 confirmed true positive (UBO, 27% holding); 2 hits dispositioned false positive</td>
+              <td class="num">90</td><td class="num">0.15</td><td class="num">13.5</td>
+            </tr>
+            <tr>
+              <td><span class="pill pill--med"><span class="pill__dot"></span>Expected activity</span></td>
+              <td>&pound;4.2 m annual throughput across 12 corridors; no cash-intensive component declared</td>
+              <td class="num">55</td><td class="num">0.10</td><td class="num">5.5</td>
+            </tr>
+          </tbody>
+          <tfoot>
+            <tr class="tfoot">
+              <td colspan="3">Total &mdash; Risk Rating Matrix v2.1</td>
+              <td class="num">1.00</td>
+              <td class="num">76.2 &rarr; <b>76</b></td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+      <div style="padding:16px var(--pad-card)">
+        <div class="callout callout--lock">
+          <span class="callout__title">Score integrity</span>
+          The score field is <b>never directly editable by any role</b> &mdash; not analyst, not senior analyst, not
+          compliance officer, not administrator, and not the AI agent. It exists only as the output of the
+          deterministic engine over the case inputs. A score changes only when an input changes, and every
+          recomputation writes a new audit entry recording the inputs, the matrix version and the before &rarr; after
+          total. The <b>matrix version applied (v2.1)</b> is persisted on the case so historical scores remain
+          reproducible after the matrix is revised.
+        </div>
+      </div>
+    </section>
+
+    <!-- Band scale -->
+    <div class="stack">
+      <figure class="card chartfig">
+        <div class="card__head"><h3 class="card__title">Band thresholds</h3></div>
+        <svg viewBox="0 0 340 210" width="100%" height="210" role="img"
+             aria-label="Banded score scale from 0 to 100. Low band 0 to 39. Medium band 40 to 69. High band 70 to 100. This case scores 76, inside the High band, 6 points above the threshold.">
+          <g class="axislabel">
+            <text x="8" y="12">0</text><text x="118" y="12">39</text>
+            <text x="136" y="12">40</text><text x="222" y="12">69</text>
+            <text x="240" y="12">70</text><text x="312" y="12">100</text>
+          </g>
+          <rect x="10" y="20" width="124" height="30" rx="5" fill="var(--band-low)"/>
+          <rect x="136" y="20" width="96" height="30" fill="var(--band-medium)"/>
+          <rect x="234" y="20" width="96" height="30" rx="5" fill="var(--band-high)"/>
+          <g fill="#fff">
+            <circle cx="26" cy="35" r="5"/>
+            <rect x="147" y="30" width="10" height="10"/>
+            <rect x="245" y="30" width="10" height="10" transform="rotate(45 250 35)"/>
+          </g>
+          <g class="vallabel vallabel--inv">
+            <text x="40" y="39">Low</text><text x="166" y="39">Medium</text><text x="264" y="39">High</text>
+          </g>
+          <!-- marker at 76 -->
+          <g transform="translate(253.6,0)">
+            <line x1="0" y1="16" x2="0" y2="58" stroke="var(--fg-strong)" stroke-width="2.5"/>
+            <polygon points="0,60 -7,72 7,72" fill="var(--fg-strong)"/>
+            <text class="vallabel" x="0" y="86" text-anchor="middle" style="font-size:14px">76</text>
+            <text class="axislabel" x="0" y="99" text-anchor="middle">this case</text>
+          </g>
+          <line class="axisline" x1="10" y1="112" x2="330" y2="112"/>
+          <g class="catlabel">
+            <circle cx="16" cy="128" r="5" fill="var(--band-low)"/>
+            <text x="28" y="132">Low 0&ndash;39 &mdash; review every 3 years</text>
+            <text class="axislabel" x="28" y="144">Approval: KYC Analyst</text>
+            <rect x="11" y="155" width="10" height="10" fill="var(--band-medium)"/>
+            <text x="28" y="164">Medium 40&ndash;69 &mdash; review annually</text>
+            <text class="axislabel" x="28" y="176">Approval: Senior Analyst</text>
+            <rect x="11" y="187" width="10" height="10" fill="var(--band-high)" transform="rotate(45 16 192)"/>
+            <text x="28" y="196" style="font-weight:800;fill:var(--band-high-ink)">High 70&ndash;100 &mdash; review every 6 months</text>
+            <text class="axislabel" x="28" y="208" style="fill:var(--band-high-ink)">Approval: Compliance Officer (mandatory)</text>
+          </g>
+        </svg>
+        <figcaption>
+          <p class="chartsummary"><b>Text summary.</b> The scale runs 0&ndash;100 in three bands. This case scores <b>76</b>, which is <b>6 points above the High threshold of 70</b>. High band sets a six-month review cadence and makes Compliance Officer approval mandatory.</p>
+        </figcaption>
+      </figure>
+
+      <section class="card">
+        <div class="card__head"><h3 class="card__title">Recomputation history</h3></div>
+        <ul class="timeline">
+          <li class="tl"><span class="tl__t">22 Jul 2026, 09:12 UTC</span><br>
+            <span class="tl__a">Initial computation &mdash; 71</span><br>
+            <span class="muted">Matrix v2.1 &middot; pre-screening, sanctions factor provisional at 60</span></li>
+          <li class="tl tl--warn"><span class="tl__t">24 Jul 2026, 14:05 UTC</span><br>
+            <span class="tl__a">Recomputed &mdash; 71 &rarr; 76</span><br>
+            <span class="muted">Screening true positive confirmed; sanctions raw 60 &rarr; 90. Band Medium &rarr; High.</span></li>
+          <li class="tl tl--ok"><span class="tl__t">26 Jul 2026, 11:04 UTC</span><br>
+            <span class="tl__a">Recomputed &mdash; 76 (unchanged)</span><br>
+            <span class="muted">Structure chart received; entity-structure input refreshed, raw unchanged at 76.</span></li>
+        </ul>
+      </section>
+    </div>
+  </div>
+</section>
+<!-- ================= AUDIT ================= -->
+<section class="screen" id="screen-audit" aria-label="Audit trail" hidden>
+  <div class="screenhead">
+    <div>
+      <h2 class="screenhead__title">Audit trail &middot; KYC-2026-0412</h2>
+      <p class="screenhead__meta">Append-only &middot; chronological &middot; 31 entries &middot; retention: indefinite, no purge job exists</p>
+    </div>
+    <div class="screenhead__actions">
+      <button class="btn" type="button" data-goto="reports">Export trail as CSV</button>
+    </div>
+  </div>
+
+  <div class="callout callout--lock" style="margin-bottom:var(--gutter)">
+    <span class="callout__title">Immutability</span>
+    Entries are written append-only. <b>There is no edit control and no delete control anywhere in this application,
+    for any role, including administrators.</b> Each row carries a content hash chained to its predecessor, so any
+    tampering downstream of the write breaks the chain and is detectable. Corrections are made by appending a new
+    entry that references the earlier one &mdash; the original text is never altered. Retention is indefinite.
+  </div>
+
+  <div class="grid grid--kpi">
+    <div class="kpi"><div class="kpi__label">Entries on this case</div><div class="kpi__value tnum">31</div>
+      <div class="kpi__foot"><span class="kpi__delta">First: 21 Jul 08:40 UTC</span></div></div>
+    <div class="kpi kpi--low"><div class="kpi__label">Hash chain</div><div class="kpi__value" style="font-size:26px">Verified</div>
+      <div class="kpi__foot"><span class="kpi__delta kpi__delta--good">31 of 31 links intact</span></div></div>
+    <div class="kpi"><div class="kpi__label">Distinct actors</div><div class="kpi__value tnum">5</div>
+      <div class="kpi__foot"><span class="kpi__delta">4 named humans + 1 system principal</span></div></div>
+    <div class="kpi kpi--alert"><div class="kpi__label">Escalation notices sent</div><div class="kpi__value tnum">2</div>
+      <div class="kpi__foot"><span class="kpi__delta kpi__delta--bad">Stage 3 (COO) pending</span></div></div>
+  </div>
+
+  <div class="grid grid--12-8">
+    <section class="card card--flush locked">
+      <span class="locked__ribbon">Append-only &mdash; no edit, no delete</span>
+      <div class="card__head"><h3 class="card__title">Entries, oldest first</h3></div>
+      <div class="tablewrap">
+        <table class="data">
+          <thead>
+            <tr>
+              <th scope="col">#</th>
+              <th scope="col">Timestamp (UTC)</th>
+              <th scope="col">Actor &amp; role held at the time</th>
+              <th scope="col">Action</th>
+              <th scope="col">Field: before &rarr; after</th>
+              <th scope="col">Chain</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="num">01</td>
+              <td class="ref">2026-07-21 08:40:12</td>
+              <td>System principal <span class="muted small">&middot; intake-service</span></td>
+              <td><b>Case opened from client submission</b><br><span class="muted small">Source: SUB-88214</span></td>
+              <td><span class="beforeafter"><span class="ba ba--none">no prior value</span><span class="arrow">&rarr;</span><span class="ba ba--after">status = OPEN</span></span></td>
+              <td class="hash">a4f1&hellip;9c02</td>
+            </tr>
+            <tr>
+              <td class="num">02</td>
+              <td class="ref">2026-07-21 08:41:03</td>
+              <td>Maya Adeyemi <span class="muted small">&middot; KYC Analyst</span></td>
+              <td><b>Case assigned</b></td>
+              <td><span class="beforeafter"><span class="ba ba--before">assignee = unassigned</span><span class="arrow">&rarr;</span><span class="ba ba--after">assignee = M. Adeyemi</span></span></td>
+              <td class="hash">b708&hellip;31de</td>
+            </tr>
+            <tr>
+              <td class="num">03</td>
+              <td class="ref">2026-07-22 09:11:44</td>
+              <td>System principal <span class="muted small">&middot; completeness-engine</span></td>
+              <td><b>Document completeness check passed</b><br><span class="muted small">Document Checklist v2.0 &middot; 4 of 4 mandatory items present</span></td>
+              <td><span class="beforeafter"><span class="ba ba--before">completeness = pending</span><span class="arrow">&rarr;</span><span class="ba ba--after">completeness = PASS (4/4 mandatory)</span></span></td>
+              <td class="hash">c19a&hellip;7740</td>
+            </tr>
+            <tr>
+              <td class="num">04</td>
+              <td class="ref">2026-07-22 09:12:01</td>
+              <td>System principal <span class="muted small">&middot; scoring-engine</span></td>
+              <td><b>Risk score computed</b><br><span class="muted small">Risk Rating Matrix v2.1 &middot; deterministic</span></td>
+              <td><span class="beforeafter"><span class="ba ba--none">no prior value</span><span class="arrow">&rarr;</span><span class="ba ba--after">score = 71</span></span>
+                  <span class="beforeafter"><span class="ba ba--none">no prior value</span><span class="arrow">&rarr;</span><span class="ba ba--after">band = HIGH</span></span></td>
+              <td class="hash">d5c3&hellip;0e18</td>
+            </tr>
+            <tr>
+              <td class="num">05</td>
+              <td class="ref">2026-07-22 09:58:37</td>
+              <td>Memo agent <span class="muted small">&middot; advisory principal, no write scope on status/score</span></td>
+              <td><b>Memo drafted (v1)</b><br><span class="muted small">Machine-drafted label applied &middot; 2 evidence gaps declared</span></td>
+              <td><span class="beforeafter"><span class="ba ba--none">no prior value</span><span class="arrow">&rarr;</span><span class="ba ba--after">memo_version = v1 (machine-drafted)</span></span></td>
+              <td class="hash">e2b7&hellip;aa45</td>
+            </tr>
+            <tr>
+              <td class="num">06</td>
+              <td class="ref">2026-07-23 10:22:09</td>
+              <td>Maya Adeyemi <span class="muted small">&middot; KYC Analyst</span></td>
+              <td><b>Document received &mdash; group structure chart</b></td>
+              <td><span class="beforeafter"><span class="ba ba--before">structure_chart = absent</span><span class="arrow">&rarr;</span><span class="ba ba--after">structure_chart = received</span></span></td>
+              <td class="hash">f083&hellip;5b91</td>
+            </tr>
+            <tr>
+              <td class="num">07</td>
+              <td class="ref">2026-07-24 14:05:18</td>
+              <td>System principal <span class="muted small">&middot; scoring-engine</span></td>
+              <td><b>Score recomputed &mdash; sanctions true positive confirmed</b></td>
+              <td><span class="beforeafter"><span class="ba ba--before">sanctions_raw = 60</span><span class="arrow">&rarr;</span><span class="ba ba--after">sanctions_raw = 90</span></span>
+                  <span class="beforeafter"><span class="ba ba--before">score = 71</span><span class="arrow">&rarr;</span><span class="ba ba--after">score = 76</span></span></td>
+              <td class="hash">1a4d&hellip;cc60</td>
+            </tr>
+            <tr class="row--atrisk">
+              <td class="num">08</td>
+              <td class="ref">2026-07-24 14:05:19</td>
+              <td>System principal <span class="muted small">&middot; sla-monitor</span></td>
+              <td><b>At-risk notification sent</b><br><span class="muted small">Recipients: M. Adeyemi, D. Osei &middot; 22% of SLA budget remaining</span></td>
+              <td><span class="beforeafter"><span class="ba ba--before">sla_flag = none</span><span class="arrow">&rarr;</span><span class="ba ba--after">sla_flag = AT_RISK</span></span></td>
+              <td class="hash">2b5e&hellip;d371</td>
+            </tr>
+            <tr>
+              <td class="num">09</td>
+              <td class="ref">2026-07-24 20:40:00</td>
+              <td>System principal <span class="muted small">&middot; escalation-service</span></td>
+              <td><b>Escalation step 1 notified &mdash; Compliance Officer</b><br><span class="muted small">Recipient: Priya Raman &middot; Escalation &amp; SLA Policy v1.4 &sect;3</span></td>
+              <td><span class="beforeafter"><span class="ba ba--before">status = IN REVIEW</span><span class="arrow">&rarr;</span><span class="ba ba--after">status = ESCALATED</span></span>
+                  <span class="beforeafter"><span class="ba ba--before">escalation_stage = 0</span><span class="arrow">&rarr;</span><span class="ba ba--after">escalation_stage = 1</span></span></td>
+              <td class="hash">3c6f&hellip;e482</td>
+            </tr>
+            <tr class="row--breach">
+              <td class="num">10</td>
+              <td class="ref">2026-07-25 08:40:01</td>
+              <td>System principal <span class="muted small">&middot; sla-monitor</span></td>
+              <td><b>SLA breached</b><br><span class="muted small">48 h high-band decision target passed</span></td>
+              <td><span class="beforeafter"><span class="ba ba--before">sla_flag = AT_RISK</span><span class="arrow">&rarr;</span><span class="ba ba--after">sla_flag = BREACHED</span></span></td>
+              <td class="hash">4d70&hellip;f593</td>
+            </tr>
+            <tr class="row--breach">
+              <td class="num">11</td>
+              <td class="ref">2026-07-25 08:41:00</td>
+              <td>System principal <span class="muted small">&middot; escalation-service</span></td>
+              <td><b>Escalation step 2 notified &mdash; Head of Financial Crime</b><br><span class="muted small">Recipient: Gerald Ntoumi</span></td>
+              <td><span class="beforeafter"><span class="ba ba--before">escalation_stage = 1</span><span class="arrow">&rarr;</span><span class="ba ba--after">escalation_stage = 2</span></span></td>
+              <td class="hash">5e81&hellip;06a4</td>
+            </tr>
+            <tr>
+              <td class="num">12</td>
+              <td class="ref">2026-07-26 11:07:52</td>
+              <td>Memo agent <span class="muted small">&middot; advisory principal</span></td>
+              <td><b>Memo drafted (v3)</b><br><span class="muted small">v2 retained immutably &middot; machine-drafted label applied</span></td>
+              <td><span class="beforeafter"><span class="ba ba--before">memo_version = v2</span><span class="arrow">&rarr;</span><span class="ba ba--after">memo_version = v3 (machine-drafted)</span></span></td>
+              <td class="hash">6f92&hellip;17b5</td>
+            </tr>
+            <tr>
+              <td class="num">13</td>
+              <td class="ref">2026-07-26 15:33:10</td>
+              <td>Maya Adeyemi <span class="muted small">&middot; KYC Analyst</span></td>
+              <td><b>Approval attempt refused &mdash; insufficient authority</b><br><span class="muted small">Server-side authorization check, not a UI restriction</span></td>
+              <td><span class="beforeafter"><span class="ba ba--before">status = ESCALATED</span><span class="arrow">&rarr;</span><span class="ba ba--none">unchanged &mdash; refused</span></span></td>
+              <td class="hash">70a3&hellip;28c6</td>
+            </tr>
+            <tr>
+              <td class="num">14</td>
+              <td class="ref">2026-07-27 09:18:41</td>
+              <td>Priya Raman <span class="muted small">&middot; Compliance Officer</span></td>
+              <td><b>Approval recorded on comparison case KYC-2026-0388</b><br><span class="muted small">Rationale recorded &middot; explicit human action, no automation</span></td>
+              <td><span class="beforeafter"><span class="ba ba--before">status = IN REVIEW</span><span class="arrow">&rarr;</span><span class="ba ba--after">status = APPROVED</span></span>
+                  <span class="beforeafter"><span class="ba ba--before">approver = none</span><span class="arrow">&rarr;</span><span class="ba ba--after">approver = P. Raman (Compliance Officer)</span></span></td>
+              <td class="hash">81b4&hellip;3907</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div style="padding:14px var(--pad-card)">
+        <p class="small muted">Showing entries 1&ndash;14 of 31. Entries 15&ndash;31 cover document requests, screening hit dispositions and notification receipts. Every row is read-only for every role.</p>
+      </div>
+    </section>
+
+    <div class="stack">
+      <figure class="card chartfig">
+        <div class="card__head"><h3 class="card__title">Case lifecycle</h3></div>
+        <ul class="timeline">
+          <li class="tl tl--ok"><span class="tl__t">21 Jul 08:40</span><br><span class="tl__a">Case opened</span><br><span class="muted">From submission SUB-88214</span></li>
+          <li class="tl tl--ok"><span class="tl__t">22 Jul 09:11</span><br><span class="tl__a">Completeness passed</span><br><span class="muted">4 of 4 mandatory items</span></li>
+          <li class="tl"><span class="tl__t">22 Jul 09:12</span><br><span class="tl__a">Score computed &mdash; 71</span><br><span class="muted">Matrix v2.1</span></li>
+          <li class="tl"><span class="tl__t">22 Jul 09:58</span><br><span class="tl__a">Memo drafted v1</span><br><span class="muted">Machine-drafted</span></li>
+          <li class="tl tl--warn"><span class="tl__t">24 Jul 14:05</span><br><span class="tl__a">At-risk notification sent</span><br><span class="muted">Score 71 &rarr; 76 after true positive</span></li>
+          <li class="tl tl--alert"><span class="tl__t">24 Jul 20:40</span><br><span class="tl__a">Escalation 1 &mdash; Compliance Officer</span><br><span class="muted">Priya Raman notified</span></li>
+          <li class="tl tl--alert"><span class="tl__t">25 Jul 08:41</span><br><span class="tl__a">Escalation 2 &mdash; Head of Financial Crime</span><br><span class="muted">Gerald Ntoumi notified</span></li>
+          <li class="tl"><span class="tl__t">26 Jul 11:07</span><br><span class="tl__a">Memo drafted v3</span><br><span class="muted">v1, v2 retained</span></li>
+          <li class="tl tl--ok"><span class="tl__t">27 Jul 09:18</span><br><span class="tl__a">Approval recorded (0388)</span><br><span class="muted">Human action, rationale captured</span></li>
+        </ul>
+        <figcaption>
+          <p class="chartsummary"><b>Text summary.</b> Nine milestone events across six days. The case moved from OPEN to ESCALATED after the sanctions true positive raised the score to 76, and has reached escalation stage 2 of 3. The COO notification is due 26 Jul 08:41 UTC.</p>
+        </figcaption>
+      </figure>
+
+      <section class="card">
+        <div class="card__head"><h3 class="card__title">Escalation ladder</h3></div>
+        <svg viewBox="0 0 300 150" width="100%" height="150" role="img"
+             aria-label="Escalation ladder for this case: step 1 Compliance Officer notified, step 2 Head of Financial Crime notified, step 3 COO pending.">
+          <line x1="26" y1="24" x2="26" y2="126" stroke="var(--border-strong)" stroke-width="2"/>
+          <circle cx="26" cy="30" r="9" fill="var(--band-high)"/><text class="vallabel vallabel--inv" x="23" y="34">1</text>
+          <text class="catlabel" x="46" y="28" style="font-weight:700;fill:var(--fg)">Compliance Officer</text>
+          <text class="axislabel" x="46" y="41">Priya Raman &middot; notified 24 Jul 20:40</text>
+          <circle cx="26" cy="78" r="9" fill="var(--band-high)"/><text class="vallabel vallabel--inv" x="23" y="82">2</text>
+          <text class="catlabel" x="46" y="76" style="font-weight:700;fill:var(--fg)">Head of Financial Crime</text>
+          <text class="axislabel" x="46" y="89">Gerald Ntoumi &middot; notified 25 Jul 08:41</text>
+          <circle cx="26" cy="126" r="9" fill="none" stroke="var(--border-strong)" stroke-width="2" stroke-dasharray="3 2"/><text class="vallabel" x="23" y="130" style="fill:var(--fg-faint)">3</text>
+          <text class="catlabel" x="46" y="124">COO</text>
+          <text class="axislabel" x="46" y="137">Rhoda Kelsey &middot; pending, due 26 Jul 08:41</text>
+        </svg>
+        <p class="chartsummary"><b>Text summary.</b> Two of three escalation steps have fired. Notifications are records, not approvals &mdash; being notified confers no decision authority.</p>
+      </section>
+    </div>
+  </div>
+</section>
+<!-- ================= CHAT ================= -->
+<section class="screen" id="screen-chat" aria-label="Agent chat" hidden>
+  <div class="screenhead">
+    <div>
+      <h2 class="screenhead__title">Memo agent &middot; KYC-2026-0412</h2>
+      <p class="screenhead__meta">Grounded conversation about Meridian Freight Holdings Ltd &middot; retrieval restricted to the versioned policy set plus this case record</p>
+    </div>
+    <div class="screenhead__actions">
+      <button class="btn" type="button" data-goto="memo">Open memo v3</button>
+      <button class="btn" type="button" data-goto="case">Open case file</button>
+    </div>
+  </div>
+
+  <div class="callout callout--info" style="margin-bottom:var(--gutter)">
+    <span class="callout__title">Advisory only</span>
+    This agent <b>cannot change a case status, cannot alter the score, and cannot record an approval</b> &mdash; it holds no
+    write scope on any of those fields, enforced server-side. It answers only from the four versioned policy documents
+    and the case record; it has no web access, no model memory of other cases, and no authority to infer facts that are
+    not in the grounding corpus. Current mode: <b data-agent-mode-readout>Draft</b>
+  </div>
+
+  <div class="chatshell">
+    <section class="card card--flush chatcard">
+      <div class="card__head">
+        <h3 class="card__title">Conversation</h3>
+        <span class="card__note">Every turn is written to the audit trail</span>
+      </div>
+      <ul id="messages">
+        <li class="msg msg--me">
+          <div class="msg__body">
+            <div class="msg__who"><span class="msg__name">Maya Adeyemi &middot; KYC Analyst</span><span class="msg__time">09:02</span></div>
+            <div>Why did this case land in the High band? I want to explain it to the relationship team in one sentence.</div>
+          </div>
+          <span class="msg__av">MA</span>
+        </li>
+
+        <li class="msg msg--agent">
+          <span class="msg__av">AI</span>
+          <div class="msg__body">
+            <div class="msg__who"><span class="msg__name">Memo agent</span><span class="msg__time">09:02</span><span class="flag flag--lock">Machine-generated</span></div>
+            <div>
+              Two independent routes put it in High. First, the weighted total is <b>76</b>, above the High threshold of 70
+              &mdash; jurisdiction contributes 24.6 and entity structure 19.0 of that. Second, screening returned a
+              confirmed true positive against the 27% beneficial owner, and a confirmed true positive forces High band
+              regardless of the arithmetic. One sentence: <i>"Meridian scores 76 on the risk matrix and has a confirmed
+              sanctions match on a 27% owner, either of which requires High-band treatment."</i>
+            </div>
+            <div class="msg__sources">
+              <span class="src">Risk Rating Matrix v2.1 &sect;5</span>
+              <span class="src">Risk Rating Matrix v2.1 &mdash; weighting table</span>
+              <span class="src">Case record KYC-2026-0412</span>
+            </div>
+          </div>
+        </li>
+
+        <li class="msg msg--me">
+          <div class="msg__body">
+            <div class="msg__who"><span class="msg__name">Maya Adeyemi &middot; KYC Analyst</span><span class="msg__time">09:05</span></div>
+            <div>Can I approve it myself if I write a strong rationale?</div>
+          </div>
+          <span class="msg__av">MA</span>
+        </li>
+
+        <li class="msg msg--agent">
+          <span class="msg__av">AI</span>
+          <div class="msg__body">
+            <div class="msg__who"><span class="msg__name">Memo agent</span><span class="msg__time">09:05</span><span class="flag flag--lock">Machine-generated</span></div>
+            <div>
+              No. High band requires <b>Compliance Officer</b> approval and the rationale field is an additional
+              requirement, not a substitute for authority. Your role is KYC Analyst, which carries approval authority for
+              Low band only. I should also say plainly that I cannot record an approval either, in any mode &mdash; approval is
+              a human action taken by an authorised named individual.
+            </div>
+            <div class="msg__sources">
+              <span class="src">KYC Onboarding Policy v3.2 &sect;10</span>
+              <span class="src">Risk Rating Matrix v2.1 &mdash; band authority</span>
+            </div>
+          </div>
+        </li>
+
+        <li class="msg msg--me">
+          <div class="msg__body">
+            <div class="msg__who"><span class="msg__name">Maya Adeyemi &middot; KYC Analyst</span><span class="msg__time">09:09</span></div>
+            <div>Does the 27% owner have any adverse media against him? The relationship team is asking.</div>
+          </div>
+          <span class="msg__av">MA</span>
+        </li>
+
+        <li class="msg msg--agent msg--refusal">
+          <span class="msg__av">AI</span>
+          <div class="msg__body">
+            <div class="msg__who"><span class="msg__name">Memo agent</span><span class="msg__time">09:09</span><span class="flag flag--atrisk">Evidence gap &mdash; not answered</span></div>
+            <div>
+              <b>I cannot answer this.</b> No adverse-media search result for R. Al-Fahim exists in the case record, and
+              adverse media is not covered by any of the four policy documents I can retrieve. I will not infer a position
+              from the sanctions hit &mdash; a sanctions designation and an adverse-media finding are different evidence types.
+              The correct next step is a human-run adverse-media search attached to the case; until then memo v3 carries this
+              as a declared gap rather than an assertion.
+            </div>
+            <div class="msg__sources">
+              <span class="src">Grounding set: no matching document</span>
+              <span class="src">Case record KYC-2026-0412 &mdash; no adverse-media artefact</span>
+            </div>
+          </div>
+        </li>
+
+        <li class="msg msg--me">
+          <div class="msg__body">
+            <div class="msg__who"><span class="msg__name">Maya Adeyemi &middot; KYC Analyst</span><span class="msg__time">09:12</span></div>
+            <div>Fair. What exactly is still missing on the checklist, and does it stop the decision?</div>
+          </div>
+          <span class="msg__av">MA</span>
+        </li>
+
+        <li class="msg msg--agent">
+          <span class="msg__av">AI</span>
+          <div class="msg__body">
+            <div class="msg__who"><span class="msg__name">Memo agent</span><span class="msg__time">09:12</span><span class="flag flag--lock">Machine-generated</span></div>
+            <div>
+              One item fails: the <b>DMCC customs brokerage operating licence</b> for the Jebel Ali entity. It is a
+              conditional item triggered by SIC 52290, so it is mandatory for this client even though it is optional in
+              general. On whether it stops the decision &mdash; the checklist governs completeness, and a failing conditional
+              item can only be dispositioned by a Compliance-Officer policy exception with a written justification and an
+              expiry date. There is no waive action available to your role. I am reporting the rule, not applying it.
+            </div>
+            <div class="msg__sources">
+              <span class="src">Document Checklist v2.0 &sect;3.1</span>
+              <span class="src">KYC Onboarding Policy v3.2 &sect;8.2</span>
+              <span class="src">Case record &mdash; checklist state</span>
+            </div>
+          </div>
+        </li>
+
+        <li class="msg msg--me">
+          <div class="msg__body">
+            <div class="msg__who"><span class="msg__name">Maya Adeyemi &middot; KYC Analyst</span><span class="msg__time">09:15</span></div>
+            <div>When does the COO escalation fire?</div>
+          </div>
+          <span class="msg__av">MA</span>
+        </li>
+
+        <li class="msg msg--agent">
+          <span class="msg__av">AI</span>
+          <div class="msg__body">
+            <div class="msg__who"><span class="msg__name">Memo agent</span><span class="msg__time">09:15</span><span class="flag flag--lock">Machine-generated</span></div>
+            <div>
+              Step 3 fires 24 hours after step 2, so <b>26 Jul 2026 at 08:41 UTC</b>, addressed to the COO. Steps 1 and 2
+              have already fired &mdash; Compliance Officer at 24 Jul 20:40 and Head of Financial Crime at 25 Jul 08:41.
+              The case is currently 6 h 20 m past its 48-hour decision target.
+            </div>
+            <div class="msg__sources">
+              <span class="src">Escalation &amp; SLA Policy v1.4 &sect;3</span>
+              <span class="src">Case record &mdash; SLA timers</span>
+            </div>
+          </div>
+        </li>
+      </ul>
+
+      <form id="composer" autocomplete="off">
+        <label class="field__label" for="input" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">Ask the memo agent</label>
+        <input id="input" type="text" name="message" placeholder="Ask about this case — answers are grounded in the versioned policy set only…">
+        <button type="submit">Send</button>
+      </form>
+    </section>
+
+    <div class="stack">
+      <section class="card">
+        <div class="card__head"><h3 class="card__title">Agent capability</h3></div>
+        <table class="matrix">
+          <tbody>
+            <tr><th scope="row">Read case record</th><td class="perm perm--yes">&#10003;</td></tr>
+            <tr><th scope="row">Read versioned policy set</th><td class="perm perm--yes">&#10003;</td></tr>
+            <tr><th scope="row">Draft / redraft the memo</th><td class="perm perm--yes">&#10003;</td></tr>
+            <tr><th scope="row">Change case status</th><td class="perm perm--no">&#10007;</td></tr>
+            <tr><th scope="row">Alter the risk score</th><td class="perm perm--no">&#10007;</td></tr>
+            <tr><th scope="row">Record an approval</th><td class="perm perm--no">&#10007;</td></tr>
+            <tr><th scope="row">Waive a checklist item</th><td class="perm perm--no">&#10007;</td></tr>
+            <tr><th scope="row">Retrieve outside the corpus</th><td class="perm perm--no">&#10007;</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="card">
+        <div class="card__head"><h3 class="card__title">Grounding corpus</h3></div>
+        <ul class="stack stack--sm">
+          <li class="chip" style="width:100%;justify-content:flex-start">KYC Onboarding Policy <b>v3.2</b></li>
+          <li class="chip" style="width:100%;justify-content:flex-start">Document Checklist <b>v2.0</b></li>
+          <li class="chip" style="width:100%;justify-content:flex-start">Risk Rating Matrix <b>v2.1</b></li>
+          <li class="chip" style="width:100%;justify-content:flex-start">Escalation &amp; SLA Policy <b>v1.4</b></li>
+          <li class="chip" style="width:100%;justify-content:flex-start">Case record <b>KYC-2026-0412</b></li>
+        </ul>
+        <p class="small muted" style="margin-top:12px">Nothing else is retrievable. If an answer is not in these five sources the agent declares a gap instead of inferring.</p>
+      </section>
+
+      <section class="card">
+        <div class="card__head"><h3 class="card__title">Session quality</h3></div>
+        <svg viewBox="0 0 280 100" width="100%" height="100" role="img"
+             aria-label="Session quality: 5 agent turns, 5 fully cited, 1 declared gap, 0 unsupported claims.">
+          <text class="catlabel" x="4" y="16">Cited turns</text>
+          <rect x="4" y="20" width="220" height="12" rx="3" fill="var(--primary-600)"/>
+          <text class="vallabel" x="230" y="30">5 / 5</text>
+          <text class="catlabel" x="4" y="52">Declared gaps</text>
+          <rect x="4" y="56" width="44" height="12" rx="3" fill="var(--signal-atrisk)"/>
+          <text class="vallabel" x="54" y="66">1</text>
+          <text class="catlabel" x="4" y="88">Unsupported claims</text>
+          <rect x="4" y="92" width="3" height="6" rx="1" fill="var(--border-strong)"/>
+          <text class="vallabel" x="14" y="99">0</text>
+        </svg>
+        <p class="chartsummary"><b>Text summary.</b> All five agent turns carried at least one resolvable citation. One question was refused as an evidence gap. No claim was made without a source.</p>
+      </section>
+    </div>
+  </div>
+</section>
+<!--SCREENS-->
+</main>
+
+<script>
+(function () {
+  var buttons = Array.prototype.slice.call(document.querySelectorAll('.nav__btn'));
+  var screens = Array.prototype.slice.call(document.querySelectorAll('.screen'));
+
+  function show(name) {
+    screens.forEach(function (s) {
+      var on = s.id === 'screen-' + name;
+      s.classList.toggle('is-active', on);
+      if (on) { s.removeAttribute('hidden'); } else { s.setAttribute('hidden', ''); }
+    });
+    buttons.forEach(function (b) {
+      if (b.dataset.screen === name) { b.setAttribute('aria-current', 'page'); }
+      else { b.removeAttribute('aria-current'); }
+    });
+    if (window.location.hash !== '#' + name) {
+      try { history.replaceState(null, '', '#' + name); } catch (e) {}
+    }
+    window.scrollTo({ top: 0, behavior: 'instant' in document.body.style ? 'auto' : 'auto' });
+  }
+
+  buttons.forEach(function (b) {
+    b.addEventListener('click', function () { show(b.dataset.screen); });
+  });
+
+  document.addEventListener('click', function (e) {
+    var jump = e.target.closest('[data-goto]');
+    if (jump) { e.preventDefault(); show(jump.getAttribute('data-goto')); }
+  });
+
+  var initial = (window.location.hash || '').replace('#', '');
+  var valid = ['worklist','case','memo','score','audit','chat','reports','admin'];
+  show(valid.indexOf(initial) > -1 ? initial : 'worklist');
+
+  /* Agent mode reflects everywhere it is surfaced. */
+  var mode = document.getElementById('agent-mode');
+  var readouts = Array.prototype.slice.call(document.querySelectorAll('[data-agent-mode-readout]'));
+  var labels = {
+    draft: 'DRAFT — the agent composes the next memo version for human review.',
+    suggest: 'SUGGEST — the agent offers inline hints; it does not write the memo body.',
+    off: 'OFF — no agent involvement; memo authored entirely by the analyst.'
+  };
+  function syncMode() {
+    readouts.forEach(function (el) { el.textContent = labels[mode.value]; });
+    document.body.setAttribute('data-agent-mode', mode.value);
+  }
+  mode.addEventListener('change', syncMode);
+  syncMode();
+
+  /* Composer: append the analyst turn locally. No status/score/approval effects. */
+  var form = document.getElementById('composer');
+  var input = document.getElementById('input');
+  var list = document.getElementById('messages');
+  form.addEventListener('submit', function (e) {
+    e.preventDefault();
+    var text = input.value.trim();
+    if (!text) { return; }
+    var li = document.createElement('li');
+    li.className = 'msg msg--me';
+    var now = new Date();
+    var hh = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
+    li.innerHTML = '<div class="msg__body"><div class="msg__who"><span class="msg__name">Maya Adeyemi</span>' +
+      '<span class="msg__time">' + hh + '</span></div><div></div></div>' +
+      '<span class="msg__av">MA</span>';
+    li.querySelector('.msg__body div:last-child').textContent = text;
+    list.appendChild(li);
+    input.value = '';
+    list.scrollTop = list.scrollHeight;
+  });
+
+  /* Worklist client-side filter. */
+  var q = document.getElementById('wl-search');
+  var band = document.getElementById('wl-band');
+  var status = document.getElementById('wl-status');
+  var rows = Array.prototype.slice.call(document.querySelectorAll('#wl-body tr'));
+  var countOut = document.getElementById('wl-count');
+  function filter() {
+    var text = (q.value || '').toLowerCase();
+    var b = band.value, s = status.value, n = 0;
+    rows.forEach(function (r) {
+      var ok = (!text || r.textContent.toLowerCase().indexOf(text) > -1) &&
+               (b === 'all' || r.dataset.band === b) &&
+               (s === 'all' || r.dataset.status === s);
+      r.style.display = ok ? '' : 'none';
+      if (ok) { n++; }
+    });
+    countOut.textContent = n;
+  }
+  [q, band, status].forEach(function (el) { el.addEventListener('input', filter); });
+  filter();
+})();
+</script>
+
+</body>
+</html>

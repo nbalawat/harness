@@ -353,7 +353,7 @@ test("budget-check: plan exceeding the envelope is rejected", () => {
     path.join(dir, "inputs.json"),
     JSON.stringify({
       architecture: {
-        data: { build_budget_plan: { nodes: { "build-backend": 45 }, total_usd: 45 } },
+        data: { build_budget_plan: { nodes: { "build-backend": 70 }, total_usd: 70 } },
       },
     }),
   );

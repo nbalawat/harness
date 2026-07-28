@@ -1,0 +1,2916 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>KYC Review Desk — Compliance Onboarding Review</title>
+<link rel="stylesheet" href="tokens.css">
+<style>
+/* ==========================================================
+   THE COMPLIANCE QUARTERLY
+   Structural stylesheet — editorial print direction
+   Rules and hairlines, never boxes-in-boxes.
+   ========================================================== */
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-text);
+  font-size: var(--fs-body);
+  line-height: var(--lh-body);
+  font-kerning: normal;
+  font-variant-numeric: oldstyle-nums proportional-nums;
+  text-rendering: optimizeLegibility;
+}
+
+/* faint laid-paper texture, pure CSS */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.5;
+  background-image:
+    repeating-linear-gradient(90deg,
+      rgba(28,26,23,0.018) 0 1px, transparent 1px 3px),
+    repeating-linear-gradient(0deg,
+      rgba(28,26,23,0.012) 0 1px, transparent 1px 4px);
+}
+
+a { color: inherit; }
+
+/* ---------- small-caps editorial label ---------- */
+.label,
+.kicker,
+.sc {
+  font-family: var(--font-sans);
+  font-size: var(--fs-folio);
+  font-weight: 700;
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  line-height: 1.4;
+}
+
+.kicker { color: var(--accent); }
+
+/* ==========================================================
+   MASTHEAD
+   ========================================================== */
+
+.masthead {
+  position: relative;
+  z-index: 2;
+  background: var(--surface);
+  border-bottom: 2px solid var(--rule-strong);
+  padding: var(--space-5) var(--gutter) 0;
+}
+
+.masthead__folio {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--space-4);
+  padding-bottom: var(--space-3);
+  border-bottom: var(--rule-thin);
+  flex-wrap: wrap;
+}
+
+.masthead__folio .label { color: var(--ink-faint); }
+
+.masthead__title-row {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--gutter);
+  padding: var(--space-4) 0 var(--space-4);
+  flex-wrap: wrap;
+}
+
+.masthead__title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--fs-display);
+  font-weight: 400;
+  line-height: 0.98;
+  letter-spacing: var(--tracking-display);
+  font-variant-numeric: lining-nums;
+}
+
+.masthead__title .amp {
+  font-style: italic;
+  color: var(--accent);
+}
+
+.masthead__strap {
+  max-width: 26rem;
+  margin: 0;
+  padding-left: var(--space-5);
+  border-left: 2px solid var(--accent);
+  font-size: var(--fs-small);
+  line-height: 1.55;
+  color: var(--ink-soft);
+  font-style: italic;
+}
+
+.masthead__meta {
+  display: flex;
+  gap: var(--space-6);
+  align-items: center;
+  padding: var(--space-3) 0;
+  border-top: var(--rule-thin);
+  flex-wrap: wrap;
+}
+
+.byline {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.byline__seal {
+  width: 2.25rem;
+  height: 2.25rem;
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius-pill);
+  display: grid;
+  place-items: center;
+  font-family: var(--font-display);
+  font-size: 0.8125rem;
+  letter-spacing: 0.02em;
+  background: var(--paper-tint);
+}
+
+.byline__who { line-height: 1.25; }
+.byline__name {
+  font-family: var(--font-display);
+  font-size: var(--fs-small);
+  font-weight: 600;
+}
+.byline__role { font-size: var(--fs-folio); color: var(--ink-faint); font-style: italic; }
+
+.masthead__spacer { flex: 1 1 auto; }
+
+/* ---------- agent mode control ---------- */
+
+#agent-mode {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-4);
+  background: var(--accent-wash);
+  border: 1px solid var(--accent);
+  color: var(--accent-deep);
+  font-family: var(--font-sans);
+  font-size: var(--fs-folio);
+  font-weight: 700;
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background .16s ease;
+}
+#agent-mode:hover { background: #ecd8d4; }
+#agent-mode .dot {
+  width: 7px; height: 7px;
+  border-radius: var(--radius-pill);
+  background: var(--accent);
+  box-shadow: 0 0 0 3px rgba(140,47,39,0.16);
+}
+#agent-mode[data-mode="observing"] { background: var(--paper-deep); border-color: var(--border); color: var(--ink-faint); }
+#agent-mode[data-mode="observing"] .dot { background: var(--ink-ghost); box-shadow: 0 0 0 3px rgba(167,156,136,0.2); }
+#agent-mode .mode-sep { color: var(--ink-ghost); }
+#agent-mode .mode-val { font-style: normal; }
+
+/* ==========================================================
+   PAGE FRAME — table of contents + reading well
+   ========================================================== */
+
+.frame {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: 16.5rem minmax(0, 1fr);
+  min-height: calc(100vh - 1px);
+  max-width: 108rem;
+  margin: 0 auto;
+}
+
+/* ---------- contents / navigation ---------- */
+
+.contents {
+  border-right: var(--rule);
+  background: var(--paper-deep);
+  padding: var(--space-6) var(--space-5) var(--space-7);
+  position: sticky;
+  top: 0;
+  align-self: start;
+  max-height: 100vh;
+  overflow-y: auto;
+}
+
+.contents__head {
+  font-family: var(--font-display);
+  font-size: var(--fs-h4);
+  font-style: italic;
+  margin: 0 0 var(--space-2);
+  letter-spacing: 0.01em;
+}
+
+.contents__rule {
+  border: 0;
+  border-top: 2px solid var(--rule-strong);
+  margin: 0 0 var(--space-4);
+}
+
+.contents__group { margin-bottom: var(--space-5); }
+.contents__group > .label { display: block; margin-bottom: var(--space-2); }
+
+.toc { list-style: none; margin: 0; padding: 0; }
+
+.toc li { border-bottom: 1px dotted var(--border); }
+.toc li:last-child { border-bottom: 0; }
+
+.toc button {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 1.75rem 1fr auto;
+  align-items: baseline;
+  gap: var(--space-2);
+  padding: var(--space-2) 0;
+  background: none;
+  border: 0;
+  font-family: var(--font-display);
+  font-size: var(--fs-body);
+  color: var(--ink-soft);
+  text-align: left;
+  cursor: pointer;
+}
+.toc button:hover { color: var(--fg); }
+.toc button:hover .toc__name { text-decoration: underline; text-underline-offset: 3px; }
+
+.toc__num {
+  font-family: var(--font-sans);
+  font-size: var(--fs-folio);
+  font-weight: 700;
+  color: var(--ink-ghost);
+  letter-spacing: 0.06em;
+}
+.toc__name { letter-spacing: 0.005em; }
+.toc__folio {
+  font-family: var(--font-mono);
+  font-size: var(--fs-folio);
+  color: var(--ink-ghost);
+}
+
+.toc button[aria-current="true"] {
+  color: var(--fg);
+  font-weight: 600;
+}
+.toc button[aria-current="true"] .toc__num { color: var(--accent); }
+.toc button[aria-current="true"] .toc__name {
+  box-shadow: inset 0 -0.5em 0 var(--accent-wash);
+}
+
+.colophon {
+  margin-top: var(--space-6);
+  padding-top: var(--space-4);
+  border-top: var(--rule-thin);
+  font-size: var(--fs-folio);
+  line-height: 1.65;
+  color: var(--ink-faint);
+  font-style: italic;
+}
+.colophon dl { margin: var(--space-2) 0 0; display: grid; grid-template-columns: auto 1fr; gap: 0 var(--space-3); }
+.colophon dt { font-style: normal; font-family: var(--font-sans); font-size: 0.625rem; letter-spacing: var(--tracking-caps); text-transform: uppercase; }
+.colophon dd { margin: 0; font-family: var(--font-mono); font-style: normal; font-size: var(--fs-folio); color: var(--ink-soft); }
+
+/* ---------- the well ---------- */
+
+.well {
+  padding: var(--space-7) var(--gutter) var(--space-8);
+  min-width: 0;
+}
+
+.screen { display: none; animation: settle .28s ease both; }
+.screen.is-active { display: block; }
+
+@keyframes settle {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+
+/* ==========================================================
+   ARTICLE OPENERS
+   ========================================================== */
+
+.opener {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) var(--margin-col);
+  gap: var(--gutter);
+  align-items: end;
+  padding-bottom: var(--space-4);
+  border-bottom: 2px solid var(--rule-strong);
+  margin-bottom: var(--space-6);
+}
+
+.opener__kicker { display: block; margin-bottom: var(--space-3); }
+
+.opener h1 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--fs-h1);
+  font-weight: 400;
+  line-height: var(--lh-tight);
+  letter-spacing: var(--tracking-display);
+  max-width: 20ch;
+}
+.opener h1 em { font-style: italic; color: var(--accent); }
+
+.opener__standfirst {
+  margin: var(--space-4) 0 0;
+  max-width: var(--measure);
+  font-size: var(--fs-lead);
+  line-height: 1.55;
+  color: var(--ink-soft);
+}
+
+.opener__aside {
+  font-size: var(--fs-folio);
+  line-height: 1.6;
+  color: var(--ink-faint);
+  border-left: var(--rule);
+  padding-left: var(--space-4);
+  font-style: italic;
+}
+.opener__aside strong { font-style: normal; color: var(--fg); font-family: var(--font-sans); font-size: 0.625rem; letter-spacing: var(--tracking-caps); text-transform: uppercase; display: block; }
+
+/* drop cap */
+.dropcap::first-letter {
+  float: left;
+  font-family: var(--font-display);
+  font-size: 3.9em;
+  line-height: 0.82;
+  padding: 0.06em 0.09em 0 0;
+  color: var(--accent);
+  font-weight: 400;
+}
+
+/* ==========================================================
+   COLUMN SYSTEMS
+   ========================================================== */
+
+.spread {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) var(--margin-col);
+  gap: var(--gutter);
+  align-items: start;
+}
+
+.spread--wide { grid-template-columns: minmax(0, 1fr) 20rem; }
+
+.spread--thirds {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
+  gap: var(--gutter);
+  align-items: start;
+}
+
+.prose { max-width: var(--measure); }
+.prose p { margin: 0 0 var(--space-4); }
+.prose p + p { text-indent: 1.25em; }
+
+/* marginal note */
+.sidenote {
+  font-size: var(--fs-folio);
+  line-height: 1.62;
+  color: var(--ink-faint);
+  border-top: 1px solid var(--rule-strong);
+  padding-top: var(--space-2);
+  margin-bottom: var(--space-5);
+}
+.sidenote__head {
+  display: block;
+  font-family: var(--font-sans);
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  color: var(--fg);
+  margin-bottom: var(--space-2);
+}
+.sidenote em { color: var(--ink-soft); }
+.sidenote--accent { border-top-color: var(--accent); }
+.sidenote--accent .sidenote__head { color: var(--accent); }
+
+/* section head with hairline */
+.section-head {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-4);
+  margin: var(--space-7) 0 var(--space-4);
+}
+.screen > .section-head:first-of-type { margin-top: 0; }
+.section-head h2 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--fs-h3);
+  font-weight: 400;
+  letter-spacing: -0.008em;
+  white-space: nowrap;
+}
+.section-head::after {
+  content: "";
+  flex: 1;
+  border-bottom: var(--rule);
+  transform: translateY(-0.28em);
+}
+.section-head .label { white-space: nowrap; }
+
+h3.sub {
+  font-family: var(--font-display);
+  font-size: var(--fs-h4);
+  font-weight: 600;
+  margin: var(--space-5) 0 var(--space-2);
+}
+
+/* pull quote */
+.pullquote {
+  margin: var(--space-5) 0;
+  padding: var(--space-4) 0 var(--space-4) var(--space-5);
+  border-left: 3px solid var(--accent);
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-style: italic;
+  line-height: 1.42;
+  color: var(--fg);
+  max-width: 30rem;
+}
+.pullquote cite {
+  display: block;
+  margin-top: var(--space-3);
+  font-family: var(--font-sans);
+  font-size: var(--fs-folio);
+  font-style: normal;
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+/* ==========================================================
+   TABULAR MATTER — ledger tables, hairlines only
+   ========================================================== */
+
+.ledger {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--fs-small);
+  font-variant-numeric: lining-nums tabular-nums;
+}
+
+.ledger caption {
+  caption-side: top;
+  text-align: left;
+  font-family: var(--font-sans);
+  font-size: var(--fs-folio);
+  font-weight: 700;
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  padding-bottom: var(--space-2);
+}
+
+.ledger thead th {
+  text-align: left;
+  font-family: var(--font-sans);
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  padding: 0 var(--space-3) var(--space-2) 0;
+  border-bottom: 1.5px solid var(--rule-strong);
+  white-space: nowrap;
+  vertical-align: bottom;
+}
+
+.ledger tbody td {
+  padding: var(--space-3) var(--space-3) var(--space-3) 0;
+  border-bottom: var(--rule-thin);
+  vertical-align: top;
+  line-height: 1.45;
+}
+.ledger tbody tr:hover td { background: var(--paper-tint); }
+.ledger tbody tr:last-child td { border-bottom: var(--rule); }
+
+.ledger tfoot td {
+  padding: var(--space-3) var(--space-3) 0 0;
+  border-top: 2px solid var(--rule-strong);
+  font-weight: 600;
+}
+
+.ledger .num { text-align: right; font-family: var(--font-mono); font-size: var(--fs-caption); padding-right: var(--space-4); }
+.ledger .col-tight { width: 1%; white-space: nowrap; }
+
+.entity {
+  font-family: var(--font-display);
+  font-size: var(--fs-body);
+  font-weight: 600;
+  display: block;
+  letter-spacing: 0.003em;
+}
+.entity + .sub-line {
+  display: block;
+  font-size: var(--fs-folio);
+  color: var(--ink-faint);
+  font-style: italic;
+  margin-top: 2px;
+}
+
+.ref {
+  font-family: var(--font-mono);
+  font-size: var(--fs-caption);
+  color: var(--ink-faint);
+  letter-spacing: 0.02em;
+}
+
+/* definition ledger (key/value in print style) */
+.deflist {
+  margin: 0;
+  display: grid;
+  grid-template-columns: 11rem minmax(0, 1fr);
+  border-top: 1.5px solid var(--rule-strong);
+}
+.deflist dt {
+  font-family: var(--font-sans);
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  padding: var(--space-3) var(--space-4) var(--space-3) 0;
+  border-bottom: var(--rule-thin);
+}
+.deflist dd {
+  margin: 0;
+  padding: var(--space-3) 0;
+  border-bottom: var(--rule-thin);
+  font-size: var(--fs-small);
+  line-height: 1.5;
+}
+
+/* ==========================================================
+   STAMPS, BANDS, FLAGS
+   ========================================================== */
+
+.stamp {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4em;
+  padding: 0.16em 0.6em;
+  border: 1px solid currentColor;
+  font-family: var(--font-sans);
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  white-space: nowrap;
+  line-height: 1.5;
+}
+.stamp--low   { color: var(--ink-low);  background: var(--ink-low-wash); }
+.stamp--med   { color: var(--ink-med);  background: var(--ink-med-wash); }
+.stamp--high  { color: var(--ink-high); background: var(--ink-high-wash); }
+.stamp--info  { color: var(--ink-info); background: var(--ink-info-wash); }
+.stamp--quiet { color: var(--ink-faint); background: transparent; border-style: dotted; }
+
+.stamp--rotate {
+  transform: rotate(-3.2deg);
+  border-width: 2px;
+  padding: 0.3em 0.85em;
+  font-size: var(--fs-folio);
+  letter-spacing: 0.16em;
+}
+
+.flag-atrisk {
+  color: var(--ink-med);
+  font-family: var(--font-sans);
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+}
+.flag-breached {
+  color: var(--on-primary);
+  background: var(--ink-high);
+  padding: 0.16em 0.55em;
+  font-family: var(--font-sans);
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+}
+
+/* machine-drafted banner — the signature device */
+.machine-mark {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  border-top: 2px solid var(--accent);
+  border-bottom: 1px solid var(--accent);
+  background:
+    repeating-linear-gradient(135deg,
+      var(--accent-wash) 0 8px,
+      rgba(242,226,223,0.45) 8px 16px);
+  color: var(--accent-deep);
+}
+.machine-mark__badge {
+  font-family: var(--font-sans);
+  font-size: var(--fs-folio);
+  font-weight: 700;
+  letter-spacing: 0.17em;
+  text-transform: uppercase;
+  border: 2px solid var(--accent);
+  background: var(--surface);
+  padding: 0.28em 0.7em;
+  white-space: nowrap;
+}
+.machine-mark p {
+  margin: 0;
+  font-size: var(--fs-caption);
+  font-style: italic;
+  line-height: 1.45;
+}
+.machine-mark--sticky { position: sticky; top: 0; z-index: 5; }
+
+/* ==========================================================
+   FORM MATTER
+   ========================================================== */
+
+.field { margin-bottom: var(--space-4); max-width: 34rem; }
+.field > label {
+  display: block;
+  font-family: var(--font-sans);
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  margin-bottom: var(--space-2);
+}
+.field .hint {
+  display: block;
+  font-size: var(--fs-folio);
+  font-style: italic;
+  color: var(--ink-faint);
+  margin-top: var(--space-2);
+}
+.req { color: var(--accent); }
+
+input[type="text"], input[type="search"], input[type="date"], select, textarea {
+  width: 100%;
+  font-family: var(--font-text);
+  font-size: var(--fs-body);
+  color: var(--fg);
+  background: transparent;
+  border: 0;
+  border-bottom: 1.5px solid var(--rule-strong);
+  padding: var(--space-2) 0;
+  border-radius: 0;
+}
+textarea { line-height: 1.55; resize: vertical; }
+input:focus, select:focus, textarea:focus {
+  outline: 0;
+  border-bottom-color: var(--accent);
+  background: linear-gradient(to top, var(--accent-wash), transparent 62%);
+}
+::placeholder { color: var(--ink-ghost); font-style: italic; }
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5em;
+  padding: 0.55em 1.35em;
+  font-family: var(--font-sans);
+  font-size: var(--fs-folio);
+  font-weight: 700;
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  border: 1px solid var(--rule-strong);
+  background: var(--surface);
+  color: var(--fg);
+  cursor: pointer;
+  border-radius: 0;
+}
+.btn:hover { background: var(--paper-tint); }
+.btn--ink { background: var(--fg); color: var(--on-primary); border-color: var(--fg); }
+.btn--ink:hover { background: #000; }
+.btn--accent { background: var(--primary); color: var(--on-primary); border-color: var(--primary); }
+.btn--accent:hover { background: var(--accent-deep); }
+.btn--ghost { background: transparent; border-style: dotted; color: var(--ink-soft); }
+.btn:disabled, .btn[aria-disabled="true"] {
+  color: var(--ink-ghost);
+  border-color: var(--border);
+  border-style: dashed;
+  background: repeating-linear-gradient(135deg, transparent 0 5px, rgba(167,156,136,0.13) 5px 10px);
+  cursor: not-allowed;
+}
+
+.btn-row { display: flex; gap: var(--space-3); flex-wrap: wrap; align-items: center; margin-top: var(--space-4); }
+
+.denial {
+  border-left: 3px solid var(--ink-med);
+  background: var(--ink-med-wash);
+  padding: var(--space-3) var(--space-4);
+  font-size: var(--fs-caption);
+  line-height: 1.55;
+  color: #5c440e;
+  max-width: 34rem;
+  margin-top: var(--space-3);
+}
+.denial strong { font-family: var(--font-sans); font-size: 0.625rem; letter-spacing: var(--tracking-caps); text-transform: uppercase; display: block; margin-bottom: 2px; }
+
+.notice {
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  padding: var(--space-3) 0;
+  font-size: var(--fs-caption);
+  font-style: italic;
+  color: var(--ink-soft);
+  display: flex;
+  gap: var(--space-3);
+  align-items: flex-start;
+}
+.notice__mark {
+  font-family: var(--font-display);
+  font-style: normal;
+  font-size: 1.1rem;
+  color: var(--accent);
+  line-height: 1;
+}
+
+/* ==========================================================
+   CHAT — set as a printed dialogue / interview
+   ========================================================== */
+
+.dialogue-wrap {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 17rem;
+  gap: var(--gutter);
+  align-items: start;
+}
+
+.transcript {
+  border-top: 1.5px solid var(--rule-strong);
+}
+
+#messages {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 30rem;
+  overflow-y: auto;
+}
+
+#messages > li {
+  display: grid;
+  grid-template-columns: 7.5rem minmax(0, 1fr);
+  gap: var(--space-5);
+  padding: var(--space-4) 0;
+  border-bottom: var(--rule-thin);
+}
+
+.turn__who {
+  font-family: var(--font-sans);
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  line-height: 1.5;
+  padding-top: 0.2em;
+}
+.turn__who .t { display: block; font-family: var(--font-mono); font-weight: 400; letter-spacing: 0; text-transform: none; color: var(--ink-ghost); margin-top: 3px; }
+
+#messages > li[data-from="agent"] .turn__who { color: var(--accent); }
+#messages > li[data-from="agent"] .turn__body { border-left: 2px solid var(--accent-wash); padding-left: var(--space-4); }
+
+.turn__body { max-width: var(--measure); font-size: var(--fs-body); }
+.turn__body p { margin: 0 0 var(--space-3); }
+.turn__body p:last-child { margin-bottom: 0; }
+.turn__body ul { margin: 0 0 var(--space-3); padding-left: 1.1em; }
+.turn__body li { margin-bottom: var(--space-1); }
+
+.cite {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  color: var(--accent);
+  border-bottom: 1px dotted var(--accent);
+  cursor: help;
+  white-space: nowrap;
+}
+
+.turn__foot {
+  margin-top: var(--space-3);
+  font-size: var(--fs-folio);
+  font-style: italic;
+  color: var(--ink-faint);
+}
+
+#composer {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--space-4);
+  align-items: end;
+  padding-top: var(--space-4);
+  border-top: 2px solid var(--rule-strong);
+  margin-top: var(--space-2);
+}
+#composer .field { margin: 0; max-width: none; }
+#input { font-size: var(--fs-lead); }
+
+.composer-note {
+  grid-column: 1 / -1;
+  font-size: var(--fs-folio);
+  font-style: italic;
+  color: var(--ink-faint);
+  margin-top: var(--space-1);
+}
+
+.capability-list { list-style: none; margin: 0; padding: 0; font-size: var(--fs-folio); }
+.capability-list li {
+  padding: var(--space-2) 0;
+  border-bottom: 1px dotted var(--border);
+  display: grid;
+  grid-template-columns: 1.4rem 1fr;
+  gap: var(--space-2);
+  line-height: 1.45;
+  color: var(--ink-soft);
+}
+.capability-list .yes { color: var(--ink-low); font-weight: 700; }
+.capability-list .no { color: var(--ink-high); font-weight: 700; }
+
+/* ==========================================================
+   SCORE — arithmetic set as a printed table
+   ========================================================== */
+
+.arith { font-family: var(--font-mono); font-size: var(--fs-caption); color: var(--ink-soft); white-space: nowrap; }
+
+.score-figure {
+  border-top: 2px solid var(--rule-strong);
+  border-bottom: 1px solid var(--border);
+  padding: var(--space-5) 0;
+  text-align: center;
+}
+.score-figure__num {
+  font-family: var(--font-display);
+  font-size: 5.25rem;
+  line-height: 0.9;
+  font-variant-numeric: lining-nums;
+  letter-spacing: -0.03em;
+  display: block;
+}
+.score-figure__den { font-size: var(--fs-caption); color: var(--ink-faint); font-style: italic; }
+.score-figure__band { margin-top: var(--space-3); }
+.score-figure figcaption { margin-top: var(--space-3); font-size: var(--fs-folio); color: var(--ink-faint); font-style: italic; line-height: 1.5; }
+
+.bar {
+  height: 5px;
+  background: var(--paper-deep);
+  border: 1px solid var(--border);
+  position: relative;
+  min-width: 4.5rem;
+}
+.bar span { position: absolute; inset: 0 auto 0 0; background: var(--ink-soft); }
+.bar--high span { background: var(--ink-high); }
+.bar--med span { background: var(--ink-med); }
+.bar--low span { background: var(--ink-low); }
+
+.override-note {
+  margin-top: var(--space-5);
+  border: 2px solid var(--ink-high);
+  border-left-width: 6px;
+  background: var(--ink-high-wash);
+  padding: var(--space-4) var(--space-5);
+  max-width: 40rem;
+}
+.override-note h3 {
+  margin: 0 0 var(--space-2);
+  font-family: var(--font-display);
+  font-size: var(--fs-h4);
+  color: var(--ink-high);
+}
+.override-note p { margin: 0; font-size: var(--fs-small); line-height: 1.55; }
+
+/* ==========================================================
+   DOCUMENT CHECKLIST
+   ========================================================== */
+
+.checklist { list-style: none; margin: 0; padding: 0; border-top: 1.5px solid var(--rule-strong); }
+.checklist li {
+  display: grid;
+  grid-template-columns: 1.6rem minmax(0, 1fr) auto;
+  gap: var(--space-3);
+  align-items: baseline;
+  padding: var(--space-3) 0;
+  border-bottom: var(--rule-thin);
+  font-size: var(--fs-small);
+}
+.checklist .mark { font-family: var(--font-mono); font-size: 0.9rem; line-height: 1; }
+.checklist .mark--ok { color: var(--ink-low); }
+.checklist .mark--miss { color: var(--ink-high); font-weight: 700; }
+.checklist .doc-name { font-family: var(--font-display); font-size: var(--fs-body); }
+.checklist .doc-cond { display: block; font-size: var(--fs-folio); font-style: italic; color: var(--ink-faint); }
+.checklist .doc-meta { font-family: var(--font-mono); font-size: var(--fs-folio); color: var(--ink-faint); white-space: nowrap; }
+.checklist li.is-missing { background: linear-gradient(to right, var(--ink-high-wash), transparent 72%); }
+
+.missing-manifest {
+  border: 1px solid var(--ink-high);
+  border-top-width: 4px;
+  padding: var(--space-5);
+  background: var(--surface);
+  max-width: 44rem;
+}
+.missing-manifest h3 {
+  margin: 0 0 var(--space-1);
+  font-family: var(--font-display);
+  font-size: var(--fs-h3);
+  color: var(--ink-high);
+  font-weight: 400;
+}
+.missing-manifest ol { margin: var(--space-4) 0 0; padding-left: 1.3em; font-size: var(--fs-small); }
+.missing-manifest li { margin-bottom: var(--space-3); line-height: 1.5; }
+.missing-manifest li b { font-family: var(--font-display); font-weight: 600; }
+.missing-manifest li span { display: block; font-size: var(--fs-folio); font-style: italic; color: var(--ink-faint); }
+
+/* ==========================================================
+   TIMELINE / AUDIT / SLA
+   ========================================================== */
+
+.timeline { list-style: none; margin: 0; padding: 0; border-top: 1.5px solid var(--rule-strong); }
+.timeline > li {
+  display: grid;
+  grid-template-columns: 10.5rem 1.2rem minmax(0, 1fr);
+  gap: var(--space-3);
+  padding: var(--space-4) 0;
+  border-bottom: var(--rule-thin);
+}
+.timeline time { font-family: var(--font-mono); font-size: var(--fs-folio); color: var(--ink-faint); line-height: 1.5; }
+.timeline .node {
+  position: relative;
+  border-left: 1px solid var(--border);
+  margin-left: 0.5rem;
+}
+.timeline .node::before {
+  content: "";
+  position: absolute;
+  left: -4px; top: 0.42em;
+  width: 7px; height: 7px;
+  background: var(--fg);
+  border-radius: var(--radius-pill);
+}
+.timeline li[data-kind="alert"] .node::before { background: var(--ink-high); box-shadow: 0 0 0 3px var(--ink-high-wash); }
+.timeline li[data-kind="approval"] .node::before { background: var(--ink-low); box-shadow: 0 0 0 3px var(--ink-low-wash); }
+.timeline li[data-kind="agent"] .node::before { background: var(--accent); box-shadow: 0 0 0 3px var(--accent-wash); }
+.timeline .event { font-size: var(--fs-small); line-height: 1.5; }
+.timeline .event b { font-family: var(--font-display); font-weight: 600; }
+.timeline .actor { font-size: var(--fs-folio); color: var(--ink-faint); font-style: italic; }
+
+.delta {
+  margin-top: var(--space-2);
+  font-family: var(--font-mono);
+  font-size: var(--fs-folio);
+  display: inline-flex;
+  gap: 0.5em;
+  align-items: baseline;
+  flex-wrap: wrap;
+  background: var(--paper-tint);
+  border-left: 2px solid var(--border);
+  padding: var(--space-2) var(--space-3);
+}
+.delta .from { color: var(--ink-faint); text-decoration: line-through; }
+.delta .arrow { color: var(--ink-ghost); }
+.delta .to { color: var(--fg); font-weight: 600; }
+
+.clock {
+  border-top: 2px solid var(--rule-strong);
+  padding-top: var(--space-3);
+  margin-bottom: var(--space-5);
+}
+.clock__val {
+  font-family: var(--font-display);
+  font-size: 2.4rem;
+  line-height: 1;
+  font-variant-numeric: lining-nums;
+  letter-spacing: -0.02em;
+  display: block;
+}
+.clock--atrisk .clock__val { color: var(--ink-med); }
+.clock--breached .clock__val { color: var(--ink-high); }
+.clock__meter { height: 6px; background: var(--paper-deep); border: 1px solid var(--border); margin: var(--space-3) 0 var(--space-2); }
+.clock__meter span { display: block; height: 100%; background: var(--ink-low); }
+.clock--atrisk .clock__meter span { background: var(--ink-med); }
+.clock--breached .clock__meter span { background: var(--ink-high); }
+.clock__meta { font-size: var(--fs-folio); color: var(--ink-faint); font-style: italic; line-height: 1.5; }
+
+.chain { list-style: none; margin: 0; padding: 0; counter-reset: step; }
+.chain li {
+  display: grid;
+  grid-template-columns: 2rem minmax(0, 1fr) auto;
+  gap: var(--space-3);
+  padding: var(--space-3) 0;
+  border-bottom: var(--rule-thin);
+  align-items: baseline;
+  font-size: var(--fs-small);
+}
+.chain li::before {
+  counter-increment: step;
+  content: counter(step, upper-roman) ".";
+  font-family: var(--font-display);
+  font-size: var(--fs-caption);
+  color: var(--ink-ghost);
+}
+.chain .who { font-family: var(--font-display); font-weight: 600; }
+.chain .who span { display: block; font-size: var(--fs-folio); font-style: italic; font-weight: 400; color: var(--ink-faint); }
+.chain .when { font-family: var(--font-mono); font-size: var(--fs-folio); color: var(--ink-faint); white-space: nowrap; }
+.chain li[data-state="pending"] { opacity: 0.55; }
+
+/* ==========================================================
+   MEMO
+   ========================================================== */
+
+.memo-sheet {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-lift);
+  padding: var(--space-7) var(--space-8);
+  max-width: 44rem;
+  position: relative;
+  overflow: hidden;
+}
+.memo-sheet::after {
+  content: "MACHINE-DRAFTED";
+  position: absolute;
+  right: -2.2rem; top: 5.5rem;
+  transform: rotate(-32deg);
+  font-family: var(--font-sans);
+  font-size: 2.6rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: rgba(140, 47, 39, 0.075);
+  pointer-events: none;
+  white-space: nowrap;
+}
+.memo-sheet h2 {
+  font-family: var(--font-display);
+  font-size: var(--fs-h2);
+  font-weight: 400;
+  margin: var(--space-3) 0 var(--space-2);
+  line-height: 1.14;
+  letter-spacing: -0.012em;
+}
+.memo-sheet .memo-sub {
+  font-size: var(--fs-caption);
+  color: var(--ink-faint);
+  font-style: italic;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: var(--space-4);
+  margin: 0 0 var(--space-5);
+}
+.memo-sheet h3 {
+  font-family: var(--font-sans);
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  margin: var(--space-6) 0 var(--space-2);
+}
+.memo-sheet p { margin: 0 0 var(--space-4); max-width: 33rem; }
+
+.footnotes {
+  margin-top: var(--space-6);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--rule-strong);
+  font-size: var(--fs-folio);
+  line-height: 1.6;
+  color: var(--ink-soft);
+}
+.footnotes ol { margin: var(--space-2) 0 0; padding-left: 1.2em; }
+.footnotes li { margin-bottom: var(--space-2); }
+.footnotes a { color: var(--accent); }
+
+.versions { list-style: none; margin: 0; padding: 0; border-top: 1.5px solid var(--rule-strong); }
+.versions li { padding: var(--space-3) 0; border-bottom: var(--rule-thin); font-size: var(--fs-folio); line-height: 1.5; }
+.versions .v { font-family: var(--font-mono); font-size: var(--fs-caption); font-weight: 700; }
+.versions .meta { color: var(--ink-faint); font-style: italic; display: block; }
+.versions li[data-current="true"] .v { color: var(--accent); }
+
+/* ==========================================================
+   ADMIN MATRIX
+   ========================================================== */
+
+.matrix { width: 100%; border-collapse: collapse; font-size: var(--fs-caption); }
+.matrix th, .matrix td { border-bottom: var(--rule-thin); padding: var(--space-3) var(--space-2); text-align: center; }
+.matrix thead th {
+  border-bottom: 1.5px solid var(--rule-strong);
+  font-family: var(--font-sans);
+  font-size: 0.625rem;
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  vertical-align: bottom;
+}
+.matrix tbody th {
+  text-align: left;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: var(--fs-small);
+  padding-left: 0;
+  white-space: nowrap;
+}
+.matrix .y { color: var(--ink-low); font-weight: 700; font-family: var(--font-mono); }
+.matrix .n { color: var(--ink-ghost); font-family: var(--font-mono); }
+.matrix .c { color: var(--ink-med); font-weight: 700; font-family: var(--font-mono); }
+.matrix tbody tr:hover td, .matrix tbody tr:hover th { background: var(--paper-tint); }
+.matrix col.is-auditor { background: rgba(47,79,107,0.05); }
+
+.legend { display: flex; gap: var(--space-5); flex-wrap: wrap; margin-top: var(--space-3); font-size: var(--fs-folio); color: var(--ink-faint); font-style: italic; }
+.legend b { font-family: var(--font-mono); font-style: normal; }
+
+.roster { list-style: none; margin: 0; padding: 0; border-top: 1.5px solid var(--rule-strong); }
+.roster li { padding: var(--space-3) 0; border-bottom: var(--rule-thin); display: grid; grid-template-columns: minmax(0,1fr) auto; gap: var(--space-3); align-items: baseline; }
+.roster .nm { font-family: var(--font-display); font-weight: 600; font-size: var(--fs-small); }
+.roster .nm span { display: block; font-weight: 400; font-style: italic; font-size: var(--fs-folio); color: var(--ink-faint); }
+
+/* ==========================================================
+   SEARCH
+   ========================================================== */
+
+.search-bar {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr) auto;
+  gap: var(--space-5);
+  align-items: end;
+  border-bottom: 2px solid var(--rule-strong);
+  padding-bottom: var(--space-4);
+  margin-bottom: var(--space-5);
+}
+.search-bar .field { margin: 0; max-width: none; }
+
+.result-count { font-size: var(--fs-caption); color: var(--ink-faint); font-style: italic; margin-bottom: var(--space-4); }
+
+/* ==========================================================
+   FOLIO FOOT
+   ========================================================== */
+
+.folio-foot {
+  margin-top: var(--space-8);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--rule-strong);
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-4);
+  font-size: var(--fs-folio);
+  color: var(--ink-faint);
+  font-style: italic;
+  flex-wrap: wrap;
+}
+.folio-foot span { font-family: var(--font-mono); font-style: normal; }
+
+/* ==========================================================
+   RESPONSIVE
+   ========================================================== */
+
+@media (max-width: 1180px) {
+  .opener, .spread, .spread--wide, .dialogue-wrap, .spread--thirds { grid-template-columns: minmax(0, 1fr); }
+  .opener { align-items: start; }
+  .opener__aside { border-left: 0; border-top: var(--rule); padding: var(--space-3) 0 0; }
+  .search-bar { grid-template-columns: minmax(0,1fr) minmax(0,1fr); }
+}
+
+@media (max-width: 860px) {
+  .frame { grid-template-columns: minmax(0, 1fr); }
+  .contents { position: static; max-height: none; border-right: 0; border-bottom: var(--rule); }
+  .masthead, .well { padding-left: var(--space-5); padding-right: var(--space-5); }
+  .masthead__title { font-size: 2.5rem; }
+  .opener h1 { font-size: 2rem; }
+  #messages > li { grid-template-columns: minmax(0,1fr); gap: var(--space-2); }
+  .memo-sheet { padding: var(--space-5); }
+  .ledger { font-size: var(--fs-caption); }
+}
+
+@media print {
+  .contents, #agent-mode, #composer, .btn-row { display: none; }
+  body::before { display: none; }
+  .screen { display: block !important; }
+}
+</style>
+</head>
+<body>
+
+<!-- ==================== MASTHEAD ==================== -->
+<header class="masthead" role="banner">
+  <div class="masthead__folio">
+    <span class="label">Financial Crime Compliance &middot; Corporate Onboarding</span>
+    <span class="label">Tuesday, 28 July 2026 &middot; London &middot; Vol. XI No. 7</span>
+  </div>
+
+  <div class="masthead__title-row">
+    <h1 class="masthead__title">KYC Review Desk</h1>
+    <p class="masthead__strap">
+      A deterministic record of corporate onboarding review. Scores are computed
+      mechanically from the risk rating matrix; memoranda are machine-drafted and
+      advisory; every status change awaits a named human hand.
+    </p>
+  </div>
+
+  <div class="masthead__meta">
+    <div class="byline">
+      <span class="byline__seal" aria-hidden="true">MC</span>
+      <span class="byline__who">
+        <span class="byline__name">Miriam Castellanos</span>
+        <span class="byline__role">Senior Analyst &middot; Desk 4 &middot; authority to Medium band</span>
+      </span>
+    </div>
+    <span class="masthead__spacer"></span>
+    <span class="label">Case in hand &middot; <strong style="color:var(--fg)">KYC-2026-0417</strong> &middot; Meridian Freight Holdings B.V.</span>
+    <button type="button" id="agent-mode" data-mode="drafting" aria-live="polite"
+            title="Toggle the drafting agent between Drafting and Observing. The agent is advisory only.">
+      <span class="dot" aria-hidden="true"></span>
+      <span>Agent</span><span class="mode-sep">&mdash;</span><span class="mode-val" id="agent-mode-value">Drafting &middot; advisory only</span>
+    </button>
+  </div>
+</header>
+
+<div class="frame">
+
+  <!-- ==================== CONTENTS / NAV ==================== -->
+  <nav class="contents" aria-label="Sections">
+    <p class="contents__head">Contents</p>
+    <hr class="contents__rule">
+
+    <div class="contents__group">
+      <span class="label">The Desk</span>
+      <ul class="toc">
+        <li><button type="button" data-screen="worklist"><span class="toc__num">I</span><span class="toc__name">Worklist</span><span class="toc__folio">p.2</span></button></li>
+        <li><button type="button" data-screen="case"><span class="toc__num">II</span><span class="toc__name">Case File</span><span class="toc__folio">p.5</span></button></li>
+        <li><button type="button" data-screen="score"><span class="toc__num">III</span><span class="toc__name">Risk Arithmetic</span><span class="toc__folio">p.9</span></button></li>
+      </ul>
+    </div>
+
+    <div class="contents__group">
+      <span class="label">Drafting &amp; Decision</span>
+      <ul class="toc">
+        <li><button type="button" data-screen="chat" aria-current="true"><span class="toc__num">IV</span><span class="toc__name">Agent Dialogue</span><span class="toc__folio">p.12</span></button></li>
+        <li><button type="button" data-screen="memo"><span class="toc__num">V</span><span class="toc__name">Assessment Memo</span><span class="toc__folio">p.14</span></button></li>
+        <li><button type="button" data-screen="approvals"><span class="toc__num">VI</span><span class="toc__name">Approvals</span><span class="toc__folio">p.19</span></button></li>
+      </ul>
+    </div>
+
+    <div class="contents__group">
+      <span class="label">Oversight</span>
+      <ul class="toc">
+        <li><button type="button" data-screen="sla"><span class="toc__num">VII</span><span class="toc__name">Clocks &amp; Escalation</span><span class="toc__folio">p.22</span></button></li>
+        <li><button type="button" data-screen="audit"><span class="toc__num">VIII</span><span class="toc__name">Audit Trail</span><span class="toc__folio">p.26</span></button></li>
+        <li><button type="button" data-screen="search"><span class="toc__num">IX</span><span class="toc__name">Archive &amp; Export</span><span class="toc__folio">p.31</span></button></li>
+        <li><button type="button" data-screen="admin"><span class="toc__num">X</span><span class="toc__name">Roles &amp; Authority</span><span class="toc__folio">p.34</span></button></li>
+      </ul>
+    </div>
+
+    <div class="colophon">
+      Set in Iowan Old Style. Composed against pinned policy artefacts; no
+      artefact may be substituted after a case is opened.
+      <dl>
+        <dt>Risk matrix</dt><dd>v2.1</dd>
+        <dt>Doc checklist</dt><dd>v2.0</dd>
+        <dt>Onboarding policy</dt><dd>v3.2</dd>
+        <dt>Session</dt><dd>SSO &middot; 09:14 BST</dd>
+      </dl>
+    </div>
+  </nav>
+
+  <!-- ==================== THE WELL ==================== -->
+  <main class="well" id="well">
+
+    <!-- ============ IV. CHAT ============ -->
+    <section class="screen is-active" id="screen-chat" aria-labelledby="chat-h">
+      <div class="opener">
+        <div>
+          <span class="kicker opener__kicker">Section IV &middot; Drafting Dialogue</span>
+          <h1 id="chat-h">A conversation with the <em>drafting agent</em></h1>
+          <p class="opener__standfirst">
+            The agent composes and re-composes the risk assessment memorandum for
+            KYC-2026-0417 using only the pinned policy artefacts and the case
+            record. It proposes language. It decides nothing.
+          </p>
+        </div>
+        <aside class="opener__aside">
+          <strong>Grounding</strong>
+          Onboarding Policy v3.2; Risk Rating Matrix v2.1; Document Checklist
+          v2.0; case data as at 28 Jul 2026, 09:02 BST. Retrieval outside this
+          set is refused and logged.
+        </aside>
+      </div>
+
+      <div class="machine-mark" role="note">
+        <span class="machine-mark__badge">Machine-drafted</span>
+        <p>
+          Everything produced in this dialogue is machine-drafted and
+          <strong>advisory only</strong>. The agent cannot change case status,
+          alter the computed score, or record an approval. A named human must do
+          each of those on the Approvals page.
+        </p>
+      </div>
+
+      <div class="dialogue-wrap" style="margin-top:var(--space-6)">
+        <div>
+          <div class="transcript">
+            <ul id="messages">
+              <li data-from="agent">
+                <div class="turn__who">Drafting agent<span class="t">09:02:41</span></div>
+                <div class="turn__body">
+                  <p class="dropcap">Meridian Freight Holdings B.V. presents a computed risk score of
+                  <strong>76</strong>, band <strong>High</strong>, with a sanctions band-override in
+                  force. I have prepared a first draft of the assessment memorandum in five
+                  parts, grounded as follows:</p>
+                  <ul>
+                    <li>Jurisdiction rationale &mdash; <span class="cite" title="Onboarding Policy v3.2, section 4, paragraph 2">OP v3.2 &sect;4.2</span></li>
+                    <li>Ownership opacity &mdash; <span class="cite" title="Risk Rating Matrix v2.1, table 3">RRM v2.1 tbl.3</span></li>
+                    <li>Sanctions handling &mdash; <span class="cite" title="Onboarding Policy v3.2, section 7, paragraph 1">OP v3.2 &sect;7.1</span></li>
+                  </ul>
+                  <p>The draft is on the Assessment Memo page as version 3.</p>
+                  <p class="turn__foot">Advisory output. No status changed. No score written.</p>
+                </div>
+              </li>
+
+              <li data-from="human">
+                <div class="turn__who">M. Castellanos<span class="t">09:06:12</span></div>
+                <div class="turn__body">
+                  <p>The ownership paragraph reads as if we had confirmed the ultimate
+                  beneficial owner. We have not &mdash; the chart stops at the Curaçao
+                  intermediate. Redraft it to state the limit of what is evidenced.</p>
+                </div>
+              </li>
+
+              <li data-from="agent">
+                <div class="turn__who">Drafting agent<span class="t">09:06:58</span></div>
+                <div class="turn__body">
+                  <p>Understood. Redrafted &sect;2 to record that ownership is evidenced to the
+                  second tier only, that the declaration on file covers holders at or above
+                  25 per cent as required by <span class="cite" title="Document Checklist v2.0, item 3">DC v2.0 item 3</span>,
+                  and that the residual opacity is itself a scoring input under
+                  <span class="cite" title="Risk Rating Matrix v2.1, section 2, paragraph 4 — entity structure factor">RRM v2.1 &sect;2.4</span>.</p>
+                  <p>Saved as memo version 4. Version 3 is retained and remains readable.</p>
+                  <p class="turn__foot">Advisory output. Approval authority for a High-band case rests with a Compliance Officer.</p>
+                </div>
+              </li>
+
+              <li data-from="human">
+                <div class="turn__who">M. Castellanos<span class="t">09:11:03</span></div>
+                <div class="turn__body">
+                  <p>Good. Now summarise, in two sentences, what a Compliance Officer must
+                  weigh before approving.</p>
+                </div>
+              </li>
+
+              <li data-from="agent">
+                <div class="turn__who">Drafting agent<span class="t">09:11:20</span></div>
+                <div class="turn__body">
+                  <p>The sanctions true-positive against a second-tier holder forces the High
+                  band irrespective of the weighted total, so the decision cannot be taken
+                  below Compliance Officer tier
+                  (<span class="cite" title="Onboarding Policy v3.2, section 7, paragraph 1">OP v3.2 &sect;7.1</span>).
+                  The officer must also record a written rationale addressing residual
+                  ownership opacity and set the next review at six months
+                  (<span class="cite" title="Onboarding Policy v3.2, section 9, paragraph 3">OP v3.2 &sect;9.3</span>).</p>
+                  <p class="turn__foot">Advisory output. I cannot record that approval on your behalf.</p>
+                </div>
+              </li>
+            </ul>
+          </div>
+
+          <form id="composer" autocomplete="off">
+            <div class="field">
+              <label for="input">Instruction to the drafting agent</label>
+              <input type="text" id="input" name="input"
+                     placeholder="e.g. Redraft §3 to cite the expected-activity questionnaire directly&hellip;">
+            </div>
+            <button type="submit" class="btn btn--accent">Send</button>
+            <p class="composer-note">
+              Instructions and responses are appended to the immutable audit trail
+              against case KYC-2026-0417. The agent has no write access to status,
+              score or approvals.
+            </p>
+          </form>
+        </div>
+
+        <aside>
+          <div class="sidenote sidenote--accent">
+            <span class="sidenote__head">What the agent may do</span>
+            <ul class="capability-list">
+              <li><span class="yes">&#10003;</span> Draft and redraft the memo</li>
+              <li><span class="yes">&#10003;</span> Cite pinned policy provisions</li>
+              <li><span class="yes">&#10003;</span> Summarise case evidence</li>
+              <li><span class="no">&#10007;</span> Change case status</li>
+              <li><span class="no">&#10007;</span> Alter the computed score</li>
+              <li><span class="no">&#10007;</span> Record or countersign approval</li>
+              <li><span class="no">&#10007;</span> Waive a missing document</li>
+            </ul>
+          </div>
+
+          <div class="sidenote">
+            <span class="sidenote__head">Marginalia</span>
+            <em>The agent answers only from the three pinned artefacts. Asked for
+            anything beyond them, it declines and the refusal is written to the
+            trail &mdash; a refusal is evidence too.</em>
+          </div>
+
+          <div class="sidenote">
+            <span class="sidenote__head">This session</span>
+            4 instructions &middot; 2 redrafts &middot; 0 refusals<br>
+            Memo now at version 4 of 4<br>
+            Tokens grounded: 3 artefacts, 11 provisions
+          </div>
+        </aside>
+      </div>
+
+      <div class="folio-foot">
+        <span>KYC-2026-0417 &middot; Section IV</span>
+        <span>Page 12</span>
+      </div>
+    </section>
+
+    <!-- ============ I. WORKLIST ============ -->
+    <section class="screen" id="screen-worklist" aria-labelledby="worklist-h">
+      <div class="opener">
+        <div>
+          <span class="kicker opener__kicker">Section I &middot; The Queue</span>
+          <h1 id="worklist-h">Cases in review, <em>by clock</em></h1>
+          <p class="opener__standfirst">
+            Nineteen corporate onboarding files stand open on the desk this
+            morning. Two have consumed four fifths of their service window; one
+            breached at dawn and will carry that mark permanently.
+          </p>
+        </div>
+        <aside class="opener__aside">
+          <strong>Ordering</strong>
+          Sorted by remaining service window, breached first. Score and band are
+          computed; neither is editable by any role.
+        </aside>
+      </div>
+
+      <div class="spread--thirds">
+        <div>
+          <table class="ledger">
+            <caption>Open cases &middot; Desk 4 &middot; as at 09:14 BST</caption>
+            <thead>
+              <tr>
+                <th>Client &amp; reference</th>
+                <th>Status</th>
+                <th class="num">Score</th>
+                <th>Band</th>
+                <th>Approver</th>
+                <th>SLA remaining</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>
+                  <span class="entity">Meridian Freight Holdings B.V.</span>
+                  <span class="sub-line">Netherlands &middot; logistics &middot; cross-border</span>
+                  <span class="ref">KYC-2026-0417</span>
+                </td>
+                <td><span class="stamp stamp--info">Awaiting approval</span></td>
+                <td class="num">76</td>
+                <td><span class="stamp stamp--high">High</span></td>
+                <td>D. Okonjo<br><span class="ref">Compliance Officer</span></td>
+                <td><span class="flag-atrisk">At risk &middot; 1h 32m left</span><br><span class="ref">of 8h &middot; 81% consumed</span></td>
+              </tr>
+              <tr>
+                <td>
+                  <span class="entity">Aurelia Trading DMCC</span>
+                  <span class="sub-line">United Arab Emirates &middot; commodities</span>
+                  <span class="ref">KYC-2026-0402</span>
+                </td>
+                <td><span class="stamp stamp--high">Returned</span></td>
+                <td class="num">68</td>
+                <td><span class="stamp stamp--med">Medium</span></td>
+                <td>M. Castellanos<br><span class="ref">Senior Analyst</span></td>
+                <td><span class="flag-breached">Breached</span><br><span class="ref">04:41 BST &middot; permanent</span></td>
+              </tr>
+              <tr>
+                <td>
+                  <span class="entity">Northbank Capital Partners LLP</span>
+                  <span class="sub-line">United Kingdom &middot; regulated fund manager</span>
+                  <span class="ref">KYC-2026-0421</span>
+                </td>
+                <td><span class="stamp stamp--info">In review</span></td>
+                <td class="num">44</td>
+                <td><span class="stamp stamp--med">Medium</span></td>
+                <td>M. Castellanos<br><span class="ref">Senior Analyst</span></td>
+                <td><span class="flag-atrisk">At risk &middot; 4h 08m left</span><br><span class="ref">of 24h &middot; 83% consumed</span></td>
+              </tr>
+              <tr>
+                <td>
+                  <span class="entity">Volterra Agri-Products S.p.A.</span>
+                  <span class="sub-line">Italy &middot; agriculture</span>
+                  <span class="ref">KYC-2026-0424</span>
+                </td>
+                <td><span class="stamp stamp--quiet">Documents complete</span></td>
+                <td class="num">31</td>
+                <td><span class="stamp stamp--low">Low</span></td>
+                <td>R. Adeyemi<br><span class="ref">KYC Analyst</span></td>
+                <td>29h 12m left<br><span class="ref">of 48h &middot; 39% consumed</span></td>
+              </tr>
+              <tr>
+                <td>
+                  <span class="entity">Sable Ridge Minerals Ltd</span>
+                  <span class="sub-line">British Virgin Islands &middot; extractives</span>
+                  <span class="ref">KYC-2026-0409</span>
+                </td>
+                <td><span class="stamp stamp--info">Awaiting approval</span></td>
+                <td class="num">83</td>
+                <td><span class="stamp stamp--high">High</span></td>
+                <td>D. Okonjo<br><span class="ref">Compliance Officer</span></td>
+                <td>3h 47m left<br><span class="ref">of 8h &middot; 53% consumed</span></td>
+              </tr>
+              <tr>
+                <td>
+                  <span class="entity">Kestrel Marine Services AS</span>
+                  <span class="sub-line">Norway &middot; shipping</span>
+                  <span class="ref">KYC-2026-0426</span>
+                </td>
+                <td><span class="stamp stamp--quiet">In review</span></td>
+                <td class="num">52</td>
+                <td><span class="stamp stamp--med">Medium</span></td>
+                <td>M. Castellanos<br><span class="ref">Senior Analyst</span></td>
+                <td>18h 55m left<br><span class="ref">of 24h &middot; 21% consumed</span></td>
+              </tr>
+              <tr>
+                <td>
+                  <span class="entity">Halcyon Payments GmbH</span>
+                  <span class="sub-line">Germany &middot; payment institution &middot; regulated</span>
+                  <span class="ref">KYC-2026-0428</span>
+                </td>
+                <td><span class="stamp stamp--quiet">Awaiting documents</span></td>
+                <td class="num">&mdash;</td>
+                <td><span class="stamp stamp--quiet">Not scored</span></td>
+                <td>R. Adeyemi<br><span class="ref">KYC Analyst</span></td>
+                <td><span class="ref">Clock not started</span><br><span class="ref">awaiting case-ready</span></td>
+              </tr>
+              <tr>
+                <td>
+                  <span class="entity">Cordillera Textiles S.A.C.</span>
+                  <span class="sub-line">Peru &middot; manufacturing &middot; cross-border</span>
+                  <span class="ref">KYC-2026-0430</span>
+                </td>
+                <td><span class="stamp stamp--low">Approved</span></td>
+                <td class="num">27</td>
+                <td><span class="stamp stamp--low">Low</span></td>
+                <td>R. Adeyemi<br><span class="ref">KYC Analyst</span></td>
+                <td><span class="ref">Closed within window</span><br><span class="ref">next review Jul 2029</span></td>
+              </tr>
+            </tbody>
+            <tfoot>
+              <tr>
+                <td>19 open &middot; 8 shown</td>
+                <td colspan="2">2 at risk &middot; 1 breached</td>
+                <td colspan="3">Mean score 54.3 &middot; 4 High, 9 Medium, 6 Low</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+
+        <aside>
+          <div class="sidenote sidenote--accent">
+            <span class="sidenote__head">Service windows</span>
+            Measured in business hours from the case-ready timestamp.<br><br>
+            <strong style="font-family:var(--font-mono);font-size:var(--fs-caption)">Low 48h &middot; Medium 24h &middot; High 8h</strong><br><br>
+            <em>At eighty per cent consumed the file is flagged AT RISK. A breach,
+            once recorded, is permanent and can never be cleared by any role.</em>
+          </div>
+
+          <div class="sidenote">
+            <span class="sidenote__head">Band thresholds</span>
+            Low 0&ndash;39 &middot; review every 3 years<br>
+            Medium 40&ndash;69 &middot; annual review<br>
+            High 70&ndash;100 &middot; 6-month review<br><br>
+            <em>A sanctions true-positive forces High regardless of the weighted
+            total.</em>
+          </div>
+
+          <div class="sidenote">
+            <span class="sidenote__head">Desk note</span>
+            <em>Aurelia Trading was returned to the client on 24 July with four
+            missing items. The clock does not stop while a file is out.</em>
+          </div>
+
+          <div class="btn-row">
+            <button type="button" class="btn btn--ink" data-screen="case">Open case file</button>
+            <button type="button" class="btn btn--ghost" data-screen="search">Search archive</button>
+          </div>
+        </aside>
+      </div>
+
+      <div class="folio-foot">
+        <span>Desk 4 &middot; Section I</span>
+        <span>Page 2</span>
+      </div>
+    </section>
+
+    <!-- ============ II. CASE ============ -->
+    <section class="screen" id="screen-case" aria-labelledby="case-h">
+      <div class="opener">
+        <div>
+          <span class="kicker opener__kicker">Section II &middot; Case File KYC-2026-0417</span>
+          <h1 id="case-h">Meridian Freight <em>Holdings B.V.</em></h1>
+          <p class="opener__standfirst">
+            A Netherlands-incorporated logistics group with a Curaçao intermediate
+            holding company and declared cross-border activity across eleven
+            corridors. Submitted 27 July; case-ready 28 July, 01:06 BST.
+          </p>
+        </div>
+        <aside class="opener__aside">
+          <strong>Pinned artefacts</strong>
+          Risk Rating Matrix v2.1<br>
+          Document Checklist v2.0<br>
+          Onboarding Policy v3.2<br><br>
+          Pinned at case creation. Later versions do not apply retroactively.
+        </aside>
+      </div>
+
+      <div class="spread">
+        <div>
+          <div class="section-head"><h2>The client</h2><span class="label">As submitted</span></div>
+          <dl class="deflist">
+            <dt>Legal name</dt><dd>Meridian Freight Holdings B.V.</dd>
+            <dt>Registration</dt><dd>Netherlands Chamber of Commerce &middot; 82441907 &middot; incorporated 14 March 2019</dd>
+            <dt>Registered address</dt><dd>Weena 505, 3013 AL Rotterdam, Netherlands</dd>
+            <dt>Industry</dt><dd>Freight forwarding &amp; logistics (NACE 52.29) &middot; not a regulated activity</dd>
+            <dt>Ownership depth</dt><dd>2 tiers &mdash; structure chart therefore required</dd>
+            <dt>Beneficial owners &ge;25%</dt><dd>Meridian Freight Curaçao N.V. (61%) &middot; J. van der Meer (24%, below threshold) &middot; residual free float</dd>
+            <dt>Expected activity</dt><dd>&euro;180m annual throughput &middot; 11 corridors &middot; cross-border declared</dd>
+            <dt>Submitted by</dt><dd>Relationship Management &middot; K. Berhane &middot; 27 Jul 2026, 16:48 BST</dd>
+            <dt>Case-ready</dt><dd>28 Jul 2026, 01:06 BST &mdash; the SLA clock runs from this stamp</dd>
+          </dl>
+
+          <div class="section-head"><h2>Document package</h2><span class="label">Deterministic check &middot; Checklist v2.0</span></div>
+          <ul class="checklist">
+            <li>
+              <span class="mark mark--ok">&#10003;</span>
+              <span><span class="doc-name">Certificate of incorporation</span><span class="doc-cond">Always required</span></span>
+              <span class="doc-meta">PDF &middot; 2 pp &middot; recd 27 Jul</span>
+            </li>
+            <li>
+              <span class="mark mark--ok">&#10003;</span>
+              <span><span class="doc-name">Register of directors</span><span class="doc-cond">Always required</span></span>
+              <span class="doc-meta">PDF &middot; 4 pp &middot; recd 27 Jul</span>
+            </li>
+            <li>
+              <span class="mark mark--ok">&#10003;</span>
+              <span><span class="doc-name">Beneficial ownership declaration</span><span class="doc-cond">Holders at or above 25 per cent</span></span>
+              <span class="doc-meta">PDF &middot; 3 pp &middot; recd 27 Jul</span>
+            </li>
+            <li>
+              <span class="mark mark--ok">&#10003;</span>
+              <span><span class="doc-name">Proof of registered address</span><span class="doc-cond">Must be dated within 3 months &mdash; dated 09 Jun 2026, accepted</span></span>
+              <span class="doc-meta">PDF &middot; 1 p &middot; recd 27 Jul</span>
+            </li>
+            <li>
+              <span class="mark mark--ok">&#10003;</span>
+              <span><span class="doc-name">Structure chart</span><span class="doc-cond">Conditional &mdash; ownership depth 2 exceeds 1</span></span>
+              <span class="doc-meta">PDF &middot; 1 p &middot; recd 28 Jul</span>
+            </li>
+            <li>
+              <span class="mark mark--ok">&#10003;</span>
+              <span><span class="doc-name">Expected activity questionnaire</span><span class="doc-cond">Conditional &mdash; cross-border activity declared</span></span>
+              <span class="doc-meta">XLSX &middot; recd 28 Jul</span>
+            </li>
+            <li>
+              <span class="mark mark--ok">&mdash;</span>
+              <span><span class="doc-name">Operating licence</span><span class="doc-cond">Conditional &mdash; not required, industry is unregulated</span></span>
+              <span class="doc-meta">Not applicable</span>
+            </li>
+          </ul>
+
+          <div class="notice" style="margin-top:var(--space-5)">
+            <span class="notice__mark">&para;</span>
+            <span>
+              Completeness check passed at 28 Jul 2026, 01:06:04 BST. Six of six
+              applicable items present. The check is deterministic: rules are read
+              from Document Checklist v2.0 and no model participates.
+            </span>
+          </div>
+
+          <div class="section-head"><h2>A returned file, for contrast</h2><span class="label">KYC-2026-0402 &middot; Aurelia Trading DMCC</span></div>
+          <div class="missing-manifest">
+            <span class="label">Status</span>
+            <h3>Returned &mdash; itemised deficiencies</h3>
+            <p style="margin:var(--space-2) 0 0;font-size:var(--fs-small);font-style:italic;color:var(--ink-soft)">
+              Issued to the client 24 Jul 2026, 11:20 GST by R. Adeyemi. The service
+              window continued to run and was breached at 04:41 BST on 28 July.
+            </p>
+            <ol>
+              <li><b>Proof of registered address</b><span>On file is dated 02 Feb 2026 &mdash; older than three months at case-ready. Checklist v2.0, item 4.</span></li>
+              <li><b>Beneficial ownership declaration</b><span>Declares holders at or above 25 per cent but omits the Jebel Ali nominee arrangement. Checklist v2.0, item 3.</span></li>
+              <li><b>Structure chart</b><span>Required: ownership depth recorded as 3. Not supplied. Checklist v2.0, item 5.</span></li>
+              <li><b>Expected activity questionnaire</b><span>Cross-border activity declared at submission; questionnaire absent. Checklist v2.0, item 7.</span></li>
+            </ol>
+            <div class="btn-row">
+              <button type="button" class="btn">Re-issue itemised list</button>
+              <button type="button" class="btn" aria-disabled="true" disabled>Waive item</button>
+            </div>
+            <div class="denial">
+              <strong>Why the waive control is inert</strong>
+              A waive action is not available to your role and is not rendered for
+              KYC Analysts at all. Waivers are a Compliance Officer instrument and
+              are recorded as a distinct audit event with a mandatory rationale.
+            </div>
+          </div>
+        </div>
+
+        <aside>
+          <div class="sidenote sidenote--accent">
+            <span class="sidenote__head">Status</span>
+            <span class="stamp stamp--rotate stamp--info" style="margin-top:4px">Awaiting approval</span>
+            <p style="margin:var(--space-4) 0 0"><em>No status change may occur without an explicit,
+            named human approval. The agent cannot move this file.</em></p>
+          </div>
+
+          <div class="sidenote">
+            <span class="sidenote__head">Computed score</span>
+            <span style="font-family:var(--font-display);font-size:2.6rem;line-height:1;font-variant-numeric:lining-nums">76</span>
+            <span class="stamp stamp--high" style="vertical-align:0.9rem;margin-left:0.4rem">High</span>
+            <p style="margin:var(--space-3) 0 0"><em>Band forced High by sanctions override. Arithmetic
+            shown in full in Section III.</em></p>
+          </div>
+
+          <div class="sidenote">
+            <span class="sidenote__head">Assignment</span>
+            Analyst &middot; M. Castellanos<br>
+            Approver &middot; D. Okonjo, Compliance Officer<br>
+            Escalation &middot; A. Lindqvist, Head of Financial Crime
+          </div>
+
+          <div class="sidenote">
+            <span class="sidenote__head">Next review due</span>
+            <em>Six months from approval &mdash; provisionally 28 January 2027,
+            per Onboarding Policy v3.2 &sect;9.3.</em>
+          </div>
+        </aside>
+      </div>
+
+      <div class="folio-foot">
+        <span>KYC-2026-0417 &middot; Section II</span>
+        <span>Page 5</span>
+      </div>
+    </section>
+
+    <!-- ============ III. SCORE ============ -->
+    <section class="screen" id="screen-score" aria-labelledby="score-h">
+      <div class="opener">
+        <div>
+          <span class="kicker opener__kicker">Section III &middot; Risk Arithmetic</span>
+          <h1 id="score-h">The score, shown <em>as long division</em></h1>
+          <p class="opener__standfirst">
+            Every figure below is produced mechanically from Risk Rating Matrix
+            v2.1. No model contributes to scoring. The arithmetic is printed in
+            full so that a reader may check it by hand.
+          </p>
+        </div>
+        <aside class="opener__aside">
+          <strong>Immutability</strong>
+          The score field is not editable by any role, including Compliance
+          Officers and administrators. It changes only when an input changes, and
+          then only by recomputation.
+        </aside>
+      </div>
+
+      <div class="spread--thirds">
+        <div>
+          <table class="ledger">
+            <caption>Factor breakdown &middot; Risk Rating Matrix v2.1 &middot; computed 28 Jul 2026, 01:06:09 BST</caption>
+            <thead>
+              <tr>
+                <th>Factor</th>
+                <th>Input observed</th>
+                <th class="num">Raw</th>
+                <th class="num">Weight</th>
+                <th class="num">Contribution</th>
+                <th>Share</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><span class="entity">Jurisdiction</span><span class="sub-line">RRM v2.1 &sect;1</span></td>
+                <td>Netherlands (low) with Curaçao intermediate holding (elevated) &mdash; higher of the two applies</td>
+                <td class="num">80</td>
+                <td class="num">0.30</td>
+                <td class="num">24.00</td>
+                <td><span class="bar bar--high" style="display:block"><span style="width:80%"></span></span></td>
+              </tr>
+              <tr>
+                <td><span class="entity">Entity structure</span><span class="sub-line">RRM v2.1 &sect;2</span></td>
+                <td>Two-tier holding; UBO evidenced to second tier only; residual opacity</td>
+                <td class="num">72</td>
+                <td class="num">0.25</td>
+                <td class="num">18.00</td>
+                <td><span class="bar bar--high" style="display:block"><span style="width:72%"></span></span></td>
+              </tr>
+              <tr>
+                <td><span class="entity">Industry</span><span class="sub-line">RRM v2.1 &sect;3</span></td>
+                <td>Freight forwarding &amp; logistics &mdash; elevated per trade-based money laundering schedule</td>
+                <td class="num">65</td>
+                <td class="num">0.20</td>
+                <td class="num">13.00</td>
+                <td><span class="bar bar--med" style="display:block"><span style="width:65%"></span></span></td>
+              </tr>
+              <tr>
+                <td><span class="entity">Sanctions screening</span><span class="sub-line">RRM v2.1 &sect;4</span></td>
+                <td><strong>True positive</strong> &mdash; second-tier holder matched to OFAC SDN, adjudicated 28 Jul 04:12 BST</td>
+                <td class="num">100</td>
+                <td class="num">0.15</td>
+                <td class="num">15.00</td>
+                <td><span class="bar bar--high" style="display:block"><span style="width:100%"></span></span></td>
+              </tr>
+              <tr>
+                <td><span class="entity">Expected activity</span><span class="sub-line">RRM v2.1 &sect;5</span></td>
+                <td>&euro;180m across 11 corridors; three corridors on the elevated list</td>
+                <td class="num">60</td>
+                <td class="num">0.10</td>
+                <td class="num">6.00</td>
+                <td><span class="bar bar--med" style="display:block"><span style="width:60%"></span></span></td>
+              </tr>
+            </tbody>
+            <tfoot>
+              <tr>
+                <td colspan="3">Weighted total</td>
+                <td class="num">1.00</td>
+                <td class="num">76.00</td>
+                <td><span class="stamp stamp--high">High</span></td>
+              </tr>
+            </tfoot>
+          </table>
+
+          <p class="arith" style="margin-top:var(--space-4)">
+            (80 &times; 0.30) + (72 &times; 0.25) + (65 &times; 0.20) + (100 &times; 0.15) + (60 &times; 0.10)
+            = 24.00 + 18.00 + 13.00 + 15.00 + 6.00 = <strong>76.00</strong>
+          </p>
+
+          <div class="override-note">
+            <span class="label" style="color:var(--ink-high)">Band override in force</span>
+            <h3>Sanctions true-positive &rarr; High</h3>
+            <p>
+              The adjudicated sanctions true-positive forces band <strong>High</strong>
+              irrespective of the weighted total, per Risk Rating Matrix v2.1
+              &sect;4.3 and Onboarding Policy v3.2 &sect;7.1. Here the total of 76.00
+              already falls in the High range, so the override is confirmatory
+              rather than corrective &mdash; but it is recorded independently, and
+              it alone fixes approval authority at Compliance Officer.
+            </p>
+          </div>
+
+          <div class="notice" style="margin-top:var(--space-5)">
+            <span class="notice__mark">&sect;</span>
+            <span>
+              Recomputation history: v1 at 01:06:09 (total 64.00, band Medium);
+              v2 at 04:12:37 following sanctions adjudication (total 76.00, band
+              High, override applied). Both computations are retained in the audit
+              trail with their inputs.
+            </span>
+          </div>
+        </div>
+
+        <aside>
+          <figure class="score-figure" style="margin:0">
+            <span class="score-figure__num">76</span>
+            <span class="score-figure__den">of 100</span>
+            <div class="score-figure__band"><span class="stamp stamp--high stamp--rotate">High band</span></div>
+            <figcaption>
+              Computed mechanically. Read-only for every role. Review cadence:
+              six months.
+            </figcaption>
+          </figure>
+
+          <div class="sidenote sidenote--accent" style="margin-top:var(--space-6)">
+            <span class="sidenote__head">Weights, fixed by matrix</span>
+            Jurisdiction <b>0.30</b><br>
+            Entity structure <b>0.25</b><br>
+            Industry <b>0.20</b><br>
+            Sanctions screening <b>0.15</b><br>
+            Expected activity <b>0.10</b><br><br>
+            <em>Weights sum to 1.00 and are version-pinned to the case.</em>
+          </div>
+
+          <div class="sidenote">
+            <span class="sidenote__head">Bands</span>
+            0&ndash;39 Low &middot; review 3 years<br>
+            40&ndash;69 Medium &middot; review annually<br>
+            70&ndash;100 High &middot; review 6 months, Compliance Officer approval mandatory
+          </div>
+
+          <div class="sidenote">
+            <span class="sidenote__head">Marginalia</span>
+            <em>Had the sanctions match been adjudicated a false positive, the raw
+            score for that factor would fall to 10, the total to 62.50, and the band
+            to Medium &mdash; and the approval authority would fall with it.</em>
+          </div>
+        </aside>
+      </div>
+
+      <div class="folio-foot">
+        <span>KYC-2026-0417 &middot; Section III</span>
+        <span>Page 9</span>
+      </div>
+    </section>
+
+    <!-- ============ V. MEMO ============ -->
+    <section class="screen" id="screen-memo" aria-labelledby="memo-h">
+      <div class="opener">
+        <div>
+          <span class="kicker opener__kicker">Section V &middot; Assessment Memorandum</span>
+          <h1 id="memo-h">Risk assessment, <em>machine-drafted</em></h1>
+          <p class="opener__standfirst">
+            Version 4 of 4. Drafted by the agent from pinned policy artefacts and
+            case data only. Every assertion carries a resolvable citation. No
+            version is ever overwritten or deleted.
+          </p>
+        </div>
+        <aside class="opener__aside">
+          <strong>Standing label</strong>
+          The MACHINE-DRAFTED mark travels with this document into export, print
+          and the case file. It cannot be removed by any role.
+        </aside>
+      </div>
+
+      <div class="machine-mark machine-mark--sticky">
+        <span class="machine-mark__badge">Machine-drafted</span>
+        <p>
+          Composed by the drafting agent, version 4, 28 Jul 2026 09:06:58 BST.
+          Advisory only &mdash; not a decision, not an approval, and not a
+          substitute for the reviewer's own judgement.
+        </p>
+      </div>
+
+      <div class="spread" style="margin-top:var(--space-6)">
+        <article class="memo-sheet">
+          <span class="label">Memorandum &middot; KYC-2026-0417 &middot; Confidential</span>
+          <h2>Risk Assessment: Meridian Freight Holdings B.V.</h2>
+          <p class="memo-sub">
+            Prepared for D. Okonjo, Compliance Officer &middot; Grounded in Onboarding
+            Policy v3.2, Risk Rating Matrix v2.1, Document Checklist v2.0 &middot;
+            Case data as at 28 Jul 2026, 09:02 BST
+          </p>
+
+          <h3>1. Summary</h3>
+          <p class="dropcap">
+            Meridian Freight Holdings B.V. is a Netherlands-incorporated freight
+            forwarding group whose file computes to a weighted risk score of 76.00
+            and falls in the High band. An adjudicated sanctions true-positive
+            against a second-tier holder independently forces the High band and
+            fixes approval authority at Compliance Officer level
+            <a class="cite" href="#fn1">[1]</a>. The document package is complete
+            against the applicable checklist; six of six applicable items are on
+            file <a class="cite" href="#fn2">[2]</a>.
+          </p>
+
+          <h3>2. Ownership and structure</h3>
+          <p>
+            Ownership is evidenced to the second tier only. The declaration on file
+            covers holders at or above the twenty-five per cent threshold as the
+            checklist requires <a class="cite" href="#fn2">[2]</a>; beyond the
+            Curaçao intermediate, no further attribution is evidenced. That residual
+            opacity is not a documentary gap but a scoring input, and is reflected
+            in the entity-structure raw score of 72 <a class="cite" href="#fn3">[3]</a>.
+            The structure chart supplied on 28 July satisfies the conditional
+            requirement triggered by ownership depth of two.
+          </p>
+
+          <h3>3. Sanctions exposure</h3>
+          <p>
+            Screening returned one match against a second-tier holder, adjudicated a
+            true positive at 04:12 BST on 28 July. Policy requires that a true
+            positive force the High band irrespective of the weighted total and that
+            the file may not be decided below Compliance Officer tier
+            <a class="cite" href="#fn1">[1]</a>. The adjudication record and screening
+            vendor reference are retained in the case file.
+          </p>
+
+          <h3>4. Expected activity</h3>
+          <p>
+            The questionnaire declares &euro;180m of annual throughput across eleven
+            corridors, three of which appear on the elevated corridor schedule. This
+            is consistent with the stated business model and does not, on the
+            evidence before the desk, indicate layering
+            <a class="cite" href="#fn4">[4]</a>.
+          </p>
+
+          <h3>5. Matters for the approver</h3>
+          <p>
+            The approver should weigh whether the residual second-tier opacity is
+            tolerable given the sanctions finding, and must record a written
+            rationale as a condition of any High-band approval
+            <a class="cite" href="#fn5">[5]</a>. If approved, the next review falls
+            due six months from the decision date.
+          </p>
+
+          <div class="footnotes">
+            <span class="label">Citations &middot; resolvable to pinned artefacts</span>
+            <ol>
+              <li id="fn1"><a href="#fn1">Onboarding Policy v3.2 &sect;7.1</a> &mdash; Sanctions true-positive: mandatory High band and Compliance Officer authority.</li>
+              <li id="fn2"><a href="#fn2">Document Checklist v2.0, items 1&ndash;7</a> &mdash; Core and conditional documentary requirements.</li>
+              <li id="fn3"><a href="#fn3">Risk Rating Matrix v2.1 &sect;2.4</a> &mdash; Entity structure factor: scoring of unevidenced ownership tiers.</li>
+              <li id="fn4"><a href="#fn4">Risk Rating Matrix v2.1 &sect;5.2</a> &mdash; Expected activity: corridor schedule and throughput bands.</li>
+              <li id="fn5"><a href="#fn5">Onboarding Policy v3.2 &sect;9.3</a> &mdash; High-band approval: documented rationale and six-month review cadence.</li>
+            </ol>
+          </div>
+
+          <div class="btn-row">
+            <button type="button" class="btn btn--ink" data-screen="chat">Ask the agent to redraft</button>
+            <button type="button" class="btn">Export memo (PDF)</button>
+            <button type="button" class="btn" aria-disabled="true" disabled>Remove machine-drafted label</button>
+          </div>
+        </article>
+
+        <aside>
+          <div class="sidenote sidenote--accent">
+            <span class="sidenote__head">Version history &middot; immutable</span>
+            <ul class="versions">
+              <li data-current="true">
+                <span class="v">v4 &middot; current</span>
+                <span class="meta">28 Jul 09:06:58 &middot; agent redraft &mdash; &sect;2 restated to the limit of evidence, at analyst instruction</span>
+              </li>
+              <li>
+                <span class="v">v3</span>
+                <span class="meta">28 Jul 09:02:41 &middot; agent draft &mdash; first full five-part memo after sanctions adjudication</span>
+              </li>
+              <li>
+                <span class="v">v2</span>
+                <span class="meta">28 Jul 04:31:12 &middot; agent draft &mdash; superseded when band moved Medium &rarr; High</span>
+              </li>
+              <li>
+                <span class="v">v1</span>
+                <span class="meta">28 Jul 01:22:40 &middot; agent draft &mdash; initial draft on Medium band assumption</span>
+              </li>
+            </ul>
+            <p style="margin-top:var(--space-3)"><em>Superseded versions remain
+            readable in full. There is no delete affordance.</em></p>
+          </div>
+
+          <div class="sidenote">
+            <span class="sidenote__head">Grounding set</span>
+            Onboarding Policy v3.2<br>
+            Risk Rating Matrix v2.1<br>
+            Document Checklist v2.0<br>
+            Case record KYC-2026-0417<br><br>
+            <em>11 provisions cited; 11 resolved; 0 unresolved.</em>
+          </div>
+
+          <div class="sidenote">
+            <span class="sidenote__head">Marginalia</span>
+            <em>A memo is a proposal, not a finding. It becomes part of the record
+            only when a named officer approves the case and the memo version in
+            force at that moment is sealed against the decision.</em>
+          </div>
+        </aside>
+      </div>
+
+      <div class="folio-foot">
+        <span>KYC-2026-0417 &middot; Section V</span>
+        <span>Page 14</span>
+      </div>
+    </section>
+
+    <!-- ============ VI. APPROVALS ============ -->
+    <section class="screen" id="screen-approvals" aria-labelledby="approvals-h">
+      <div class="opener">
+        <div>
+          <span class="kicker opener__kicker">Section VI &middot; Decision</span>
+          <h1 id="approvals-h">Authority rests with a <em>named person</em></h1>
+          <p class="opener__standfirst">
+            No status changes without an explicit human approval. Authority is
+            fixed by the computed band: Low to a KYC Analyst, Medium to a Senior
+            Analyst, High to a Compliance Officer and no one below.
+          </p>
+        </div>
+        <aside class="opener__aside">
+          <strong>You are signed in as</strong>
+          Miriam Castellanos &middot; Senior Analyst &middot; authority to Medium band.
+          This case is High.
+        </aside>
+      </div>
+
+      <div class="spread--thirds">
+        <div>
+          <div class="section-head"><h2>KYC-2026-0417 &middot; Meridian Freight Holdings B.V.</h2><span class="label">High band</span></div>
+
+          <dl class="deflist">
+            <dt>Computed score</dt><dd>76.00 &mdash; High band &middot; sanctions override in force</dd>
+            <dt>Authority required</dt><dd>Compliance Officer</dd>
+            <dt>Assigned approver</dt><dd>Dele Okonjo &middot; Compliance Officer &middot; notified 04:16 BST</dd>
+            <dt>Memo in force</dt><dd>Version 4 &middot; machine-drafted &middot; will be sealed against the decision</dd>
+            <dt>Service window</dt><dd>8 business hours from 01:06 BST &middot; <span class="flag-atrisk">At risk &mdash; 1h 32m remaining</span></dd>
+          </dl>
+
+          <div class="pullquote">
+            &ldquo;Approval is an act of a person, not of a system. The desk records
+            who, when, on what evidence, and why.&rdquo;
+            <cite>Onboarding Policy v3.2, preamble</cite>
+          </div>
+
+          <div class="section-head"><h2>Decision</h2><span class="label">Controls restricted by band</span></div>
+
+          <div class="field">
+            <label for="approval-rationale">Approval rationale <span class="req">&middot; required for High band</span></label>
+            <textarea id="approval-rationale" rows="4" disabled
+              placeholder="A documented rationale is mandatory for High-band approvals. Address the residual ownership opacity and the sanctions adjudication."></textarea>
+            <span class="hint">Minimum 120 characters. Written verbatim to the audit trail; cannot be edited afterwards.</span>
+          </div>
+
+          <div class="btn-row">
+            <button type="button" class="btn btn--accent" aria-disabled="true" disabled>Approve case</button>
+            <button type="button" class="btn" aria-disabled="true" disabled>Reject case</button>
+            <button type="button" class="btn btn--ghost" data-screen="sla">Escalate for attention</button>
+          </div>
+
+          <div class="denial">
+            <strong>Why these controls are disabled</strong>
+            This case computes to the High band (score 76.00, sanctions override in
+            force). High-band decisions require Compliance Officer authority. Your
+            role is Senior Analyst, with authority to the Medium band. The controls
+            remain visible so that the constraint is legible, and every blocked
+            attempt is itself recorded. Onboarding Policy v3.2 &sect;7.1, &sect;9.3.
+          </div>
+
+          <div class="section-head"><h2>Rejection</h2><span class="label">Reason mandatory at every band</span></div>
+          <div class="field">
+            <label for="reject-reason">Reason for rejection <span class="req">&middot; required</span></label>
+            <textarea id="reject-reason" rows="3" disabled
+              placeholder="State the ground of rejection. A rejection without a recorded reason cannot be submitted at any band."></textarea>
+            <span class="hint">A rejection returns the case to the client with the reason attached and does not stop the service clock.</span>
+          </div>
+
+          <div class="section-head"><h2>A case within your authority</h2><span class="label">For contrast</span></div>
+          <dl class="deflist">
+            <dt>Case</dt><dd>KYC-2026-0426 &middot; Kestrel Marine Services AS</dd>
+            <dt>Computed score</dt><dd>52.00 &mdash; Medium band &middot; no override</dd>
+            <dt>Authority required</dt><dd>Senior Analyst &mdash; <strong>you hold this authority</strong></dd>
+          </dl>
+          <div class="field" style="margin-top:var(--space-4)">
+            <label for="kestrel-note">Approval note <span style="font-style:italic;text-transform:none;letter-spacing:0;font-family:var(--font-text);color:var(--ink-faint)">(optional at Medium band)</span></label>
+            <textarea id="kestrel-note" rows="2" placeholder="Optional commentary for the record&hellip;"></textarea>
+          </div>
+          <div class="btn-row">
+            <button type="button" class="btn btn--ink">Approve KYC-2026-0426</button>
+            <button type="button" class="btn">Reject with reason</button>
+          </div>
+        </div>
+
+        <aside>
+          <div class="sidenote sidenote--accent">
+            <span class="sidenote__head">Authority by band</span>
+            <table class="ledger" style="font-size:var(--fs-folio)">
+              <tbody>
+                <tr><td>Low 0&ndash;39</td><td>KYC Analyst</td></tr>
+                <tr><td>Medium 40&ndash;69</td><td>Senior Analyst</td></tr>
+                <tr><td>High 70&ndash;100</td><td>Compliance Officer</td></tr>
+              </tbody>
+            </table>
+            <p style="margin-top:var(--space-3)"><em>A holder of higher authority may decide a lower-band case;
+            the reverse is never permitted, and cannot be delegated.</em></p>
+          </div>
+
+          <div class="sidenote">
+            <span class="sidenote__head">Standing prohibitions</span>
+            The drafting agent may not approve, reject, or move a case.<br>
+            Auditors may not approve anything.<br>
+            No role may edit the computed score.<br>
+            No role may clear a recorded breach.
+          </div>
+
+          <div class="sidenote">
+            <span class="sidenote__head">Marginalia</span>
+            <em>The disabled state is deliberate design. Hiding the control would
+            hide the rule; showing it, inert and explained, teaches the rule every
+            time the page is read.</em>
+          </div>
+        </aside>
+      </div>
+
+      <div class="folio-foot">
+        <span>KYC-2026-0417 &middot; Section VI</span>
+        <span>Page 19</span>
+      </div>
+    </section>
+
+    <!-- ============ VII. SLA ============ -->
+    <section class="screen" id="screen-sla" aria-labelledby="sla-h">
+      <div class="opener">
+        <div>
+          <span class="kicker opener__kicker">Section VII &middot; Clocks &amp; Escalation</span>
+          <h1 id="sla-h">The clock does not <em>stop</em></h1>
+          <p class="opener__standfirst">
+            Service windows run in business hours from the case-ready timestamp.
+            At eighty per cent consumed a file is marked AT RISK. A breach is
+            permanent: it is a fact of the record, not a condition to be cleared.
+          </p>
+        </div>
+        <aside class="opener__aside">
+          <strong>Windows</strong>
+          Low 48 business hours &middot; Medium 24 &middot; High 8. Measured from
+          case-ready, not from submission.
+        </aside>
+      </div>
+
+      <div class="spread--thirds">
+        <div>
+          <div class="section-head"><h2>Active clocks</h2><span class="label">Desk 4</span></div>
+
+          <div class="clock clock--atrisk">
+            <span class="label">KYC-2026-0417 &middot; Meridian Freight Holdings B.V. &middot; High &middot; 8h window</span>
+            <span class="clock__val">1h 32m remaining</span>
+            <div class="clock__meter"><span style="width:81%"></span></div>
+            <p class="clock__meta">
+              Case-ready 28 Jul 01:06 BST &middot; 81% consumed &middot; AT RISK raised
+              06:32 BST &middot; due 09:06 BST &middot; awaiting Compliance Officer decision
+            </p>
+          </div>
+
+          <div class="clock clock--breached">
+            <span class="label">KYC-2026-0402 &middot; Aurelia Trading DMCC &middot; Medium &middot; 24h window</span>
+            <span class="clock__val">Breached by 4h 33m</span>
+            <div class="clock__meter"><span style="width:100%"></span></div>
+            <p class="clock__meta">
+              Case-ready 27 Jul 04:41 BST &middot; AT RISK raised 23:52 &middot; breach
+              recorded 28 Jul 04:41:00 BST &middot; <strong>permanent &mdash; no role may clear it</strong>
+            </p>
+          </div>
+
+          <div class="clock clock--atrisk">
+            <span class="label">KYC-2026-0421 &middot; Northbank Capital Partners LLP &middot; Medium &middot; 24h window</span>
+            <span class="clock__val">4h 08m remaining</span>
+            <div class="clock__meter"><span style="width:83%"></span></div>
+            <p class="clock__meta">
+              Case-ready 27 Jul 13:22 BST &middot; 83% consumed &middot; AT RISK raised
+              08:41 BST &middot; due 13:22 BST
+            </p>
+          </div>
+
+          <div class="clock">
+            <span class="label">KYC-2026-0409 &middot; Sable Ridge Minerals Ltd &middot; High &middot; 8h window</span>
+            <span class="clock__val">3h 47m remaining</span>
+            <div class="clock__meter"><span style="width:53%"></span></div>
+            <p class="clock__meta">
+              Case-ready 28 Jul 05:31 BST &middot; 53% consumed &middot; within window &middot;
+              due 13:31 BST
+            </p>
+          </div>
+
+          <div class="section-head"><h2>Escalation chain</h2><span class="label">KYC-2026-0417</span></div>
+          <ul class="chain">
+            <li data-state="done">
+              <span class="who">Dele Okonjo<span>Assigned Compliance Officer</span></span>
+              <span class="when">Notified 28 Jul 04:16 BST<br>Acknowledged 04:29 BST</span>
+            </li>
+            <li data-state="done">
+              <span class="who">Astrid Lindqvist<span>Head of Financial Crime</span></span>
+              <span class="when">Notified 28 Jul 06:32 BST<br>on AT RISK &middot; acknowledged 06:40</span>
+            </li>
+            <li data-state="pending">
+              <span class="who">Rupert Ellingham<span>Chief Operating Officer</span></span>
+              <span class="when">Not yet notified<br>triggers on breach</span>
+            </li>
+          </ul>
+
+          <div class="notice" style="margin-top:var(--space-5)">
+            <span class="notice__mark">&dagger;</span>
+            <span>
+              Notifications are events, not messages: each is written to the audit
+              trail with recipient, channel, timestamp and acknowledgement. An
+              unacknowledged notification escalates automatically to the next link
+              after 30 minutes.
+            </span>
+          </div>
+
+          <div class="section-head"><h2>Breach register</h2><span class="label">Rolling 30 days &middot; permanent entries</span></div>
+          <table class="ledger">
+            <thead>
+              <tr><th>Case</th><th>Band</th><th>Window</th><th>Breached at</th><th>Overrun</th><th>Recorded by</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><span class="entity">Aurelia Trading DMCC</span><span class="ref">KYC-2026-0402</span></td>
+                <td><span class="stamp stamp--med">Medium</span></td>
+                <td>24h</td>
+                <td class="ref">28 Jul 04:41:00 BST</td>
+                <td>4h 33m &amp; running</td>
+                <td>System &middot; deterministic</td>
+              </tr>
+              <tr>
+                <td><span class="entity">Pelagic Bunkering Pte Ltd</span><span class="ref">KYC-2026-0388</span></td>
+                <td><span class="stamp stamp--high">High</span></td>
+                <td>8h</td>
+                <td class="ref">19 Jul 15:02:00 BST</td>
+                <td>2h 11m at closure</td>
+                <td>System &middot; deterministic</td>
+              </tr>
+              <tr>
+                <td><span class="entity">Grandview Estates Corp</span><span class="ref">KYC-2026-0361</span></td>
+                <td><span class="stamp stamp--low">Low</span></td>
+                <td>48h</td>
+                <td class="ref">11 Jul 09:00:00 BST</td>
+                <td>6h 48m at closure</td>
+                <td>System &middot; deterministic</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <aside>
+          <div class="sidenote sidenote--accent">
+            <span class="sidenote__head">At-risk threshold</span>
+            <em>Eighty per cent of the window consumed. The flag is raised once and
+            is not lowered if work resumes &mdash; the record shows that the file
+            approached its limit.</em>
+          </div>
+
+          <div class="sidenote">
+            <span class="sidenote__head">Escalation chain</span>
+            I. Assigned Compliance Officer<br>
+            II. Head of Financial Crime<br>
+            III. Chief Operating Officer<br><br>
+            <em>The chain is fixed. It cannot be reordered or skipped.</em>
+          </div>
+
+          <div class="sidenote">
+            <span class="sidenote__head">Desk note</span>
+            <em>Returning a file to the client does not pause the clock. This is
+            deliberate: the client's delay is the desk's problem to manage, and
+            hiding it would flatter the numbers.</em>
+          </div>
+        </aside>
+      </div>
+
+      <div class="folio-foot">
+        <span>Desk 4 &middot; Section VII</span>
+        <span>Page 22</span>
+      </div>
+    </section>
+
+    <!-- ============ VIII. AUDIT ============ -->
+    <section class="screen" id="screen-audit" aria-labelledby="audit-h">
+      <div class="opener">
+        <div>
+          <span class="kicker opener__kicker">Section VIII &middot; The Record</span>
+          <h1 id="audit-h">Append-only, <em>in perpetuity</em></h1>
+          <p class="opener__standfirst">
+            Every action lands here with actor, instrument, timestamp and the
+            values before and after. Nothing on this page may be edited or
+            removed, by anyone, ever. There is no control that would do so.
+          </p>
+        </div>
+        <aside class="opener__aside">
+          <strong>Integrity</strong>
+          Entries are hash-chained; each carries the digest of its predecessor.
+          A gap or alteration is detectable on verification.
+        </aside>
+      </div>
+
+      <div class="spread">
+        <div>
+          <div class="section-head"><h2>KYC-2026-0417 &middot; chronological</h2><span class="label">47 entries &middot; newest first</span></div>
+
+          <ul class="timeline">
+            <li data-kind="agent">
+              <time>28 Jul 2026<br>09:11:20.418 BST</time>
+              <span class="node"></span>
+              <span class="event">
+                <b>Agent response recorded</b> &mdash; advisory summary of approver considerations
+                <span class="actor">Drafting agent v1.4 &middot; on instruction of M. Castellanos &middot; hash 9f3c&hellip;a71e</span>
+              </span>
+            </li>
+            <li data-kind="agent">
+              <time>28 Jul 2026<br>09:06:58.002 BST</time>
+              <span class="node"></span>
+              <span class="event">
+                <b>Memo redrafted</b> &mdash; assessment memorandum &sect;2 restated
+                <span class="delta"><span class="from">version 3</span><span class="arrow">&rarr;</span><span class="to">version 4</span></span>
+                <span class="actor">Drafting agent v1.4 &middot; instruction by M. Castellanos, Senior Analyst</span>
+              </span>
+            </li>
+            <li data-kind="alert">
+              <time>28 Jul 2026<br>06:32:00.000 BST</time>
+              <span class="node"></span>
+              <span class="event">
+                <b>SLA flag raised</b> &mdash; 80% of the 8-hour window consumed
+                <span class="delta"><span class="from">within window</span><span class="arrow">&rarr;</span><span class="to">AT RISK</span></span>
+                <span class="actor">System &middot; deterministic &middot; notification issued to A. Lindqvist, Head of Financial Crime</span>
+              </span>
+            </li>
+            <li data-kind="alert">
+              <time>28 Jul 2026<br>04:12:37.551 BST</time>
+              <span class="node"></span>
+              <span class="event">
+                <b>Score recomputed</b> after sanctions adjudication
+                <span class="delta"><span class="from">64.00 &middot; Medium</span><span class="arrow">&rarr;</span><span class="to">76.00 &middot; High (override)</span></span>
+                <span class="actor">System &middot; Risk Rating Matrix v2.1 &middot; no human input to the arithmetic</span>
+              </span>
+            </li>
+            <li data-kind="alert">
+              <time>28 Jul 2026<br>04:12:04.309 BST</time>
+              <span class="node"></span>
+              <span class="event">
+                <b>Sanctions match adjudicated</b> &mdash; second-tier holder, OFAC SDN
+                <span class="delta"><span class="from">unadjudicated</span><span class="arrow">&rarr;</span><span class="to">true positive</span></span>
+                <span class="actor">D. Okonjo, Compliance Officer &middot; vendor ref SCR-88214-B</span>
+              </span>
+            </li>
+            <li>
+              <time>28 Jul 2026<br>01:22:40.117 BST</time>
+              <span class="node"></span>
+              <span class="event">
+                <b>Memo drafted</b> &mdash; initial machine-drafted assessment
+                <span class="delta"><span class="from">none</span><span class="arrow">&rarr;</span><span class="to">version 1</span></span>
+                <span class="actor">Drafting agent v1.4 &middot; grounded in OP v3.2, RRM v2.1, DC v2.0</span>
+              </span>
+            </li>
+            <li>
+              <time>28 Jul 2026<br>01:06:09.884 BST</time>
+              <span class="node"></span>
+              <span class="event">
+                <b>Risk score computed</b> &mdash; five factors, weights per matrix
+                <span class="delta"><span class="from">not scored</span><span class="arrow">&rarr;</span><span class="to">64.00 &middot; Medium</span></span>
+                <span class="actor">System &middot; deterministic &middot; Risk Rating Matrix v2.1</span>
+              </span>
+            </li>
+            <li data-kind="approval">
+              <time>28 Jul 2026<br>01:06:04.221 BST</time>
+              <span class="node"></span>
+              <span class="event">
+                <b>Completeness check passed</b> &mdash; 6 of 6 applicable items present
+                <span class="delta"><span class="from">awaiting documents</span><span class="arrow">&rarr;</span><span class="to">case-ready</span></span>
+                <span class="actor">System &middot; deterministic &middot; Document Checklist v2.0 &middot; SLA clock started</span>
+              </span>
+            </li>
+            <li>
+              <time>28 Jul 2026<br>00:58:31.640 BST</time>
+              <span class="node"></span>
+              <span class="event">
+                <b>Document received</b> &mdash; structure chart (conditional, ownership depth 2)
+                <span class="actor">K. Berhane, Relationship Management &middot; 1 page &middot; sha256 4c1b&hellip;77d0</span>
+              </span>
+            </li>
+            <li>
+              <time>27 Jul 2026<br>16:48:12.005 BST</time>
+              <span class="node"></span>
+              <span class="event">
+                <b>Case created</b> from client submission with document package
+                <span class="delta"><span class="from">&mdash;</span><span class="arrow">&rarr;</span><span class="to">KYC-2026-0417 &middot; awaiting documents</span></span>
+                <span class="actor">K. Berhane, Relationship Management &middot; artefacts pinned: RRM v2.1, DC v2.0, OP v3.2</span>
+              </span>
+            </li>
+          </ul>
+
+          <div class="notice" style="margin-top:var(--space-5)">
+            <span class="notice__mark">&#8258;</span>
+            <span>
+              This page offers reading, filtering and export only. No edit, redact
+              or delete affordance exists in any role, including administrators.
+              Access to the trail is itself an audited event.
+            </span>
+          </div>
+
+          <div class="btn-row">
+            <button type="button" class="btn">Export trail (CSV)</button>
+            <button type="button" class="btn btn--ghost">Verify hash chain</button>
+          </div>
+        </div>
+
+        <aside>
+          <div class="sidenote sidenote--accent">
+            <span class="sidenote__head">What an entry records</span>
+            Actor &mdash; named individual or named system component<br>
+            Instrument &mdash; the action taken<br>
+            Timestamp &mdash; to the millisecond, with zone<br>
+            Before &rarr; after &mdash; the values on both sides<br>
+            Digest &mdash; hash of the entry and its predecessor
+          </div>
+
+          <div class="sidenote">
+            <span class="sidenote__head">Read access</span>
+            All four roles may read this trail in full. Auditors may read every
+            case's trail regardless of assignment, and may write nothing anywhere.
+          </div>
+
+          <div class="sidenote">
+            <span class="sidenote__head">Marginalia</span>
+            <em>A refusal by the agent is an entry too. So is a blocked approval
+            attempt. The record is of what was tried, not only of what succeeded.</em>
+          </div>
+        </aside>
+      </div>
+
+      <div class="folio-foot">
+        <span>KYC-2026-0417 &middot; Section VIII</span>
+        <span>Page 26</span>
+      </div>
+    </section>
+
+    <!-- ============ IX. SEARCH ============ -->
+    <section class="screen" id="screen-search" aria-labelledby="search-h">
+      <div class="opener">
+        <div>
+          <span class="kicker opener__kicker">Section IX &middot; Archive</span>
+          <h1 id="search-h">Past cases, <em>and their export</em></h1>
+          <p class="opener__standfirst">
+            Search the closed and open record by client, reference, jurisdiction,
+            band or period. A full case file &mdash; client data, documents index,
+            score workings, memo versions and audit trail &mdash; exports as CSV.
+          </p>
+        </div>
+        <aside class="opener__aside">
+          <strong>Export is audited</strong>
+          Each export writes an entry naming the requester, the scope, the row
+          count and the moment.
+        </aside>
+      </div>
+
+      <div class="search-bar">
+        <div class="field">
+          <label for="q">Client, reference or jurisdiction</label>
+          <input type="search" id="q" value="freight" placeholder="e.g. Meridian, KYC-2026-04, Netherlands">
+        </div>
+        <div class="field">
+          <label for="band">Risk band</label>
+          <select id="band">
+            <option>Any band</option>
+            <option>Low 0&ndash;39</option>
+            <option selected>Medium 40&ndash;69</option>
+            <option>High 70&ndash;100</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="period">Decided within</label>
+          <select id="period">
+            <option>Last 30 days</option>
+            <option selected>Last 12 months</option>
+            <option>All time</option>
+          </select>
+        </div>
+        <button type="button" class="btn btn--ink">Search</button>
+      </div>
+
+      <div class="spread--thirds">
+        <div>
+          <p class="result-count">27 cases matched &middot; showing 6 &middot; sorted by decision date, most recent first</p>
+
+          <table class="ledger">
+            <thead>
+              <tr>
+                <th>Client &amp; reference</th>
+                <th>Jurisdiction</th>
+                <th class="num">Score</th>
+                <th>Band</th>
+                <th>Outcome</th>
+                <th>Decided</th>
+                <th class="col-tight">File</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><span class="entity">Meridian Freight Holdings B.V.</span><span class="ref">KYC-2026-0417</span></td>
+                <td>Netherlands</td><td class="num">76</td>
+                <td><span class="stamp stamp--high">High</span></td>
+                <td><span class="stamp stamp--info">Awaiting</span></td>
+                <td class="ref">&mdash;</td>
+                <td class="col-tight"><button type="button" class="btn">CSV</button></td>
+              </tr>
+              <tr>
+                <td><span class="entity">Cordillera Textiles S.A.C.</span><span class="ref">KYC-2026-0430</span></td>
+                <td>Peru</td><td class="num">27</td>
+                <td><span class="stamp stamp--low">Low</span></td>
+                <td><span class="stamp stamp--low">Approved</span></td>
+                <td class="ref">26 Jul 2026<br>R. Adeyemi</td>
+                <td class="col-tight"><button type="button" class="btn">CSV</button></td>
+              </tr>
+              <tr>
+                <td><span class="entity">Thorne &amp; Whitcombe Ltd</span><span class="ref">KYC-2026-0395</span></td>
+                <td>United Kingdom</td><td class="num">58</td>
+                <td><span class="stamp stamp--med">Medium</span></td>
+                <td><span class="stamp stamp--low">Approved</span></td>
+                <td class="ref">21 Jul 2026<br>M. Castellanos</td>
+                <td class="col-tight"><button type="button" class="btn">CSV</button></td>
+              </tr>
+              <tr>
+                <td><span class="entity">Pelagic Bunkering Pte Ltd</span><span class="ref">KYC-2026-0388</span></td>
+                <td>Singapore</td><td class="num">81</td>
+                <td><span class="stamp stamp--high">High</span></td>
+                <td><span class="stamp stamp--high">Rejected</span></td>
+                <td class="ref">19 Jul 2026<br>D. Okonjo</td>
+                <td class="col-tight"><button type="button" class="btn">CSV</button></td>
+              </tr>
+              <tr>
+                <td><span class="entity">Lindwall Precision AB</span><span class="ref">KYC-2026-0374</span></td>
+                <td>Sweden</td><td class="num">33</td>
+                <td><span class="stamp stamp--low">Low</span></td>
+                <td><span class="stamp stamp--low">Approved</span></td>
+                <td class="ref">15 Jul 2026<br>R. Adeyemi</td>
+                <td class="col-tight"><button type="button" class="btn">CSV</button></td>
+              </tr>
+              <tr>
+                <td><span class="entity">Grandview Estates Corp</span><span class="ref">KYC-2026-0361</span></td>
+                <td>United States</td><td class="num">38</td>
+                <td><span class="stamp stamp--low">Low</span></td>
+                <td><span class="stamp stamp--low">Approved</span></td>
+                <td class="ref">11 Jul 2026<br>R. Adeyemi &middot; <span class="flag-breached">Breached</span></td>
+                <td class="col-tight"><button type="button" class="btn">CSV</button></td>
+              </tr>
+            </tbody>
+          </table>
+
+          <div class="btn-row">
+            <button type="button" class="btn btn--accent">Export all 27 matched case files (CSV)</button>
+            <button type="button" class="btn btn--ghost">Save this search</button>
+          </div>
+        </div>
+
+        <aside>
+          <div class="sidenote sidenote--accent">
+            <span class="sidenote__head">What a full case file contains</span>
+            Client and registration data<br>
+            Document index with receipt stamps and digests<br>
+            Completeness result and any itemised deficiencies<br>
+            Score workings &mdash; inputs, raw, weights, contributions<br>
+            All memo versions with citations<br>
+            Approval record and rationale<br>
+            SLA timeline and escalations<br>
+            Complete audit trail<br>
+            Pinned artefact versions
+          </div>
+
+          <div class="sidenote">
+            <span class="sidenote__head">Export format</span>
+            UTF-8 CSV, RFC 4180, one archive per case with a manifest sheet.
+            Timestamps in ISO 8601 with zone.
+          </div>
+
+          <div class="sidenote">
+            <span class="sidenote__head">Marginalia</span>
+            <em>Auditors may search and export exactly as analysts do. That is the
+            whole of their power, and it is enough.</em>
+          </div>
+        </aside>
+      </div>
+
+      <div class="folio-foot">
+        <span>Archive &middot; Section IX</span>
+        <span>Page 31</span>
+      </div>
+    </section>
+
+    <!-- ============ X. ADMIN ============ -->
+    <section class="screen" id="screen-admin" aria-labelledby="admin-h">
+      <div class="opener">
+        <div>
+          <span class="kicker opener__kicker">Section X &middot; Roles &amp; Authority</span>
+          <h1 id="admin-h">Least privilege, <em>named and legible</em></h1>
+          <p class="opener__standfirst">
+            Four roles, no shared accounts, no generic logins. Every action is
+            attributable to a named individual. Auditors hold read access
+            everywhere and write access nowhere.
+          </p>
+        </div>
+        <aside class="opener__aside">
+          <strong>Principle</strong>
+          A role grants the least authority sufficient to the work. Elevation is a
+          change of role, recorded as such &mdash; never a temporary exception.
+        </aside>
+      </div>
+
+      <div class="spread--thirds">
+        <div>
+          <div class="section-head"><h2>Permissions matrix</h2><span class="label">Effective 01 Jul 2026</span></div>
+
+          <table class="matrix">
+            <colgroup><col><col><col><col><col class="is-auditor"></colgroup>
+            <thead>
+              <tr>
+                <th style="text-align:left">Capability</th>
+                <th>KYC Analyst</th>
+                <th>Senior Analyst</th>
+                <th>Compliance Officer</th>
+                <th>Auditor</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><th>Create case from submission</th><td class="y">&#10003;</td><td class="y">&#10003;</td><td class="y">&#10003;</td><td class="n">&mdash;</td></tr>
+              <tr><th>Upload / index documents</th><td class="y">&#10003;</td><td class="y">&#10003;</td><td class="y">&#10003;</td><td class="n">&mdash;</td></tr>
+              <tr><th>Run completeness check</th><td class="y">&#10003;</td><td class="y">&#10003;</td><td class="y">&#10003;</td><td class="n">&mdash;</td></tr>
+              <tr><th>View computed score</th><td class="y">&#10003;</td><td class="y">&#10003;</td><td class="y">&#10003;</td><td class="y">&#10003;</td></tr>
+              <tr><th>Edit computed score</th><td class="n">&mdash;</td><td class="n">&mdash;</td><td class="n">&mdash;</td><td class="n">&mdash;</td></tr>
+              <tr><th>Instruct the drafting agent</th><td class="y">&#10003;</td><td class="y">&#10003;</td><td class="y">&#10003;</td><td class="n">&mdash;</td></tr>
+              <tr><th>Approve &mdash; Low band</th><td class="y">&#10003;</td><td class="y">&#10003;</td><td class="y">&#10003;</td><td class="n">&mdash;</td></tr>
+              <tr><th>Approve &mdash; Medium band</th><td class="n">&mdash;</td><td class="y">&#10003;</td><td class="y">&#10003;</td><td class="n">&mdash;</td></tr>
+              <tr><th>Approve &mdash; High band</th><td class="n">&mdash;</td><td class="n">&mdash;</td><td class="c">&#10003;&#8202;*</td><td class="n">&mdash;</td></tr>
+              <tr><th>Reject with reason</th><td class="c">&#10003;&#8202;&dagger;</td><td class="c">&#10003;&#8202;&dagger;</td><td class="y">&#10003;</td><td class="n">&mdash;</td></tr>
+              <tr><th>Waive a missing document</th><td class="n">&mdash;</td><td class="n">&mdash;</td><td class="c">&#10003;&#8202;*</td><td class="n">&mdash;</td></tr>
+              <tr><th>Adjudicate sanctions match</th><td class="n">&mdash;</td><td class="n">&mdash;</td><td class="y">&#10003;</td><td class="n">&mdash;</td></tr>
+              <tr><th>Read audit trail</th><td class="y">&#10003;</td><td class="y">&#10003;</td><td class="y">&#10003;</td><td class="y">&#10003;</td></tr>
+              <tr><th>Edit or delete audit entry</th><td class="n">&mdash;</td><td class="n">&mdash;</td><td class="n">&mdash;</td><td class="n">&mdash;</td></tr>
+              <tr><th>Clear an SLA breach</th><td class="n">&mdash;</td><td class="n">&mdash;</td><td class="n">&mdash;</td><td class="n">&mdash;</td></tr>
+              <tr><th>Search archive</th><td class="y">&#10003;</td><td class="y">&#10003;</td><td class="y">&#10003;</td><td class="y">&#10003;</td></tr>
+              <tr><th>Export full case file (CSV)</th><td class="y">&#10003;</td><td class="y">&#10003;</td><td class="y">&#10003;</td><td class="y">&#10003;</td></tr>
+              <tr><th>Set review cadence</th><td class="n">&mdash;</td><td class="n">&mdash;</td><td class="y">&#10003;</td><td class="n">&mdash;</td></tr>
+            </tbody>
+          </table>
+
+          <div class="legend">
+            <span><b class="y" style="color:var(--ink-low)">&#10003;</b> permitted</span>
+            <span><b style="color:var(--ink-ghost)">&mdash;</b> denied</span>
+            <span><b style="color:var(--ink-med)">*</b> requires documented rationale</span>
+            <span><b style="color:var(--ink-med)">&dagger;</b> within the role's own band authority only</span>
+          </div>
+
+          <div class="pullquote">
+            &ldquo;No role, and no combination of roles, may edit the computed
+            score, clear a recorded breach, or alter the audit trail. These are
+            not permissions withheld; they are operations that do not exist.&rdquo;
+            <cite>Onboarding Policy v3.2 &sect;11</cite>
+          </div>
+
+          <div class="section-head"><h2>Review cadence</h2><span class="label">By band &middot; Compliance Officer settable</span></div>
+          <table class="ledger">
+            <thead><tr><th>Band</th><th>Cadence</th><th>Next review calculated from</th><th>Example due date</th></tr></thead>
+            <tbody>
+              <tr><td><span class="stamp stamp--low">Low 0&ndash;39</span></td><td>Every 3 years</td><td>Date of approval</td><td class="ref">Cordillera Textiles &middot; 26 Jul 2029</td></tr>
+              <tr><td><span class="stamp stamp--med">Medium 40&ndash;69</span></td><td>Annual</td><td>Date of approval</td><td class="ref">Thorne &amp; Whitcombe &middot; 21 Jul 2027</td></tr>
+              <tr><td><span class="stamp stamp--high">High 70&ndash;100</span></td><td>Every 6 months</td><td>Date of approval</td><td class="ref">Meridian Freight &middot; provisionally 28 Jan 2027</td></tr>
+            </tbody>
+          </table>
+          <div class="btn-row">
+            <button type="button" class="btn" aria-disabled="true" disabled>Amend cadence</button>
+          </div>
+          <div class="denial">
+            <strong>Why amendment is unavailable to you</strong>
+            Review cadence is set by a Compliance Officer. Your role is Senior
+            Analyst. Any amendment applies prospectively only and is written to the
+            audit trail with before and after values.
+          </div>
+        </div>
+
+        <aside>
+          <div class="sidenote sidenote--accent">
+            <span class="sidenote__head">Named individuals &middot; no shared accounts</span>
+            <ul class="roster">
+              <li><span class="nm">Rafael Adeyemi<span>KYC Analyst &middot; Desk 4</span></span><span class="ref">Low band</span></li>
+              <li><span class="nm">Miriam Castellanos<span>Senior Analyst &middot; Desk 4</span></span><span class="ref">Medium band</span></li>
+              <li><span class="nm">Dele Okonjo<span>Compliance Officer</span></span><span class="ref">High band</span></li>
+              <li><span class="nm">Astrid Lindqvist<span>Head of Financial Crime</span></span><span class="ref">Escalation II</span></li>
+              <li><span class="nm">Rupert Ellingham<span>Chief Operating Officer</span></span><span class="ref">Escalation III</span></li>
+              <li><span class="nm">Yuki Tanabe<span>Auditor &middot; Internal Audit</span></span><span class="ref">Read only</span></li>
+              <li><span class="nm">Helena Brandt<span>Auditor &middot; External, PLC engagement</span></span><span class="ref">Read only</span></li>
+            </ul>
+          </div>
+
+          <div class="sidenote">
+            <span class="sidenote__head">Auditor posture</span>
+            <em>Auditors see every case, every score, every memo version and every
+            trail entry. They hold no write capability at all &mdash; not a single
+            control on any screen is enabled for them, including this one.</em>
+          </div>
+
+          <div class="sidenote">
+            <span class="sidenote__head">Pinned artefacts, estate-wide</span>
+            Risk Rating Matrix <b>v2.1</b> &middot; in force since 12 Feb 2026<br>
+            Document Checklist <b>v2.0</b> &middot; in force since 03 Jan 2026<br>
+            Onboarding Policy <b>v3.2</b> &middot; in force since 12 Feb 2026<br><br>
+            <em>Cases carry the versions pinned at creation, whatever is current
+            today.</em>
+          </div>
+        </aside>
+      </div>
+
+      <div class="folio-foot">
+        <span>Administration &middot; Section X</span>
+        <span>Page 34</span>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  var SCREENS = ["chat","worklist","case","score","memo","approvals","sla","audit","search","admin"];
+
+  function show(name) {
+    if (SCREENS.indexOf(name) === -1) { return; }
+    SCREENS.forEach(function (n) {
+      var el = document.getElementById("screen-" + n);
+      if (el) { el.classList.toggle("is-active", n === name); }
+    });
+    Array.prototype.forEach.call(
+      document.querySelectorAll(".toc button[data-screen]"),
+      function (b) {
+        if (b.getAttribute("data-screen") === name) { b.setAttribute("aria-current", "true"); }
+        else { b.removeAttribute("aria-current"); }
+      }
+    );
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  document.addEventListener("click", function (e) {
+    var t = e.target.closest ? e.target.closest("[data-screen]") : null;
+    if (t) { e.preventDefault(); show(t.getAttribute("data-screen")); }
+  });
+
+  /* ---- agent mode toggle ---- */
+  var MODES = [
+    { key: "drafting",  text: "Drafting · advisory only" },
+    { key: "observing", text: "Observing · no drafting" }
+  ];
+  var modeBtn = document.getElementById("agent-mode");
+  var modeVal = document.getElementById("agent-mode-value");
+  var modeIdx = 0;
+  if (modeBtn) {
+    modeBtn.addEventListener("click", function () {
+      modeIdx = (modeIdx + 1) % MODES.length;
+      modeBtn.setAttribute("data-mode", MODES[modeIdx].key);
+      if (modeVal) { modeVal.textContent = MODES[modeIdx].text; }
+    });
+  }
+
+  /* ---- composer ---- */
+  var form = document.getElementById("composer");
+  var input = document.getElementById("input");
+  var list = document.getElementById("messages");
+
+  function stamp() {
+    var d = new Date();
+    function p(n) { return (n < 10 ? "0" : "") + n; }
+    return p(d.getHours()) + ":" + p(d.getMinutes()) + ":" + p(d.getSeconds());
+  }
+
+  function addTurn(from, who, text, foot) {
+    var li = document.createElement("li");
+    li.setAttribute("data-from", from);
+
+    var w = document.createElement("div");
+    w.className = "turn__who";
+    w.appendChild(document.createTextNode(who));
+    var t = document.createElement("span");
+    t.className = "t";
+    t.textContent = stamp();
+    w.appendChild(t);
+
+    var b = document.createElement("div");
+    b.className = "turn__body";
+    var p = document.createElement("p");
+    p.textContent = text;
+    b.appendChild(p);
+    if (foot) {
+      var f = document.createElement("p");
+      f.className = "turn__foot";
+      f.textContent = foot;
+      b.appendChild(f);
+    }
+
+    li.appendChild(w);
+    li.appendChild(b);
+    list.appendChild(li);
+    list.scrollTop = list.scrollHeight;
+    return li;
+  }
+
+  if (form && input && list) {
+    form.addEventListener("submit", function (e) {
+      e.preventDefault();
+      var value = input.value.trim();
+      if (!value) { return; }
+      addTurn("human", "M. Castellanos", value, null);
+      input.value = "";
+      window.setTimeout(function () {
+        addTurn(
+          "agent",
+          "Drafting agent",
+          "Noted. I will redraft against the pinned artefacts (Onboarding Policy v3.2, "
+          + "Risk Rating Matrix v2.1, Document Checklist v2.0) and record the new version "
+          + "in the memo history. Citations will resolve to provisions in that set only.",
+          "Advisory output. No status changed, no score written, no approval recorded."
+        );
+      }, 420);
+    });
+  }
+})();
+</script>
+
+</body>
+</html>
