@@ -19,7 +19,7 @@ cost:
   # legitimately spend again).
   # Complex builds (FSI-grade: workflows + rich policy corpora) run ~$35-50
   # live including one recovered failure; 60 covers that plus revision cycles.
-  run_budget_usd: 60.00
+  run_budget_usd: 85.00  # operator: +25 absorbs recovered calibration failures on this pathfinder run
   nodes:
     ingest: { budget_usd: 2.00 }
     requirements-synthesis: { budget_usd: 3.00 }
@@ -30,12 +30,12 @@ cost:
     agent-design: { budget_usd: 1.50 }
     workflow-design: { budget_usd: 1.50 }
     slice-plan: { budget_usd: 3.50 }  # planning against workflows + rich requirements (live data)
-    slice-1: { budget_usd: 4.00 }
-    slice-2: { budget_usd: 4.00 }
-    slice-3: { budget_usd: 4.00 }
-    slice-4: { budget_usd: 4.00 }
-    slice-5: { budget_usd: 4.00 }
-    slice-6: { budget_usd: 4.00 }
+    slice-1: { budget_usd: 9.00 }
+    slice-2: { budget_usd: 9.00 }
+    slice-3: { budget_usd: 9.00 }
+    slice-4: { budget_usd: 9.00 }
+    slice-5: { budget_usd: 9.00 }
+    slice-6: { budget_usd: 9.00 }
 
 interaction:
   max_questions_per_gate: 6

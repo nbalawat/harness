@@ -1,0 +1,957 @@
+{
+  "_params": {
+    "path": "",
+    "data": {
+      "slice": 1
+    }
+  },
+  "app": {
+    "path": "/Users/nbalawat/development/harness/fsi-kyc-desk/artifacts/scaffold/app"
+  },
+  "slice_plan": {
+    "path": "/Users/nbalawat/development/harness/fsi-kyc-desk/artifacts/slice-plan/slice_plan.json",
+    "data": {
+      "slices": [
+        {
+          "id": "case-intake-completeness",
+          "name": "Case intake and deterministic completeness check",
+          "story": "As a KYC analyst, I submit a client's onboarding package so that a case is opened and mechanically checked against the Document Checklist: a complete package moves the case to READY with a case-ready timestamp, an incomplete package is RETURNED with the itemized list of exactly which documents are missing, and no analyst can waive a required item. Cases are addressed by their submission reference; the worklist and case detail screens show status and the missing-document list.",
+          "addresses": [
+            "REQ-001",
+            "REQ-002",
+            "REQ-003",
+            "REQ-004",
+            "REQ-005",
+            "REQ-006",
+            "REQ-007",
+            "REQ-008",
+            "REQ-009",
+            "REQ-010",
+            "REQ-011",
+            "REQ-012",
+            "REQ-013",
+            "REQ-014",
+            "REQ-055",
+            "REQ-070",
+            "REQ-089",
+            "REQ-094"
+          ],
+          "acceptance": [
+            {
+              "method": "POST",
+              "path": "/cases",
+              "body": {
+                "client_reference": "ACC-COMPLETE-001",
+                "client_name": "Meridian Holdings Ltd",
+                "entity_type": "corporate",
+                "submitted_by": "ana.analyst",
+                "documents": [
+                  "certificate_of_incorporation",
+                  "register_of_directors",
+                  "beneficial_ownership_declaration",
+                  "proof_of_registered_address"
+                ],
+                "attributes": {
+                  "ownership_chain_depth": 1,
+                  "regulated_industry": false,
+                  "cross_border_expected": false
+                },
+                "risk_factors": {
+                  "jurisdiction": "standard",
+                  "entity_structure": "simple",
+                  "industry": "other",
+                  "sanctions_screening": "clear",
+                  "expected_activity": "domestic_only"
+                }
+              },
+              "expect_status": 200,
+              "expect_contains": [
+                "acc-complete-001",
+                "\"status\":\"ready\"",
+                "case_ready_timestamp",
+                "document_checklist_version"
+              ]
+            },
+            {
+              "method": "POST",
+              "path": "/cases",
+              "body": {
+                "client_reference": "ACC-RETURNED-001",
+                "client_name": "Kestrel Nominees SA",
+                "entity_type": "corporate",
+                "submitted_by": "ana.analyst",
+                "documents": [
+                  "certificate_of_incorporation",
+                  "proof_of_registered_address"
+                ],
+                "attributes": {
+                  "ownership_chain_depth": 3,
+                  "regulated_industry": true,
+                  "cross_border_expected": false
+                },
+                "risk_factors": {
+                  "jurisdiction": "fatf_high_risk",
+                  "entity_structure": "chain_depth_over_3",
+                  "industry": "money_services",
+                  "sanctions_screening": "clear",
+                  "expected_activity": "domestic_only"
+                }
+              },
+              "expect_status": 200,
+              "expect_contains": [
+                "\"status\":\"returned\"",
+                "missing_documents",
+                "register_of_directors",
+                "beneficial_ownership_declaration",
+                "structure_chart",
+                "operating_license"
+              ]
+            },
+            {
+              "method": "POST",
+              "path": "/cases",
+              "body": {
+                "client_reference": "ACC-RETURNED-002",
+                "client_name": "Solano Trading Corp",
+                "entity_type": "corporate",
+                "submitted_by": "ana.analyst",
+                "documents": [
+                  "certificate_of_incorporation",
+                  "register_of_directors",
+                  "beneficial_ownership_declaration",
+                  "proof_of_registered_address"
+                ],
+                "attributes": {
+                  "ownership_chain_depth": 1,
+                  "regulated_industry": false,
+                  "cross_border_expected": true
+                },
+                "risk_factors": {
+                  "jurisdiction": "standard",
+                  "entity_structure": "simple",
+                  "industry": "other",
+                  "sanctions_screening": "clear",
+                  "expected_activity": "cross_border_over_1m"
+                }
+              },
+              "expect_status": 200,
+              "expect_contains": [
+                "\"status\":\"returned\"",
+                "expected_activity_questionnaire"
+              ]
+            },
+            {
+              "method": "GET",
+              "path": "/cases",
+              "expect_status": 200,
+              "expect_contains": [
+                "acc-complete-001",
+                "acc-returned-001",
+                "\"status\":\"returned\""
+              ]
+            },
+            {
+              "method": "GET",
+              "path": "/cases/ACC-RETURNED-001",
+              "expect_status": 200,
+              "expect_contains": [
+                "\"status\":\"returned\"",
+                "missing_documents",
+                "register_of_directors"
+              ]
+            },
+            {
+              "method": "POST",
+              "path": "/cases/ACC-RETURNED-001/waive-document",
+              "body": {
+                "document_type": "register_of_directors",
+                "acting_user": "ana.analyst"
+              },
+              "expect_status": 403,
+              "expect_contains": [
+                "compliance"
+              ]
+            },
+            {
+              "method": "GET",
+              "path": "/checklist",
+              "expect_status": 200,
+              "expect_contains": [
+                "certificate_of_incorporation",
+                "register_of_directors",
+                "beneficial_ownership_declaration",
+                "proof_of_registered_address",
+                "structure_chart",
+                "operating_license",
+                "expected_activity_questionnaire",
+                "version"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "deterministic-risk-scoring",
+          "name": "Deterministic risk scoring and banding",
+          "story": "As a KYC analyst, when a case passes completeness I want the risk score computed mechanically from the risk rating matrix — five weighted factors, a Low/Medium/High band, and a sanctions true-positive override that forces High regardless of the total — so the score is reproducible, never editable by any role, and I can see each factor's input, raw score, weight, and contribution in a score-breakdown view on the case.",
+          "addresses": [
+            "REQ-016",
+            "REQ-017",
+            "REQ-018",
+            "REQ-019",
+            "REQ-020",
+            "REQ-021",
+            "REQ-022",
+            "REQ-023",
+            "REQ-024",
+            "REQ-025",
+            "REQ-026",
+            "REQ-027",
+            "REQ-028",
+            "REQ-071",
+            "REQ-091"
+          ],
+          "acceptance": [
+            {
+              "method": "GET",
+              "path": "/risk-matrix",
+              "expect_status": 200,
+              "expect_contains": [
+                "jurisdiction",
+                "entity_structure",
+                "industry",
+                "sanctions_screening",
+                "expected_activity",
+                "0.3",
+                "0.25",
+                "0.15",
+                "39",
+                "69",
+                "70",
+                "version"
+              ]
+            },
+            {
+              "method": "POST",
+              "path": "/risk/score",
+              "body": {
+                "factors": {
+                  "jurisdiction": "fatf_high_risk",
+                  "entity_structure": "nominee_shareholders",
+                  "industry": "cash_intensive_retail",
+                  "sanctions_screening": "clear",
+                  "expected_activity": "domestic_only"
+                }
+              },
+              "expect_status": 200,
+              "expect_contains": [
+                "55",
+                "\"risk_band\":\"medium\"",
+                "contribution",
+                "weight"
+              ]
+            },
+            {
+              "method": "POST",
+              "path": "/risk/score",
+              "body": {
+                "factors": {
+                  "jurisdiction": "fatf_high_risk",
+                  "entity_structure": "nominee_shareholders",
+                  "industry": "cash_intensive_retail",
+                  "sanctions_screening": "clear",
+                  "expected_activity": "domestic_only"
+                }
+              },
+              "expect_status": 200,
+              "expect_contains": [
+                "55",
+                "\"risk_band\":\"medium\""
+              ]
+            },
+            {
+              "method": "POST",
+              "path": "/risk/score",
+              "body": {
+                "factors": {
+                  "jurisdiction": "standard",
+                  "entity_structure": "nominee_shareholders",
+                  "industry": "money_services",
+                  "sanctions_screening": "true_positive",
+                  "expected_activity": "domestic_only"
+                }
+              },
+              "expect_status": 200,
+              "expect_contains": [
+                "51",
+                "\"risk_band\":\"high\"",
+                "\"sanctions_true_positive_override_applied\":true"
+              ]
+            },
+            {
+              "method": "POST",
+              "path": "/cases",
+              "body": {
+                "client_reference": "ACC-HIGH-001",
+                "client_name": "Aurelia Payments Group",
+                "entity_type": "corporate",
+                "submitted_by": "ana.analyst",
+                "documents": [
+                  "certificate_of_incorporation",
+                  "register_of_directors",
+                  "beneficial_ownership_declaration",
+                  "proof_of_registered_address",
+                  "structure_chart",
+                  "operating_license",
+                  "expected_activity_questionnaire"
+                ],
+                "attributes": {
+                  "ownership_chain_depth": 2,
+                  "regulated_industry": true,
+                  "cross_border_expected": true
+                },
+                "risk_factors": {
+                  "jurisdiction": "fatf_high_risk",
+                  "entity_structure": "nominee_shareholders",
+                  "industry": "money_services",
+                  "sanctions_screening": "unresolved_possible",
+                  "expected_activity": "cross_border_over_1m"
+                }
+              },
+              "expect_status": 200,
+              "expect_contains": [
+                "\"status\":\"ready\"",
+                "\"risk_band\":\"high\"",
+                "76",
+                "risk_matrix_version"
+              ]
+            },
+            {
+              "method": "GET",
+              "path": "/cases/ACC-HIGH-001/score-breakdown",
+              "expect_status": 200,
+              "expect_contains": [
+                "jurisdiction",
+                "fatf_high_risk",
+                "weight",
+                "contribution",
+                "76",
+                "\"risk_band\":\"high\""
+              ]
+            },
+            {
+              "method": "POST",
+              "path": "/cases/ACC-HIGH-001/score",
+              "body": {
+                "total_risk_score": 10,
+                "risk_band": "Low",
+                "acting_user": "cora.compliance"
+              },
+              "expect_status": 403
+            }
+          ]
+        },
+        {
+          "id": "ai-risk-memo-drafting",
+          "name": "AI-drafted risk assessment memo with citations",
+          "story": "As a reviewer, I want the Risk Assessment Memo Assistant to draft the case memo grounded only in the versioned policy corpus and the case record — carrying a permanent MACHINE-DRAFTED label, citations an auditor can resolve back to the cited provision, and covering ownership, jurisdiction, sanctions and the computed score — so I can read a draft on the case detail screen; every redraft is retained as a new immutable version and the agent can never change the case itself.",
+          "addresses": [
+            "REQ-029",
+            "REQ-030",
+            "REQ-031",
+            "REQ-032",
+            "REQ-033",
+            "REQ-034",
+            "REQ-036",
+            "REQ-037",
+            "REQ-038",
+            "REQ-039",
+            "REQ-087"
+          ],
+          "acceptance": [
+            {
+              "method": "GET",
+              "path": "/policy-corpus",
+              "expect_status": 200,
+              "expect_contains": [
+                "kyc-onboarding-policy",
+                "document-checklist",
+                "escalation-sla-policy",
+                "risk-rating-matrix",
+                "version"
+              ]
+            },
+            {
+              "method": "POST",
+              "path": "/memos/draft",
+              "body": {
+                "case_reference": "ACC-HIGH-001",
+                "requested_by": "ana.analyst"
+              },
+              "expect_status": 200,
+              "expect_contains": [
+                "machine-drafted",
+                "\"is_machine_drafted\":true",
+                "\"version\":1",
+                "policy_citations",
+                "memo_text"
+              ]
+            },
+            {
+              "method": "POST",
+              "path": "/memos/draft",
+              "body": {
+                "case_reference": "ACC-HIGH-001",
+                "requested_by": "ana.analyst"
+              },
+              "expect_status": 200,
+              "expect_contains": [
+                "\"version\":2",
+                "\"is_machine_drafted\":true"
+              ]
+            },
+            {
+              "method": "GET",
+              "path": "/cases/ACC-HIGH-001/memos",
+              "expect_status": 200,
+              "expect_contains": [
+                "\"version\":1",
+                "\"version\":2",
+                "machine-drafted",
+                "policy_citations"
+              ]
+            },
+            {
+              "method": "GET",
+              "path": "/cases/ACC-HIGH-001",
+              "expect_status": 200,
+              "expect_contains": [
+                "\"status\":\"ready\"",
+                "\"risk_band\":\"high\""
+              ]
+            },
+            {
+              "method": "GET",
+              "path": "/citations/resolve?document=risk-rating-matrix&section=jurisdiction",
+              "expect_status": 200,
+              "expect_contains": [
+                "risk-rating-matrix",
+                "jurisdiction",
+                "0.3"
+              ]
+            },
+            {
+              "method": "GET",
+              "path": "/agents",
+              "expect_status": 200,
+              "expect_contains": [
+                "risk assessment memo assistant",
+                "save_memo_draft",
+                "denied_tools",
+                "record_approval_or_rejection",
+                "update_case_status"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "rbac-tiered-approval",
+          "name": "Role-based access and tiered human approval",
+          "story": "As a compliance officer, I want approvals gated by risk band and enforced server-side against named individual accounts — analyst for Low, senior analyst for Medium, compliance officer plus a documented rationale for High, a required reason on rejection, no automated or auditor approvals, and compliance-officer-only policy exceptions — so that every status change carries an immutable decision record with the approver's identity, role at decision time, timestamp, adopted memo version and next review due date.",
+          "addresses": [
+            "REQ-015",
+            "REQ-035",
+            "REQ-040",
+            "REQ-041",
+            "REQ-042",
+            "REQ-043",
+            "REQ-044",
+            "REQ-045",
+            "REQ-046",
+            "REQ-047",
+            "REQ-048",
+            "REQ-049",
+            "REQ-062",
+            "REQ-064",
+            "REQ-065",
+            "REQ-066",
+            "REQ-075",
+            "REQ-076",
+            "REQ-077",
+            "REQ-078",
+            "REQ-079",
+            "REQ-080",
+            "REQ-081",
+            "REQ-082",
+            "REQ-083",
+            "REQ-084",
+            "REQ-085",
+            "REQ-088",
+            "REQ-093"
+          ],
+          "acceptance": [
+            {
+              "method": "GET",
+              "path": "/roles",
+              "expect_status": 200,
+              "expect_contains": [
+                "kyc_analyst",
+                "senior_analyst",
+                "compliance_officer",
+                "auditor",
+                "40",
+                "70"
+              ]
+            },
+            {
+              "method": "GET",
+              "path": "/users",
+              "expect_status": 200,
+              "expect_contains": [
+                "ana.analyst",
+                "sam.senior",
+                "cora.compliance",
+                "aud.auditor",
+                "kyc_analyst"
+              ]
+            },
+            {
+              "method": "POST",
+              "path": "/decisions",
+              "body": {
+                "case_reference": "ACC-HIGH-001",
+                "decision": "approve",
+                "acting_user": "ana.analyst",
+                "rationale": "Looks acceptable to me."
+              },
+              "expect_status": 403,
+              "expect_contains": [
+                "compliance_officer"
+              ]
+            },
+            {
+              "method": "POST",
+              "path": "/decisions",
+              "body": {
+                "case_reference": "ACC-HIGH-001",
+                "decision": "approve",
+                "acting_user": "aud.auditor",
+                "rationale": "Auditor attempting a decision."
+              },
+              "expect_status": 403
+            },
+            {
+              "method": "POST",
+              "path": "/decisions",
+              "body": {
+                "case_reference": "ACC-HIGH-001",
+                "decision": "approve",
+                "acting_user": "sla-evaluator-job",
+                "rationale": "Auto-approved to meet SLA."
+              },
+              "expect_status": 403
+            },
+            {
+              "method": "POST",
+              "path": "/decisions",
+              "body": {
+                "case_reference": "ACC-HIGH-001",
+                "decision": "approve",
+                "acting_user": "cora.compliance",
+                "rationale": ""
+              },
+              "expect_status": 400,
+              "expect_contains": [
+                "rationale"
+              ]
+            },
+            {
+              "method": "POST",
+              "path": "/decisions",
+              "body": {
+                "case_reference": "ACC-HIGH-001",
+                "decision": "approve",
+                "acting_user": "cora.compliance",
+                "rationale": "Enhanced due diligence complete; beneficial owners verified to natural persons and possible sanctions hit resolved as false positive."
+              },
+              "expect_status": 200,
+              "expect_contains": [
+                "\"status\":\"approved\"",
+                "\"decided_by_role\":\"compliance_officer\"",
+                "\"required_role_tier\":\"compliance_officer\"",
+                "decided_at",
+                "memo_version_id",
+                "next_review_due_date"
+              ]
+            },
+            {
+              "method": "POST",
+              "path": "/decisions",
+              "body": {
+                "case_reference": "ACC-HIGH-001",
+                "decision": "approve",
+                "acting_user": "cora.compliance",
+                "rationale": "Second attempt at the same decision."
+              },
+              "expect_status": 409
+            },
+            {
+              "method": "POST",
+              "path": "/decisions",
+              "body": {
+                "case_reference": "ACC-COMPLETE-001",
+                "decision": "reject",
+                "acting_user": "ana.analyst"
+              },
+              "expect_status": 400,
+              "expect_contains": [
+                "reason"
+              ]
+            },
+            {
+              "method": "POST",
+              "path": "/decisions",
+              "body": {
+                "case_reference": "ACC-COMPLETE-001",
+                "decision": "reject",
+                "acting_user": "ana.analyst",
+                "reason": "Beneficial ownership declaration is inconsistent with the register of directors."
+              },
+              "expect_status": 200,
+              "expect_contains": [
+                "\"status\":\"rejected\"",
+                "\"decided_by_role\":\"kyc_analyst\"",
+                "decided_at"
+              ]
+            },
+            {
+              "method": "GET",
+              "path": "/notifications?case_reference=ACC-COMPLETE-001",
+              "expect_status": 200,
+              "expect_contains": [
+                "recipient_user_id",
+                "rejected",
+                "relationship"
+              ]
+            },
+            {
+              "method": "POST",
+              "path": "/cases/ACC-RETURNED-001/exceptions",
+              "body": {
+                "acting_user": "ana.analyst",
+                "document_type": "register_of_directors",
+                "reason": "Client says the register is unavailable."
+              },
+              "expect_status": 403
+            },
+            {
+              "method": "POST",
+              "path": "/cases/ACC-RETURNED-001/exceptions",
+              "body": {
+                "acting_user": "cora.compliance",
+                "document_type": "register_of_directors",
+                "reason": "Register filed with the local regulator; certified copy requested and pending."
+              },
+              "expect_status": 200,
+              "expect_contains": [
+                "granted_by_user_id",
+                "cora.compliance",
+                "register_of_directors"
+              ]
+            },
+            {
+              "method": "GET",
+              "path": "/audit/cases/ACC-HIGH-001",
+              "expect_status": 200,
+              "expect_contains": [
+                "performed_by_role",
+                "old_value",
+                "new_value",
+                "timestamp",
+                "approved"
+              ]
+            },
+            {
+              "method": "POST",
+              "path": "/audit/entries/1/delete",
+              "expect_status": 404
+            }
+          ]
+        },
+        {
+          "id": "sla-escalation-monitoring",
+          "name": "SLA clocks, at-risk flags and escalation chain",
+          "story": "As a compliance officer, I want each ready case put under its band's business-hour SLA clock from the case-ready timestamp, flagged AT RISK to me at 80% consumed, permanently recorded as breached when the window passes, and stepped up the escalation chain when a high-risk case stays unactioned — with every at-risk, escalation and rejection notice persisted as an addressable record — so the worklist shows status, band, score, assigned approver, SLA remaining and breach flags at a glance and no clock pressure ever unlocks a shortcut.",
+          "addresses": [
+            "REQ-050",
+            "REQ-051",
+            "REQ-052",
+            "REQ-053",
+            "REQ-054",
+            "REQ-056",
+            "REQ-057",
+            "REQ-058",
+            "REQ-060",
+            "REQ-061",
+            "REQ-063",
+            "REQ-086",
+            "REQ-095"
+          ],
+          "acceptance": [
+            {
+              "method": "GET",
+              "path": "/sla-policy",
+              "expect_status": 200,
+              "expect_contains": [
+                "48",
+                "24",
+                "8",
+                "80",
+                "business_hours",
+                "09:00",
+                "17:00"
+              ]
+            },
+            {
+              "method": "POST",
+              "path": "/cases",
+              "body": {
+                "client_reference": "ACC-SLA-001",
+                "client_name": "Halcyon Global Payments",
+                "entity_type": "corporate",
+                "submitted_by": "ana.analyst",
+                "documents": [
+                  "certificate_of_incorporation",
+                  "register_of_directors",
+                  "beneficial_ownership_declaration",
+                  "proof_of_registered_address",
+                  "structure_chart",
+                  "operating_license",
+                  "expected_activity_questionnaire"
+                ],
+                "attributes": {
+                  "ownership_chain_depth": 2,
+                  "regulated_industry": true,
+                  "cross_border_expected": true
+                },
+                "risk_factors": {
+                  "jurisdiction": "fatf_high_risk",
+                  "entity_structure": "nominee_shareholders",
+                  "industry": "money_services",
+                  "sanctions_screening": "unresolved_possible",
+                  "expected_activity": "cross_border_over_1m"
+                }
+              },
+              "expect_status": 200,
+              "expect_contains": [
+                "\"status\":\"ready\"",
+                "\"risk_band\":\"high\"",
+                "sla_due_timestamp",
+                "assigned_approver_id"
+              ]
+            },
+            {
+              "method": "POST",
+              "path": "/sla/evaluate",
+              "body": {
+                "simulated_business_hours_elapsed": 7
+              },
+              "expect_status": 200,
+              "expect_contains": [
+                "acc-sla-001",
+                "\"sla_state\":\"at_risk\"",
+                "notification"
+              ]
+            },
+            {
+              "method": "GET",
+              "path": "/cases/ACC-SLA-001",
+              "expect_status": 200,
+              "expect_contains": [
+                "\"is_at_risk\":true",
+                "\"status\":\"ready\""
+              ]
+            },
+            {
+              "method": "GET",
+              "path": "/notifications",
+              "expect_status": 200,
+              "expect_contains": [
+                "at_risk",
+                "recipient_user_id",
+                "sent_at",
+                "cora.compliance"
+              ]
+            },
+            {
+              "method": "POST",
+              "path": "/sla/evaluate",
+              "body": {
+                "simulated_business_hours_elapsed": 9
+              },
+              "expect_status": 200,
+              "expect_contains": [
+                "acc-sla-001",
+                "\"breached\":true",
+                "escalation"
+              ]
+            },
+            {
+              "method": "GET",
+              "path": "/escalations",
+              "expect_status": 200,
+              "expect_contains": [
+                "acc-sla-001",
+                "\"escalation_level\":1",
+                "compliance_officer",
+                "escalated_at"
+              ]
+            },
+            {
+              "method": "POST",
+              "path": "/sla/evaluate",
+              "body": {
+                "simulated_business_hours_elapsed": 14
+              },
+              "expect_status": 200,
+              "expect_contains": [
+                "acc-sla-001",
+                "head_of_financial_crime"
+              ]
+            },
+            {
+              "method": "GET",
+              "path": "/cases",
+              "expect_status": 200,
+              "expect_contains": [
+                "risk_band",
+                "assigned_approver_id",
+                "sla_due_timestamp",
+                "is_at_risk",
+                "\"sla_breached\":true"
+              ]
+            },
+            {
+              "method": "POST",
+              "path": "/decisions",
+              "body": {
+                "case_reference": "ACC-SLA-001",
+                "decision": "approve",
+                "acting_user": "cora.compliance",
+                "rationale": "Decision taken after the SLA window closed; enhanced due diligence complete and screening hit cleared."
+              },
+              "expect_status": 200,
+              "expect_contains": [
+                "\"status\":\"approved\"",
+                "\"decided_by_role\":\"compliance_officer\""
+              ]
+            },
+            {
+              "method": "GET",
+              "path": "/cases/ACC-SLA-001",
+              "expect_status": 200,
+              "expect_contains": [
+                "\"status\":\"approved\"",
+                "\"sla_breached\":true"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "audit-search-export",
+          "name": "Case search, audit trail view, CSV export and weekly report",
+          "story": "As an analyst or auditor, I want to search past cases, read a case's full chronological audit trail with before/after values, retrieve the exact score inputs, matrix version and approved memo text for any past case, export a case file including its trail as CSV, and pull the weekly operations report of breached SLAs — so retained records stay reviewable and reproducible for internal audit and regulators.",
+          "addresses": [
+            "REQ-059",
+            "REQ-067",
+            "REQ-068",
+            "REQ-069",
+            "REQ-072",
+            "REQ-073",
+            "REQ-074",
+            "REQ-090",
+            "REQ-092"
+          ],
+          "acceptance": [
+            {
+              "method": "GET",
+              "path": "/search/cases?q=Meridian",
+              "expect_status": 200,
+              "expect_contains": [
+                "acc-complete-001",
+                "meridian"
+              ]
+            },
+            {
+              "method": "GET",
+              "path": "/search/cases?risk_band=high",
+              "expect_status": 200,
+              "expect_contains": [
+                "acc-high-001",
+                "\"risk_band\":\"high\""
+              ]
+            },
+            {
+              "method": "GET",
+              "path": "/export/cases.csv",
+              "expect_status": 200,
+              "expect_contains": [
+                "case_reference",
+                "client_name",
+                "risk_band",
+                "status",
+                "acc-high-001"
+              ]
+            },
+            {
+              "method": "GET",
+              "path": "/export/cases/ACC-HIGH-001.csv?include=audit_trail",
+              "expect_status": 200,
+              "expect_contains": [
+                "acc-high-001",
+                "machine-drafted",
+                "performed_by_role",
+                "old_value",
+                "new_value"
+              ]
+            },
+            {
+              "method": "GET",
+              "path": "/audit/cases/ACC-COMPLETE-001?acting_user=aud.auditor",
+              "expect_status": 200,
+              "expect_contains": [
+                "case_opened",
+                "rejected",
+                "performed_by_role",
+                "timestamp"
+              ]
+            },
+            {
+              "method": "GET",
+              "path": "/cases/ACC-HIGH-001/reproduction",
+              "expect_status": 200,
+              "expect_contains": [
+                "risk_matrix_version",
+                "document_checklist_version",
+                "onboarding_policy_version",
+                "fatf_high_risk",
+                "76",
+                "memo_text",
+                "\"is_machine_drafted\":true"
+              ]
+            },
+            {
+              "method": "GET",
+              "path": "/reports/weekly-operations",
+              "expect_status": 200,
+              "expect_contains": [
+                "acc-sla-001",
+                "breached",
+                "period"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

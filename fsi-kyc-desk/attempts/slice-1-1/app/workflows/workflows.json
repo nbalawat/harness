@@ -1,0 +1,435 @@
+{
+  "workflows": [
+    {
+      "name": "case-intake-and-risk-scoring",
+      "description": "A client submission opens a case, the document package is checked for completeness by a purely mechanical step, and only a complete case is marked ready, scored against the risk rating matrix and put under an SLA clock. An incomplete case is RETURNED with its itemized missing-document list — never parked and never waived.",
+      "addresses": [
+        "REQ-001",
+        "REQ-002",
+        "REQ-003",
+        "REQ-004",
+        "REQ-005",
+        "REQ-006",
+        "REQ-007",
+        "REQ-008",
+        "REQ-009",
+        "REQ-010",
+        "REQ-011",
+        "REQ-012",
+        "REQ-013",
+        "REQ-014",
+        "REQ-016",
+        "REQ-017",
+        "REQ-018",
+        "REQ-019",
+        "REQ-020",
+        "REQ-021",
+        "REQ-022",
+        "REQ-023",
+        "REQ-024",
+        "REQ-025",
+        "REQ-026",
+        "REQ-027",
+        "REQ-028",
+        "REQ-052",
+        "REQ-053",
+        "REQ-054",
+        "REQ-055",
+        "REQ-056",
+        "REQ-064",
+        "REQ-065",
+        "REQ-070",
+        "REQ-071",
+        "REQ-089"
+      ],
+      "nodes": [
+        {
+          "id": "open_case",
+          "kind": "deterministic",
+          "handler": "open_case_from_submission",
+          "output_schema": {
+            "required": [
+              "case_id",
+              "client_name",
+              "status",
+              "created_at",
+              "document_checklist_version",
+              "risk_matrix_version",
+              "onboarding_policy_version",
+              "audit_entry_id"
+            ]
+          }
+        },
+        {
+          "id": "completeness_check",
+          "kind": "deterministic",
+          "handler": "run_document_completeness_check",
+          "output_schema": {
+            "required": [
+              "case_id",
+              "is_complete",
+              "required_document_types",
+              "received_document_types",
+              "missing_documents",
+              "conditional_triggers_applied",
+              "document_checklist_version"
+            ]
+          }
+        },
+        {
+          "id": "completeness_gate",
+          "kind": "condition",
+          "path": "completeness_check.is_complete",
+          "equals": true,
+          "on_false": "incomplete_branch"
+        },
+        {
+          "id": "mark_ready",
+          "kind": "deterministic",
+          "handler": "mark_case_ready",
+          "output_schema": {
+            "required": [
+              "case_id",
+              "status",
+              "case_ready_timestamp",
+              "completeness_passed_at",
+              "audit_entry_id"
+            ]
+          }
+        },
+        {
+          "id": "score_case",
+          "kind": "deterministic",
+          "handler": "compute_risk_score_from_matrix",
+          "output_schema": {
+            "required": [
+              "case_id",
+              "risk_score_id",
+              "factor_inputs",
+              "factor_scores",
+              "factor_weights",
+              "factor_contributions",
+              "total_risk_score",
+              "risk_band",
+              "sanctions_true_positive_override_applied",
+              "risk_matrix_version",
+              "computed_at",
+              "audit_entry_id"
+            ]
+          }
+        },
+        {
+          "id": "start_sla",
+          "kind": "deterministic",
+          "handler": "start_sla_clock",
+          "output_schema": {
+            "required": [
+              "case_id",
+              "sla_tracking_id",
+              "sla_start_timestamp",
+              "sla_due_timestamp",
+              "sla_hours",
+              "risk_band",
+              "required_approver_role",
+              "assigned_approver_id",
+              "business_hours_config",
+              "audit_entry_id"
+            ]
+          }
+        },
+        {
+          "id": "incomplete_branch",
+          "kind": "condition",
+          "path": "completeness_check.is_complete",
+          "equals": false,
+          "on_false": "end"
+        },
+        {
+          "id": "return_case",
+          "kind": "deterministic",
+          "handler": "return_case_with_missing_documents",
+          "output_schema": {
+            "required": [
+              "case_id",
+              "status",
+              "missing_documents",
+              "returned_at",
+              "notification_id",
+              "audit_entry_id"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "risk-memo-and-approval",
+      "description": "For a ready, scored case an AI agent drafts the risk assessment memo grounded only in the versioned policy corpus and the case record, the draft is persisted as an immutable machine-drafted version with its citations mechanically resolved, and a named human at the tier the risk band requires approves or rejects. Every state change after the human decision is deterministic and recorded.",
+      "addresses": [
+        "REQ-029",
+        "REQ-030",
+        "REQ-031",
+        "REQ-032",
+        "REQ-033",
+        "REQ-034",
+        "REQ-035",
+        "REQ-036",
+        "REQ-037",
+        "REQ-038",
+        "REQ-039",
+        "REQ-040",
+        "REQ-041",
+        "REQ-042",
+        "REQ-043",
+        "REQ-044",
+        "REQ-045",
+        "REQ-046",
+        "REQ-047",
+        "REQ-048",
+        "REQ-049",
+        "REQ-067",
+        "REQ-069",
+        "REQ-085",
+        "REQ-087",
+        "REQ-088",
+        "REQ-093"
+      ],
+      "nodes": [
+        {
+          "id": "load_case",
+          "kind": "deterministic",
+          "handler": "load_case_for_assessment",
+          "output_schema": {
+            "required": [
+              "case_id",
+              "client_name",
+              "status",
+              "beneficial_ownership_summary",
+              "jurisdiction_exposure",
+              "sanctions_screening_result",
+              "factor_breakdown",
+              "total_risk_score",
+              "risk_band",
+              "required_approver_role",
+              "policy_versions",
+              "policy_corpus_refs"
+            ]
+          }
+        },
+        {
+          "id": "draft_memo",
+          "kind": "agent",
+          "prompt": "Draft the risk assessment memo for KYC case ${load_case_case_id} (client: ${load_case_client_name}). Ground every statement ONLY in the versioned policy corpus ${load_case_policy_corpus_refs} (versions ${load_case_policy_versions}) and this case record — never outside knowledge and never another case. Open with a prominent 'MACHINE-DRAFTED — requires human approval' label. Cover: beneficial ownership (${load_case_beneficial_ownership_summary}); jurisdiction exposure (${load_case_jurisdiction_exposure}); sanctions screening results (${load_case_sanctions_screening_result}); and the computed score and band exactly as recorded — total ${load_case_total_risk_score}, band ${load_case_risk_band}, per-factor breakdown ${load_case_factor_breakdown}. Do not recompute or adjust the score. Cite the specific policy provision behind every policy-based claim in a form an auditor can trace to the source document. Where a fact needed for the memo is absent from the record, state plainly that it is not available rather than inferring or estimating it. You are advisory only: do not change case status, alter the score, or record an approval."
+        },
+        {
+          "id": "persist_memo",
+          "kind": "deterministic",
+          "handler": "persist_memo_version",
+          "output_schema": {
+            "required": [
+              "case_id",
+              "memo_version_id",
+              "version",
+              "memo_text",
+              "policy_citations",
+              "is_machine_drafted",
+              "generated_at",
+              "audit_entry_id"
+            ]
+          }
+        },
+        {
+          "id": "validate_citations",
+          "kind": "deterministic",
+          "handler": "validate_memo_citations",
+          "output_schema": {
+            "required": [
+              "memo_version_id",
+              "citations_resolved",
+              "resolved_citations",
+              "unresolved_citations",
+              "machine_drafted_label_present"
+            ]
+          }
+        },
+        {
+          "id": "approval_decision",
+          "kind": "human",
+          "question": "Case ${load_case_case_id} (${load_case_client_name}) scored ${load_case_total_risk_score} — band ${load_case_risk_band}, which requires a ${load_case_required_approver_role} decision. Review the MACHINE-DRAFTED memo (version ${persist_memo_version}, label present: ${validate_citations_machine_drafted_label_present}; unresolved citations: ${validate_citations_unresolved_citations}):\n\n${persist_memo_memo_text}\n\nApproving adopts this memo text as your own. Approve or reject? A rejection requires a rejection reason, and a High-band approval requires a documented rationale."
+        },
+        {
+          "id": "record_decision",
+          "kind": "deterministic",
+          "handler": "record_approval_decision",
+          "output_schema": {
+            "required": [
+              "case_id",
+              "approval_id",
+              "decision",
+              "decided_by_user_id",
+              "decided_by_role",
+              "required_role_tier",
+              "role_substitution",
+              "decided_at",
+              "reason",
+              "memo_version_id",
+              "case_status",
+              "audit_entry_id"
+            ]
+          }
+        },
+        {
+          "id": "approved_gate",
+          "kind": "condition",
+          "path": "record_decision.decision",
+          "equals": "approved",
+          "on_false": "rejection_branch"
+        },
+        {
+          "id": "finalize_approval",
+          "kind": "deterministic",
+          "handler": "finalize_approved_case",
+          "output_schema": {
+            "required": [
+              "case_id",
+              "case_status",
+              "memo_adopted",
+              "approved_memo_version_id",
+              "review_cadence",
+              "next_review_due_date",
+              "audit_entry_id"
+            ]
+          }
+        },
+        {
+          "id": "rejection_branch",
+          "kind": "condition",
+          "path": "record_decision.decision",
+          "equals": "rejected",
+          "on_false": "end"
+        },
+        {
+          "id": "record_rejection",
+          "kind": "deterministic",
+          "handler": "record_rejection_and_notify_relationship_team",
+          "output_schema": {
+            "required": [
+              "case_id",
+              "case_status",
+              "rejection_reason",
+              "notification_id",
+              "recipient_user_id",
+              "audit_entry_id"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "sla-escalation-monitor",
+      "description": "A recurring evaluator measures each undecided ready case against its band's business-hour SLA, flags it AT RISK to the assigned approver at 80% consumed, records a breach permanently once the window passes, and steps unactioned high-risk cases up the escalation chain — without ever recording a decision itself.",
+      "addresses": [
+        "REQ-050",
+        "REQ-051",
+        "REQ-057",
+        "REQ-058",
+        "REQ-059",
+        "REQ-060",
+        "REQ-061",
+        "REQ-062",
+        "REQ-063",
+        "REQ-086",
+        "REQ-095"
+      ],
+      "nodes": [
+        {
+          "id": "evaluate_sla",
+          "kind": "deterministic",
+          "handler": "evaluate_case_sla_status",
+          "output_schema": {
+            "required": [
+              "case_id",
+              "risk_band",
+              "sla_hours",
+              "sla_start_timestamp",
+              "sla_due_timestamp",
+              "elapsed_business_hours",
+              "percent_consumed",
+              "sla_state",
+              "decision_recorded",
+              "assigned_approver_id"
+            ]
+          }
+        },
+        {
+          "id": "at_risk_gate",
+          "kind": "condition",
+          "path": "evaluate_sla.sla_state",
+          "equals": "at_risk",
+          "on_false": "breach_gate"
+        },
+        {
+          "id": "flag_at_risk",
+          "kind": "deterministic",
+          "handler": "flag_case_at_risk_and_notify",
+          "output_schema": {
+            "required": [
+              "case_id",
+              "is_at_risk",
+              "flagged_at_risk_at",
+              "notification_id",
+              "recipient_user_id",
+              "audit_entry_id"
+            ]
+          }
+        },
+        {
+          "id": "breach_gate",
+          "kind": "condition",
+          "path": "evaluate_sla.sla_state",
+          "equals": "breached",
+          "on_false": "end"
+        },
+        {
+          "id": "record_breach",
+          "kind": "deterministic",
+          "handler": "record_sla_breach",
+          "output_schema": {
+            "required": [
+              "case_id",
+              "breached",
+              "breached_at",
+              "permanent",
+              "weekly_report_period",
+              "audit_entry_id"
+            ]
+          }
+        },
+        {
+          "id": "high_risk_escalation_gate",
+          "kind": "condition",
+          "path": "evaluate_sla.risk_band",
+          "equals": "High",
+          "on_false": "end"
+        },
+        {
+          "id": "escalate",
+          "kind": "deterministic",
+          "handler": "advance_escalation_chain",
+          "output_schema": {
+            "required": [
+              "case_id",
+              "escalation_id",
+              "escalation_level",
+              "escalated_to_role",
+              "escalated_to_user_id",
+              "escalated_at",
+              "reason",
+              "notification_id",
+              "audit_entry_id"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

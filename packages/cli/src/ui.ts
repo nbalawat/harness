@@ -1094,6 +1094,10 @@ button.ghost { background:transparent; border:1px solid var(--border); color:var
 .event { display:flex; gap:.6rem; align-items:baseline; padding:.14rem 0; color:var(--ink2); font-size:.8rem; }
 .event .t { color:var(--muted); font-size:.7rem; flex:none; width:56px; }
 .event.bad { color:var(--crit); }
+/* overview narrative sections */
+.secwrap { margin-top:1.6rem; padding-top:1rem; border-top:1px solid var(--grid); }
+.seclabel { font-size:.78rem; font-weight:750; text-transform:uppercase; letter-spacing:.09em; color:var(--ink2); margin-bottom:.7rem; }
+.seclabel .hint { text-transform:none; letter-spacing:0; font-weight:500; }
 /* app agents */
 .agrid { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:.8rem; }
 .agcard { border:1px solid var(--grid); border-radius:10px; padding:.8rem .9rem; background:var(--page); }
@@ -1185,8 +1189,17 @@ button.ghost { background:transparent; border:1px solid var(--border); color:var
     <div class="card"><h2>About this build</h2><div id="about"></div></div>
     <div class="card"><h2>Quality &amp; test results</h2><div id="quality"></div></div>
   </div>
-  <div class="card" id="agentsPanel" style="display:none"><h2>Your app&#39;s agents <span class="hint">— who does the work inside the built application, with their tools and guardrails</span></h2><div class="agrid" id="appAgents"></div></div>
-  <div class="card" id="workflowsPanel" style="display:none"><h2>Your app&#39;s processes <span class="hint">— the deterministic flow, with the agentic and human steps called out</span></h2><div id="appWorkflows"></div></div>
+  <div class="secwrap" id="sec-design" style="display:none">
+    <div class="seclabel">The design <span class="hint">— what your app looks like</span></div>
+    <div class="card" id="designPanel" style="display:none"><h2 id="designHead">Design options — pick one</h2><div class="designs" id="designs"></div></div>
+  </div>
+  <div class="secwrap" id="sec-anatomy" style="display:none">
+    <div class="seclabel">What&#39;s inside <span class="hint">— the processes and agents your app runs</span></div>
+    <div class="card" id="workflowsPanel" style="display:none"><h2>Your app&#39;s processes <span class="hint">— the deterministic flow, with the agentic and human steps called out</span></h2><div id="appWorkflows"></div></div>
+    <div class="card" id="agentsPanel" style="display:none"><h2>Your app&#39;s agents <span class="hint">— who does the work, with tools and guardrails</span></h2><div class="agrid" id="appAgents"></div></div>
+  </div>
+  <div class="secwrap" id="sec-running" style="display:none">
+    <div class="seclabel">See it running <span class="hint">— the application itself, as it grows</span></div>
   <div class="card" id="shotsPanel" style="display:none"><h2>Watch it grow — one screenshot per slice</h2><div class="shots" id="shots"></div>
     <details style="margin-top:.9rem"><summary style="cursor:pointer;font-weight:600;font-size:.88rem">Request a change to the app</summary>
       <form id="feedbackForm" style="margin-top:.7rem;max-width:640px">
@@ -1213,7 +1226,7 @@ button.ghost { background:transparent; border:1px solid var(--border); color:var
       <iframe id="appFrame" style="width:100%;height:520px;border:0;display:block"></iframe>
     </div>
   </div>
-  <div class="card" id="designPanel" style="display:none"><h2 id="designHead">Design options — pick one</h2><div class="designs" id="designs"></div></div>
+  </div>
 </section>
 <section class="tabpane" id="tab-pipeline">
   <div class="card"><h2>Pipeline <span class="hint">— grouped by phase; click any step to inspect it</span></h2><div id="nodes"></div></div>
@@ -1642,6 +1655,15 @@ async function tick() {
       };
     }
   } else { aq.style.display = 'none'; }
+
+  // narrative sections show only when they have visible content
+  for (const sec of ['sec-design', 'sec-anatomy', 'sec-running']) {
+    const el = document.getElementById(sec);
+    if (el) {
+      const anyVisible = [...el.querySelectorAll('.card')].some(c => c.style.display !== 'none');
+      el.style.display = anyVisible ? '' : 'none';
+    }
+  }
 
   // pipeline
   const phases = [];

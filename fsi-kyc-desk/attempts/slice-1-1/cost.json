@@ -1,0 +1,8 @@
+{
+  "model": "claude-sonnet-5",
+  "inputTokens": 660,
+  "outputTokens": 90279,
+  "cacheReadTokens": 9514351,
+  "cacheWriteTokens": 214306,
+  "costUsd": 7.178634549999997
+}

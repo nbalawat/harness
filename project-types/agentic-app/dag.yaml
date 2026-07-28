@@ -30,12 +30,12 @@ cost:
     agent-design: { budget_usd: 1.50 }
     workflow-design: { budget_usd: 1.50 }
     slice-plan: { budget_usd: 3.50 }  # planning against workflows + rich requirements (live data)
-    slice-1: { budget_usd: 4.00 }
-    slice-2: { budget_usd: 4.00 }
-    slice-3: { budget_usd: 4.00 }
-    slice-4: { budget_usd: 4.00 }
-    slice-5: { budget_usd: 4.00 }
-    slice-6: { budget_usd: 4.00 }
+    slice-1: { budget_usd: 9.00 }
+    slice-2: { budget_usd: 9.00 }
+    slice-3: { budget_usd: 9.00 }
+    slice-4: { budget_usd: 9.00 }
+    slice-5: { budget_usd: 9.00 }
+    slice-6: { budget_usd: 9.00 }
 
 interaction:
   max_questions_per_gate: 6
