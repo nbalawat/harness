@@ -341,6 +341,7 @@ export function buildState(workspace: string): Record<string, unknown> {
     quality,
     designChoice: (designChoiceDoc?.chosen_option as string | undefined) ?? null,
     appAgents: Array.isArray(rosterDoc?.agents) ? rosterDoc!.agents : null,
+    agentOpportunityMap: Array.isArray(rosterDoc?.opportunity_map) ? rosterDoc!.opportunity_map : null,
     appWorkflows: Array.isArray(workflowsDoc?.workflows) ? workflowsDoc!.workflows : null,
     pendingQuestion,
     sliceShots,
@@ -1645,7 +1646,13 @@ async function tick() {
       ((a.addresses || []).length ? '<div class="agrow"><span class="k">covers</span>' + a.addresses.map(t => '<span class="badgechip">' + esc(t) + '</span>').join('') + '</div>' : '') +
       (a.system_prompt ? '<details><summary class="hint" style="cursor:pointer;font-size:.72rem">Instructions it runs under</summary><div class="agevals" style="border:0;padding-top:.2rem">' + esc(String(a.system_prompt).slice(0, 600)) + '</div></details>' : '') +
       ((a.eval_criteria || []).length ? '<div class="agevals">held to: ' + esc(a.eval_criteria.join('; ')) + '</div>' : '') +
-      '</div>').join(''));
+      '</div>').join('') +
+    (Array.isArray(s.agentOpportunityMap) && s.agentOpportunityMap.length ?
+      '<details style="grid-column:1/-1;margin-top:.3rem"><summary style="cursor:pointer;font-size:.8rem;font-weight:650">Where agents were considered — every slot evaluated, ' + s.agentOpportunityMap.filter(o => o.decision === 'included').length + ' included, ' + s.agentOpportunityMap.filter(o => o.decision === 'excluded').length + ' excluded with reasons</summary>' +
+      '<div style="margin-top:.5rem">' + s.agentOpportunityMap.map(o =>
+        '<div class="depitem"><span class="chip ' + (o.decision === 'included' ? 'ok' : '') + '">' + esc(o.decision) + '</span> <span class="mono" style="font-size:.74rem">' + esc(o.slot) + '</span>' +
+        (o.agent ? ' <span class="badgechip">' + esc(o.agent) + '</span>' : '') +
+        ' — <span class="d">' + esc(o.rationale) + '</span></div>').join('') + '</div></details>' : ''));
   } else agentsPanel.style.display = 'none';
 
   // your app's processes — deterministic flow with agentic/human steps called out

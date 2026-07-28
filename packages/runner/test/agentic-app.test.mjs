@@ -615,3 +615,19 @@ test("runtime adapters: compat-matrix refuses two runtimes in one selection", ()
   assert.equal(result.status, 1);
   assert.match(result.stderr, /conflicts with/);
 });
+
+test("agent design sweeps every workflow slot: included agents + excluded-with-citation", () => {
+  const roster = readJson(artifact(golden, "agent-design", "agent_roster.json"));
+  assert.ok(Array.isArray(roster.opportunity_map) && roster.opportunity_map.length >= 4, "the sweep is recorded");
+
+  const { workflows } = readJson(artifact(golden, "workflow-design", "workflows.json"));
+  const agentNodes = workflows.flatMap((w) => w.nodes.filter((n) => n.kind === "agent").map((n) => `${w.name}/${n.id}`));
+  for (const slot of agentNodes) {
+    const entry = roster.opportunity_map.find((o) => o.slot === slot);
+    assert.ok(entry && entry.decision === "included" && entry.agent, `workflow agent node ${slot} maps to a roster agent`);
+    assert.ok(roster.agents.some((a) => a.name === entry.agent), "the mapped agent exists in the roster");
+  }
+  const excluded = roster.opportunity_map.filter((o) => o.decision === "excluded");
+  assert.ok(excluded.length >= 2, "mechanical/human slots were considered and rejected");
+  for (const o of excluded) assert.ok(o.rationale.length >= 10, "every exclusion carries a reason");
+});

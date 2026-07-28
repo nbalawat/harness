@@ -37,8 +37,8 @@ BASE_REQUIRED_DOCUMENTS = {
 CONDITIONAL_DOCUMENTS = [
     {
         "document_type": "structure_chart",
-        "condition_trigger": "ownership_chain_depth_over_2",
-        "description": "Required when the ownership chain is deeper than two layers.",
+        "condition_trigger": "ownership_chain_depth_over_1",
+        "description": "Required when the ownership chain is deeper than one layer — structure chart down to natural persons.",
     },
     {
         "document_type": "operating_license",
@@ -65,7 +65,7 @@ def _conditional_triggered(document_type, attributes, risk_factors):
             depth = int(attributes.get("ownership_chain_depth") or 0)
         except (TypeError, ValueError):
             depth = 0
-        return depth > 2 or risk_factors.get("entity_structure") == "chain_depth_over_3"
+        return depth > 1 or risk_factors.get("entity_structure") in ("chain_depth_over_3", "bearer_shares")
     if document_type == "operating_license":
         return _truthy(attributes.get("regulated_industry")) or risk_factors.get("industry") == "money_services"
     if document_type == "expected_activity_questionnaire":
@@ -153,48 +153,60 @@ def evaluate_completeness(entity_type, documents, attributes, risk_factors):
 # --------------------------------------------------------------------------
 RISK_FACTORS = ["jurisdiction", "entity_structure", "industry", "sanctions_screening", "expected_activity"]
 
+# Weights and 0-100 factor scales transcribed verbatim from Client Risk Rating
+# Matrix v2.1 (corpus: risk-rating-matrix.md), restated as REQ-018…REQ-022.
+# Do not tune these to make a number come out: the matrix is the bank's.
 FACTOR_WEIGHTS = {
     "jurisdiction": 0.3,
     "entity_structure": 0.25,
-    "industry": 0.15,
-    "sanctions_screening": 0.2,
+    "industry": 0.2,
+    "sanctions_screening": 0.15,
     "expected_activity": 0.1,
 }
 
+# "otherwise" score for each factor — an unrecognised input scores as the
+# matrix's own residual category rather than silently as zero.
+FACTOR_DEFAULTS = {
+    "jurisdiction": 10,
+    "entity_structure": 15,
+    "industry": 20,
+    "sanctions_screening": 0,
+    "expected_activity": 20,
+}
+
 FACTOR_SCALES = {
+    # FATF high-risk list country involved = 90; enhanced-monitoring list = 60; otherwise = 10
     "jurisdiction": {
-        "standard": 0,
-        "eu_or_equivalent": 10,
-        "elevated": 50,
-        "fatf_high_risk": 100,
-        "sanctioned_jurisdiction": 100,
+        "fatf_high_risk": 90,
+        "enhanced_monitoring": 60,
+        "standard": 10,
     },
+    # Ownership chain depth > 3 or bearer shares = 85; nominee shareholders = 60; simple = 15
     "entity_structure": {
-        "simple": 0,
-        "holding_company": 40,
-        "nominee_shareholders": 70,
-        "chain_depth_over_3": 80,
-        "opaque_trust": 90,
+        "chain_depth_over_3": 85,
+        "bearer_shares": 85,
+        "nominee_shareholders": 60,
+        "simple": 15,
     },
+    # Money services, gambling, defense = 80; cash-intensive retail = 55; other = 20
     "industry": {
-        "other": 0,
-        "professional_services": 20,
-        "cash_intensive_retail": 50,
-        "real_estate": 60,
-        "money_services": 90,
-        "crypto_asset_services": 100,
+        "money_services": 80,
+        "gambling": 80,
+        "defense": 80,
+        "cash_intensive_retail": 55,
+        "other": 20,
     },
+    # Any true-positive hit = 100 (auto high risk); unresolved possible hit = 70; clear = 0
     "sanctions_screening": {
-        "clear": 0,
-        "false_positive": 0,
-        "unresolved_possible": 50,
         "true_positive": 100,
+        "unresolved_possible": 70,
+        "false_positive": 0,
+        "clear": 0,
     },
+    # Cross-border wires > $1M/month = 75; domestic only = 20
     "expected_activity": {
-        "domestic_only": 0,
-        "cross_border_standard": 25,
-        "cross_border_over_1m": 50,
-        "high_volume_cash": 80,
+        "cross_border_over_1m": 75,
+        "domestic_only": 20,
     },
 }
 
@@ -267,7 +279,7 @@ def score_factors(factors):
     for name in RISK_FACTORS:
         raw_input = factors.get(name)
         scale = FACTOR_SCALES[name]
-        raw_score = scale.get(str(raw_input), 0)
+        raw_score = scale.get(str(raw_input), FACTOR_DEFAULTS[name])
         weight = FACTOR_WEIGHTS[name]
         contribution = _tidy(raw_score * weight)
         total += raw_score * weight
@@ -307,9 +319,12 @@ def score_factors(factors):
 BUSINESS_HOURS = {"start": "09:00", "end": "17:00", "days": ["mon", "tue", "wed", "thu", "fri"], "timezone": "UTC"}
 SLA_HOURS_BY_BAND = {"low": 48, "medium": 24, "high": 8}
 AT_RISK_PERCENT = 80
+# Escalation and SLA Policy v1.4: assigned Compliance Officer -> Head of
+# Financial Crime -> COO. Each step is recorded with who was notified and when.
 ESCALATION_CHAIN = [
     {"level": 1, "role": "compliance_officer", "user_id": "cora.compliance"},
     {"level": 2, "role": "head_of_financial_crime", "user_id": "hoc.fincrime"},
+    {"level": 3, "role": "coo", "user_id": "kim.coo"},
 ]
 REVIEW_CADENCE_MONTHS = {"low": 36, "medium": 12, "high": 6}
 
@@ -389,6 +404,7 @@ ROLE_DEFINITIONS = [
         "approves_bands": ["low", "medium", "high"],
         "may_decide": True,
     },
+    {"role": "coo", "may_approve_up_to_score": 100, "approves_bands": ["low", "medium", "high"], "may_decide": True},
 ]
 
 SEED_USERS = [
@@ -397,6 +413,7 @@ SEED_USERS = [
     {"username": "cora.compliance", "full_name": "Cora Vasquez", "role": "compliance_officer"},
     {"username": "aud.auditor", "full_name": "Aud Larsen", "role": "auditor"},
     {"username": "hoc.fincrime", "full_name": "Helena Okonjo", "role": "head_of_financial_crime"},
+    {"username": "kim.coo", "full_name": "Kim Larsen", "role": "coo"},
 ]
 
 APPROVER_BY_BAND = {

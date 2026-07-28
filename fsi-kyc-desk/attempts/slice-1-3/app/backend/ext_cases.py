@@ -66,10 +66,13 @@ def user_record(username):
 
 
 def role_of(username):
+    """The `users` table is the record of a person's role at decision time.
+
+    rbac holds the same grants and is what enforcement (`rbac.require`) reads;
+    it is deliberately not consulted here, because `roles_of` returns roles
+    sorted alphabetically and would resolve a multi-grant user to the wrong one.
+    """
     sync_rbac()
-    roles = rbac.roles_of((username or "").strip())
-    if roles:
-        return roles[0]
     row = user_record(username)
     return row["role"] if row else None
 
@@ -92,15 +95,15 @@ def normalise_reference(reference):
     return (reference or "").strip().lower()
 
 
-def live_cases():
-    """Superseded rows stay on the record but leave the live register."""
-    return [c for c in store.list(CASE_TABLE) if c.get("status") != "superseded"]
-
-
 def find_case(reference):
-    """Cases are addressed by their submission reference, case-insensitively."""
+    """Cases are addressed by their submission reference, case-insensitively.
+
+    One reference is one case for the life of the relationship: a resubmitted
+    package opens a new *cycle* on the same case id, so the audit trail, memo
+    versions and decision records of a reference never fragment.
+    """
     key = normalise_reference(reference)
-    matches = [c for c in live_cases() if c.get("case_reference") == key]
+    matches = [c for c in store.list(CASE_TABLE) if c.get("case_reference") == key]
     return matches[-1] if matches else None
 
 
@@ -131,12 +134,24 @@ def audit(case_id, action_type, performed_by, field_name=None, old_value=None, n
     return entry
 
 
+def _cycle_of(case_id):
+    row = case_by_id(case_id)
+    return (row or {}).get("cycle", 1)
+
+
 def documents_for(case_id):
-    return [d for d in store.list("documents") if d["case_id"] == case_id]
+    """Only the current submission cycle's checklist — earlier cycles are kept."""
+    cycle = _cycle_of(case_id)
+    return [d for d in store.list("documents") if d["case_id"] == case_id and d.get("cycle", 1) == cycle]
 
 
 def missing_for(case_id):
-    return [m["document_type"] for m in store.list("missing_documents") if m["case_id"] == case_id]
+    cycle = _cycle_of(case_id)
+    return [
+        m["document_type"]
+        for m in store.list("missing_documents")
+        if m["case_id"] == case_id and m.get("cycle", 1) == cycle
+    ]
 
 
 # --------------------------------------------------------------------------
@@ -147,56 +162,59 @@ def open_case_from_submission(context):
     now = policy.iso(policy.now_utc())
     versions = policy.policy_versions()
     reference = normalise_reference(submission.get("client_reference"))
+    submitted_by = submission.get("submitted_by")
+    package = {
+        "client_reference": submission.get("client_reference"),
+        "client_name": submission.get("client_name"),
+        "client_name_normalized": (submission.get("client_name") or "").lower(),
+        "entity_type": (submission.get("entity_type") or "corporate").lower(),
+        "submitted_by": submitted_by,
+        "submitted_documents": list(submission.get("documents") or []),
+        "attributes": dict(submission.get("attributes") or {}),
+        "risk_factors": dict(submission.get("risk_factors") or {}),
+        "status": "open",
+        "case_ready_timestamp": None,
+        "completeness_passed_at": None,
+        "returned_at": None,
+        "is_at_risk": False,
+        "assigned_approver_id": None,
+        "document_checklist_version": versions["document_checklist_version"],
+        "risk_matrix_version": versions["risk_matrix_version"],
+        "onboarding_policy_version": versions["onboarding_policy_version"],
+    }
     previous = find_case(reference)
     if previous is not None:
-        # A reference identifies one live case: an amended package supersedes
-        # the earlier submission rather than silently duplicating it.
+        # A resubmission is a new CYCLE of the same case, not a new case: the
+        # reference keeps one case id, so its audit trail, memo versions and
+        # decision records stay whole. Prior decisions are never rewritten and
+        # a recorded SLA breach is permanent — neither is touched here.
         was = previous.get("status")
-        previous["status"] = "superseded"
-        audit(
-            previous["id"],
-            "case_superseded",
-            submission.get("submitted_by"),
+        row = previous
+        row.update(package)
+        row["cycle"] = (previous.get("cycle") or 1) + 1
+        entry = audit(
+            row["id"],
+            "case_resubmitted",
+            submitted_by,
             field_name="status",
             old_value=was,
-            new_value="superseded",
-            details={"superseded_by_reference": reference},
+            new_value="open",
+            details={"cycle": row["cycle"], "case_reference": reference},
         )
-    row = store.insert(
-        CASE_TABLE,
-        {
-            "case_reference": reference,
-            "client_reference": submission.get("client_reference"),
-            "client_name": submission.get("client_name"),
-            "client_name_normalized": (submission.get("client_name") or "").lower(),
-            "entity_type": (submission.get("entity_type") or "corporate").lower(),
-            "submitted_by": submission.get("submitted_by"),
-            "submitted_documents": list(submission.get("documents") or []),
-            "attributes": dict(submission.get("attributes") or {}),
-            "risk_factors": dict(submission.get("risk_factors") or {}),
-            "status": "open",
-            "created_at": now,
-            "case_ready_timestamp": None,
-            "completeness_passed_at": None,
-            "returned_at": None,
-            "sla_breached": False,
-            "is_at_risk": False,
-            "assigned_approver_id": None,
-            "next_review_due_date": None,
-            "document_checklist_version": versions["document_checklist_version"],
-            "risk_matrix_version": versions["risk_matrix_version"],
-            "onboarding_policy_version": versions["onboarding_policy_version"],
-        },
-    )
-    entry = audit(
-        row["id"],
-        "case_opened",
-        submission.get("submitted_by"),
-        field_name="status",
-        old_value=None,
-        new_value="open",
-        details={"case_reference": row["case_reference"]},
-    )
+    else:
+        row = store.insert(
+            CASE_TABLE,
+            dict(package, case_reference=reference, created_at=now, cycle=1, sla_breached=False, next_review_due_date=None),
+        )
+        entry = audit(
+            row["id"],
+            "case_opened",
+            submitted_by,
+            field_name="status",
+            old_value=None,
+            new_value="open",
+            details={"case_reference": row["case_reference"], "cycle": 1},
+        )
     return {
         "case_id": row["id"],
         "case_reference": row["case_reference"],
@@ -219,11 +237,13 @@ def run_document_completeness_check(context):
         row.get("entity_type"), row.get("submitted_documents"), row.get("attributes"), row.get("risk_factors")
     )
     now = policy.iso(policy.now_utc())
+    cycle = row.get("cycle", 1)
     for item in result["items"]:
         store.insert(
             "documents",
             {
                 "case_id": row["id"],
+                "cycle": cycle,
                 "document_type": item["document_type"],
                 "required": item["required"],
                 "conditionally_required": item["conditionally_required"],
@@ -233,7 +253,9 @@ def run_document_completeness_check(context):
             },
         )
     for doc in result["missing_documents"]:
-        store.insert("missing_documents", {"case_id": row["id"], "document_type": doc, "recorded_at": now})
+        store.insert(
+            "missing_documents", {"case_id": row["id"], "cycle": cycle, "document_type": doc, "recorded_at": now}
+        )
     audit(
         row["id"],
         "completeness_checked",
@@ -453,6 +475,7 @@ def case_summary(row):
         "client_name_normalized": row.get("client_name_normalized"),
         "entity_type": row.get("entity_type"),
         "status": row.get("status"),
+        "cycle": row.get("cycle", 1),
         "submitted_by": row.get("submitted_by"),
         "created_at": row.get("created_at"),
         "case_ready_timestamp": row.get("case_ready_timestamp"),
@@ -558,7 +581,7 @@ def open_case(submission: CaseSubmission, authorization: str | None = Header(def
 
 @router.get("/cases")
 def list_cases(status: str | None = None):
-    rows = live_cases()
+    rows = store.list(CASE_TABLE)
     if status:
         rows = [r for r in rows if str(r.get("status")) == status.lower()]
     return {"cases": [case_summary(r) for r in rows], "count": len(rows)}

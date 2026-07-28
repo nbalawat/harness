@@ -6,7 +6,23 @@ const clar = clarifications.data;
 const agentReqs = requirements.data.requirements
   .filter((r) => r.category === "agent" && r.confidence !== "unknown")
   .map((r) => r.id);
+const workflows = inputs().workflows ? inputs().workflows.data.workflows : [];
+const opportunity_map = [];
+for (const wf of workflows) {
+  for (const node of wf.nodes) {
+    if (node.kind === "agent") {
+      opportunity_map.push({ slot: `${wf.name}/${node.id}`, source: node.id, decision: "included", rationale: "Advisory drafting step the workflow declares — grounded, cited, human-approved downstream.", agent: appName });
+    } else if (node.kind === "deterministic") {
+      opportunity_map.push({ slot: `${wf.name}/${node.id}`, source: node.id, decision: "excluded", rationale: "Requirements mandate this step be mechanical; no agent judgment may enter it." });
+    } else if (node.kind === "human") {
+      opportunity_map.push({ slot: `${wf.name}/${node.id}`, source: node.id, decision: "excluded", rationale: "Decision authority is human by policy; automation of approval is prohibited." });
+    }
+  }
+}
+opportunity_map.push({ slot: "chat-surface", source: agentReqs, decision: "included", rationale: "The chat screen's grounded Q&A is served by the roster agent.", agent: appName });
+
 writeJson("agent_roster.json", {
+  opportunity_map,
   agents: [
     {
       name: appName,

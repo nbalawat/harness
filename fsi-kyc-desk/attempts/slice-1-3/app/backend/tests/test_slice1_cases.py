@@ -106,12 +106,59 @@ def test_conditional_items_only_apply_when_triggered():
     assert conditional and all(c["required"] is False for c in conditional)
 
 
-def test_resubmitting_a_reference_supersedes_rather_than_duplicates():
+def test_resubmission_opens_a_new_cycle_on_the_same_case():
     ensure_cases()
-    client.post("/cases", json=INCOMPLETE_PACKAGE)
+    first = client.get("/cases/T-RETURNED-001").json()
+    again = client.post("/cases", json=INCOMPLETE_PACKAGE).json()
+    assert again["case_id"] == first["case_id"]  # one reference, one case id
+    assert again["cycle"] == first["cycle"] + 1
+    assert again["status"] == "returned"
     refs = [c["case_reference"] for c in client.get("/cases").json()["cases"]]
     assert refs.count("t-returned-001") == 1
-    assert client.get("/cases/T-RETURNED-001").json()["status"] == "returned"
+    # the earlier cycle's checklist rows are retained but do not double-count
+    assert len(again["missing_documents"]) == len(set(again["missing_documents"]))
+
+
+def test_risk_matrix_scores_match_the_published_matrix():
+    import kyc_policy
+
+    scored = kyc_policy.score_factors(
+        {
+            "jurisdiction": "fatf_high_risk",
+            "entity_structure": "nominee_shareholders",
+            "industry": "cash_intensive_retail",
+            "sanctions_screening": "clear",
+            "expected_activity": "domestic_only",
+        }
+    )
+    # 90*.30 + 60*.25 + 55*.20 + 0*.15 + 20*.10 — Risk Rating Matrix v2.1
+    assert scored["total_risk_score"] == 55
+    assert scored["risk_band"] == "medium"
+    assert scored["sanctions_true_positive_override_applied"] is False
+
+    override = kyc_policy.score_factors(
+        {
+            "jurisdiction": "standard",
+            "entity_structure": "nominee_shareholders",
+            "industry": "money_services",
+            "sanctions_screening": "true_positive",
+            "expected_activity": "domestic_only",
+        }
+    )
+    assert override["total_risk_score"] == 51
+    assert override["risk_band"] == "high"  # forced regardless of the total
+    assert override["sanctions_true_positive_override_applied"] is True
+
+
+def test_structure_chart_is_required_beyond_one_ownership_layer():
+    payload = dict(
+        COMPLETE_PACKAGE,
+        client_reference="T-DEPTH-002",
+        attributes={"ownership_chain_depth": 2, "regulated_industry": False, "cross_border_expected": False},
+    )
+    body = client.post("/cases", json=payload).json()
+    assert body["status"] == "returned"
+    assert "structure_chart" in body["missing_documents"]
 
 
 def test_worklist_and_case_detail_are_addressable_by_reference():

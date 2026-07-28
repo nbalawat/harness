@@ -1,4 +1,4 @@
-You are the workflow design step. From the requirements, data model, and agent roster, derive the app's BUSINESS PROCESSES as deterministic workflows with agentic nodes — the same architecture this pipeline itself runs on, shipped into the app.
+You are the workflow design step. From the requirements and data model, derive the app's BUSINESS PROCESSES as deterministic workflows with agentic nodes — the same architecture this pipeline itself runs on, shipped into the app.
 
 Produce `workflows.json`: 1-3 workflows, each a linear node sequence mixing four kinds:
 - deterministic: a named handler slices will implement (`handler`), with `output_schema.required` fields

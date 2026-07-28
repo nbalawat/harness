@@ -254,11 +254,10 @@ nodes:
 
   - id: agent-design
     phase: Design
-    description: "Defines your app's AI agents: roles, allowed tools, and how they will be evaluated."
+    description: "Sweeps every workflow step and requirement for agent opportunities — the roster plus an auditable map of every slot considered, included or rejected with reasons."
     kind: agent
-    model: claude-sonnet-5
-    escalateModel: claude-opus-5
-    deps: [requirements-synthesis, clarify]
+    model: claude-opus-5
+    deps: [requirements-synthesis, clarify, workflow-design]
     prompt: prompts/agent-design.md
     mock: node "$HARNESS_PROJECT_DIR/mocks/agent-design.cjs"
     outputs:
@@ -270,7 +269,7 @@ nodes:
     description: "Derives the app's business processes as deterministic workflows with agentic nodes — the pipeline's own architecture, shipped into your app."
     kind: agent
     model: claude-opus-5
-    deps: [requirements-synthesis, data-design, agent-design]
+    deps: [requirements-synthesis, data-design]
     prompt: prompts/workflow-design.md
     mock: node "$HARNESS_PROJECT_DIR/mocks/workflow-design.cjs"
     retries: 2
