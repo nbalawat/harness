@@ -1,0 +1,29 @@
+{
+  "standards_profile": "firm-baseline-v0",
+  "security": {
+    "high_findings": 0,
+    "total_findings": 0,
+    "files_scanned": 78,
+    "evidence": "security_report.json"
+  },
+  "validation": {
+    "backend_tests": "pass",
+    "agent_evals": "pass",
+    "compose_config": "skipped",
+    "evidence": "integration_report.json"
+  },
+  "requirements": {
+    "total": 95,
+    "covered": 95,
+    "uncovered": 0,
+    "assumptions": 26,
+    "evidence": "rtm.json"
+  },
+  "agents": {
+    "count": 1,
+    "names": [
+      "Risk Assessment Memo Assistant"
+    ],
+    "eval_criteria_total": 10
+  }
+}

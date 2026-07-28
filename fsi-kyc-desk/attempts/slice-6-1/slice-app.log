@@ -1,0 +1,95 @@
+INFO:     Started server process [80599]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:63578 (Press CTRL+C to quit)
+INFO:     127.0.0.1:63580 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63581 - "POST /cases HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63580 - "POST /cases HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63581 - "POST /cases HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63580 - "GET /cases HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63581 - "GET /cases/ACC-RETURNED-001 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63580 - "POST /cases/ACC-RETURNED-001/waive-document HTTP/1.1" 403 Forbidden
+INFO:     127.0.0.1:63581 - "GET /checklist HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63580 - "GET /risk-matrix HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63581 - "POST /risk/score HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63580 - "POST /risk/score HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63581 - "POST /risk/score HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63580 - "POST /cases HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63581 - "GET /cases/ACC-HIGH-001/score-breakdown HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63580 - "POST /cases/ACC-HIGH-001/score HTTP/1.1" 403 Forbidden
+INFO:     127.0.0.1:63581 - "GET /policy-corpus HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63580 - "POST /memos/draft HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63581 - "POST /memos/draft HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63580 - "GET /cases/ACC-HIGH-001/memos HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63581 - "GET /cases/ACC-HIGH-001 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63580 - "GET /citations/resolve?document=risk-rating-matrix&section=jurisdiction HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63581 - "GET /agents HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63580 - "GET /roles HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63581 - "GET /users HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63580 - "POST /decisions HTTP/1.1" 403 Forbidden
+INFO:     127.0.0.1:63581 - "POST /decisions HTTP/1.1" 403 Forbidden
+INFO:     127.0.0.1:63580 - "POST /decisions HTTP/1.1" 403 Forbidden
+INFO:     127.0.0.1:63581 - "POST /decisions HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:63580 - "POST /decisions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63581 - "POST /decisions HTTP/1.1" 409 Conflict
+INFO:     127.0.0.1:63580 - "POST /decisions HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:63581 - "POST /decisions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63580 - "GET /notifications?case_reference=ACC-COMPLETE-001 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63581 - "POST /cases/ACC-RETURNED-001/exceptions HTTP/1.1" 403 Forbidden
+INFO:     127.0.0.1:63580 - "POST /cases/ACC-RETURNED-001/exceptions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63581 - "GET /audit/cases/ACC-HIGH-001 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63580 - "POST /audit/entries/1/delete HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:63581 - "GET /sla-policy HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63580 - "POST /cases HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63581 - "POST /sla/evaluate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63580 - "GET /cases/ACC-SLA-001 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63581 - "GET /notifications HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63580 - "POST /sla/evaluate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63581 - "GET /escalations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63580 - "POST /sla/evaluate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63581 - "GET /cases HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63580 - "POST /decisions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63581 - "GET /cases/ACC-SLA-001 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63580 - "GET /search/cases?q=Meridian HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63581 - "GET /search/cases?risk_band=high HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63580 - "GET /export/cases.csv HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63581 - "GET /export/cases/ACC-HIGH-001.csv?include=audit_trail HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63580 - "GET /audit/cases/ACC-COMPLETE-001?acting_user=aud.auditor HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63581 - "GET /cases/ACC-HIGH-001/reproduction HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63580 - "GET /reports/weekly-operations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63589 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63589 - "GET /tokens.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63590 - "GET /app.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63591 - "GET /cases.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63592 - "GET /risk.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63593 - "GET /memo.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63594 - "GET /decisions.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63591 - "GET /agent/mode HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63593 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63589 - "GET /sla.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63592 - "GET /agents HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63590 - "GET /archive.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63594 - "GET /checklist HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63591 - "GET /risk-matrix HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63593 - "GET /policy-corpus HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63592 - "GET /users HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63593 - "GET /cases HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63593 - "GET /escalations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63590 - "GET /cases HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63590 - "GET /favicon.ico HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:63590 - "POST /chat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63590 - "GET / HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:63590 - "GET /agent/mode HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63592 - "GET /checklist HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63589 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63591 - "GET /risk-matrix HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63594 - "GET /policy-corpus HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63593 - "GET /agents HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63590 - "GET /users HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63592 - "GET /cases HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63589 - "GET /escalations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63589 - "GET /cases HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [80599]

@@ -1,0 +1,10 @@
+{
+  "screen": "screen-search",
+  "caption": "Searching the live case store by client name surfaces the matching case, and its full file — particulars, checklist, factor table, memos and register — can be exported as one CSV.",
+  "steps": [
+    { "action": "fill", "selector": "#live-search-q", "value": "Meridian" },
+    { "action": "click", "selector": "#live-search-run" },
+    { "action": "fill", "selector": "#live-export-ref", "value": "ACC-HIGH-001" },
+    { "action": "click", "selector": "#live-export-run" }
+  ]
+}
