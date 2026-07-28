@@ -11,6 +11,7 @@
           "agent-runtime",
           "agent-runtime-adk",
           "agent-runtime-langgraph",
+          "agent-runtime-strands",
           "api-keys",
           "approval-flow",
           "assignment",

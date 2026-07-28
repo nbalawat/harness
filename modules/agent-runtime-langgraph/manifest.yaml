@@ -7,6 +7,7 @@ requires:
   - "persistence-core"
 conflicts:
   - "agent-runtime"
+  - "agent-runtime-strands"
   - "agent-runtime-adk"
 app_deps:
   - "langgraph>=0.2"

@@ -9,21 +9,21 @@
       "status": "completed",
       "totalCostUsd": 11.499999999999998,
       "nodeCount": 28,
-      "digest": "102a6799ce25f097"
+      "digest": "ca7162b540ef27b0"
     },
     {
       "scenario": "answers-langgraph.json",
       "status": "completed",
-      "totalCostUsd": 12.599999999999998,
+      "totalCostUsd": 11.499999999999998,
       "nodeCount": 28,
-      "digest": "892f25e4e9d0631b"
+      "digest": "f790f4667d43cd8e"
     },
     {
       "scenario": "answers.json",
       "status": "completed",
       "totalCostUsd": 11.499999999999998,
       "nodeCount": 28,
-      "digest": "0d94c7da3d38e9a7"
+      "digest": "d9dc13389137c050"
     }
   ],
   "revisionDrill": {
@@ -31,6 +31,6 @@
     "status": "completed",
     "cachedReuses": 3
   },
-  "packageDigest": "4be4fadcf453fe7ce7ad4bbb570e410d4ccedff9b2eb81ad5d2e012d74024fb1",
-  "certifiedAt": "2026-07-28T03:43:55.843Z"
+  "packageDigest": "8f5d717e01f4e963303c74f430c2f874952536fd54ca07486bfdf3be955fee31",
+  "certifiedAt": "2026-07-28T04:22:21.315Z"
 }

@@ -1,0 +1,16 @@
+{
+  "intake": {
+    "project_name": "Support Copilot Strands",
+    "problem_statement": "Support analysts need an assistant that answers product questions from our knowledge and keeps reviewable conversation history. Our department mandates the AWS Strands framework for agent runtimes.",
+    "documents_dir": "fixtures/sample-docs"
+  },
+  "design-select": {
+    "chosen_option": "option-2"
+  },
+  "uat": {
+    "approved": "yes"
+  },
+  "design-review": {
+    "approve_design": "yes"
+  }
+}

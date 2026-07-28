@@ -4,7 +4,7 @@ const { intake, requirements } = inputs();
 const reqs = requirements.data.requirements.filter((r) => r.confidence !== "unknown");
 const byCat = (...cats) => reqs.filter((r) => cats.includes(r.category)).map((r) => r.id);
 const statement = String(intake.data.problem_statement || "");
-const runtime = /langgraph/i.test(statement) ? "agent-runtime-langgraph" : /\bADK\b/i.test(statement) ? "agent-runtime-adk" : "agent-runtime";
+const runtime = /langgraph/i.test(statement) ? "agent-runtime-langgraph" : /\bADK\b/i.test(statement) ? "agent-runtime-adk" : /strands/i.test(statement) ? "agent-runtime-strands" : "agent-runtime";
 writeJson("architecture.json", {
   modules: ["persistence-core", "chat-shell", runtime, "audit-log", "approval-flow", "workflow-engine"],
   module_coverage: [

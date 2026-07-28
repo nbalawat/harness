@@ -1,5 +1,5 @@
 {
-  "digest": "102a6799ce25f097",
+  "digest": "ca7162b540ef27b0",
   "files": {
     "agent-design/agent_roster.json": "804e3f19a4a03008",
     "architecture/architecture.json": "f8b9d68ebd2911b7",
@@ -17,13 +17,13 @@
     "design-review/design_review.json": "897c732e58233a0f",
     "design-select/design_choice.json": "d47dd464c6894c4a",
     "gap-questions/gaps.json": "b35942ef3038827d",
-    "governance-report/governance.json": "a532db5119b59dd9",
+    "governance-report/governance.json": "8652624e96641564",
     "ingest/corpus/src-1.md": "112dd27209a4dd7f",
     "ingest/corpus/src-2.md": "060134fc2144216f",
     "ingest/corpus/src-3.md": "d11ae6e79dedad31",
     "ingest/corpus_index.json": "c4f515511d8f88b4",
     "intake/intake.json": "55a123e6e1948061",
-    "integrate/integration_report.json": "c60c7081dd29f54c",
+    "integrate/integration_report.json": "f512b99f57e6b540",
     "requirements-synthesis/requirements.json": "21e24ab2cb0275c3",
     "scaffold/app/.env.example": "2ca749bbb882619c",
     "scaffold/app/agents/evals/cases.json": "502f75b20c5ffedc",

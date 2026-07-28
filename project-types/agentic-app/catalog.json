@@ -40,6 +40,14 @@
       ]
     },
     {
+      "name": "agent-runtime-strands",
+      "version": "0.1.0",
+      "description": "The agent-runtime contract implemented on AWS Strands — a Strands Agent with a custom Model bridge executes every reply; the model behind it is stub/live-cli/live-api like the base runtime.",
+      "requires": [
+        "persistence-core"
+      ]
+    },
+    {
       "name": "api-keys",
       "version": "0.1.0",
       "description": "Service-to-service callers of generated apps — hashed keys with prefixes, revocation, and last-used tracking.",

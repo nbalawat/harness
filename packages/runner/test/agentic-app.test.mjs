@@ -593,6 +593,18 @@ test("ADK mandate: the full pipeline builds and verifies an ADK-runtime app", as
   assert.equal(integration.backend_tests.status, "pass");
 });
 
+test("Strands mandate: the full pipeline builds and verifies a Strands-runtime app", async () => {
+  const ctx = makeCtx(tmpDir("strands-e2e"), readAnswers("scenario-strands.json"));
+  assert.equal((await runLoop(ctx)).status, "completed");
+  const appDir = path.join(ctx.workspace, "artifacts/slice-3/app");
+  const composed = readJson(path.join(appDir, "composed_modules.json"));
+  assert.ok(composed.modules.includes("agent-runtime-strands") && !composed.modules.includes("agent-runtime"));
+  assert.match(fs.readFileSync(path.join(appDir, "backend/agent_runtime.py"), "utf8"), /from strands import Agent/);
+  assert.match(fs.readFileSync(path.join(appDir, "backend/requirements.txt"), "utf8"), /strands-agents/);
+  const integration = readJson(artifact(ctx, "integrate", "integration_report.json"));
+  assert.equal(integration.evals.status, "pass");
+});
+
 test("runtime adapters: compat-matrix refuses two runtimes in one selection", () => {
   const result = spawnSync(
     process.execPath,
