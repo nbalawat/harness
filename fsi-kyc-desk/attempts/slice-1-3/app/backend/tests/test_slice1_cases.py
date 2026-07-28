@@ -119,6 +119,48 @@ def test_resubmission_opens_a_new_cycle_on_the_same_case():
     assert len(again["missing_documents"]) == len(set(again["missing_documents"]))
 
 
+def test_a_new_cycle_carries_no_stale_score_or_sla_clock():
+    """A cycle that is RETURNED must not advertise the previous cycle's band."""
+    ref = "T-CYCLE-STALE-001"
+    ready = client.post("/cases", json=dict(COMPLETE_PACKAGE, client_reference=ref)).json()
+    assert ready["status"] == "ready" and ready["risk_band"] and ready["sla_due_timestamp"]
+
+    short = client.post(
+        "/cases",
+        json=dict(COMPLETE_PACKAGE, client_reference=ref, documents=["certificate_of_incorporation"]),
+    ).json()
+    assert short["status"] == "returned"
+    assert short["risk_band"] is None and short["total_risk_score"] is None
+    assert short["sla_due_timestamp"] is None and short["assigned_approver_id"] is None
+    assert short["is_at_risk"] is False
+
+
+def test_each_cycle_keeps_the_policy_versions_and_outcome_that_applied_to_it():
+    ref = "T-CYCLE-SNAP-001"
+    client.post("/cases", json=dict(COMPLETE_PACKAGE, client_reference=ref, documents=[]))
+    client.post("/cases", json=dict(COMPLETE_PACKAGE, client_reference=ref))
+    cycles = client.get("/cases/" + ref).json()["cycles"]
+    assert [c["cycle"] for c in cycles] == [1, 2]
+    assert cycles[0]["status"] == "returned" and cycles[0]["missing_documents"]
+    assert cycles[1]["status"] == "ready" and cycles[1]["missing_documents"] == []
+    assert cycles[1]["total_risk_score"] is not None
+    for snapshot in cycles:  # REQ-070: versions travel with the cycle
+        assert snapshot["document_checklist_version"] and snapshot["risk_matrix_version"]
+        assert snapshot["onboarding_policy_version"]
+
+
+def test_regulated_industries_require_a_licence_without_the_attribute():
+    payload = dict(
+        COMPLETE_PACKAGE,
+        client_reference="T-GAMBLING-001",
+        attributes={"ownership_chain_depth": 1, "cross_border_expected": False},
+        risk_factors=dict(COMPLETE_PACKAGE["risk_factors"], industry="gambling"),
+    )
+    body = client.post("/cases", json=payload).json()
+    assert body["status"] == "returned"
+    assert "operating_license" in body["missing_documents"]
+
+
 def test_risk_matrix_scores_match_the_published_matrix():
     import kyc_policy
 

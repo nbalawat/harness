@@ -576,8 +576,24 @@ export function startUiServer(target: string, port: number): Promise<http.Server
   const root = singleMode ? path.dirname(target) : target;
   let workspace: string | null = singleMode ? target : null;
   let resuming = false;
-  const artifactsRoot = () => path.join(workspace ?? target, "artifacts");
-  const app: AppPreview = { status: "stopped", port: null, node: null, pid: null };
+  const artifactsRoot = (ws?: string | null) => path.join(ws ?? workspace ?? target, "artifacts");
+
+  /** Per-tab independence: ?ws=<dir> selects the run for THIS request only —
+   * ten builds in ten tabs, none fighting over server-side selection. */
+  function wsFrom(url: URL): string | null {
+    const ws = url.searchParams.get("ws");
+    if (!ws) return null;
+    const abs = path.resolve(ws);
+    if (!abs.startsWith(path.resolve(root)) || !fs.existsSync(path.join(abs, "run.json"))) return null;
+    return abs;
+  }
+
+  // One app preview per run, so tab A's launch doesn't kill tab B's.
+  const apps = new Map<string, AppPreview>();
+  const appFor = (ws: string): AppPreview => {
+    if (!apps.has(ws)) apps.set(ws, { status: "stopped", port: null, node: null, pid: null });
+    return apps.get(ws)!;
+  };
 
   /** Certified project types the storefront can start a new build from. */
   function availableProjectTypes(): { name: string; version: string; dir: string; description: string }[] {
@@ -613,58 +629,65 @@ export function startUiServer(target: string, port: number): Promise<http.Server
   }
 
   /** Continue the run in a child CLI process; ui-answers ride along when present. */
-  function spawnResume(extraArgs: string[] = []): void {
+  function spawnResume(extraArgs: string[] = [], ws?: string): void {
+    const w = ws ?? workspace!;
     const cliEntry = cliEntryPath();
-    const uiAnswers = path.join(workspace!, "ui-answers.json");
+    const uiAnswers = path.join(w, "ui-answers.json");
     const args =
       extraArgs.length > 0
-        ? [cliEntry, "resume", workspace!, ...extraArgs]
-        : [cliEntry, "resume", workspace!, ...(fs.existsSync(uiAnswers) ? ["--answers", uiAnswers] : [])];
+        ? [cliEntry, "resume", w, ...extraArgs]
+        : [cliEntry, "resume", w, ...(fs.existsSync(uiAnswers) ? ["--answers", uiAnswers] : [])];
     resuming = true;
     const child = spawn(process.execPath, args, { stdio: "ignore", detached: false });
     child.on("exit", () => (resuming = false));
   }
 
-  function latestAppArtifact(): { node: string; dir: string } | null {
-    if (workspace === null) return null;
-    const config = readConfig(workspace);
-    const def = loadDef(workspace!, config.projectTypeDir);
+  function latestAppArtifact(ws?: string | null): { node: string; dir: string } | null {
+    const w = ws ?? workspace;
+    if (!w) return null;
+    const config = readConfig(w);
+    const def = loadDef(w, config.projectTypeDir);
     const artifactName = def.preview?.artifact ?? "app";
-    const state = foldState(new Journal(workspace!).read());
+    const state = foldState(new Journal(w).read());
     let found: { node: string; dir: string } | null = null;
     for (const n of def.nodes) {
       const rel = state.artifacts[n.id]?.[artifactName];
-      if (rel) found = { node: n.id, dir: path.join(workspace!, rel) };
+      if (rel) found = { node: n.id, dir: path.join(w, rel) };
     }
     return found;
   }
 
-  function stopApp(): void {
-    if (app.pid) {
-      try {
-        process.kill(-app.pid, "SIGTERM");
-      } catch {
-        /* already gone */
+  function stopApp(ws?: string | null): void {
+    const targets = ws ? [appFor(ws)] : [...apps.values()];
+    for (const app of targets) {
+      if (app.pid) {
+        try {
+          process.kill(-app.pid, "SIGTERM");
+        } catch {
+          /* already gone */
+        }
       }
+      app.status = "stopped";
+      app.port = null;
+      app.pid = null;
     }
-    app.status = "stopped";
-    app.port = null;
-    app.pid = null;
   }
 
-  async function startApp(): Promise<void> {
-    stopApp();
-    if (workspace === null) return;
-    const config = readConfig(workspace);
-    const def = loadDef(workspace, config.projectTypeDir);
+  async function startApp(ws?: string | null): Promise<void> {
+    const w = ws ?? workspace;
+    if (!w) return;
+    stopApp(w);
+    const app = appFor(w);
+    const config = readConfig(w);
+    const def = loadDef(w, config.projectTypeDir);
     const preview = def.preview;
-    const latest = latestAppArtifact();
+    const latest = latestAppArtifact(w);
     if (!preview || !latest) {
       app.status = "failed";
       app.error = preview ? "no app artifact committed yet" : "project type declares no preview";
       return;
     }
-    const runDir = path.join(workspace, "app-preview");
+    const runDir = path.join(w, "app-preview");
     fs.rmSync(runDir, { recursive: true, force: true });
     fs.cpSync(latest.dir, runDir, { recursive: true });
 
@@ -672,7 +695,7 @@ export function startUiServer(target: string, port: number): Promise<http.Server
     app.status = "starting";
     app.node = latest.node;
     app.error = undefined;
-    const logFile = path.join(workspace, "app-preview.log");
+    const logFile = path.join(w, "app-preview.log");
     const log = fs.openSync(logFile, "w");
     const child = spawn(preview.command, {
       shell: true,
@@ -769,29 +792,28 @@ export function startUiServer(target: string, port: number): Promise<http.Server
             res.writeHead(400).end("not a run workspace under the served root");
             return;
           }
-          stopApp();
           workspace = abs;
           res.writeHead(200, { "content-type": "application/json" });
           res.end(JSON.stringify({ ok: true }));
         });
       } else if (url.pathname === "/api/deselect" && req.method === "POST") {
-        stopApp();
         workspace = null;
         res.writeHead(200, { "content-type": "application/json" });
         res.end(JSON.stringify({ ok: true }));
-      } else if (workspace === null && url.pathname.startsWith("/api/")) {
+      } else if (workspace === null && wsFrom(url) === null && url.pathname.startsWith("/api/")) {
         res.writeHead(200, { "content-type": "application/json" });
         res.end(JSON.stringify({ selected: false }));
       } else if (url.pathname === "/api/state") {
+        const ws = wsFrom(url) ?? workspace!;
         res.writeHead(200, { "content-type": "application/json" });
         res.end(
           JSON.stringify({
             selected: true,
-            ...buildState(workspace!),
+            ...buildState(ws),
             resuming,
-            app,
-            appAvailable: latestAppArtifact() !== null,
-            appStageNode: latestAppArtifact()?.node ?? null,
+            app: appFor(ws),
+            appAvailable: latestAppArtifact(ws) !== null,
+            appStageNode: latestAppArtifact(ws)?.node ?? null,
           }),
         );
       } else if (url.pathname === "/api/agent-answer" && req.method === "POST") {
@@ -804,7 +826,7 @@ export function startUiServer(target: string, port: number): Promise<http.Server
           res.end(JSON.stringify({ ok: true }));
         });
       } else if (url.pathname.startsWith("/api/node/")) {
-        const detail = buildNodeDetail(workspace!, decodeURIComponent(url.pathname.slice("/api/node/".length)));
+        const detail = buildNodeDetail(wsFrom(url) ?? workspace!, decodeURIComponent(url.pathname.slice("/api/node/".length)));
         if (!detail) {
           res.writeHead(404).end("unknown node");
           return;
@@ -842,8 +864,9 @@ export function startUiServer(target: string, port: number): Promise<http.Server
         res.end(fs.readFileSync(shot));
       } else if (url.pathname.startsWith("/artifact/")) {
         const rel = decodeURIComponent(url.pathname.slice("/artifact/".length));
-        const abs = path.normalize(path.join(artifactsRoot(), rel));
-        if (!abs.startsWith(artifactsRoot() + path.sep) || !fs.existsSync(abs) || !fs.statSync(abs).isFile()) {
+        const aroot = artifactsRoot(wsFrom(url));
+        const abs = path.normalize(path.join(aroot, rel));
+        if (!abs.startsWith(aroot + path.sep) || !fs.existsSync(abs) || !fs.statSync(abs).isFile()) {
           res.writeHead(404).end("not found");
           return;
         }
@@ -854,8 +877,9 @@ export function startUiServer(target: string, port: number): Promise<http.Server
         req.on("data", (chunk) => (body += chunk));
         req.on("end", () => {
           const { nodeId, answers } = JSON.parse(body) as { nodeId: string; answers: Record<string, string> };
-          const answersFile = mergeAnswers(workspace!, nodeId, answers);
-          spawnResume(["--answers", answersFile]);
+          const ws = wsFrom(url) ?? workspace!;
+          const answersFile = mergeAnswers(ws, nodeId, answers);
+          spawnResume(["--answers", answersFile], ws);
           res.writeHead(200, { "content-type": "application/json" });
           res.end(JSON.stringify({ ok: true }));
         });
@@ -864,7 +888,7 @@ export function startUiServer(target: string, port: number): Promise<http.Server
         req.on("data", (chunk) => (body += chunk));
         req.on("end", () => {
           const { nodeId, feedback, dryRun } = JSON.parse(body) as { nodeId: string; feedback: string; dryRun?: boolean };
-          const ctx = revisionCtx(workspace!);
+          const ctx = revisionCtx(wsFrom(url) ?? workspace!);
           if (dryRun) {
             const state = foldState(ctx.journal.read());
             const ran = (id: string) => state.committed.has(id) || state.failed.has(id) || state.skipped.has(id);
@@ -874,7 +898,7 @@ export function startUiServer(target: string, port: number): Promise<http.Server
             return;
           }
           const { reopened } = reviseNode(ctx, nodeId, feedback);
-          spawnResume();
+          spawnResume([], ctx.workspace);
           res.writeHead(200, { "content-type": "application/json" });
           res.end(JSON.stringify({ ok: true, reopened }));
         });
@@ -883,7 +907,7 @@ export function startUiServer(target: string, port: number): Promise<http.Server
         req.on("data", (chunk) => (body += chunk));
         req.on("end", () => {
           const { kind, slice, text } = JSON.parse(body) as { kind: string; slice?: string; text: string };
-          const ctx = revisionCtx(workspace!);
+          const ctx = revisionCtx(wsFrom(url) ?? workspace!);
           let target: string | undefined;
           let feedback: string;
           if (kind === "fix-slice") {
@@ -915,16 +939,16 @@ export function startUiServer(target: string, port: number): Promise<http.Server
             return;
           }
           const { reopened } = reviseNode(ctx, target, feedback);
-          spawnResume();
+          spawnResume([], ctx.workspace);
           res.writeHead(200, { "content-type": "application/json" });
           res.end(JSON.stringify({ ok: true, target, reopened }));
         });
       } else if (url.pathname === "/api/app/start" && req.method === "POST") {
-        void startApp();
+        void startApp(wsFrom(url));
         res.writeHead(200, { "content-type": "application/json" });
         res.end(JSON.stringify({ ok: true }));
       } else if (url.pathname === "/api/app/stop" && req.method === "POST") {
-        stopApp();
+        stopApp(wsFrom(url));
         res.writeHead(200, { "content-type": "application/json" });
         res.end(JSON.stringify({ ok: true }));
       } else {
@@ -1356,8 +1380,20 @@ function showTab(name) {
 }
 document.querySelectorAll('#tabs button').forEach(b => b.onclick = () => showTab(b.dataset.tab));
 if (location.hash) showTab(location.hash.slice(1));
-async function goHome() { await fetch('/api/deselect', { method: 'POST' }); tick(); }
-async function openRun(dir) { await fetch('/api/select', { method:'POST', body: JSON.stringify({ dir }) }); showTab('overview'); tick(); }
+let currentRun = new URLSearchParams(location.search).get('run') || null;
+function q(extra) {
+  const params = new URLSearchParams(extra || '');
+  if (currentRun) params.set('ws', currentRun);
+  const str = params.toString();
+  return str ? '?' + str : '';
+}
+async function goHome() { currentRun = null; history.replaceState(null, '', location.pathname); await fetch('/api/deselect', { method: 'POST' }); tick(); }
+async function openRun(dir) {
+  currentRun = dir;
+  history.replaceState(null, '', location.pathname + '?run=' + encodeURIComponent(dir));
+  await fetch('/api/select', { method:'POST', body: JSON.stringify({ dir }) }); // keeps single-tab flows working
+  showTab('overview'); tick();
+}
 
 let openNode = null;
 function closeDrawer() { openNode = null; document.getElementById('drawer').classList.remove('open'); }
@@ -1372,7 +1408,7 @@ async function refreshDrawer() {
   if (!openNode) return;
   let d;
   try {
-    d = await (await fetch('/api/node/' + encodeURIComponent(openNode))).json();
+    d = await (await fetch('/api/node/' + encodeURIComponent(openNode) + q())).json();
   } catch (e) {
     setText('dTitle', openNode);
     setText('dKind', '');
@@ -1444,12 +1480,12 @@ async function refreshDrawer() {
 async function reviseNodeUI() {
   const text = (document.getElementById('reviseText')?.value || '').trim();
   if (!text || !openNode) return;
-  const preview = await (await fetch('/api/revise', { method:'POST', body: JSON.stringify({ nodeId: openNode, feedback: text, dryRun: true }) })).json();
+  const preview = await (await fetch('/api/revise' + q(), { method:'POST', body: JSON.stringify({ nodeId: openNode, feedback: text, dryRun: true }) })).json();
   const NL = String.fromCharCode(10);
   const msg = 'Your feedback will reopen ' + preview.reopened.length + ' step(s):' + NL + NL + preview.reopened.join(', ') +
     NL + NL + 'Steps with unchanged inputs are re-used automatically (no cost). Continue?';
   if (!confirm(msg)) return;
-  await fetch('/api/revise', { method:'POST', body: JSON.stringify({ nodeId: openNode, feedback: text }) });
+  await fetch('/api/revise' + q(), { method:'POST', body: JSON.stringify({ nodeId: openNode, feedback: text }) });
   closeDrawer(); showTab('overview'); tick();
 }
 
@@ -1565,8 +1601,8 @@ function renderStorefront(data) {
 
 async function tick() {
   const runsData = await (await fetch('/api/runs')).json();
-  if (!runsData.selected) { renderStorefront(runsData); return; }
-  const s = await (await fetch('/api/state')).json();
+  if (!currentRun && !runsData.selected) { renderStorefront(runsData); return; }
+  const s = await (await fetch('/api/state' + q())).json();
   if (!s.selected) { renderStorefront(runsData); return; }
   document.getElementById('storefront').style.display = 'none';
   document.getElementById('runview').style.display = '';
@@ -1708,7 +1744,7 @@ async function tick() {
       const kind = new FormData(fbForm).get('fbKind');
       const text = document.getElementById('fbText').value.trim();
       if (!text) return;
-      const r = await (await fetch('/api/feedback', { method:'POST', body: JSON.stringify({ kind, slice: document.getElementById('fbSlice').value, text }) })).json();
+      const r = await (await fetch('/api/feedback' + q(), { method:'POST', body: JSON.stringify({ kind, slice: document.getElementById('fbSlice').value, text }) })).json();
       if (r.ok) { document.getElementById('fbText').value = ''; alert('Feedback accepted — ' + r.reopened.length + ' step(s) reopened. Watch the pipeline re-derive; unchanged steps are re-used.'); }
       tick();
     };
@@ -1739,7 +1775,7 @@ async function tick() {
           const other = String(fd.get('q' + i + '_other') || '').trim();
           answers[q.question ?? ('q' + i)] = other || String(fd.get('q' + i) || '');
         });
-        await fetch('/api/agent-answer', { method:'POST', body: JSON.stringify({ id: s.pendingQuestion.id, answers }) });
+        await fetch('/api/agent-answer' + q(), { method:'POST', body: JSON.stringify({ id: s.pendingQuestion.id, answers }) });
         form.dataset.qid = '';
       };
     }
@@ -1897,7 +1933,7 @@ async function tick() {
       form.onsubmit = async (ev) => {
         ev.preventDefault();
         const answers = Object.fromEntries(new FormData(form).entries());
-        await fetch('/api/answer', { method:'POST', body: JSON.stringify({ nodeId: form.dataset.node, answers }) });
+        await fetch('/api/answer' + q(), { method:'POST', body: JSON.stringify({ nodeId: form.dataset.node, answers }) });
         form.dataset.node = '';
       };
     }

@@ -139,6 +139,29 @@ def _cycle_of(case_id):
     return (row or {}).get("cycle", 1)
 
 
+def cycle_row(case_id, cycle=None):
+    """The per-cycle snapshot — what the case looked like at that submission."""
+    if cycle is None:
+        cycle = _cycle_of(case_id)
+    for row in store.list("case_cycles"):
+        if row["case_id"] == case_id and row["cycle"] == cycle:
+            return row
+    return None
+
+
+def stamp_cycle(case_id, **fields):
+    row = cycle_row(case_id)
+    if row is not None:
+        row.update(fields)
+    return row
+
+
+def cycles_for(case_id):
+    return sorted(
+        (c for c in store.list("case_cycles") if c["case_id"] == case_id), key=lambda c: c["cycle"]
+    )
+
+
 def documents_for(case_id):
     """Only the current submission cycle's checklist — earlier cycles are kept."""
     cycle = _cycle_of(case_id)
@@ -178,6 +201,16 @@ def open_case_from_submission(context):
         "returned_at": None,
         "is_at_risk": False,
         "assigned_approver_id": None,
+        # A new cycle carries no score and no live clock until this cycle's
+        # package passes completeness and is scored again. `sla_breached` is
+        # deliberately absent: a recorded breach is permanent (REQ-053).
+        "total_risk_score": None,
+        "risk_band": None,
+        "required_approver_role": None,
+        "sla_start_timestamp": None,
+        "sla_due_timestamp": None,
+        "sla_hours": None,
+        "next_review_due_date": None,
         "document_checklist_version": versions["document_checklist_version"],
         "risk_matrix_version": versions["risk_matrix_version"],
         "onboarding_policy_version": versions["onboarding_policy_version"],
@@ -199,12 +232,11 @@ def open_case_from_submission(context):
             field_name="status",
             old_value=was,
             new_value="open",
-            details={"cycle": row["cycle"], "case_reference": reference},
+            details={"cycle": row["cycle"], "case_reference": reference, "previous_cycle_outcome": was},
         )
     else:
         row = store.insert(
-            CASE_TABLE,
-            dict(package, case_reference=reference, created_at=now, cycle=1, sla_breached=False, next_review_due_date=None),
+            CASE_TABLE, dict(package, case_reference=reference, created_at=now, cycle=1, sla_breached=False)
         )
         entry = audit(
             row["id"],
@@ -215,6 +247,37 @@ def open_case_from_submission(context):
             new_value="open",
             details={"case_reference": row["case_reference"], "cycle": 1},
         )
+    # Snapshot what applied at THIS cycle. Later cycles get their own row, so a
+    # policy revision or a rescore never retroactively alters an earlier one.
+    store.insert(
+        "case_cycles",
+        {
+            "case_id": row["id"],
+            "case_reference": row["case_reference"],
+            "cycle": row["cycle"],
+            "opened_at": now,
+            "submitted_by": submitted_by,
+            "submitted_documents": list(row.get("submitted_documents") or []),
+            "attributes": dict(row.get("attributes") or {}),
+            "risk_factors": dict(row.get("risk_factors") or {}),
+            "status": "open",
+            "missing_documents": [],
+            "total_risk_score": None,
+            "risk_band": None,
+            "case_ready_timestamp": None,
+            "returned_at": None,
+            # Filled by slice 4 via stamp_cycle() when a human decides this
+            # cycle — without it a reproduced past cycle reports the wrong
+            # outcome for exactly the cases that were decided then resubmitted.
+            "decision": None,
+            "decided_at": None,
+            "decided_by_user_id": None,
+            "decided_by_role": None,
+            "document_checklist_version": versions["document_checklist_version"],
+            "risk_matrix_version": versions["risk_matrix_version"],
+            "onboarding_policy_version": versions["onboarding_policy_version"],
+        },
+    )
     return {
         "case_id": row["id"],
         "case_reference": row["case_reference"],
@@ -256,6 +319,7 @@ def run_document_completeness_check(context):
         store.insert(
             "missing_documents", {"case_id": row["id"], "cycle": cycle, "document_type": doc, "recorded_at": now}
         )
+    stamp_cycle(row["id"], missing_documents=list(result["missing_documents"]))
     audit(
         row["id"],
         "completeness_checked",
@@ -288,6 +352,7 @@ def mark_case_ready(context):
     row["status"] = "ready"
     row["case_ready_timestamp"] = now
     row["completeness_passed_at"] = now
+    stamp_cycle(row["id"], status="ready", case_ready_timestamp=now)
     entry = audit(
         row["id"], "case_ready", "completeness-check", field_name="status", old_value=previous, new_value="ready"
     )
@@ -311,6 +376,7 @@ def compute_risk_score_from_matrix(context):
         "risk_scores",
         {
             "case_id": row["id"],
+            "cycle": row.get("cycle", 1),
             "jurisdiction_raw_input": factors.get("jurisdiction"),
             "jurisdiction_factor_score": scored["factor_scores"]["jurisdiction"],
             "entity_structure_raw_input": factors.get("entity_structure"),
@@ -333,6 +399,7 @@ def compute_risk_score_from_matrix(context):
     )
     row["total_risk_score"] = scored["total_risk_score"]
     row["risk_band"] = scored["risk_band"]
+    stamp_cycle(row["id"], total_risk_score=scored["total_risk_score"], risk_band=scored["risk_band"])
     row["required_approver_role"] = scored["required_approver_role"]
     entry = audit(
         row["id"],
@@ -373,6 +440,7 @@ def start_sla_clock(context):
         "sla_tracking",
         {
             "case_id": row["id"],
+            "cycle": row.get("cycle", 1),
             "sla_start_timestamp": policy.iso(start),
             "sla_due_timestamp": policy.iso(due),
             "risk_band": band,
@@ -418,6 +486,7 @@ def return_case_with_missing_documents(context):
     previous = row["status"]
     row["status"] = "returned"
     row["returned_at"] = now
+    stamp_cycle(row["id"], status="returned", returned_at=now)
     missing = check.get("missing_documents") or []
     notification = store.insert(
         "notifications",
@@ -515,6 +584,9 @@ def case_detail(row):
                 for d in documents_for(row["id"])
             ],
             "waivable": False,
+            # Every submission cycle this reference has been through, each with
+            # the policy versions and outcome that applied at the time.
+            "cycles": cycles_for(row["id"]),
         }
     )
     return detail

@@ -347,3 +347,49 @@ test("storefront: Build-a-new-app starts a run that parks at intake, ready for Q
     assert.ok(state.parkedGate.questions.length >= 1, "intake questions ready to answer");
   });
 });
+
+test("ten-terminals model: concurrent builds, independently viewable and actionable via ?ws=", async () => {
+  const root = tmpDir("multi-root");
+  // Three concurrent builds (parked at intake = cheap and stable).
+  for (const name of ["app-a", "app-b", "app-c"]) {
+    runCli(["run", DEMO_DIR, "--workspace", path.join(root, name), "--mock-agents"]);
+  }
+
+  await withServer(root, async (base) => {
+    // Storefront sees all three at once.
+    const runs = await (await fetch(`${base}/api/runs`)).json();
+    assert.equal(runs.runs.length, 3);
+    assert.ok(runs.runs.every((r) => r.needsYou), "all three surface as waiting-on-you");
+
+    // Two 'tabs' view DIFFERENT runs simultaneously — no server-side fighting.
+    const wsA = encodeURIComponent(path.join(root, "app-a"));
+    const wsB = encodeURIComponent(path.join(root, "app-b"));
+    const [stateA, stateB] = await Promise.all([
+      fetch(`${base}/api/state?ws=${wsA}`).then((r) => r.json()),
+      fetch(`${base}/api/state?ws=${wsB}`).then((r) => r.json()),
+    ]);
+    assert.equal(stateA.selected, true);
+    assert.equal(stateA.parkedGate.nodeId, "intake");
+    assert.equal(stateB.parkedGate.nodeId, "intake");
+    assert.notEqual(stateA.workspace, stateB.workspace, "each tab sees its own run");
+
+    // Actions are ws-scoped: answering tab B's intake resumes ONLY app-b.
+    await fetch(`${base}/api/answer?ws=${wsB}`, {
+      method: "POST",
+      body: JSON.stringify({ nodeId: "intake", answers: { project_name: "App Bee" } }),
+    });
+    let b;
+    for (let i = 0; i < 60; i++) {
+      await new Promise((r) => setTimeout(r, 250));
+      b = await (await fetch(`${base}/api/state?ws=${wsB}`)).json();
+      if (b.status === "completed") break;
+    }
+    assert.equal(b.status, "completed", "app-b completed from its tab");
+    const a = await (await fetch(`${base}/api/state?ws=${wsA}`)).json();
+    assert.equal(a.status, "parked", "app-a untouched by app-b's answer");
+
+    // Traversal guard on ws.
+    const evil = await (await fetch(`${base}/api/state?ws=${encodeURIComponent("/etc")}`)).json();
+    assert.equal(evil.selected, false);
+  });
+});

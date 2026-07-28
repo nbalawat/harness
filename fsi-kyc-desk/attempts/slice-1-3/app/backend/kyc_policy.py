@@ -53,6 +53,11 @@ CONDITIONAL_DOCUMENTS = [
 ]
 
 
+# The matrix's regulated set — a licence is required for all of these even when
+# the submission does not set the `regulated_industry` attribute (REQ-010).
+REGULATED_INDUSTRIES = ("money_services", "gambling", "defense")
+
+
 def _truthy(value):
     return value is True or str(value).strip().lower() in ("true", "yes", "1")
 
@@ -67,11 +72,10 @@ def _conditional_triggered(document_type, attributes, risk_factors):
             depth = 0
         return depth > 1 or risk_factors.get("entity_structure") in ("chain_depth_over_3", "bearer_shares")
     if document_type == "operating_license":
-        return _truthy(attributes.get("regulated_industry")) or risk_factors.get("industry") == "money_services"
+        return _truthy(attributes.get("regulated_industry")) or risk_factors.get("industry") in REGULATED_INDUSTRIES
     if document_type == "expected_activity_questionnaire":
-        return _truthy(attributes.get("cross_border_expected")) or risk_factors.get("expected_activity") in (
-            "cross_border_over_1m",
-            "high_volume_cash",
+        return _truthy(attributes.get("cross_border_expected")) or risk_factors.get("expected_activity") == (
+            "cross_border_over_1m"
         )
     return False
 
