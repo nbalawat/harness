@@ -1,0 +1,514 @@
+{
+  "proven_through_slice": 4,
+  "slices": [
+    {
+      "slice": "case-intake-completeness",
+      "name": "Case intake and deterministic completeness check",
+      "objective": "As a KYC analyst, I submit a client's onboarding package so that a case is opened and mechanically checked against the Document Checklist: a complete package moves the case to READY with a case-ready timestamp, an incomplete package is RETURNED with the itemized list of exactly which documents are missing, and no analyst can waive a required item. Cases are addressed by their submission reference; the worklist and case detail screens show status and the missing-document list.",
+      "addresses": [
+        "REQ-001",
+        "REQ-002",
+        "REQ-003",
+        "REQ-004",
+        "REQ-005",
+        "REQ-006",
+        "REQ-007",
+        "REQ-008",
+        "REQ-009",
+        "REQ-010",
+        "REQ-011",
+        "REQ-012",
+        "REQ-013",
+        "REQ-014",
+        "REQ-055",
+        "REQ-070",
+        "REQ-089",
+        "REQ-094"
+      ],
+      "checks": [
+        {
+          "method": "POST",
+          "path": "/cases",
+          "expected_status": 200,
+          "contains": [
+            "acc-complete-001",
+            "\"status\":\"ready\"",
+            "case_ready_timestamp",
+            "document_checklist_version"
+          ],
+          "ok": true
+        },
+        {
+          "method": "POST",
+          "path": "/cases",
+          "expected_status": 200,
+          "contains": [
+            "\"status\":\"returned\"",
+            "missing_documents",
+            "register_of_directors",
+            "beneficial_ownership_declaration",
+            "structure_chart",
+            "operating_license"
+          ],
+          "ok": true
+        },
+        {
+          "method": "POST",
+          "path": "/cases",
+          "expected_status": 200,
+          "contains": [
+            "\"status\":\"returned\"",
+            "expected_activity_questionnaire"
+          ],
+          "ok": true
+        },
+        {
+          "method": "GET",
+          "path": "/cases",
+          "expected_status": 200,
+          "contains": [
+            "acc-complete-001",
+            "acc-returned-001",
+            "\"status\":\"returned\""
+          ],
+          "ok": true
+        },
+        {
+          "method": "GET",
+          "path": "/cases/ACC-RETURNED-001",
+          "expected_status": 200,
+          "contains": [
+            "\"status\":\"returned\"",
+            "missing_documents",
+            "register_of_directors"
+          ],
+          "ok": true
+        },
+        {
+          "method": "POST",
+          "path": "/cases/ACC-RETURNED-001/waive-document",
+          "expected_status": 403,
+          "contains": [
+            "compliance"
+          ],
+          "ok": true
+        },
+        {
+          "method": "GET",
+          "path": "/checklist",
+          "expected_status": 200,
+          "contains": [
+            "certificate_of_incorporation",
+            "register_of_directors",
+            "beneficial_ownership_declaration",
+            "proof_of_registered_address",
+            "structure_chart",
+            "operating_license",
+            "expected_activity_questionnaire",
+            "version"
+          ],
+          "ok": true
+        }
+      ]
+    },
+    {
+      "slice": "deterministic-risk-scoring",
+      "name": "Deterministic risk scoring and banding",
+      "objective": "As a KYC analyst, when a case passes completeness I want the risk score computed mechanically from the risk rating matrix — five weighted factors, a Low/Medium/High band, and a sanctions true-positive override that forces High regardless of the total — so the score is reproducible, never editable by any role, and I can see each factor's input, raw score, weight, and contribution in a score-breakdown view on the case.",
+      "addresses": [
+        "REQ-016",
+        "REQ-017",
+        "REQ-018",
+        "REQ-019",
+        "REQ-020",
+        "REQ-021",
+        "REQ-022",
+        "REQ-023",
+        "REQ-024",
+        "REQ-025",
+        "REQ-026",
+        "REQ-027",
+        "REQ-028",
+        "REQ-071",
+        "REQ-091"
+      ],
+      "checks": [
+        {
+          "method": "GET",
+          "path": "/risk-matrix",
+          "expected_status": 200,
+          "contains": [
+            "jurisdiction",
+            "entity_structure",
+            "industry",
+            "sanctions_screening",
+            "expected_activity",
+            "0.3",
+            "0.25",
+            "0.15",
+            "39",
+            "69",
+            "70",
+            "version"
+          ],
+          "ok": true
+        },
+        {
+          "method": "POST",
+          "path": "/risk/score",
+          "expected_status": 200,
+          "contains": [
+            "55",
+            "\"risk_band\":\"medium\"",
+            "contribution",
+            "weight"
+          ],
+          "ok": true
+        },
+        {
+          "method": "POST",
+          "path": "/risk/score",
+          "expected_status": 200,
+          "contains": [
+            "55",
+            "\"risk_band\":\"medium\""
+          ],
+          "ok": true
+        },
+        {
+          "method": "POST",
+          "path": "/risk/score",
+          "expected_status": 200,
+          "contains": [
+            "51",
+            "\"risk_band\":\"high\"",
+            "\"sanctions_true_positive_override_applied\":true"
+          ],
+          "ok": true
+        },
+        {
+          "method": "POST",
+          "path": "/cases",
+          "expected_status": 200,
+          "contains": [
+            "\"status\":\"ready\"",
+            "\"risk_band\":\"high\"",
+            "76",
+            "risk_matrix_version"
+          ],
+          "ok": true
+        },
+        {
+          "method": "GET",
+          "path": "/cases/ACC-HIGH-001/score-breakdown",
+          "expected_status": 200,
+          "contains": [
+            "jurisdiction",
+            "fatf_high_risk",
+            "weight",
+            "contribution",
+            "76",
+            "\"risk_band\":\"high\""
+          ],
+          "ok": true
+        },
+        {
+          "method": "POST",
+          "path": "/cases/ACC-HIGH-001/score",
+          "expected_status": 403,
+          "contains": [],
+          "ok": true
+        }
+      ]
+    },
+    {
+      "slice": "ai-risk-memo-drafting",
+      "name": "AI-drafted risk assessment memo with citations",
+      "objective": "As a reviewer, I want the Risk Assessment Memo Assistant to draft the case memo grounded only in the versioned policy corpus and the case record — carrying a permanent MACHINE-DRAFTED label, citations an auditor can resolve back to the cited provision, and covering ownership, jurisdiction, sanctions and the computed score — so I can read a draft on the case detail screen; every redraft is retained as a new immutable version and the agent can never change the case itself.",
+      "addresses": [
+        "REQ-029",
+        "REQ-030",
+        "REQ-031",
+        "REQ-032",
+        "REQ-033",
+        "REQ-034",
+        "REQ-036",
+        "REQ-037",
+        "REQ-038",
+        "REQ-039",
+        "REQ-087"
+      ],
+      "checks": [
+        {
+          "method": "GET",
+          "path": "/policy-corpus",
+          "expected_status": 200,
+          "contains": [
+            "kyc-onboarding-policy",
+            "document-checklist",
+            "escalation-sla-policy",
+            "risk-rating-matrix",
+            "version"
+          ],
+          "ok": true
+        },
+        {
+          "method": "POST",
+          "path": "/memos/draft",
+          "expected_status": 200,
+          "contains": [
+            "machine-drafted",
+            "\"is_machine_drafted\":true",
+            "\"version\":1",
+            "policy_citations",
+            "memo_text"
+          ],
+          "ok": true
+        },
+        {
+          "method": "POST",
+          "path": "/memos/draft",
+          "expected_status": 200,
+          "contains": [
+            "\"version\":2",
+            "\"is_machine_drafted\":true"
+          ],
+          "ok": true
+        },
+        {
+          "method": "GET",
+          "path": "/cases/ACC-HIGH-001/memos",
+          "expected_status": 200,
+          "contains": [
+            "\"version\":1",
+            "\"version\":2",
+            "machine-drafted",
+            "policy_citations"
+          ],
+          "ok": true
+        },
+        {
+          "method": "GET",
+          "path": "/cases/ACC-HIGH-001",
+          "expected_status": 200,
+          "contains": [
+            "\"status\":\"ready\"",
+            "\"risk_band\":\"high\""
+          ],
+          "ok": true
+        },
+        {
+          "method": "GET",
+          "path": "/citations/resolve?document=risk-rating-matrix&section=jurisdiction",
+          "expected_status": 200,
+          "contains": [
+            "risk-rating-matrix",
+            "jurisdiction",
+            "0.3"
+          ],
+          "ok": true
+        },
+        {
+          "method": "GET",
+          "path": "/agents",
+          "expected_status": 200,
+          "contains": [
+            "risk assessment memo assistant",
+            "save_memo_draft",
+            "denied_tools",
+            "record_approval_or_rejection",
+            "update_case_status"
+          ],
+          "ok": true
+        }
+      ]
+    },
+    {
+      "slice": "rbac-tiered-approval",
+      "name": "Role-based access and tiered human approval",
+      "objective": "As a compliance officer, I want approvals gated by risk band and enforced server-side against named individual accounts — analyst for Low, senior analyst for Medium, compliance officer plus a documented rationale for High, a required reason on rejection, no automated or auditor approvals, and compliance-officer-only policy exceptions — so that every status change carries an immutable decision record with the approver's identity, role at decision time, timestamp, adopted memo version and next review due date.",
+      "addresses": [
+        "REQ-015",
+        "REQ-035",
+        "REQ-040",
+        "REQ-041",
+        "REQ-042",
+        "REQ-043",
+        "REQ-044",
+        "REQ-045",
+        "REQ-046",
+        "REQ-047",
+        "REQ-048",
+        "REQ-049",
+        "REQ-062",
+        "REQ-064",
+        "REQ-065",
+        "REQ-066",
+        "REQ-075",
+        "REQ-076",
+        "REQ-077",
+        "REQ-078",
+        "REQ-079",
+        "REQ-080",
+        "REQ-081",
+        "REQ-082",
+        "REQ-083",
+        "REQ-084",
+        "REQ-085",
+        "REQ-088",
+        "REQ-093"
+      ],
+      "checks": [
+        {
+          "method": "GET",
+          "path": "/roles",
+          "expected_status": 200,
+          "contains": [
+            "kyc_analyst",
+            "senior_analyst",
+            "compliance_officer",
+            "auditor",
+            "40",
+            "70"
+          ],
+          "ok": true
+        },
+        {
+          "method": "GET",
+          "path": "/users",
+          "expected_status": 200,
+          "contains": [
+            "ana.analyst",
+            "sam.senior",
+            "cora.compliance",
+            "aud.auditor",
+            "kyc_analyst"
+          ],
+          "ok": true
+        },
+        {
+          "method": "POST",
+          "path": "/decisions",
+          "expected_status": 403,
+          "contains": [
+            "compliance_officer"
+          ],
+          "ok": true
+        },
+        {
+          "method": "POST",
+          "path": "/decisions",
+          "expected_status": 403,
+          "contains": [],
+          "ok": true
+        },
+        {
+          "method": "POST",
+          "path": "/decisions",
+          "expected_status": 403,
+          "contains": [],
+          "ok": true
+        },
+        {
+          "method": "POST",
+          "path": "/decisions",
+          "expected_status": 400,
+          "contains": [
+            "rationale"
+          ],
+          "ok": true
+        },
+        {
+          "method": "POST",
+          "path": "/decisions",
+          "expected_status": 200,
+          "contains": [
+            "\"status\":\"approved\"",
+            "\"decided_by_role\":\"compliance_officer\"",
+            "\"required_role_tier\":\"compliance_officer\"",
+            "decided_at",
+            "memo_version_id",
+            "next_review_due_date"
+          ],
+          "ok": true
+        },
+        {
+          "method": "POST",
+          "path": "/decisions",
+          "expected_status": 409,
+          "contains": [],
+          "ok": true
+        },
+        {
+          "method": "POST",
+          "path": "/decisions",
+          "expected_status": 400,
+          "contains": [
+            "reason"
+          ],
+          "ok": true
+        },
+        {
+          "method": "POST",
+          "path": "/decisions",
+          "expected_status": 200,
+          "contains": [
+            "\"status\":\"rejected\"",
+            "\"decided_by_role\":\"kyc_analyst\"",
+            "decided_at"
+          ],
+          "ok": true
+        },
+        {
+          "method": "GET",
+          "path": "/notifications?case_reference=ACC-COMPLETE-001",
+          "expected_status": 200,
+          "contains": [
+            "recipient_user_id",
+            "rejected",
+            "relationship"
+          ],
+          "ok": true
+        },
+        {
+          "method": "POST",
+          "path": "/cases/ACC-RETURNED-001/exceptions",
+          "expected_status": 403,
+          "contains": [],
+          "ok": true
+        },
+        {
+          "method": "POST",
+          "path": "/cases/ACC-RETURNED-001/exceptions",
+          "expected_status": 200,
+          "contains": [
+            "granted_by_user_id",
+            "cora.compliance",
+            "register_of_directors"
+          ],
+          "ok": true
+        },
+        {
+          "method": "GET",
+          "path": "/audit/cases/ACC-HIGH-001",
+          "expected_status": 200,
+          "contains": [
+            "performed_by_role",
+            "old_value",
+            "new_value",
+            "timestamp",
+            "approved"
+          ],
+          "ok": true
+        },
+        {
+          "method": "POST",
+          "path": "/audit/entries/1/delete",
+          "expected_status": 404,
+          "contains": [],
+          "ok": true
+        }
+      ]
+    }
+  ]
+}

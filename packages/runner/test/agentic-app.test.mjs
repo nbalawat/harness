@@ -631,3 +631,14 @@ test("agent design sweeps every workflow slot: included agents + excluded-with-c
   assert.ok(excluded.length >= 2, "mechanical/human slots were considered and rejected");
   for (const o of excluded) assert.ok(o.rationale.length >= 10, "every exclusion carries a reason");
 });
+
+test("slice objectives carry executable evidence: the acceptance report in the app artifact", () => {
+  const report = readJson(path.join(golden.workspace, "artifacts/slice-3/app/acceptance_report.json"));
+  assert.equal(report.proven_through_slice, 3);
+  assert.equal(report.slices.length, 3, "cumulative — every prior slice re-proven");
+  for (const sl of report.slices) {
+    assert.ok(sl.objective && sl.objective.length > 10, `${sl.slice} carries its objective (story)`);
+    assert.ok(sl.checks.length >= 1 && sl.checks.every((c) => c.ok), `${sl.slice} checks all proven`);
+    assert.ok(Array.isArray(sl.addresses) && sl.addresses.length >= 1, "objective traces to requirements");
+  }
+});

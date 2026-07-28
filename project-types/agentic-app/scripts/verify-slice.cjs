@@ -62,7 +62,11 @@ async function main() {
     }
     if (!up) fail("app did not boot for slice verification:\n" + fs.readFileSync("slice-app.log", "utf8").slice(-1500));
 
+    // The objectives ledger: every check's verdict, recorded into the app
+    // artifact so "were the slice objectives met" always has visible evidence.
+    const report = [];
     for (const slice of slices) {
+      const checks = [];
       for (const check of slice.acceptance) {
         const res = await fetch(`http://127.0.0.1:${port}${check.path}`, {
           method: check.method,
@@ -79,9 +83,12 @@ async function main() {
             fail(`[${slice.id}] ${check.method} ${check.path}: response missing "${needle}"\n${text.slice(0, 400)}`);
           }
         }
+        checks.push({ method: check.method, path: check.path, expected_status: wanted, contains: check.expect_contains ?? [], ok: true });
       }
+      report.push({ slice: slice.id, name: slice.name, objective: slice.story, addresses: slice.addresses, checks });
       console.log(`acceptance passed: ${slice.id}`);
     }
+    fs.writeFileSync(path.join(app, "acceptance_report.json"), JSON.stringify({ proven_through_slice: sliceIndex, slices: report }, null, 2));
 
     // Progress screenshot (best-effort): ships inside the app artifact so the
     // dashboard can show the app evolving slice by slice. FULL PAGE, after a

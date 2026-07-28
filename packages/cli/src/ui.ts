@@ -477,6 +477,30 @@ export function buildNodeDetail(workspace: string, nodeId: string): Record<strin
     }
   }
 
+  // Slice objectives ledger: the acceptance evidence recorded at verification.
+  if (planMatch) {
+    try {
+      const rep = JSON.parse(
+        fs.readFileSync(path.join(workspace, "artifacts", nodeId, "app", "acceptance_report.json"), "utf8"),
+      ) as { slices: { slice: string; name: string; objective: string; checks: { method: string; path: string; ok: boolean }[] }[] };
+      const mine = rep.slices[rep.slices.length - 1];
+      if (mine) {
+        results.unshift({
+          name: `Objective proven: ${mine.name}`,
+          file: "app/acceptance_report.json",
+          href: `/artifact/${nodeId}/app/acceptance_report.json`,
+          entries: [
+            { k: "objective", v: mine.objective },
+            ...mine.checks.map((c) => ({ k: `${c.method} ${c.path}`, v: c.ok ? "proven ✓" : "FAILED" })),
+            { k: "plus", v: `all ${rep.slices.length - 1} previous slices re-proven + backend test suite` },
+          ],
+        });
+      }
+    } catch {
+      /* not verified yet */
+    }
+  }
+
   const describe = (id: string) => def.nodes.find((n) => n.id === id)?.description ?? null;
   let promptText: string | null = null;
   if (node.prompt) {
