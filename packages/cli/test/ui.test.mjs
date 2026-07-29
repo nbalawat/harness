@@ -64,6 +64,11 @@ test("ui: state API reflects a completed run with costs and artifacts", async ()
 
     // The dashboard page itself renders.
     const page = await (await fetch(`${base}/`)).text();
+    // q() is the per-tab URL helper used all over tick(); ANY local `q`
+    // declaration in the page script shadows it function-wide (TDZ) and
+    // crashes every selected-run render. Syntax checks can't catch it.
+    const script = page.slice(page.indexOf("<script>"), page.indexOf("</script>"));
+    assert.ok(!/\b(const|let|var)\s+q\s*=/.test(script), "page script must not shadow the q() URL helper");
     assert.match(page, /<title>harness<\/title>/);
   });
 });
