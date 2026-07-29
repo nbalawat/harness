@@ -17346,15 +17346,15 @@ async function tick() {
   );
 
   // quality
-  const q = s.quality || {};
+  const qual = s.quality || {};
   const mark = (ok) => ok === null || ok === undefined ? '<span class="mark na">\u2013</span>' : ok ? '<span class="mark ok">\u2713</span>' : '<span class="mark bad">\u2715</span>';
   setHTML('quality',
-    '<div class="qrow">' + mark(q.backendTests ? q.backendTests === 'pass' : null) + '<span>Backend test suite</span><span class="stat">' + esc(q.backendSummary ?? 'runs at integration') + '</span></div>' +
-    '<div class="qrow">' + mark(q.evals ? q.evals.status === 'pass' : null) + '<span>Agent evals</span><span class="stat">' + (q.evals ? esc(q.evals.passed + '/' + q.evals.total + ' passed') : 'runs at integration') + '</span></div>' +
-    '<div class="qrow">' + mark(q.securityHigh === null ? null : q.securityHigh === 0) + '<span>Security scan</span><span class="stat">' + (q.securityHigh === null ? 'runs after build' : q.securityHigh + ' blocking \xB7 ' + (q.securityFindings ?? 0) + ' total findings') + '</span></div>' +
-    '<div class="qrow">' + mark(q.composeSmoke === null ? null : q.composeSmoke !== 'failed') + '<span>Container boot smoke</span><span class="stat">' + esc(q.composeSmoke ?? '\u2014') + '</span></div>' +
-    '<div class="qrow">' + mark(q.requirementsCovered ? q.requirementsCovered.covered === q.requirementsCovered.total : null) + '<span>Requirements covered</span><span class="stat">' + (q.requirementsCovered ? q.requirementsCovered.covered + '/' + q.requirementsCovered.total : 'traceability pending') + '</span></div>' +
-    '<div class="qrow">' + mark(q.slicesPlanned ? q.slicesDelivered >= q.slicesPlanned : null) + '<span>Feature slices</span><span class="stat">' + (q.slicesPlanned ? q.slicesDelivered + ' delivered of ' + q.slicesPlanned + ' planned' : '\u2014') + '</span></div>'
+    '<div class="qrow">' + mark(qual.backendTests ? qual.backendTests === 'pass' : null) + '<span>Backend test suite</span><span class="stat">' + esc(qual.backendSummary ?? 'runs at integration') + '</span></div>' +
+    '<div class="qrow">' + mark(qual.evals ? qual.evals.status === 'pass' : null) + '<span>Agent evals</span><span class="stat">' + (qual.evals ? esc(qual.evals.passed + '/' + qual.evals.total + ' passed') : 'runs at integration') + '</span></div>' +
+    '<div class="qrow">' + mark(qual.securityHigh === null ? null : qual.securityHigh === 0) + '<span>Security scan</span><span class="stat">' + (qual.securityHigh === null ? 'runs after build' : qual.securityHigh + ' blocking \xB7 ' + (qual.securityFindings ?? 0) + ' total findings') + '</span></div>' +
+    '<div class="qrow">' + mark(qual.composeSmoke === null ? null : qual.composeSmoke !== 'failed') + '<span>Container boot smoke</span><span class="stat">' + esc(qual.composeSmoke ?? '\u2014') + '</span></div>' +
+    '<div class="qrow">' + mark(qual.requirementsCovered ? qual.requirementsCovered.covered === qual.requirementsCovered.total : null) + '<span>Requirements covered</span><span class="stat">' + (qual.requirementsCovered ? qual.requirementsCovered.covered + '/' + qual.requirementsCovered.total : 'traceability pending') + '</span></div>' +
+    '<div class="qrow">' + mark(qual.slicesPlanned ? qual.slicesDelivered >= qual.slicesPlanned : null) + '<span>Feature slices</span><span class="stat">' + (qual.slicesPlanned ? qual.slicesDelivered + ' delivered of ' + qual.slicesPlanned + ' planned' : '\u2014') + '</span></div>'
   );
 
   // your app's agents \u2014 the roster the built application actually runs
@@ -17679,11 +17679,17 @@ let offline = false;
 async function safeTick() {
   try {
     await tick();
-    if (offline) { offline = false; setText('statusText', ''); }
+    if (offline) {
+      // Back online: fully clear the outage pill (tick() repaints the rest).
+      offline = false;
+      setText('statusText', '');
+      document.getElementById('statusDot').style.background = '';
+      document.getElementById('statusPill').style.display = 'none';
+    }
   } catch (e) {
     offline = true;
     setText('title', document.getElementById('title').textContent || 'harness');
-    setText('statusText', 'server unreachable \u2014 restart with: node packages/cli/dist/index.js ui .');
+    setText('statusText', 'server unreachable \u2014 it will reconnect by itself if restarted (harness ui)');
     document.getElementById('statusDot').style.background = 'var(--crit)';
     document.getElementById('statusPill').style.display = '';
   }

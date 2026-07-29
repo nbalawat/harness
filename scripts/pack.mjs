@@ -19,7 +19,7 @@ if (!fs.existsSync(bundle)) {
   process.exit(1);
 }
 
-const VERSION = "0.9.0"; // platform release version (tracks agentic-app certification line)
+const VERSION = "0.9.1"; // platform release version (tracks agentic-app certification line)
 
 fs.rmSync(out, { recursive: true, force: true });
 fs.mkdirSync(out, { recursive: true });
