@@ -2138,11 +2138,17 @@ let offline = false;
 async function safeTick() {
   try {
     await tick();
-    if (offline) { offline = false; setText('statusText', ''); }
+    if (offline) {
+      // Back online: fully clear the outage pill (tick() repaints the rest).
+      offline = false;
+      setText('statusText', '');
+      document.getElementById('statusDot').style.background = '';
+      document.getElementById('statusPill').style.display = 'none';
+    }
   } catch (e) {
     offline = true;
     setText('title', document.getElementById('title').textContent || 'harness');
-    setText('statusText', 'server unreachable — restart with: node packages/cli/dist/index.js ui .');
+    setText('statusText', 'server unreachable — it will reconnect by itself if restarted (harness ui)');
     document.getElementById('statusDot').style.background = 'var(--crit)';
     document.getElementById('statusPill').style.display = '';
   }
