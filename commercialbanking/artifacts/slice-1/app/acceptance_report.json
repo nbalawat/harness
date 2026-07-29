@@ -1,0 +1,74 @@
+{
+  "proven_through_slice": 1,
+  "slices": [
+    {
+      "slice": "intake-triage-pipeline",
+      "name": "Intake, agent triage, and the pipeline board",
+      "objective": "As a relationship manager I submit a loan application (email export plus a financials spreadsheet), the intake triage agent proposes a classification, missing-document list and analyst queue, an analyst accepts that proposal, the deal is routed into the queue and advances a stage — and every active deal shows on the pipeline board with its current stage.",
+      "addresses": [
+        "REQ-001",
+        "REQ-002",
+        "REQ-003",
+        "REQ-004",
+        "REQ-005",
+        "REQ-006",
+        "REQ-007",
+        "REQ-008",
+        "REQ-009",
+        "REQ-029",
+        "REQ-030",
+        "REQ-038",
+        "REQ-054",
+        "REQ-055",
+        "REQ-056",
+        "REQ-061"
+      ],
+      "checks": [
+        {
+          "method": "POST",
+          "path": "/deals/intake",
+          "expected_status": 200,
+          "contains": [
+            "deal_id",
+            "intake",
+            "artifact"
+          ],
+          "ok": true
+        },
+        {
+          "method": "GET",
+          "path": "/deals",
+          "expected_status": 200,
+          "contains": [
+            "borrower_name",
+            "current_stage"
+          ],
+          "ok": true
+        },
+        {
+          "method": "POST",
+          "path": "/deals/DEAL-001/triage/run",
+          "expected_status": 200,
+          "contains": [
+            "request_type",
+            "missing_documents",
+            "recommended_queue",
+            "draft"
+          ],
+          "ok": true
+        },
+        {
+          "method": "POST",
+          "path": "/deals/DEAL-001/triage/accept",
+          "expected_status": 200,
+          "contains": [
+            "accepted",
+            "queue",
+            "current_stage"
+          ],
+          "ok": true
+        }
+      ]
+    }
+  ]
+}

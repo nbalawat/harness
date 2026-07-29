@@ -14,5 +14,8 @@
   },
   "design-select": {
     "chosen_option": "option-3"
+  },
+  "design-review": {
+    "approve_design": "yes"
   }
 }

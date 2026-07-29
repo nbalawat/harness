@@ -251,7 +251,8 @@ Each phase has entry gates (what must be true to start) and exit metrics
 
 ---
 
-*Companion docs: [DESIGN.md](DESIGN.md) (architecture), 
+*Companion docs: [DEPLOYMENT-GCP.md](DEPLOYMENT-GCP.md) (the GCP deployment
+architecture for this plan), [DESIGN.md](DESIGN.md) (architecture), 
 [guides/versioning-and-releases.md](guides/versioning-and-releases.md) (release
 mechanics this plan leans on), [CAPABILITIES.md](CAPABILITIES.md) (today's
 proven inventory).*

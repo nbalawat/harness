@@ -20,6 +20,10 @@ agentic-app 0.3.0→0.8.0 version history, and the lessons the code now enforces
 
 The **module catalog** — the heart of the harness, ~100 modules with per-module rationale and certification rules — is [MODULES.md](MODULES.md).
 
+The **GCP deployment architecture** — project topology, dataflow diagrams,
+the network egress matrix, security controls, IaC layout, and sizing — is
+[DEPLOYMENT-GCP.md](DEPLOYMENT-GCP.md).
+
 The **50k rollout plan** — safe infra, cost model, firm gallery, fleet
 observability, and the phased path from 50 pilots to firm-wide — is
 [ROLLOUT.md](ROLLOUT.md).

@@ -1,0 +1,379 @@
+{
+  "_params": {
+    "path": "",
+    "data": {
+      "slice": 2
+    }
+  },
+  "app": {
+    "path": "/Users/nbalawat/development/harness/commercialbanking/artifacts/slice-1/app"
+  },
+  "slice_plan": {
+    "path": "/Users/nbalawat/development/harness/commercialbanking/artifacts/slice-plan/slice_plan.json",
+    "data": {
+      "slices": [
+        {
+          "id": "intake-triage-pipeline",
+          "name": "Intake, agent triage, and the pipeline board",
+          "story": "As a relationship manager I submit a loan application (email export plus a financials spreadsheet), the intake triage agent proposes a classification, missing-document list and analyst queue, an analyst accepts that proposal, the deal is routed into the queue and advances a stage — and every active deal shows on the pipeline board with its current stage.",
+          "addresses": [
+            "REQ-001",
+            "REQ-002",
+            "REQ-003",
+            "REQ-004",
+            "REQ-005",
+            "REQ-006",
+            "REQ-007",
+            "REQ-008",
+            "REQ-009",
+            "REQ-029",
+            "REQ-030",
+            "REQ-038",
+            "REQ-054",
+            "REQ-055",
+            "REQ-056",
+            "REQ-061"
+          ],
+          "acceptance": [
+            {
+              "method": "POST",
+              "path": "/deals/intake",
+              "body": {
+                "borrower_name": "Northwind Manufacturing LLC",
+                "industry": "manufacturing",
+                "requested_amount": 750000,
+                "ltv_percentage": 65,
+                "collateral_description": "Owner-occupied plant and equipment",
+                "submitted_by_id": "user-rm-1",
+                "artifacts": [
+                  {
+                    "artifact_type": "email",
+                    "file_name": "application.eml",
+                    "content_type": "message/rfc822",
+                    "content": "From: cfo@northwind.example\nSubject: Credit request $750k term loan\n\nRequesting a $750,000 term loan to refinance equipment. FY2025 statements attached."
+                  },
+                  {
+                    "artifact_type": "spreadsheet",
+                    "file_name": "fy2025_financials.csv",
+                    "content_type": "text/csv",
+                    "content": "line_item,amount\nrevenue,8200000\nebitda,1450000\ntotal_debt,3900000\ncurrent_assets,2100000\ncurrent_liabilities,1250000\nannual_debt_service,980000"
+                  }
+                ]
+              },
+              "expect_status": 200,
+              "expect_contains": [
+                "deal_id",
+                "intake",
+                "artifact"
+              ]
+            },
+            {
+              "method": "GET",
+              "path": "/deals",
+              "expect_status": 200,
+              "expect_contains": [
+                "borrower_name",
+                "current_stage"
+              ]
+            },
+            {
+              "method": "POST",
+              "path": "/deals/DEAL-001/triage/run",
+              "body": {},
+              "expect_status": 200,
+              "expect_contains": [
+                "request_type",
+                "missing_documents",
+                "recommended_queue",
+                "draft"
+              ]
+            },
+            {
+              "method": "POST",
+              "path": "/deals/DEAL-001/triage/accept",
+              "body": {
+                "decision": "accept",
+                "accepted_by_id": "user-analyst-1",
+                "accepted_queue": "commercial-ci-queue"
+              },
+              "expect_status": 200,
+              "expect_contains": [
+                "accepted",
+                "queue",
+                "current_stage"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "spread-ratios-grade",
+          "name": "Financial spreading with provenance, ratios, and risk grade",
+          "story": "As a credit analyst I run the financial spreading agent on a routed deal, review every proposed figure beside the source document and location it came from, accept or edit it, and the system then deterministically computes DSCR, leverage and current ratio and assigns a risk grade from an inspectable rubric that shows its inputs and the rule applied.",
+          "addresses": [
+            "REQ-010",
+            "REQ-011",
+            "REQ-012",
+            "REQ-013",
+            "REQ-014",
+            "REQ-015",
+            "REQ-016",
+            "REQ-017",
+            "REQ-039",
+            "REQ-057",
+            "REQ-058"
+          ],
+          "acceptance": [
+            {
+              "method": "POST",
+              "path": "/deals/DEAL-001/spread/run",
+              "body": {},
+              "expect_status": 200,
+              "expect_contains": [
+                "line_items",
+                "source_document_id",
+                "source_location",
+                "raw_extracted_text"
+              ]
+            },
+            {
+              "method": "POST",
+              "path": "/deals/DEAL-001/spread/accept",
+              "body": {
+                "decision": "accept",
+                "accepted_by_id": "user-analyst-1",
+                "edits": []
+              },
+              "expect_status": 200,
+              "expect_contains": [
+                "accepted",
+                "accepted_line_item_ids"
+              ]
+            },
+            {
+              "method": "GET",
+              "path": "/deals/DEAL-001/ratios",
+              "expect_status": 200,
+              "expect_contains": [
+                "dscr",
+                "leverage",
+                "current_ratio",
+                "formula",
+                "inputs"
+              ]
+            },
+            {
+              "method": "GET",
+              "path": "/deals/DEAL-001/risk-grade",
+              "expect_status": 200,
+              "expect_contains": [
+                "grade",
+                "rubric_rule_applied",
+                "inputs"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "memo-policy-compliance",
+          "name": "Cited credit memo and policy compliance exceptions",
+          "story": "As a credit analyst I have the credit memo agent draft the underwriting memo citing the exact ratios, spread lines and policy rules it relied on, accept it, then have the policy compliance agent review it against the versioned lending policy — concentration limits, prohibited industries and LTV caps evaluated against portfolio exposure — and see each breach written up as a disposable exception on the deal.",
+          "addresses": [
+            "REQ-018",
+            "REQ-019",
+            "REQ-020",
+            "REQ-021",
+            "REQ-022",
+            "REQ-023",
+            "REQ-024",
+            "REQ-029",
+            "REQ-030",
+            "REQ-038",
+            "REQ-057"
+          ],
+          "acceptance": [
+            {
+              "method": "POST",
+              "path": "/deals/DEAL-001/memo/run",
+              "body": {},
+              "expect_status": 200,
+              "expect_contains": [
+                "content",
+                "cited_ratios",
+                "cited_spread_items",
+                "cited_policy_rules"
+              ]
+            },
+            {
+              "method": "POST",
+              "path": "/deals/DEAL-001/memo/accept",
+              "body": {
+                "decision": "accept",
+                "accepted_by_id": "user-analyst-1"
+              },
+              "expect_status": 200,
+              "expect_contains": [
+                "accepted",
+                "memo"
+              ]
+            },
+            {
+              "method": "POST",
+              "path": "/deals/DEAL-001/policy-review/run",
+              "body": {},
+              "expect_status": 200,
+              "expect_contains": [
+                "exceptions",
+                "exposure_by_dimension"
+              ]
+            },
+            {
+              "method": "GET",
+              "path": "/policy-rules",
+              "expect_status": 200,
+              "expect_contains": [
+                "concentration",
+                "prohibited",
+                "loan_to_value",
+                "version"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "tiered-approval-decisions",
+          "name": "Role-scoped tiered approval, decline, and rework",
+          "story": "As a credit officer I see the approval tier the system derived from the deal's exposure, submit the named human decision, have an under-authority approval refused outright, decline a deal with a documented adverse-action reason, or return it to an earlier stage for rework with a reason and assignee — with each role seeing only the deals and controls its permissions allow.",
+          "addresses": [
+            "REQ-031",
+            "REQ-032",
+            "REQ-033",
+            "REQ-034",
+            "REQ-035",
+            "REQ-036",
+            "REQ-037",
+            "REQ-040",
+            "REQ-041",
+            "REQ-045",
+            "REQ-046",
+            "REQ-047",
+            "REQ-048",
+            "REQ-049",
+            "REQ-050",
+            "REQ-053",
+            "REQ-060",
+            "REQ-062"
+          ],
+          "acceptance": [
+            {
+              "method": "GET",
+              "path": "/deals/DEAL-001/approval-tier",
+              "expect_status": 200,
+              "expect_contains": [
+                "required_authority_tier",
+                "exposure"
+              ]
+            },
+            {
+              "method": "POST",
+              "path": "/approvals",
+              "body": {
+                "deal_id": "DEAL-001",
+                "decision": "approve",
+                "decided_by_id": "user-analyst-1",
+                "decision_notes": "Analyst attempting an approval above their $250k authority"
+              },
+              "expect_status": 403,
+              "expect_contains": [
+                "authority"
+              ]
+            },
+            {
+              "method": "POST",
+              "path": "/approvals",
+              "body": {
+                "deal_id": "DEAL-001",
+                "decision": "approve",
+                "decided_by_id": "user-officer-1",
+                "decision_notes": "Within senior credit officer authority; grade and exceptions reviewed"
+              },
+              "expect_status": 200,
+              "expect_contains": [
+                "approved",
+                "user-officer-1",
+                "closing"
+              ]
+            },
+            {
+              "method": "POST",
+              "path": "/deals/DEAL-002/decline",
+              "body": {
+                "decided_by_id": "user-officer-1",
+                "adverse_action_reason": "DSCR below policy minimum of 1.20x on the most recent fiscal year"
+              },
+              "expect_status": 200,
+              "expect_contains": [
+                "declined",
+                "adverse_action_reason",
+                "user-officer-1"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "portfolio-qa-sla-audit",
+          "name": "Grounded portfolio Q&A, SLA dashboard, and audit history",
+          "story": "As a credit officer I ask natural-language questions across the deals I am allowed to see and get an answer grounded in stored records with the supporting deals listed, watch an SLA dashboard surface every deal idle past five business days, and open any deal's chronological audit history of state changes, calculations, agent drafts and human decisions.",
+          "addresses": [
+            "REQ-025",
+            "REQ-026",
+            "REQ-027",
+            "REQ-028",
+            "REQ-042",
+            "REQ-043",
+            "REQ-044",
+            "REQ-051",
+            "REQ-052",
+            "REQ-055",
+            "REQ-059"
+          ],
+          "acceptance": [
+            {
+              "method": "POST",
+              "path": "/portfolio/qa",
+              "body": {
+                "question": "Show me all deals above $500k with DSCR under 1.2",
+                "asked_by_id": "user-officer-1"
+              },
+              "expect_status": 200,
+              "expect_contains": [
+                "answer",
+                "supporting_deal_ids",
+                "read_only"
+              ]
+            },
+            {
+              "method": "GET",
+              "path": "/sla/dashboard",
+              "expect_status": 200,
+              "expect_contains": [
+                "business_days_idle",
+                "is_over_sla"
+              ]
+            },
+            {
+              "method": "GET",
+              "path": "/deals/DEAL-001/audit",
+              "expect_status": 200,
+              "expect_contains": [
+                "actor_id",
+                "actor_type",
+                "event_type",
+                "timestamp"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  }
+}
