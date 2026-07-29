@@ -69,6 +69,13 @@ test("ui: state API reflects a completed run with costs and artifacts", async ()
     // crashes every selected-run render. Syntax checks can't catch it.
     const script = page.slice(page.indexOf("<script>"), page.indexOf("</script>"));
     assert.ok(!/\b(const|let|var)\s+q\s*=/.test(script), "page script must not shadow the q() URL helper");
+    // Every onclick handler must actually be defined — a dropped function
+    // (like startNewApp in the storefront redesign) makes a button dead silently.
+    for (const m of page.matchAll(/onclick="(\w+)\(/g)) {
+      const fn = m[1];
+      if (fn === "if") continue; // inline conditionals aren't function refs
+      assert.ok(new RegExp("function " + fn + "\\b").test(script), `onclick references undefined function ${fn}()`);
+    }
     assert.match(page, /<title>harness<\/title>/);
   });
 });

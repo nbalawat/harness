@@ -1,156 +1,127 @@
 # Harness — Certified SDLC Workflow Factory
 
+Build working agentic AI applications from a problem statement and a folder of
+documents. A small platform team **certifies** workflow types as deterministic
+DAGs; everyone else consumes them and gets the same proven result every time:
+requirements with provenance, approvable designs, certified modules,
+feature-by-feature builds with tests, security scanning, and a governance
+evidence pack.
+
+## Get started (two commands)
+
+```sh
+npm install -g @valueaddwithai/harness
+harness ui
+```
+
+Open http://localhost:4400 → **Start building** → name your app → answer the
+intake form (upload your documents right there). The run parks at intake —
+nothing executes or spends until you answer. Build as many apps in parallel as
+you like: one browser tab per build.
+
+Before your first **live** build (real Claude agents), run the preflight once
+and have an `ANTHROPIC_API_KEY` (or a logged-in Claude Code CLI):
+
+```sh
+harness setup --install-sdk
+```
+
+Prefer the command line? Everything the dashboard does has a CLI form:
+
+```sh
+harness run agentic-app@0.9.0 --workspace my-app   # parks at intake
+harness ui                                         # answer + watch in the browser
+harness status my-app
+harness revise my-app slice-2 --feedback "..." --resume
+```
+
+## What a build gives you
+
+The `agentic-app` project type is a 34-node certified pipeline:
+
+- **Requirements** — every document read into an evidence corpus; requirements
+  carry provenance (stated / inferred / unknown); at most 6 clarifying
+  questions, each with a default and a "why".
+- **Design** — 3–4 fully rendered, genuinely different design directions; the
+  one you pick ships **verbatim** as your app's frontend and is then locked.
+- **Architecture** — composed from 105 certified capability modules
+  (persistence, agent runtime, RBAC, audit, approvals, …), including your
+  choice of agent framework: native, **LangGraph**, **Google ADK**, or
+  **AWS Strands**.
+- **Workflows** — generated apps get their own deterministic workflow layer
+  (pure-Python event-sourced engine) with agentic nodes and mandatory human
+  gates where agents feed decisions.
+- **Build** — vertical feature slices, each verified against cumulative
+  acceptance checks + the full test suite, each demonstrated with a screenshot
+  of *its* increment and an objectives ledger.
+- **Evidence** — requirements-traceability matrix (uncovered requirements block
+  the build), security scan, agent evals, governance report.
+
+**Supervision is a dial:** `gates-only` asks you only at the five decision
+points; `every-slice` adds a checkpoint after each slice that pauses up to five
+minutes with the evidence — answer to decide, or walk away and it proceeds on
+approval-by-default, recorded as an assumption. Revisions are cheap: request a
+change on any step and everything downstream re-derives, re-using unchanged
+work automatically at no cost.
+
 ## Documentation
 
-Full guides in [docs/](docs/README.md): [building an app](docs/guides/building-an-app.md) ·
+Full guides in [docs/](docs/README.md):
+[building an app](docs/guides/building-an-app.md) ·
 [authoring project types](docs/guides/authoring-project-types.md) ·
 [authoring modules](docs/guides/authoring-modules.md) ·
 [versioning & releases](docs/guides/versioning-and-releases.md) ·
 [reporting bugs](docs/guides/reporting-bugs.md) ·
 [reference (CLI/env/glossary/FAQ)](docs/guides/reference.md) ·
-[architecture](docs/DESIGN.md)
+[architecture](docs/DESIGN.md) ·
+[module catalog](docs/MODULES.md) ·
+[changelog](docs/CHANGELOG.md)
 
-## Pilot quickstart (consumer path)
-
-```bash
-# 1. Get the binary (single file, node >= 20)
-npm run bundle          # produces dist-bundle/harness.cjs — or receive it from your platform team
-
-# 2. Provision the execution engine (Claude Agent SDK) + verify the toolchain
-node harness.cjs setup --install-sdk
-
-# 3. Install a certified project type from the registry (a git repo with signed tags)
-node harness.cjs install agentic-app@0.6.0 --registry <git-url>
-node harness.cjs list
-
-# 4. Build an app (parks at intake; answer in the dashboard)
-node harness.cjs run agentic-app@0.6.0 --workspace my-app
-node harness.cjs ui .   # open http://localhost:4400 -> answer intake -> watch it build
-
-# 5. Change your mind at any point
-node harness.cjs revise my-app slice-2 --feedback "..." --resume
-
-# 6. Keep current + see how your runs are going
-node harness.cjs self-update --registry <git-url>
-node harness.cjs telemetry
-```
-
-Certifier path: `harness certify project-types/<name> --update-golden` records golden digests; CI re-certifies on every push; tag the repo `<name>@<version>` to release.
-
-
-Deterministic DAG runner + certified project types. A small team certifies
-workflow types; consumers run them and get working applications. Design:
-[docs/DESIGN.md](docs/DESIGN.md).
-
-## Setup (once)
+## Developing the platform (this repo)
 
 ```sh
 npm install && npm run build
-npm test                # full regression suite (44 tests)
+npm test                 # full regression suite (110+ tests)
 ```
 
-Requires: Node 22+, python3, [uv](https://docs.astral.sh/uv/). Optional: Docker
+Requires Node 20+, python3, [uv](https://docs.astral.sh/uv/). Optional: Docker
 (compose validation + boot smoke).
 
-## Experience the agentic-app factory
-
-### 1. Certified replay — watch the whole factory run
+Watch the whole factory run deterministically (certification replay, $0):
 
 ```sh
 node packages/cli/dist/index.js run project-types/agentic-app \
   --workspace my-run \
   --answers project-types/agentic-app/fixtures/answers.json \
   --accept-defaults --mock-agents
+node packages/cli/dist/index.js ui .    # inspect it in the dashboard
 ```
 
-21 nodes: documents → evidence corpus → requirements with provenance → budgeted
-questions → architecture + build-budget check → 3 comparable design options →
-module composition → build → real tests/evals → security scan → governance
-evidence pack. Add `HARNESS_SMOKE_DOCKER=1` before the command to also build +
-boot the containers and smoke-test /chat through nginx.
+Drop `--mock-agents` for real Claude sessions — cost is captured per node in
+the journal and enforced against the certified budget envelope.
 
-### 2. Answer the gates yourself (interactive)
+### Certifier path
 
 ```sh
-node packages/cli/dist/index.js run project-types/agentic-app \
-  --workspace my-interactive-run --mock-agents
+node packages/cli/dist/index.js certify project-types/agentic-app   # golden scenarios, byte-deterministic
+node packages/cli/dist/index.js certify-modules                     # every module against a real composed app
+node packages/cli/dist/index.js certify-mcp                         # MCP servers: protocol probe + contract
+npm run pack                                                        # publishable npm package (engine + catalog)
 ```
 
-You'll be prompted for every gate question in the terminal — each shows its
-default pre-filled (`Enter` accepts, typing overrides) and why it's being asked.
-Point `documents_dir` at `project-types/agentic-app/fixtures/sample-docs` or your
-own folder of .md/.html docs. `--accept-defaults` skips confirmations for
-unattended runs; the dashboard shows the same questions as forms. Kill it mid-run and `resume` to see durable parking:
-
-```sh
-node packages/cli/dist/index.js resume my-interactive-run
-node packages/cli/dist/index.js status my-interactive-run
-```
-
-### 2b. Watch it in the browser
-
-```sh
-node packages/cli/dist/index.js ui my-run --port 4400
-# open http://localhost:4400
-```
-
-Live DAG progress with per-node cost, event feed, artifact browser, the design
-gallery rendered inline, and gate forms — a parked run can be answered and
-resumed from the browser. **"Your application" panel: one click launches the
-built app (available from the scaffold stage onward) and previews it live
-inside the dashboard** — relaunch after each build stage to watch it evolve.
-
-### 3. Explore what it produced
-
-```sh
-cat my-run/journal.jsonl | head -40      # the event-sourced ledger (every state change + cost)
-open my-run/artifacts/design-options/designs/option-2/index.html   # clickable design previews
-cat my-run/artifacts/requirements-synthesis/requirements.json      # provenance per requirement
-cat my-run/artifacts/security-scan/security_report.json
-cat my-run/artifacts/governance-report/governance.json             # the evidence pack
-```
-
-### 4. Run the generated application
-
-No Docker (single process):
-
-```sh
-cd my-run/artifacts/build-frontend/app/backend
-uv run --with fastapi --with uvicorn uvicorn dev:app --port 8000
-# open http://localhost:8000 — chat with the composed agent
-```
-
-Full stack with Docker:
-
-```sh
-cd my-run/artifacts/build-frontend/app
-docker compose up --build
-# frontend http://localhost:8080, backend http://localhost:8000/health
-```
-
-### 5. Real agents instead of mocks
-
-Drop `--mock-agents` (needs `@anthropic-ai/claude-agent-sdk`, installed in this
-repo, and Claude credentials). Agent nodes run real hermetic Claude sessions;
-cost is captured per node in the journal and enforced against the envelope in
-`project-types/agentic-app/dag.yaml`.
-
-### 6. Cloud deploy path
-
-```sh
-node packages/cli/dist/index.js run project-types/agentic-app \
-  --workspace my-cr-run \
-  --answers project-types/agentic-app/fixtures/answers-cloudrun.json \
-  --accept-defaults --mock-agents
-cat my-cr-run/artifacts/deploy/deploy/plan.md
-```
+Certification proves: static completeness, three golden scenarios with
+byte-identical artifact digests, cost gates, and a revision drill (feedback →
+cascade → re-derive to green with memoization).
 
 ## Layout
 
 ```
 packages/spec      shared types (contracts, ledger events, cost envelope)
-packages/runner    scheduler, journal, node envelope, budget enforcement
-packages/cli       harness run | resume | status
-modules/           certified capability modules composed into generated apps
-project-types/     demo (4-node) and agentic-app (21-node) certified DAGs
+packages/runner    scheduler, journal, node envelope, budgets, memoization, MCP/skills/teams
+packages/cli       run | resume | revise | status | ui | setup | certify | install | pack
+project-types/     demo (4-node) and agentic-app (34-node) certified DAGs
+modules/           105 certified capability modules composed into generated apps
+mcp/               certified MCP servers (app-sandbox: the app-under-build as a service)
+scripts/           bundle.mjs (single-file engine) · pack.mjs (npm package) · catalog-sync.mjs
+docs/              design, module catalog, changelog, role guides
 ```
