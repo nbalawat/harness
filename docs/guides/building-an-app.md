@@ -8,7 +8,7 @@ along the way — everything else is done and *proven* for you.
 ## 1. One-time setup (two commands)
 
 ```bash
-npm install -g @nbalawat/harness   # ships the engine + the certified catalog
+npm install -g @valueaddwithai/harness   # ships the engine + the certified catalog
 harness ui                          # storefront on http://localhost:4400
 ```
 

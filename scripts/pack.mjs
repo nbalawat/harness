@@ -41,7 +41,7 @@ fs.writeFileSync(
   path.join(out, "package.json"),
   JSON.stringify(
     {
-      name: "@nbalawat/harness",
+      name: "@valueaddwithai/harness",
       version: VERSION,
       description:
         "Certified SDLC workflow factory: build working agentic applications from a problem statement, with approvable designs, certified modules, and governance evidence.",
@@ -66,7 +66,7 @@ fs.writeFileSync(
     "## Get started (two commands)",
     "",
     "```sh",
-    "npm install -g @nbalawat/harness",
+    "npm install -g @valueaddwithai/harness",
     "harness ui",
     "```",
     "",

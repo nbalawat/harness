@@ -5,7 +5,7 @@ Build working agentic applications from a problem statement.
 ## Get started (two commands)
 
 ```sh
-npm install -g @nbalawat/harness
+npm install -g @valueaddwithai/harness
 harness ui
 ```
 
