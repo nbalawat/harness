@@ -1,0 +1,400 @@
+{
+  "architecture": {
+    "path": "/Users/nbalawat/development/harness/commercialbanking/artifacts/architecture/architecture.json",
+    "data": {
+      "modules": [
+        "persistence-core",
+        "agent-runtime",
+        "chat-shell",
+        "sqlite-adapter",
+        "auth-basic",
+        "rbac",
+        "row-level-security",
+        "audit-log",
+        "audit-view",
+        "session-audit",
+        "approval-flow",
+        "workflow-engine",
+        "state-machine",
+        "assignment",
+        "sla-timers",
+        "agent-router",
+        "tool-registry",
+        "versioned-drafts",
+        "row-history",
+        "blob-store",
+        "file-upload",
+        "file-preview",
+        "doc-extract",
+        "table-extract",
+        "email-ingest",
+        "spreadsheet-io",
+        "forms-engine",
+        "rag-core",
+        "citation-tracker",
+        "search-index",
+        "data-table",
+        "record-detail",
+        "dashboard-cards",
+        "screen-router",
+        "seed-data",
+        "pii-redaction",
+        "data-classification"
+      ],
+      "deploy_target": "local",
+      "composition_notes": {
+        "agent_runtime_choice": "agent-runtime (Claude Agent SDK default). The intake mandates no framework — no mention of LangGraph, ADK, or Strands — so no adapter is swapped in. The roster/respond/mode-disclosure/eval contract is identical either way.",
+        "pack_basis": "Started from pack-document-review (ingest -> extract -> human review queue -> decision trail), which is the underwriting pipeline's spine, then merged the intake/routing/SLA half of pack-intake-triage. The app is a hybrid of both shapes: document-centric extraction with citations AND classified intake routed to analyst queues under an SLA clock.",
+        "added_beyond_packs": [
+          "workflow-engine + state-machine — REQ-001/002 demand the eight underwriting stages be an explicit ordered workflow with constrained transitions; this is the single largest generation cost avoided by composition.",
+          "rbac + auth-basic + row-level-security — REQ-045..049 define three roles and REQ-048 requires ownership scoping at the data-access layer, not the UI.",
+          "versioned-drafts — REQ-030/039 require agent output to live in a pending state distinct from accepted deal data, with the original draft retained after a human edits it.",
+          "tool-registry — REQ-027/036 are enforcement requirements ('Q&A is read-only', 'no agent may approve'). Roster-enforced tool grants make that data checked at invoke time rather than a prompt instruction.",
+          "rag-core + citation-tracker — REQ-011/013/019/026/058 all hinge on 'says who': source refs on every spread figure, memo citations, grounded Q&A, and reviewer drill-through.",
+          "sqlite-adapter — REQ-054 requires a local target with no managed-cloud dependency; single-file durability without a database server.",
+          "pii-redaction + data-classification — REQ-050 requires borrower financials be kept out of logs and agent telemetry in raw form, driven by sensitivity tags rather than ad-hoc regexes.",
+          "seed-data — REQ-055: no documents were supplied (documents_dir 'none'), so the app must ship synthetic deals, statements, per-role users, and a default policy rule set.",
+          "dashboard-cards + sla-timers — REQ-023 portfolio concentration aggregation and REQ-051/052 the 5-business-day idle dashboard.",
+          "data-table + record-detail + file-preview + screen-router + audit-view — the five UX requirements (REQ-003/044/057/058/059/060): pipeline board, chronological history panel, side-by-side draft-vs-source review workspace, and role-adaptive navigation."
+        ],
+        "removed_from_packs": [
+          "slack-notify (pack-intake-triage) — no requirement asks for outbound chat notification; the SLA signal is a dashboard (REQ-051), not a channel post.",
+          "rest-client — only pulled in by slack-notify/webhook-out, both dropped; the app makes no outbound HTTP calls (REQ-062 clarified closing as a terminal status with no external posting).",
+          "corpus-refresh, conversation-memory, export-csv — no corpus-staleness, multi-turn-summarization, or data-export requirement.",
+          "eval-harness, transcript-store, guardrails-io, structured-logging, request-metrics, health-plus, migrations, soft-delete, data-retention, permissions-ui, admin-console, notifications-ui, env-config — each is defensible in the abstract but unaddressed by any stated or inferred requirement. Idle modules are weight the user pays to carry."
+        ],
+        "dependency_closure": "Verified with modules/compat-matrix/check.mjs (exit 0): every module-typed `requires` is present — approval-flow->{persistence-core,audit-log}, workflow-engine->{persistence-core,agent-runtime,approval-flow,audit-log}, rbac->auth-basic, row-level-security->rbac, citation-tracker->rag-core, table-extract->doc-extract, file-upload->blob-store, file-preview->file-upload, record-detail->data-table, screen-router->chat-shell, audit-view/session-audit->audit-log — and no declared conflicts (exactly one agent runtime selected).",
+        "deterministic_not_agentic": "REQ-014/015/016 (DSCR, leverage, current ratio, risk grade from the clarified 5-point rubric) are deterministic workflow-engine nodes, never agent calls — the intake states this explicitly and the rubric arrived via REQ-017-gap."
+      },
+      "module_coverage": [
+        {
+          "module": "persistence-core",
+          "addresses": [
+            "REQ-005",
+            "REQ-012",
+            "REQ-013",
+            "REQ-024",
+            "REQ-052",
+            "REQ-056"
+          ]
+        },
+        {
+          "module": "sqlite-adapter",
+          "addresses": [
+            "REQ-005",
+            "REQ-054"
+          ]
+        },
+        {
+          "module": "agent-runtime",
+          "addresses": [
+            "REQ-006",
+            "REQ-007",
+            "REQ-008",
+            "REQ-010",
+            "REQ-011",
+            "REQ-018",
+            "REQ-019",
+            "REQ-020",
+            "REQ-021",
+            "REQ-025",
+            "REQ-026",
+            "REQ-029"
+          ]
+        },
+        {
+          "module": "agent-router",
+          "addresses": [
+            "REQ-006",
+            "REQ-008",
+            "REQ-029"
+          ]
+        },
+        {
+          "module": "tool-registry",
+          "addresses": [
+            "REQ-027",
+            "REQ-029",
+            "REQ-036"
+          ]
+        },
+        {
+          "module": "chat-shell",
+          "addresses": [
+            "REQ-025",
+            "REQ-059"
+          ]
+        },
+        {
+          "module": "screen-router",
+          "addresses": [
+            "REQ-003",
+            "REQ-059",
+            "REQ-060"
+          ]
+        },
+        {
+          "module": "data-table",
+          "addresses": [
+            "REQ-003",
+            "REQ-009",
+            "REQ-023",
+            "REQ-025"
+          ]
+        },
+        {
+          "module": "record-detail",
+          "addresses": [
+            "REQ-056",
+            "REQ-057",
+            "REQ-058"
+          ]
+        },
+        {
+          "module": "dashboard-cards",
+          "addresses": [
+            "REQ-023",
+            "REQ-051"
+          ]
+        },
+        {
+          "module": "forms-engine",
+          "addresses": [
+            "REQ-004",
+            "REQ-012",
+            "REQ-040",
+            "REQ-041"
+          ]
+        },
+        {
+          "module": "file-upload",
+          "addresses": [
+            "REQ-004",
+            "REQ-005"
+          ]
+        },
+        {
+          "module": "blob-store",
+          "addresses": [
+            "REQ-005"
+          ]
+        },
+        {
+          "module": "file-preview",
+          "addresses": [
+            "REQ-057",
+            "REQ-058"
+          ]
+        },
+        {
+          "module": "doc-extract",
+          "addresses": [
+            "REQ-004",
+            "REQ-010"
+          ]
+        },
+        {
+          "module": "table-extract",
+          "addresses": [
+            "REQ-010",
+            "REQ-012"
+          ]
+        },
+        {
+          "module": "email-ingest",
+          "addresses": [
+            "REQ-004"
+          ]
+        },
+        {
+          "module": "spreadsheet-io",
+          "addresses": [
+            "REQ-004",
+            "REQ-010"
+          ]
+        },
+        {
+          "module": "rag-core",
+          "addresses": [
+            "REQ-019",
+            "REQ-026"
+          ]
+        },
+        {
+          "module": "citation-tracker",
+          "addresses": [
+            "REQ-011",
+            "REQ-013",
+            "REQ-019",
+            "REQ-026",
+            "REQ-057",
+            "REQ-058"
+          ]
+        },
+        {
+          "module": "search-index",
+          "addresses": [
+            "REQ-025",
+            "REQ-026"
+          ]
+        },
+        {
+          "module": "workflow-engine",
+          "addresses": [
+            "REQ-001",
+            "REQ-002",
+            "REQ-014",
+            "REQ-015",
+            "REQ-016",
+            "REQ-053"
+          ]
+        },
+        {
+          "module": "state-machine",
+          "addresses": [
+            "REQ-001",
+            "REQ-002",
+            "REQ-041"
+          ]
+        },
+        {
+          "module": "assignment",
+          "addresses": [
+            "REQ-008",
+            "REQ-009",
+            "REQ-041"
+          ]
+        },
+        {
+          "module": "approval-flow",
+          "addresses": [
+            "REQ-024",
+            "REQ-030",
+            "REQ-031",
+            "REQ-032",
+            "REQ-033",
+            "REQ-034",
+            "REQ-036",
+            "REQ-037",
+            "REQ-038",
+            "REQ-039",
+            "REQ-040",
+            "REQ-053"
+          ]
+        },
+        {
+          "module": "versioned-drafts",
+          "addresses": [
+            "REQ-022",
+            "REQ-030",
+            "REQ-039"
+          ]
+        },
+        {
+          "module": "row-history",
+          "addresses": [
+            "REQ-013",
+            "REQ-039",
+            "REQ-042"
+          ]
+        },
+        {
+          "module": "audit-log",
+          "addresses": [
+            "REQ-016",
+            "REQ-042",
+            "REQ-043"
+          ]
+        },
+        {
+          "module": "audit-view",
+          "addresses": [
+            "REQ-044"
+          ]
+        },
+        {
+          "module": "session-audit",
+          "addresses": [
+            "REQ-043",
+            "REQ-049"
+          ]
+        },
+        {
+          "module": "auth-basic",
+          "addresses": [
+            "REQ-037",
+            "REQ-049"
+          ]
+        },
+        {
+          "module": "rbac",
+          "addresses": [
+            "REQ-034",
+            "REQ-045",
+            "REQ-046",
+            "REQ-047",
+            "REQ-060"
+          ]
+        },
+        {
+          "module": "row-level-security",
+          "addresses": [
+            "REQ-028",
+            "REQ-045",
+            "REQ-048",
+            "REQ-050"
+          ]
+        },
+        {
+          "module": "pii-redaction",
+          "addresses": [
+            "REQ-050"
+          ]
+        },
+        {
+          "module": "data-classification",
+          "addresses": [
+            "REQ-050"
+          ]
+        },
+        {
+          "module": "sla-timers",
+          "addresses": [
+            "REQ-051",
+            "REQ-052"
+          ]
+        },
+        {
+          "module": "seed-data",
+          "addresses": [
+            "REQ-022",
+            "REQ-055"
+          ]
+        }
+      ],
+      "build_budget_plan": {
+        "rationale": "Only the six slice nodes are kind:agent and therefore carry real LLM spend. scaffold and governance-report are kind:deterministic (scaffold makes zero LLM calls — it overlays the 37 certified compose trees), the review-slice-* and uat nodes are kind:gate (human questions), and integrate/security-scan are script-driven verifiers budgeted only for repair-retry escalation. Composition is what keeps the slice estimates low: the workflow engine, approval/tiering loop, RBAC + row-level scoping, audit trail, citation structure, and every UI surface arrive as certified modules, so slice agents wire and specialize rather than generate them. Each slice sits well under the DAG's per-node $15 cap, and the $54.50 total leaves ~$45 of the $100 envelope for the already-spent design phase plus retry headroom.",
+        "nodes": {
+          "scaffold": 0,
+          "slice-1": 9,
+          "slice-2": 9.5,
+          "slice-3": 7.5,
+          "slice-4": 9,
+          "slice-5": 8.5,
+          "slice-6": 8,
+          "review-slice-1": 0,
+          "review-slice-2": 0,
+          "review-slice-3": 0,
+          "review-slice-4": 0,
+          "review-slice-5": 0,
+          "review-slice-6": 0,
+          "integrate": 2,
+          "security-scan": 1,
+          "governance-report": 0,
+          "uat": 0
+        },
+        "total_usd": 54.5
+      }
+    }
+  }
+}

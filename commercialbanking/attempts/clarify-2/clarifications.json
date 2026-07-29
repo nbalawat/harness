@@ -1,0 +1,6 @@
+{
+  "REQ-017-gap": "5-point scale (1=lowest risk to 5=highest risk) with DSCR ≥1.5→grade 1, 1.25–1.49→grade 2, 1.0–1.24→grade 3, <1.0→grade 4; leverage ≤2.5→reduces grade, >4.0→raises grade by 1; qualitative factors: industry risk adjustment (±1 grade) and management experience (±0.5 grade).",
+  "REQ-035-gap": "Single committee chair approves on behalf of the committee, recording the chair's identity and timestamp; no quorum voting required.",
+  "REQ-061-gap": "Users manually upload exported email files and attachments through a web form, with the system parsing the uploaded file to extract sender, subject, body, and attachments.",
+  "REQ-062-gap": "Terminal status: closing stage records the approval decision and funding date but does not generate documents or post to external systems. The stage exists to mark deals as funded and complete."
+}

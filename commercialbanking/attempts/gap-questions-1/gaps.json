@@ -1,0 +1,28 @@
+{
+  "questions": [
+    {
+      "id": "REQ-017-gap",
+      "prompt": "What is the risk-grading rubric? Specify the grade scale (e.g., A–F, 1–5), the thresholds for each grade based on financial ratios (DSCR, leverage, current ratio), and any qualitative factors that influence grading.",
+      "default": "5-point scale (1=lowest risk to 5=highest risk) with DSCR ≥1.5→grade 1, 1.25–1.49→grade 2, 1.0–1.24→grade 3, <1.0→grade 4; leverage ≤2.5→reduces grade, >4.0→raises grade by 1; qualitative factors: industry risk adjustment (±1 grade) and management experience (±0.5 grade).",
+      "why": "The risk-grading logic is deterministic and non-delegable (REQ-015). The rubric thresholds directly determine grade output, which drives lending decisions, approval authority tier determination, and portfolio risk reporting. Without this, the grading engine cannot be implemented."
+    },
+    {
+      "id": "REQ-035-gap",
+      "prompt": "For deals above $1M requiring credit-committee approval, what is the approval mechanism? Must a quorum of multiple named committee members approve, or does a single committee chair record the committee's decision?",
+      "default": "Single committee chair approves on behalf of the committee, recording the chair's identity and timestamp; no quorum voting required.",
+      "why": "This determines the approval data model (single actor vs. multi-actor vote tracking), the persistence schema (single approval_by vs. approval_committee_votes array), and the UI workflow for approval entry. A quorum mechanism requires tracking individual votes and vote tallies; a single chair requires only a single decision record."
+    },
+    {
+      "id": "REQ-061-gap",
+      "prompt": "How do email applications enter the intake stage? Does the system connect to a live mailbox (IMAP/API polling) for automatic ingestion, or do users manually upload exported email files/attachments?",
+      "default": "Users manually upload exported email files and attachments through a web form, with the system parsing the uploaded file to extract sender, subject, body, and attachments.",
+      "why": "This shapes the intake subsystem architecture. Live mailbox connection requires integration with mail APIs, poll scheduling, authentication/secret management, and incremental ingestion logic. Manual upload requires file handling, virus scanning, and single-batch parsing. This decision affects deployment complexity, data flow, and initial scope."
+    },
+    {
+      "id": "REQ-062-gap",
+      "prompt": "What is the scope of the closing stage? Does it involve generating closing documents, recording the funded loan to a core banking system, or is it simply a terminal status after approval with no further action?",
+      "default": "Terminal status: closing stage records the approval decision and funding date but does not generate documents or post to external systems. The stage exists to mark deals as funded and complete.",
+      "why": "This determines whether the closing stage is passive (status-only) or active (generates artifacts or integrates with external systems). A document-generation scope adds templating and drafting logic. Core-system posting requires API integration and reconciliation. This affects implementation scope, external dependencies, and deployment complexity."
+    }
+  ]
+}

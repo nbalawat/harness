@@ -1,0 +1,162 @@
+{
+  "sources": [
+    {
+      "id": "src-intake",
+      "original": "/Users/nbalawat/development/harness/commercialbanking/artifacts/intake/intake.json",
+      "extracted": "corpus/intake-problem-statement.md",
+      "type": "intake-json"
+    }
+  ],
+  "claims": [
+    {
+      "id": "C-001",
+      "text": "The application must run the underwriting pipeline as an explicit multi-stage workflow: intake → document extraction → financial spreading → risk grading → memo drafting → policy compliance check → tiered approval → closing.",
+      "source": "src-intake"
+    },
+    {
+      "id": "C-002",
+      "text": "Each pipeline stage's status must be visible on a pipeline board.",
+      "source": "src-intake"
+    },
+    {
+      "id": "C-003",
+      "text": "An intake triage agent must classify incoming requests.",
+      "source": "src-intake"
+    },
+    {
+      "id": "C-004",
+      "text": "The intake triage agent must flag missing documents.",
+      "source": "src-intake"
+    },
+    {
+      "id": "C-005",
+      "text": "The intake triage agent must route incoming requests to the right analyst queue.",
+      "source": "src-intake"
+    },
+    {
+      "id": "C-006",
+      "text": "A financial spreading agent must extract figures from borrower financial statements into the standard spread template.",
+      "source": "src-intake"
+    },
+    {
+      "id": "C-007",
+      "text": "The financial spreading agent must show its source for every extracted number.",
+      "source": "src-intake"
+    },
+    {
+      "id": "C-008",
+      "text": "A credit memo agent must draft the underwriting memo, citing the specific ratios, spread figures, and policy rules it relied on.",
+      "source": "src-intake"
+    },
+    {
+      "id": "C-009",
+      "text": "A policy compliance agent must review every drafted memo against lending policy, including concentration limits, prohibited industries, and loan-to-value caps.",
+      "source": "src-intake"
+    },
+    {
+      "id": "C-010",
+      "text": "The policy compliance agent must raise written exceptions when policy violations are found.",
+      "source": "src-intake"
+    },
+    {
+      "id": "C-011",
+      "text": "A portfolio Q&A agent must let credit officers ask questions across active deals (e.g. \"show me all deals above $500k with DSCR under 1.2\").",
+      "source": "src-intake"
+    },
+    {
+      "id": "C-012",
+      "text": "The portfolio Q&A agent's answers must be grounded in stored deal data.",
+      "source": "src-intake"
+    },
+    {
+      "id": "C-013",
+      "text": "Deterministic logic — never an agent — must compute the credit ratios: DSCR, leverage, and current ratio.",
+      "source": "src-intake"
+    },
+    {
+      "id": "C-014",
+      "text": "Deterministic logic — never an agent — must assign the risk grade from a transparent rubric.",
+      "source": "src-intake"
+    },
+    {
+      "id": "C-015",
+      "text": "Approvals must be tiered by exposure: a credit analyst may approve up to $250k.",
+      "source": "src-intake"
+    },
+    {
+      "id": "C-016",
+      "text": "Approvals must be tiered by exposure: a senior credit officer may approve up to $1M.",
+      "source": "src-intake"
+    },
+    {
+      "id": "C-017",
+      "text": "Approvals must be tiered by exposure: a credit committee must approve deals above $1M.",
+      "source": "src-intake"
+    },
+    {
+      "id": "C-018",
+      "text": "No agent may ever approve, decline, or advance a deal past an approval step.",
+      "source": "src-intake"
+    },
+    {
+      "id": "C-019",
+      "text": "A named human decision is mandatory at each approval step.",
+      "source": "src-intake"
+    },
+    {
+      "id": "C-020",
+      "text": "Every agent output (triage, spread, memo, compliance exceptions) requires human acceptance before the workflow proceeds.",
+      "source": "src-intake"
+    },
+    {
+      "id": "C-021",
+      "text": "Declined deals require a documented adverse-action reason.",
+      "source": "src-intake"
+    },
+    {
+      "id": "C-022",
+      "text": "Every state change, ratio calculation, agent draft, and human decision must land in an immutable audit trail.",
+      "source": "src-intake"
+    },
+    {
+      "id": "C-023",
+      "text": "Role-based access must separate relationship managers, who may submit deals and view only their own deals.",
+      "source": "src-intake"
+    },
+    {
+      "id": "C-024",
+      "text": "Role-based access must separate credit analysts, who may spread financials, draft memos, and recommend decisions.",
+      "source": "src-intake"
+    },
+    {
+      "id": "C-025",
+      "text": "Role-based access must separate credit officers, who may approve, decline, or return deals for rework.",
+      "source": "src-intake"
+    },
+    {
+      "id": "C-026",
+      "text": "Deals idle past 5 business days must surface on an SLA dashboard.",
+      "source": "src-intake"
+    },
+    {
+      "id": "C-027",
+      "text": "Applications currently arrive as emails and spreadsheets, so intake/document extraction must accommodate those formats.",
+      "source": "src-intake"
+    },
+    {
+      "id": "C-028",
+      "text": "The system must be deployed to a local target.",
+      "source": "src-intake"
+    },
+    {
+      "id": "C-029",
+      "text": "Supervision mode is gates-only, meaning human approval gates are required at defined checkpoints rather than continuous supervision.",
+      "source": "src-intake"
+    },
+    {
+      "id": "C-030",
+      "text": "No supporting documents were supplied beyond the problem statement (documents_dir is none); all requirements derive from the intake problem statement itself.",
+      "source": "src-intake"
+    }
+  ]
+}

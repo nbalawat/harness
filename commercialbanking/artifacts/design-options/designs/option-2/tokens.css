@@ -1,0 +1,77 @@
+/* ============================================================
+   Commercial Banking Underwriting — Option 2
+   Direction: "Underwriting Console" (operational console)
+   TOKEN LAYER ONLY. All structure lives in index.html <style>.
+   ============================================================ */
+
+:root {
+  /* ---- contract tokens ---- */
+  --primary: #ff9f1a;
+  --on-primary: #16110a;
+  --bg: #0a0e13;
+  --fg: #c6d3e1;
+  --surface: #111821;
+  --border: #1e2a37;
+  --font: ui-sans-serif, -apple-system, "Segoe UI", Roboto, "Helvetica Neue",
+    Arial, sans-serif;
+
+  /* ---- extended console chrome ---- */
+  --bg-deep: #06090d;          /* rail / gutters, darker than bg   */
+  --surface-2: #161f2a;        /* raised rows, headers             */
+  --surface-3: #1c2733;        /* hover / selected                 */
+  --border-soft: #18222d;
+  --border-strong: #33445a;
+
+  /* ---- type ---- */
+  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
+    "Liberation Mono", monospace;
+  --fs-micro: 9.5px;
+  --fs-label: 10px;
+  --fs-sm: 11px;
+  --fs-base: 11.5px;
+  --fs-md: 12.5px;
+  --fs-lg: 15px;
+  --fs-xl: 19px;
+  --fs-num: 22px;
+  --track-caps: 0.09em;
+
+  /* ---- ink ---- */
+  --fg-strong: #eaf1f8;
+  --fg-mute: #7d8fa3;
+  --fg-dim: #566677;
+
+  /* ---- accent + state ---- */
+  --primary-dim: #b26a08;
+  --primary-glow: rgba(255, 159, 26, 0.22);
+  --ok: #3ddc97;
+  --ok-bg: rgba(61, 220, 151, 0.1);
+  --warn: #ffc857;
+  --warn-bg: rgba(255, 200, 87, 0.1);
+  --crit: #ff5f56;
+  --crit-bg: rgba(255, 95, 86, 0.11);
+  --info: #55b9ff;
+  --info-bg: rgba(85, 185, 255, 0.1);
+  --agent: #b48cff;            /* every AI-generated artifact      */
+  --agent-bg: rgba(180, 140, 255, 0.09);
+  --agent-line: rgba(180, 140, 255, 0.38);
+  --human: #4fd1c5;            /* named human decisions            */
+  --idle: #47586b;
+
+  /* ---- metrics: tight console rhythm ---- */
+  --row-h: 24px;
+  --row-h-lg: 28px;
+  --topbar-h: 38px;
+  --statusbar-h: 24px;
+  --rail-w: 214px;
+  --inspector-w: 320px;
+  --gap: 8px;
+  --pad: 10px;
+  --radius: 4px;
+  --radius-sm: 2px;
+
+  /* ---- effects ---- */
+  --shadow-panel: 0 1px 0 rgba(255, 255, 255, 0.03) inset,
+    0 8px 24px rgba(0, 0, 0, 0.45);
+  --shadow-pop: 0 12px 32px rgba(0, 0, 0, 0.6);
+  --scanline: rgba(255, 255, 255, 0.018);
+}

@@ -17075,6 +17075,18 @@ function q(extra) {
   return str ? '?' + str : '';
 }
 async function goHome() { currentRun = null; history.replaceState(null, '', location.pathname); await fetch('/api/deselect', { method: 'POST' }); tick(); }
+async function startNewApp() {
+  const name = document.getElementById('newName').value.trim();
+  const projectTypeDir = document.getElementById('newType').value;
+  if (!name) { setText('newErr', 'Give your app a name first.'); return; }
+  if (!projectTypeDir) { setText('newErr', 'No certified project types available.'); return; }
+  setText('newErr', 'starting the run...');
+  const r = await fetch('/api/new-run', { method:'POST', body: JSON.stringify({ name, projectTypeDir }) });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) { setText('newErr', data.error || 'could not start'); return; }
+  setText('newErr', '');
+  await openRun(data.dir); // lands on Overview with the intake form waiting
+}
 async function openRun(dir) {
   currentRun = dir;
   history.replaceState(null, '', location.pathname + '?run=' + encodeURIComponent(dir));

@@ -1,0 +1,90 @@
+/* ==========================================================================
+   Commercial Banking Underwriting
+   Option 1 — "Credit Ledger" : editorial print
+   TOKEN LAYER ONLY. Structure and composition live in index.html.
+
+   Palette discipline: warm uncoated paper, near-black letterpress ink,
+   a single editorial accent (oxblood, the colour of a ledger stamp),
+   and one supporting spot (ledger green) reserved for accepted figures.
+   ========================================================================== */
+
+:root {
+  /* ---- Contract tokens (required) ------------------------------------ */
+  --primary:    #7a1c22;   /* oxblood — rules, stamps, section marks      */
+  --on-primary: #fbf7ec;   /* paper white knocked out of the accent       */
+  --bg:         #efe9dc;   /* warm uncoated stock, the desk               */
+  --fg:         #17140f;   /* near-black letterpress ink                  */
+  --surface:    #fbf7ed;   /* the sheet itself, brighter than the desk    */
+  --border:     #cdc3ac;   /* hairline rule                               */
+  --font: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua",
+          "Hoefler Text", Georgia, "Times New Roman", serif;
+
+  /* ---- Extended ink ---------------------------------------------------- */
+  --ink-strong:  #0d0b08;  /* display headings, folio numerals            */
+  --ink:         var(--fg);
+  --ink-muted:   #5c5344;  /* standfirsts, captions, bylines              */
+  --ink-faint:   #8b8271;  /* leaders, footnote apparatus, timestamps     */
+  --paper-tint:  #f5f0e2;  /* alternating ledger bands                    */
+  --paper-deep:  #e6dfcd;  /* masthead well, table headers                */
+
+  /* ---- Editorial spots -------------------------------------------------- */
+  --accent:        var(--primary);
+  --accent-soft:   #a8474b;
+  --accent-wash:   #f3e5e1;   /* pending / exception tint                 */
+  --ledger-green:  #2f5a3f;   /* accepted, cleared, within policy         */
+  --ledger-wash:   #e6ede4;
+  --amber:         #8a6412;   /* watch, idle, awaiting                    */
+  --amber-wash:    #f4ead2;
+  --ruby-stamp:    #93262c;   /* DECLINED / EXCEPTION stamp ink           */
+
+  /* ---- Rules (hairlines, never boxes) ------------------------------------ */
+  --rule-hair:   1px solid var(--border);
+  --rule-ink:    1px solid var(--ink-strong);
+  --rule-accent: 2px solid var(--primary);
+  --rule-double: 3px double var(--ink-strong);
+
+  /* ---- Type ------------------------------------------------------------- */
+  --font-display: var(--font);
+  --font-text:    var(--font);
+  --font-sans: "Helvetica Neue", Helvetica, "Franklin Gothic Medium",
+               Arial, sans-serif;                 /* small-caps furniture  */
+  --font-figure: "Iowan Old Style", "Palatino Linotype", Palatino,
+                 Georgia, "Times New Roman", serif;
+  --font-mono: "SF Mono", "IBM Plex Mono", Menlo, Consolas,
+               "Courier New", monospace;          /* source refs only      */
+
+  --fs-masthead: 2.55rem;
+  --fs-display:  2.05rem;
+  --fs-head:     1.42rem;
+  --fs-sub:      1.08rem;
+  --fs-lede:     1.16rem;
+  --fs-body:     1rem;
+  --fs-small:    0.875rem;
+  --fs-micro:    0.72rem;
+  --fs-folio:    0.68rem;
+
+  --lh-display: 1.08;
+  --lh-text:    1.62;
+  --lh-tight:   1.3;
+
+  --track-caps:  0.17em;   /* letterspaced small caps                      */
+  --track-kicker:0.34em;   /* kickers and department slugs                 */
+
+  /* ---- Measure and margins (a page you read) ---------------------------- */
+  --measure:      34em;    /* single-column reading measure                */
+  --page-max:     1180px;
+  --page-gutter:  clamp(1.5rem, 5vw, 4.75rem);
+  --col-gap:      2.75rem;
+
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.875rem;
+  --space-4: 1.375rem;
+  --space-5: 2.125rem;
+  --space-6: 3.25rem;
+  --space-7: 4.75rem;
+
+  /* No shadows, no radii — this is print. Kept so nothing invents them. */
+  --radius: 0;
+  --shadow: none;
+}
