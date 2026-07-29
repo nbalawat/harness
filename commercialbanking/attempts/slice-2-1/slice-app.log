@@ -26,3 +26,7 @@ INFO:     127.0.0.1:55826 - "GET /agent/mode HTTP/1.1" 200 OK
 INFO:     127.0.0.1:55827 - "GET /agents HTTP/1.1" 200 OK
 INFO:     127.0.0.1:55828 - "GET /api/conversations HTTP/1.1" 200 OK
 INFO:     127.0.0.1:55829 - "GET /deals HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [67330]

@@ -1,0 +1,38 @@
+INFO:     Started server process [68614]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:55978 (Press CTRL+C to quit)
+INFO:     127.0.0.1:55980 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55981 - "POST /deals/intake HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55980 - "GET /deals HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55981 - "POST /deals/DEAL-001/triage/run HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55980 - "POST /deals/DEAL-001/triage/accept HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55981 - "POST /deals/DEAL-001/spread/run HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55980 - "POST /deals/DEAL-001/spread/accept HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55981 - "GET /deals/DEAL-001/ratios HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55980 - "GET /deals/DEAL-001/risk-grade HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55981 - "POST /deals/DEAL-001/memo/run HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55980 - "POST /deals/DEAL-001/memo/accept HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55981 - "POST /deals/DEAL-001/policy-review/run HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55980 - "GET /policy-rules HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55990 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55990 - "GET /tokens.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55991 - "GET /app.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55992 - "GET /deals.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55993 - "GET /spread.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55994 - "GET /memo.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55994 - "GET /agent/mode HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55992 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55991 - "GET /deals HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55993 - "GET /agents HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55991 - "GET /favicon.ico HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:55998 - "GET / HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:55998 - "GET /memo.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:55998 - "GET /agent/mode HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55999 - "GET /agents HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56000 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56001 - "GET /deals HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [68614]

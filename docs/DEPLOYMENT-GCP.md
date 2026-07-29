@@ -248,9 +248,17 @@ forwarding) so client config is stable across regions/failover: `llm.firm`,
 
 ## 5. Identity & access
 
+**Zero access administration for builders.** Platform access is never
+request-based: the IAP and gateway policies say "any authenticated firm
+identity" (federated from the corp IdP), so every employee can install, build,
+publish, and browse the gallery from day one — new joiners automatically in,
+leavers automatically out, no tickets, no approvals, no per-user grants.
+Narrow IAM exists only for the platform team, the audit group, and service
+accounts.
+
 | Principal | Identity | Access |
 |---|---|---|
-| Builders (50k) | Workforce Identity Federation (corp IdP → Google) | IAP to gateway/telemetry/gallery; AR read on npm repo; no direct GCP project access |
+| Builders (50k) | Workforce Identity Federation (corp IdP → Google) | Everything user-facing, org-wide by default: IAP to gateway/telemetry/gallery; AR read on npm repo. No direct GCP project access, no per-user grants ever |
 | Regulated-desk builders | Same + access level `regulated` | Routed to Tier-2 builders; stricter DLP policy templates on the gateway |
 | Platform team | Google groups → IAM roles | `roles/run.admin` etc. per project, breakglass via PAM; release rights only through Cloud Build triggers |
 | Audit / risk | Group `harness-audit` | Read-only: gallery, evidence GCS, BigQuery authorized views (no raw prompt log without joint approval) |

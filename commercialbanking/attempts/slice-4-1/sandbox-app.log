@@ -1,0 +1,22 @@
+INFO:     Started server process [69270]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:56035 (Press CTRL+C to quit)
+INFO:     127.0.0.1:56039 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56040 - "POST /deals/intake HTTP/1.1" 422 Unprocessable Content
+INFO:     127.0.0.1:56042 - "POST /deals/intake HTTP/1.1" 422 Unprocessable Content
+INFO:     127.0.0.1:56044 - "GET /deals HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56044 - "POST /auth/login HTTP/1.1" 422 Unprocessable Content
+INFO:     127.0.0.1:56048 - "POST /auth/login HTTP/1.1" 422 Unprocessable Content
+INFO:     127.0.0.1:56049 - "POST /api/conversations HTTP/1.1" 422 Unprocessable Content
+INFO:     127.0.0.1:56054 - "POST /auth/login HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56055 - "POST /deals/intake HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56056 - "POST /deals/DEAL-001/triage/run HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56057 - "POST /deals/DEAL-001/triage/accept HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56058 - "POST /deals/DEAL-001/spread/run HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56059 - "POST /deals/DEAL-001/spread/accept HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56060 - "POST /deals/DEAL-001/memo/run HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56061 - "POST /deals/DEAL-001/memo/accept HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56062 - "POST /deals/DEAL-001/policy-review/run HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56063 - "GET /policy-rules HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56064 - "GET /deals/DEAL-001 HTTP/1.1" 200 OK

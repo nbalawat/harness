@@ -1,0 +1,204 @@
+{
+  "proven_through_slice": 3,
+  "slices": [
+    {
+      "slice": "intake-triage-pipeline",
+      "name": "Intake, agent triage, and the pipeline board",
+      "objective": "As a relationship manager I submit a loan application (email export plus a financials spreadsheet), the intake triage agent proposes a classification, missing-document list and analyst queue, an analyst accepts that proposal, the deal is routed into the queue and advances a stage — and every active deal shows on the pipeline board with its current stage.",
+      "addresses": [
+        "REQ-001",
+        "REQ-002",
+        "REQ-003",
+        "REQ-004",
+        "REQ-005",
+        "REQ-006",
+        "REQ-007",
+        "REQ-008",
+        "REQ-009",
+        "REQ-029",
+        "REQ-030",
+        "REQ-038",
+        "REQ-054",
+        "REQ-055",
+        "REQ-056",
+        "REQ-061"
+      ],
+      "checks": [
+        {
+          "method": "POST",
+          "path": "/deals/intake",
+          "expected_status": 200,
+          "contains": [
+            "deal_id",
+            "intake",
+            "artifact"
+          ],
+          "ok": true
+        },
+        {
+          "method": "GET",
+          "path": "/deals",
+          "expected_status": 200,
+          "contains": [
+            "borrower_name",
+            "current_stage"
+          ],
+          "ok": true
+        },
+        {
+          "method": "POST",
+          "path": "/deals/DEAL-001/triage/run",
+          "expected_status": 200,
+          "contains": [
+            "request_type",
+            "missing_documents",
+            "recommended_queue",
+            "draft"
+          ],
+          "ok": true
+        },
+        {
+          "method": "POST",
+          "path": "/deals/DEAL-001/triage/accept",
+          "expected_status": 200,
+          "contains": [
+            "accepted",
+            "queue",
+            "current_stage"
+          ],
+          "ok": true
+        }
+      ]
+    },
+    {
+      "slice": "spread-ratios-grade",
+      "name": "Financial spreading with provenance, ratios, and risk grade",
+      "objective": "As a credit analyst I run the financial spreading agent on a routed deal, review every proposed figure beside the source document and location it came from, accept or edit it, and the system then deterministically computes DSCR, leverage and current ratio and assigns a risk grade from an inspectable rubric that shows its inputs and the rule applied.",
+      "addresses": [
+        "REQ-010",
+        "REQ-011",
+        "REQ-012",
+        "REQ-013",
+        "REQ-014",
+        "REQ-015",
+        "REQ-016",
+        "REQ-017",
+        "REQ-039",
+        "REQ-057",
+        "REQ-058"
+      ],
+      "checks": [
+        {
+          "method": "POST",
+          "path": "/deals/DEAL-001/spread/run",
+          "expected_status": 200,
+          "contains": [
+            "line_items",
+            "source_document_id",
+            "source_location",
+            "raw_extracted_text"
+          ],
+          "ok": true
+        },
+        {
+          "method": "POST",
+          "path": "/deals/DEAL-001/spread/accept",
+          "expected_status": 200,
+          "contains": [
+            "accepted",
+            "accepted_line_item_ids"
+          ],
+          "ok": true
+        },
+        {
+          "method": "GET",
+          "path": "/deals/DEAL-001/ratios",
+          "expected_status": 200,
+          "contains": [
+            "dscr",
+            "leverage",
+            "current_ratio",
+            "formula",
+            "inputs"
+          ],
+          "ok": true
+        },
+        {
+          "method": "GET",
+          "path": "/deals/DEAL-001/risk-grade",
+          "expected_status": 200,
+          "contains": [
+            "grade",
+            "rubric_rule_applied",
+            "inputs"
+          ],
+          "ok": true
+        }
+      ]
+    },
+    {
+      "slice": "memo-policy-compliance",
+      "name": "Cited credit memo and policy compliance exceptions",
+      "objective": "As a credit analyst I have the credit memo agent draft the underwriting memo citing the exact ratios, spread lines and policy rules it relied on, accept it, then have the policy compliance agent review it against the versioned lending policy — concentration limits, prohibited industries and LTV caps evaluated against portfolio exposure — and see each breach written up as a disposable exception on the deal.",
+      "addresses": [
+        "REQ-018",
+        "REQ-019",
+        "REQ-020",
+        "REQ-021",
+        "REQ-022",
+        "REQ-023",
+        "REQ-024",
+        "REQ-029",
+        "REQ-030",
+        "REQ-038",
+        "REQ-057"
+      ],
+      "checks": [
+        {
+          "method": "POST",
+          "path": "/deals/DEAL-001/memo/run",
+          "expected_status": 200,
+          "contains": [
+            "content",
+            "cited_ratios",
+            "cited_spread_items",
+            "cited_policy_rules"
+          ],
+          "ok": true
+        },
+        {
+          "method": "POST",
+          "path": "/deals/DEAL-001/memo/accept",
+          "expected_status": 200,
+          "contains": [
+            "accepted",
+            "memo"
+          ],
+          "ok": true
+        },
+        {
+          "method": "POST",
+          "path": "/deals/DEAL-001/policy-review/run",
+          "expected_status": 200,
+          "contains": [
+            "exceptions",
+            "exposure_by_dimension"
+          ],
+          "ok": true
+        },
+        {
+          "method": "GET",
+          "path": "/policy-rules",
+          "expected_status": 200,
+          "contains": [
+            "concentration",
+            "prohibited",
+            "loan_to_value",
+            "version"
+          ],
+          "ok": true
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "screen": "screen-intake",
+  "caption": "Submitting a loan application's email and financials spreadsheet through Intake triggers the Intake Triage Agent, which proposes a classification, missing documents and analyst queue in the Live triage queue for an analyst to accept and route.",
+  "steps": [
+    { "action": "fill", "selector": "#in-borrower", "value": "Northwind Manufacturing LLC" },
+    { "action": "fill", "selector": "#in-industry", "value": "manufacturing" },
+    { "action": "fill", "selector": "#in-amount", "value": "750000" },
+    { "action": "fill", "selector": "#in-ltv", "value": "65" },
+    { "action": "fill", "selector": "#in-collateral", "value": "Owner-occupied plant and equipment" },
+    { "action": "fill", "selector": "#in-submitter", "value": "user-rm-1" },
+    { "action": "click", "selector": "#intake-submit-btn" }
+  ]
+}
