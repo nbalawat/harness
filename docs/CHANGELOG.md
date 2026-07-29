@@ -6,6 +6,24 @@ to https://github.com/nbalawat/harness.
 
 ## Platform
 
+### Review windows, intake uploads, npm distribution (2026-07-28)
+**Review windows** — the middle band between "waits for everything" and
+"waits for nothing": a gate with `window: <seconds>` and all-defaulted
+questions doesn't park; the run waits in-process, polling the dashboard's
+answer file, then proceeds on defaults with provenance `"window"`
+(`gate.window_open` journal event; countdown banner + decide-now form in the
+dashboard; `/api/answer` no longer spawns a second runner while the run is
+live). `every-slice` supervision checkpoints now carry `window: 300`.
+**Intake uploads** — documents are uploaded in the intake form itself
+(`/api/upload`, stored under the run's `inputs/`, path auto-filled;
+traversal-safe). **npm distribution** — `npm run pack` assembles
+`@nbalawat/harness`: the engine bundle plus the certified catalog
+(project-types, modules, mcp) in repo layout, so onboarding is
+`npm install -g` + `harness ui` from any folder (packaged-catalog discovery
+in the storefront; `harness ui` defaults to the current directory). Dashboard
+content column centered. agentic-app re-certified at 0.9.0.
+
+
 ### Phase 0 — the execution core (2026-07-26)
 TypeScript monorepo (`spec` / `runner` / `cli`). Deterministic frontier
 scheduler; event-sourced JSONL journal with park/resume; the node envelope

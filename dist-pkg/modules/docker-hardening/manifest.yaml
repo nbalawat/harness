@@ -1,0 +1,9 @@
+name: docker-hardening
+version: 0.1.0
+description: "Non-root, pinned, minimal containers — the image the security scanner would design, checked mechanically."
+kind: tool
+provides:
+  - "deploy/Dockerfile.hardened reference + node checker enforcing USER/pin/no-latest rules"
+requires: []
+certify:
+  command: node "$HARNESS_MODULE_DIR/check.mjs" "$HARNESS_MODULE_DIR/Dockerfile.hardened" && node "$HARNESS_MODULE_DIR/test/test.mjs"

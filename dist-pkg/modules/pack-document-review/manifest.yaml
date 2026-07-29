@@ -1,0 +1,19 @@
+name: pack-document-review
+version: 0.1.0
+description: "Ingest -> extract -> human review queue -> decision trail for document-centric workflows."
+kind: pack
+provides:
+  - "bundle: 10 certified modules pre-selected for this app shape"
+requires: []
+modules:
+  - persistence-core
+  - agent-runtime
+  - chat-shell
+  - doc-extract
+  - table-extract
+  - file-upload
+  - approval-flow
+  - assignment
+  - audit-log
+  - row-history
+certify:

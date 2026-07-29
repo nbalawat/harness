@@ -1,0 +1,12 @@
+name: rbac
+version: 0.1.0
+description: "Approver vs viewer vs admin as declarative roles — permissions must be data, not if-statements scattered by build agents."
+provides:
+  - "python: rbac.grant(user, role) / require(user, role) / roles_of(user)"
+  - "http: GET/POST /admin/roles"
+requires:
+  - "auth-basic"
+compose:
+  overlay: compose/
+certify:
+  tests: test/

@@ -1,0 +1,12 @@
+name: transcript-store
+version: 0.1.0
+description: "Standard storage + redaction of agent transcripts — the raw material for evals, audits, and retention policies."
+provides:
+  - "python: transcripts.append(conversation_id, role, text) redacting PII / get(conversation_id)"
+requires:
+  - "persistence-core"
+  - "pii-redaction"
+compose:
+  overlay: compose/
+certify:
+  tests: test/

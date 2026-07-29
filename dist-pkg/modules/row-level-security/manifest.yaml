@@ -1,0 +1,11 @@
+name: row-level-security
+version: 0.1.0
+description: "'You see your team's records' — ownership scoping subtle enough that it must be written once, correctly."
+provides:
+  - "python: rls.scope(rows, user, policy) — filters rows by owner/team policy"
+requires:
+  - "rbac"
+compose:
+  overlay: compose/
+certify:
+  tests: test/

@@ -1,0 +1,11 @@
+name: feedback-inbox
+version: 0.1.0
+description: In-app feedback capture — end users of the generated app report issues/wishes where they see them; owners triage from one inbox.
+provides:
+  - http: POST /feedback {message, page?}, GET /feedback (newest first)
+requires:
+  - nothing beyond the base app
+compose:
+  overlay: compose/
+certify:
+  tests: test/

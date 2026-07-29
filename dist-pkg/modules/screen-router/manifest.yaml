@@ -1,0 +1,11 @@
+name: screen-router
+version: 0.1.0
+description: "Hash navigation binding the design shells' #screen-* mount points — formalizes what every shell implies."
+provides:
+  - "js: HarnessRouter.resolve(hash, screens) pure; activate(screens, current) toggles visibility"
+requires:
+  - "chat-shell"
+compose:
+  overlay: compose/
+certify:
+  command: node --check "$HARNESS_MODULE_DIR/compose/frontend/mod_router.js" && ! grep -q ".innerHTML =" "$HARNESS_MODULE_DIR/compose/frontend/mod_router.js" && node "$HARNESS_MODULE_DIR/test/test.mjs"

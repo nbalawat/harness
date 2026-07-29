@@ -1,0 +1,11 @@
+name: charting
+version: 0.1.0
+description: "Honest SVG charts (bars/lines) with sane scales — agents freehand charts badly; axes must start at zero for bars."
+provides:
+  - "js: HarnessChart.scale(values, height) pure; barPath/linePoints builders; render(el, values, opts)"
+requires:
+  - "nothing beyond the design shell"
+compose:
+  overlay: compose/
+certify:
+  command: node --check "$HARNESS_MODULE_DIR/compose/frontend/mod_chart.js" && ! grep -q ".innerHTML =" "$HARNESS_MODULE_DIR/compose/frontend/mod_chart.js" && node "$HARNESS_MODULE_DIR/test/test.mjs"

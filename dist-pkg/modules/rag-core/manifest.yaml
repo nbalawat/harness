@@ -1,0 +1,11 @@
+name: rag-core
+version: 0.1.0
+description: "Chunking + retrieval done right once — grounding quality is the #1 driver of app trust."
+provides:
+  - "python: rag.chunk(text, size) / Index.add(doc_id, text) / Index.retrieve(query, k) tf-idf ranked with scores"
+requires:
+  - "nothing beyond the base app"
+compose:
+  overlay: compose/
+certify:
+  tests: test/

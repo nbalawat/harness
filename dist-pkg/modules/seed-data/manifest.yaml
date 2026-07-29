@@ -1,0 +1,11 @@
+name: seed-data
+version: 0.1.0
+description: "Deterministic demo/dev fixtures — every stakeholder demo needs believable data, seeded the same way every time."
+provides:
+  - "python + http: POST /admin/seed (env-gated APP_ALLOW_SEED=1) loads seeds deterministically, idempotent"
+requires:
+  - "persistence-core"
+compose:
+  overlay: compose/
+certify:
+  tests: test/

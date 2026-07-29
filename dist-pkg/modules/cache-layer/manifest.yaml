@@ -1,0 +1,11 @@
+name: cache-layer
+version: 0.1.0
+description: "Read-through TTL caching with explicit invalidation — agents otherwise sprinkle dicts with no invalidation story."
+provides:
+  - "python: cache.cached(ttl_seconds)(fn), cache.invalidate(fn)"
+requires:
+  - "nothing beyond the base app"
+compose:
+  overlay: compose/
+certify:
+  tests: test/

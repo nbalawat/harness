@@ -1,0 +1,8 @@
+{
+  "type": "object",
+  "properties": {
+    "project_name": { "type": "string", "minLength": 1 }
+  },
+  "required": ["project_name"],
+  "additionalProperties": true
+}

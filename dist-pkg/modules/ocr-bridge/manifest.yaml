@@ -1,0 +1,11 @@
+name: ocr-bridge
+version: 0.1.0
+description: "Scanned documents appear in every ops workflow eventually — one interface, explicit availability."
+provides:
+  - "python: ocr.available() / ocr.image_to_text(path) via tesseract when installed, loud OcrUnavailable otherwise"
+requires:
+  - "doc-extract"
+compose:
+  overlay: compose/
+certify:
+  tests: test/

@@ -1,0 +1,11 @@
+name: email-ingest
+version: 0.1.0
+description: "'Forward it to the app' — the lowest-friction intake there is, parsed with the stdlib, no daemon required."
+provides:
+  - "python: email_ingest.parse_eml(path) -> {from, subject, body} / scan_dropdir(dir, store) -> new rows"
+requires:
+  - "persistence-core"
+compose:
+  overlay: compose/
+certify:
+  tests: test/

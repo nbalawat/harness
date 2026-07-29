@@ -1,0 +1,19 @@
+name: pack-support-copilot
+version: 0.1.0
+description: "Grounded answers + approval gate + history — the shape built three times already (the rule of three, literally)."
+kind: pack
+provides:
+  - "bundle: 10 certified modules pre-selected for this app shape"
+requires: []
+modules:
+  - persistence-core
+  - agent-runtime
+  - chat-shell
+  - rag-core
+  - citation-tracker
+  - approval-flow
+  - audit-log
+  - transcript-store
+  - export-csv
+  - feedback-inbox
+certify:

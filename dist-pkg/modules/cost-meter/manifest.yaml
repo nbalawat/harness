@@ -1,0 +1,11 @@
+name: cost-meter
+version: 0.1.0
+description: "Per-app LLM spend tracking — the deployed sibling of the harness's own cost ledger, so owners see what their app burns."
+provides:
+  - "python: costmeter.record(model, in_tokens, out_tokens) priced from a table / http: GET /admin/costs"
+requires:
+  - "persistence-core"
+compose:
+  overlay: compose/
+certify:
+  tests: test/

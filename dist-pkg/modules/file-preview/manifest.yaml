@@ -1,0 +1,11 @@
+name: file-preview
+version: 0.1.0
+description: "Render uploaded documents inline by type — pairs with file-upload/blob-store so previews are uniform."
+provides:
+  - "js: HarnessPreview.rendererFor(name) pure mapping; render(el, name, url)"
+requires:
+  - "file-upload"
+compose:
+  overlay: compose/
+certify:
+  command: node --check "$HARNESS_MODULE_DIR/compose/frontend/mod_preview.js" && ! grep -q ".innerHTML =" "$HARNESS_MODULE_DIR/compose/frontend/mod_preview.js" && node "$HARNESS_MODULE_DIR/test/test.mjs"

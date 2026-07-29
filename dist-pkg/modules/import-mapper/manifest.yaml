@@ -1,0 +1,13 @@
+name: import-mapper
+version: 0.1.0
+description: "CSV/XLSX import with column mapping and dry-run — data onboarding for every app, with mistakes caught before commit."
+provides:
+  - "python: importer.plan(rows, mapping, schema) dry-run report / apply(plan, table) inserts valid rows"
+requires:
+  - "persistence-core"
+  - "spreadsheet-io"
+  - "forms-engine"
+compose:
+  overlay: compose/
+certify:
+  tests: test/

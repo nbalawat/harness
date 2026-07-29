@@ -1,0 +1,12 @@
+name: sso-oidc
+version: 0.1.0
+description: "Firm identity via OIDC ID tokens — replaces auth-basic's issuer while keeping the current_user contract."
+provides:
+  - "python: oidc.validate_id_token(token, audience, issuer) -> claims"
+  - "python: oidc.auth_url(...) builder"
+requires:
+  - "auth-basic"
+compose:
+  overlay: compose/
+certify:
+  tests: test/

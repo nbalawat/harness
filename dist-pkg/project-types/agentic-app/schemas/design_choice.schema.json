@@ -1,0 +1,5 @@
+{
+  "type": "object",
+  "properties": { "chosen_option": { "type": "string", "pattern": "^option-[0-9]+$" } },
+  "required": ["chosen_option"]
+}

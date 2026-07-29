@@ -1,0 +1,9 @@
+name: tls-local
+version: 0.1.0
+description: "HTTPS for local/on-prem installs without ceremony — self-signed with the right SANs, one command."
+kind: tool
+provides:
+  - "deploy/tls-local.sh generating key+cert with localhost SANs via openssl"
+requires: []
+certify:
+  command: bash -n "$HARNESS_MODULE_DIR/tls-local.sh" && node "$HARNESS_MODULE_DIR/test/test.mjs"

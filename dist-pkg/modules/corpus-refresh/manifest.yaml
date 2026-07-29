@@ -1,0 +1,12 @@
+name: corpus-refresh
+version: 0.1.0
+description: "Re-index knowledge when documents change, atomically — RAG apps rot without a refresh story."
+provides:
+  - "python: corpus_refresh.rebuild(corpus_dir) -> new rag Index swapped atomically, with a report"
+requires:
+  - "rag-core"
+  - "doc-extract"
+compose:
+  overlay: compose/
+certify:
+  tests: test/

@@ -102,6 +102,12 @@ export interface NodeDef {
   // gate nodes
   questions?: GateQuestion[];
   questionsFrom?: QuestionsFrom;
+  /**
+   * Review window (seconds): instead of parking, the gate WAITS this long for
+   * a dashboard answer, then proceeds on defaults (provenance: "window").
+   * Awareness without obligation — only questions with defaults qualify.
+   */
+  window?: number;
 
   /** Conditional enablement; unmet condition -> node is skipped, not failed. */
   when?: WhenClause;
@@ -195,6 +201,7 @@ export interface LedgerEvent {
     | "node.skipped"
     | "node.reopened"
     | "gate.answered"
+    | "gate.window_open"
     | "agent.message"
     | "agent.question_asked"
     | "agent.question_answered"

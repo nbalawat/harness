@@ -1,0 +1,155 @@
+{
+  "type": "object",
+  "properties": {
+    "modules": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "enum": [
+          "admin-console",
+          "agent-router",
+          "agent-runtime",
+          "agent-runtime-adk",
+          "agent-runtime-langgraph",
+          "agent-runtime-strands",
+          "api-keys",
+          "approval-flow",
+          "assignment",
+          "audit-log",
+          "audit-view",
+          "auth-basic",
+          "backup-restore",
+          "batch-runner",
+          "blob-store",
+          "cache-layer",
+          "calendar-bridge",
+          "charting",
+          "chat-shell",
+          "checklists",
+          "citation-tracker",
+          "comments-threads",
+          "consent-tracking",
+          "conversation-memory",
+          "corpus-refresh",
+          "cost-meter",
+          "csp-headers",
+          "dashboard-cards",
+          "data-classification",
+          "data-retention",
+          "data-table",
+          "doc-extract",
+          "email-ingest",
+          "email-send",
+          "env-config",
+          "error-reporter",
+          "eval-harness",
+          "export-csv",
+          "fallback-chain",
+          "feature-flags",
+          "feed-poller",
+          "feedback-inbox",
+          "file-preview",
+          "file-upload",
+          "forms-engine",
+          "guardrails-io",
+          "health-plus",
+          "import-mapper",
+          "input-sanitizer",
+          "migrations",
+          "multi-env",
+          "notifications-ui",
+          "ocr-bridge",
+          "pdf-render",
+          "permissions-ui",
+          "persistence-core",
+          "pii-redaction",
+          "postgres-adapter",
+          "prompt-registry",
+          "queue-bridge",
+          "rag-core",
+          "rate-limit",
+          "rbac",
+          "record-detail",
+          "request-metrics",
+          "rest-client",
+          "row-history",
+          "row-level-security",
+          "scheduling",
+          "screen-router",
+          "search-index",
+          "secrets-manager",
+          "seed-data",
+          "session-audit",
+          "sla-timers",
+          "slack-notify",
+          "soft-delete",
+          "spreadsheet-io",
+          "sqlite-adapter",
+          "sso-oidc",
+          "state-machine",
+          "structured-logging",
+          "table-extract",
+          "token-budgeter",
+          "tool-registry",
+          "transcript-store",
+          "usage-analytics",
+          "versioned-drafts",
+          "vuln-watch",
+          "webhook-in",
+          "webhook-out",
+          "workflow-engine"
+        ]
+      }
+    },
+    "deploy_target": {
+      "enum": [
+        "local",
+        "cloud-run"
+      ]
+    },
+    "module_coverage": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "properties": {
+          "module": {
+            "type": "string"
+          },
+          "addresses": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "module",
+          "addresses"
+        ]
+      }
+    },
+    "build_budget_plan": {
+      "type": "object",
+      "properties": {
+        "nodes": {
+          "type": "object"
+        },
+        "total_usd": {
+          "type": "number",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "nodes",
+        "total_usd"
+      ]
+    }
+  },
+  "required": [
+    "modules",
+    "deploy_target",
+    "build_budget_plan",
+    "module_coverage"
+  ]
+}

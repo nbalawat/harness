@@ -1,0 +1,11 @@
+name: conversation-memory
+version: 0.1.0
+description: "Multi-turn context windows with deterministic summarization — everyone gets truncation wrong per app."
+provides:
+  - "python: convo_memory.Memory(max_chars) — add(role, text), context() with oldest turns folded into a summary"
+requires:
+  - "nothing beyond the base app"
+compose:
+  overlay: compose/
+certify:
+  tests: test/

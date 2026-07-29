@@ -10,6 +10,7 @@
 import * as fs from "node:fs";
 import * as http from "node:http";
 import * as net from "node:net";
+import * as os from "node:os";
 import * as path from "node:path";
 import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
@@ -300,6 +301,24 @@ export function buildState(workspace: string): Record<string, unknown> {
     slicesDelivered: def.nodes.filter((n) => /^slice-[0-9]+$/.test(n.id) && state.committed.has(n.id)).length,
   };
 
+  // Open review window: the run is WAITING (not parked) for a verdict.
+  let windowGate: Record<string, unknown> | null = null;
+  const lastWindow = [...events].reverse().find((e) => e.type === "gate.window_open");
+  if (lastWindow) {
+    const answered = events.some(
+      (e) => (e.type === "gate.answered" || e.type === "node.committed") && e.nodeId === lastWindow.nodeId && Date.parse(String(e.ts)) >= Date.parse(String(lastWindow.ts)),
+    );
+    if (!answered && Number(lastWindow.deadlineMs) > Date.now()) {
+      const node = byId.get(String(lastWindow.nodeId));
+      windowGate = {
+        nodeId: lastWindow.nodeId,
+        deadlineMs: lastWindow.deadlineMs,
+        description: node?.description ?? null,
+        questions: node ? resolveQuestions(workspace, node, state.artifacts) : [],
+      };
+    }
+  }
+
   const intakeDoc = readArtifactJson(workspace, state.artifacts, "intake");
   const designChoiceDoc = readArtifactJson(workspace, state.artifacts, "design_choice");
   const rosterDoc = readArtifactJson(workspace, state.artifacts, "agent_roster");
@@ -362,6 +381,7 @@ export function buildState(workspace: string): Record<string, unknown> {
     problemStatement: (intakeDoc?.problem_statement as string | undefined) ?? null,
     quality,
     designChoice: (designChoiceDoc?.chosen_option as string | undefined) ?? null,
+    windowGate,
     appAgents: Array.isArray(rosterDoc?.agents) ? rosterDoc!.agents : null,
     agentOpportunityMap: Array.isArray(rosterDoc?.opportunity_map) ? rosterDoc!.opportunity_map : null,
     appWorkflows: Array.isArray(workflowsDoc?.workflows) ? workflowsDoc!.workflows : null,
@@ -654,19 +674,45 @@ export function startUiServer(target: string, port: number): Promise<http.Server
     return apps.get(ws)!;
   };
 
+  /** project-types/ dirs shipped with the harness itself (npm package or source
+   * checkout) — found by walking up from this module/bundle's location. Users
+   * run `harness ui` anywhere and still get the certified catalog. */
+  function packagedProjectTypeRoots(): string[] {
+    const roots: string[] = [];
+    let base: string;
+    try {
+      base = path.dirname(fileURLToPath(import.meta.url));
+    } catch {
+      base = path.dirname(process.argv[1] ?? ".");
+    }
+    for (let i = 0; i < 5 && base !== path.dirname(base); i++) {
+      const cand = path.join(base, "project-types");
+      if (fs.existsSync(cand)) roots.push(cand);
+      base = path.dirname(base);
+    }
+    const home = process.env.HARNESS_HOME ?? path.join(os.homedir(), ".harness");
+    if (fs.existsSync(path.join(home, "store"))) roots.push(path.join(home, "store"));
+    return roots;
+  }
+
   /** Certified project types the storefront can start a new build from. */
   function availableProjectTypes(): { name: string; version: string; dir: string; description: string }[] {
     const out: { name: string; version: string; dir: string; description: string }[] = [];
-    const ptRoot = path.join(root, "project-types");
-    if (!fs.existsSync(ptRoot)) return out;
-    for (const entry of fs.readdirSync(ptRoot)) {
-      const dir = path.join(ptRoot, entry);
-      if (!fs.existsSync(path.join(dir, "dag.yaml"))) continue;
-      try {
-        const def = loadProjectType(dir);
-        out.push({ name: def.name, version: def.version, dir, description: def.description ?? "" });
-      } catch {
-        /* uncertifiable package — not offered */
+    const seen = new Set<string>();
+    for (const ptRoot of [path.join(root, "project-types"), ...packagedProjectTypeRoots()]) {
+      if (!fs.existsSync(ptRoot)) continue;
+      for (const entry of fs.readdirSync(ptRoot)) {
+        const dir = path.join(ptRoot, entry);
+        if (!fs.existsSync(path.join(dir, "dag.yaml"))) continue;
+        try {
+          const def = loadProjectType(dir);
+          const key = `${def.name}@${def.version}`;
+          if (seen.has(key)) continue;
+          seen.add(key);
+          out.push({ name: def.name, version: def.version, dir, description: def.description ?? "" });
+        } catch {
+          /* uncertifiable package — not offered */
+        }
       }
     }
     return out;
@@ -875,6 +921,33 @@ export function startUiServer(target: string, port: number): Promise<http.Server
             appStageNode: latestAppArtifact(ws)?.node ?? null,
           }),
         );
+      } else if (url.pathname === "/api/upload" && req.method === "POST") {
+        // Intake documents, uploaded from the dashboard: stored under the
+        // run's workspace so the ingest step (and provenance) can reach them.
+        let body = "";
+        req.on("data", (chunk) => {
+          body += chunk;
+          if (body.length > 60_000_000) req.destroy();
+        });
+        req.on("end", () => {
+          try {
+            const { files } = JSON.parse(body) as { files: Array<{ name: string; data: string }> };
+            const ws = wsFrom(url) ?? workspace!;
+            const dir = path.join(ws, "inputs");
+            fs.mkdirSync(dir, { recursive: true });
+            const saved: string[] = [];
+            for (const f of files ?? []) {
+              const name = path.basename(String(f.name)).replace(/[^\w.\- ]/g, "_");
+              if (!name || !f.data) continue;
+              fs.writeFileSync(path.join(dir, name), Buffer.from(String(f.data), "base64"));
+              saved.push(name);
+            }
+            res.writeHead(200, { "content-type": "application/json" });
+            res.end(JSON.stringify({ dir, saved }));
+          } catch (e) {
+            res.writeHead(500).end(JSON.stringify({ error: String(e) }));
+          }
+        });
       } else if (url.pathname === "/api/agent-answer" && req.method === "POST") {
         let body = "";
         req.on("data", (chunk) => (body += chunk));
@@ -938,7 +1011,10 @@ export function startUiServer(target: string, port: number): Promise<http.Server
           const { nodeId, answers } = JSON.parse(body) as { nodeId: string; answers: Record<string, string> };
           const ws = wsFrom(url) ?? workspace!;
           const answersFile = mergeAnswers(ws, nodeId, answers);
-          spawnResume(["--answers", answersFile], ws);
+          const st = buildState(ws) as { status?: string };
+          // A live run polls ui-answers itself (review windows / gates in-process);
+          // spawning a second runner would collide with it.
+          if (st.status === "parked" || st.status === "failed") spawnResume(["--answers", answersFile], ws);
           res.writeHead(200, { "content-type": "application/json" });
           res.end(JSON.stringify({ ok: true }));
         });
@@ -1057,7 +1133,8 @@ const PAGE = /* html */ `<!doctype html>
 * { box-sizing:border-box; margin:0; }
 body { font:14px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif; background:var(--page); color:var(--ink); }
 .mono { font-family:ui-monospace,Menlo,monospace; }
-.topbar { position:sticky; top:0; z-index:40; background:var(--page); border-bottom:1px solid var(--grid); padding:.8rem clamp(1rem,4vw,2.5rem); display:flex; align-items:center; gap:.9rem; flex-wrap:wrap; }
+.topbar { position:sticky; top:0; z-index:40; background:var(--page); border-bottom:1px solid var(--grid); }
+.topbar-inner { max-width:1420px; margin:0 auto; padding:.8rem clamp(1rem,4vw,2.5rem); display:flex; align-items:center; gap:.9rem; flex-wrap:wrap; }
 .topbar h1 { font-size:1.05rem; font-weight:650; cursor:pointer; }
 .topbar .mini { color:var(--ink2); font-size:.82rem; }
 .pill { display:inline-flex; align-items:center; gap:.45rem; padding:.28rem .8rem; border-radius:999px; border:1px solid var(--border); background:var(--surface); font-weight:550; font-size:.82rem; }
@@ -1068,10 +1145,10 @@ body { font:14px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif; background:
 .tabs button { border:0; background:transparent; color:var(--ink2); font:inherit; font-weight:550; padding:.4rem .95rem; border-radius:7px; cursor:pointer; }
 .tabs button.active { background:var(--accent); color:var(--accent-ink); }
 .tabs button .dot { display:inline-block; width:7px; height:7px; border-radius:50%; background:var(--warn); margin-left:.35rem; vertical-align:middle; }
-.banner { display:none; align-items:center; gap:.7rem; margin:1rem clamp(1rem,4vw,2.5rem) 0; padding:.7rem 1rem; border:1px solid var(--warn); border-left-width:4px; background:var(--surface); border-radius:10px; }
+.banner { display:none; align-items:center; gap:.7rem; max-width:1420px; margin:1rem auto 0; padding:.7rem 1rem; border:1px solid var(--warn); border-left-width:4px; background:var(--surface); border-radius:10px; }
 .banner b { color:var(--warn); }
 .banner button { margin-left:auto; }
-main { padding:1.2rem clamp(1rem,4vw,2.5rem); }
+main { padding:1.2rem clamp(1rem,4vw,2.5rem); max-width:1420px; margin:0 auto; }
 .tabpane { display:none; }
 .tabpane.active { display:block; }
 .tiles { display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:.8rem; margin-bottom:1rem; }
@@ -1098,7 +1175,7 @@ button.primary { background:var(--accent); color:var(--accent-ink); border:0; bo
 button.primary:hover { filter:brightness(1.08); }
 button.ghost { background:transparent; border:1px solid var(--border); color:var(--ink2); border-radius:8px; padding:.5rem .9rem; font:inherit; cursor:pointer; }
 /* storefront */
-.store { max-width:1100px; }
+.store { max-width:1100px; margin:0 auto; }
 .store .lead { margin:.4rem 0 1.2rem; color:var(--ink2); }
 .storegrid { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:1rem; }
 .runcard { background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:1.1rem 1.2rem; cursor:pointer; box-shadow:var(--shadow); font:inherit; color:inherit; text-align:left; }
@@ -1294,7 +1371,7 @@ button.ghost { background:transparent; border:1px solid var(--border); color:var
 </style>
 </head>
 <body>
-<div class="topbar">
+<div class="topbar"><div class="topbar-inner">
   <a class="brand" onclick="goHome()"><svg class="mark" viewBox="0 0 36 36" aria-hidden="true"><defs><linearGradient id="hgrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#2a78d6"/><stop offset="1" stop-color="#8250df"/></linearGradient></defs><path d="M8 6 V30" stroke="currentColor" stroke-width="5" stroke-linecap="round" fill="none"/><path d="M28 6 V30" stroke="currentColor" stroke-width="5" stroke-linecap="round" fill="none"/><path d="M8 18 H28" stroke="url(#hgrad)" stroke-width="5" stroke-linecap="round" fill="none"/><circle cx="18" cy="18" r="8.6" fill="var(--surface, #fff)"/><circle cx="18" cy="18" r="6.2" fill="url(#hgrad)"/><circle cx="18" cy="18" r="2.2" fill="var(--surface, #fff)" opacity=".92"/></svg><h1 id="title">harness</h1></a>
   <span class="pill" id="statusPill" style="display:none"><span class="dot" id="statusDot"></span><span id="statusText"></span></span>
   <span class="pill" id="modePill" style="display:none"></span>
@@ -1306,7 +1383,7 @@ button.ghost { background:transparent; border:1px solid var(--border); color:var
     <button data-tab="decisions">Decisions</button>
     <button data-tab="activity">Activity</button>
   </nav>
-</div>
+</div></div>
 <div class="banner" id="banner"><b>Waiting on you</b><span id="bannerText"></span><button class="primary" onclick="showTab('overview');window.scrollTo({top:0,behavior:'smooth'})">Answer now</button></div>
 <main>
 <section id="storefront" style="display:none" class="store">
@@ -1333,6 +1410,7 @@ button.ghost { background:transparent; border:1px solid var(--border); color:var
 <div id="runview" style="display:none">
 <section class="tabpane active" id="tab-overview">
   <div class="card gate" id="agentQPanel" style="display:none"><h2>The agent needs your input</h2><form id="agentQForm"></form></div>
+  <div class="card gate" id="windowPanel" style="display:none"><h2>Checkpoint — the build is pausing for you <span class="hint" id="windowCountdown"></span></h2><form id="windowForm"></form></div>
   <div class="card gate" id="gatePanel" style="display:none"><h2>Waiting on you — the run continues after you answer</h2><form id="gateForm"></form></div>
   <div class="tiles">
     <div class="tile"><div class="k">Progress</div><div class="v" id="progressV"></div><div class="meter"><div id="progressBar"></div></div><div class="sub" id="progressSub"></div></div>
@@ -1819,6 +1897,30 @@ async function tick() {
     };
   }
 
+  // open review window: countdown + approve-now
+  const wg = document.getElementById('windowPanel');
+  if (s.windowGate) {
+    wg.style.display = '';
+    const secs = Math.max(0, Math.round((s.windowGate.deadlineMs - Date.now()) / 1000));
+    setText('windowCountdown', 'proceeding on the default in ' + Math.floor(secs / 60) + ':' + String(secs % 60).padStart(2, '0') + ' — answer to decide now');
+    const form = document.getElementById('windowForm');
+    if (form.dataset.node !== s.windowGate.nodeId) {
+      form.dataset.node = s.windowGate.nodeId;
+      form.innerHTML = (s.windowGate.description ? '<div class="hint" style="margin-bottom:.5rem">' + esc(s.windowGate.description) + '</div>' : '') +
+        s.windowGate.questions.map((q, i) =>
+          '<div class="q"><label>' + esc(q.prompt) + '</label>' +
+          '<input type="text" name="' + esc(q.id) + '" value="' + esc(q.default ?? '') + '"></div>').join('') +
+        '<button type="submit" class="primary">Decide now</button>';
+      form.onsubmit = async (ev) => {
+        ev.preventDefault();
+        const answers = Object.fromEntries(new FormData(form).entries());
+        await fetch('/api/answer' + q(), { method:'POST', body: JSON.stringify({ nodeId: form.dataset.node, answers }) });
+        form.dataset.node = '';
+        tick();
+      };
+    }
+  } else { wg.style.display = 'none'; }
+
   // agent mid-step question
   const aq = document.getElementById('agentQPanel');
   if (s.pendingQuestion && !s.resuming) {
@@ -1992,13 +2094,35 @@ async function tick() {
     const form = document.getElementById('gateForm');
     if (form.dataset.node !== s.parkedGate.nodeId) {
       form.dataset.node = s.parkedGate.nodeId;
-      form.innerHTML = s.parkedGate.questions.map(q =>
-        '<div class="q"><label>' + esc(q.prompt) + '</label>' +
-        (q.why ? '<div class="why">' + esc(q.why) + '</div>' : '') +
-        '<input type="text" name="' + esc(q.id) + '" value="' + esc(q.default ?? '') + '">' +
-        (q.default !== undefined ? '<div class="hint">pre-filled with the default — edit or keep</div>' : '') +
+      form.innerHTML = s.parkedGate.questions.map(qq =>
+        '<div class="q"><label>' + esc(qq.prompt) + '</label>' +
+        (qq.why ? '<div class="why">' + esc(qq.why) + '</div>' : '') +
+        '<input type="text" name="' + esc(qq.id) + '" value="' + esc(qq.default ?? '') + '">' +
+        (qq.id === 'documents_dir'
+          ? '<input type="file" id="docUpload" multiple style="margin-top:.4rem">' +
+            '<div class="hint" id="docUploadStatus">or upload documents here — they are stored with this run and the path fills in automatically</div>'
+          : (qq.default !== undefined ? '<div class="hint">pre-filled with the default — edit or keep</div>' : '')) +
         '</div>').join('') +
         '<button type="submit" class="primary">Answer &amp; resume run</button>';
+      const up = document.getElementById('docUpload');
+      if (up) up.onchange = async () => {
+        const picked = Array.from(up.files);
+        if (!picked.length) return;
+        setText('docUploadStatus', 'uploading ' + picked.length + ' file(s)...');
+        const files = await Promise.all(picked.map(f => new Promise((resolve, reject) => {
+          const r = new FileReader();
+          r.onload = () => resolve({ name: f.name, data: String(r.result).split(',')[1] });
+          r.onerror = reject;
+          r.readAsDataURL(f);
+        })));
+        const resp = await fetch('/api/upload' + q(), { method: 'POST', body: JSON.stringify({ files }) });
+        const out = await resp.json();
+        if (out.dir) {
+          const target = form.querySelector('input[name="documents_dir"]');
+          if (target) target.value = out.dir;
+          setText('docUploadStatus', out.saved.length + ' document(s) stored with the run: ' + out.saved.join(', '));
+        } else setText('docUploadStatus', 'upload failed: ' + (out.error || 'unknown error'));
+      };
       form.onsubmit = async (ev) => {
         ev.preventDefault();
         const answers = Object.fromEntries(new FormData(form).entries());

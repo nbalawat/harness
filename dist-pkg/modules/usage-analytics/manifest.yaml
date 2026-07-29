@@ -1,0 +1,11 @@
+name: usage-analytics
+version: 0.1.0
+description: "Which features actually get used — feeds the owner's roadmap and the firm's ROI story, without third-party trackers."
+provides:
+  - "middleware counting daily active paths/users + http: GET /admin/usage"
+requires:
+  - "nothing beyond the base app"
+compose:
+  overlay: compose/
+certify:
+  tests: test/

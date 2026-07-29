@@ -1,0 +1,36 @@
+{
+  "type": "object",
+  "properties": {
+    "slices": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 6,
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z0-9-]+$" },
+          "name": { "type": "string", "minLength": 3 },
+          "story": { "type": "string", "minLength": 15 },
+          "addresses": { "type": "array", "minItems": 1, "items": { "type": "string" } },
+          "acceptance": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "properties": {
+                "method": { "enum": ["GET", "POST"] },
+                "path": { "type": "string", "pattern": "^/" },
+                "body": { "type": "object" },
+                "expect_status": { "type": "integer" },
+                "expect_contains": { "type": "array", "items": { "type": "string" } }
+              },
+              "required": ["method", "path"]
+            }
+          }
+        },
+        "required": ["id", "name", "story", "addresses", "acceptance"]
+      }
+    }
+  },
+  "required": ["slices"]
+}

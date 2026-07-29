@@ -1,0 +1,11 @@
+name: multi-env
+version: 0.1.0
+description: "dev/staging/prod promotion story — layered env templates merged one way, with prod safety rails."
+provides:
+  - "python: multi_env.merge(base, overlay) / load_env_file(text) — layered config with prod guards"
+requires:
+  - "env-config"
+compose:
+  overlay: compose/
+certify:
+  tests: test/

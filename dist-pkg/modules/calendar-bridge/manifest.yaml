@@ -1,0 +1,11 @@
+name: calendar-bridge
+version: 0.1.0
+description: "Meetings/deadlines as standard .ics — calendar sync without a calendar API dependency."
+provides:
+  - "python: ics.event(summary, start_iso, end_iso) -> valid VCALENDAR text / parse(text) -> events"
+requires:
+  - "nothing beyond the base app"
+compose:
+  overlay: compose/
+certify:
+  tests: test/

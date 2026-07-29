@@ -332,7 +332,10 @@ async function main(): Promise<void> {
       break;
     case "ui": {
       const { positional, flags } = parseFlags(rest);
-      const workspace = path.resolve(positional[0] ?? ".harness-run");
+      // No argument -> serve the current directory as the build root: the
+      // storefront lists its runs and every certified type shipped with the
+      // install. `harness ui <run-dir>` still opens a single run directly.
+      const workspace = path.resolve(positional[0] ?? ".");
       const port = Number(flags.port ?? 4400);
       const { startUiServer } = await import("./ui.js");
       await startUiServer(workspace, port);

@@ -1,0 +1,11 @@
+name: tool-registry
+version: 0.1.0
+description: "Declarative tool definitions with roster enforcement — which agent may call what is data, checked at invoke time."
+provides:
+  - "python: tools.register(name, fn) / invoke(agent, name, **kwargs) enforcing the roster's tools/denied_tools"
+requires:
+  - "agent-runtime"
+compose:
+  overlay: compose/
+certify:
+  tests: test/

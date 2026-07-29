@@ -1,0 +1,12 @@
+name: agent-runtime
+version: 0.1.0
+description: Hosts the app's agents. v0 is a deterministic stub honoring the roster contract; real mode swaps respond() for a Claude Agent SDK session with the same signature.
+provides:
+  - python: agent_runtime.respond(message) -> str
+requires:
+  - agents/roster.json (from agent-design)
+compose:
+  overlay: compose/
+certify:
+  tests: test/
+

@@ -1,0 +1,11 @@
+name: checklists
+version: 0.1.0
+description: "Structured task lists with completion tracking — onboarding, reviews, audits all need the same primitive."
+provides:
+  - "python: checklists.create(name, template) / toggle(id, item) / progress(id)"
+requires:
+  - "persistence-core"
+compose:
+  overlay: compose/
+certify:
+  tests: test/

@@ -1,0 +1,11 @@
+name: api-keys
+version: 0.1.0
+description: "Service-to-service callers of generated apps — hashed keys with prefixes, revocation, and last-used tracking."
+provides:
+  - "python: api_keys.issue(name) -> secret / verify(secret) -> name|None / revoke(name)"
+requires:
+  - "nothing beyond the base app"
+compose:
+  overlay: compose/
+certify:
+  tests: test/

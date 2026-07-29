@@ -1,0 +1,9 @@
+name: cloud-run-deploy
+version: 0.1.0
+description: "Build/deploy/rollback for Cloud Run as reviewed scripts — deepens the deploy node into a reusable module."
+kind: tool
+provides:
+  - "deploy/cloud-run.sh (build+deploy+traffic) and rollback.sh, config via env"
+requires: []
+certify:
+  command: bash -n "$HARNESS_MODULE_DIR/cloud-run.sh" && bash -n "$HARNESS_MODULE_DIR/rollback.sh" && node "$HARNESS_MODULE_DIR/test/test.mjs"

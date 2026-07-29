@@ -1,0 +1,11 @@
+name: forms-engine
+version: 0.1.0
+description: "Validated forms from a schema — every CRUD app draws the same form badly; validation must be shared with the backend."
+provides:
+  - "python: forms.validate(schema, payload) -> {ok, errors, cleaned} (types, required, enums, lengths)"
+requires:
+  - "nothing beyond the base app"
+compose:
+  overlay: compose/
+certify:
+  tests: test/

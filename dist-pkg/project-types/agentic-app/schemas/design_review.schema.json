@@ -1,0 +1,5 @@
+{
+  "type": "object",
+  "properties": { "approve_design": { "enum": ["yes"] } },
+  "required": ["approve_design"]
+}

@@ -1,0 +1,17 @@
+{
+  "intake": {
+    "project_name": "Support Copilot",
+    "problem_statement": "Support analysts need an assistant that answers product questions from our knowledge and keeps reviewable conversation history.",
+    "documents_dir": "fixtures/sample-docs",
+    "deploy_target": "cloud-run"
+  },
+  "design-select": {
+    "chosen_option": "option-1"
+  },
+  "uat": {
+    "approved": "yes"
+  },
+  "design-review": {
+    "approve_design": "yes"
+  }
+}

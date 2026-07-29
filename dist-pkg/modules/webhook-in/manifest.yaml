@@ -1,0 +1,11 @@
+name: webhook-in
+version: 0.1.0
+description: "Receive events safely — signature verification and replay protection before anything touches app logic."
+provides:
+  - "http: POST /hooks/{name} verifying X-Hook-Signature (HMAC) + replay nonce, storing accepted events"
+requires:
+  - "persistence-core"
+compose:
+  overlay: compose/
+certify:
+  tests: test/

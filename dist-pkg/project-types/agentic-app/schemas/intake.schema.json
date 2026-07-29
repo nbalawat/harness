@@ -1,0 +1,35 @@
+{
+  "type": "object",
+  "properties": {
+    "project_name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "problem_statement": {
+      "type": "string",
+      "minLength": 10
+    },
+    "documents_dir": {
+      "type": "string",
+      "minLength": 1
+    },
+    "deploy_target": {
+      "enum": [
+        "local",
+        "cloud-run"
+      ]
+    },
+    "supervision": {
+      "enum": [
+        "gates-only",
+        "every-slice"
+      ]
+    }
+  },
+  "required": [
+    "project_name",
+    "problem_statement",
+    "documents_dir",
+    "deploy_target"
+  ]
+}

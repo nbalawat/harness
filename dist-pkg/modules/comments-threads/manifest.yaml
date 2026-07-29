@@ -1,0 +1,12 @@
+name: comments-threads
+version: 0.1.0
+description: "Discussion on any record — the social glue of workflow tools, attached uniformly instead of re-modeled per app."
+provides:
+  - "python + http: POST/GET /comments/{table}/{id} threaded by record"
+requires:
+  - "persistence-core"
+  - "input-sanitizer"
+compose:
+  overlay: compose/
+certify:
+  tests: test/

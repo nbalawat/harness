@@ -1,0 +1,11 @@
+name: export-csv
+version: 0.1.0
+description: CSV export for any registered table — analysts always need the data out.
+provides:
+  - http: GET /export/{table}.csv (columns from the approved data model)
+requires:
+  - persistence-core (store) and backend/models.py TABLES
+compose:
+  overlay: compose/
+certify:
+  tests: test/

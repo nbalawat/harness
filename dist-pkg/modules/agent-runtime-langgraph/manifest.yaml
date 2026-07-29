@@ -1,0 +1,18 @@
+name: agent-runtime-langgraph
+version: 0.1.0
+description: "The agent-runtime contract implemented on LangGraph — a compiled StateGraph (ground -> reason -> disclose) executes every reply; the model inside the graph is stub/live-cli/live-api like the base runtime."
+provides:
+  - "python: agent_runtime.respond/mode/_roster — identical contract to the base runtime, executed through a LangGraph StateGraph"
+requires:
+  - "persistence-core"
+conflicts:
+  - "agent-runtime"
+  - "agent-runtime-strands"
+  - "agent-runtime-adk"
+app_deps:
+  - "langgraph>=0.2"
+compose:
+  overlay: compose/
+certify:
+  tests: test/
+  python_deps: ["langgraph>=0.2"]

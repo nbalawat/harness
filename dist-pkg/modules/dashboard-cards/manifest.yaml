@@ -1,0 +1,11 @@
+name: dashboard-cards
+version: 0.1.0
+description: "KPI tiles fed by declared queries — count/sum/latest computed one way, formatted one way."
+provides:
+  - "js: HarnessCards.compute(rows, spec) pure (count/sum/avg/latest) + format(value, kind)"
+requires:
+  - "nothing beyond the design shell"
+compose:
+  overlay: compose/
+certify:
+  command: node --check "$HARNESS_MODULE_DIR/compose/frontend/mod_cards.js" && ! grep -q ".innerHTML =" "$HARNESS_MODULE_DIR/compose/frontend/mod_cards.js" && node "$HARNESS_MODULE_DIR/test/test.mjs"

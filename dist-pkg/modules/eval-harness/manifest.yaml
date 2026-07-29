@@ -1,0 +1,11 @@
+name: eval-harness
+version: 0.1.0
+description: "Richer eval runner (contains / not_contains / regex rubrics with reports) — evals are how app agents stay honest after changes."
+provides:
+  - "python: eval_harness.run_cases(cases, respond_fn) -> report with per-case verdicts"
+requires:
+  - "agent-runtime"
+compose:
+  overlay: compose/
+certify:
+  tests: test/

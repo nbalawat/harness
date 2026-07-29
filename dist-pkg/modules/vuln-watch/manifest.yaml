@@ -1,0 +1,11 @@
+name: vuln-watch
+version: 0.1.0
+description: "Dependency advisories for the generated app's requirements — supply-chain awareness without external calls."
+provides:
+  - "python: vulnwatch.scan(requirements_path, advisories) -> findings with severity"
+requires:
+  - "nothing beyond the base app"
+compose:
+  overlay: compose/
+certify:
+  tests: test/

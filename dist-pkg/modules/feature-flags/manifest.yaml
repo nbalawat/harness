@@ -1,0 +1,11 @@
+name: feature-flags
+version: 0.1.0
+description: "Gradual rollout inside generated apps without redeploys — flags as data with deterministic percentage buckets."
+provides:
+  - "python: flags.enable(name) / disable / rollout(name, percent) / is_enabled(name, user)"
+requires:
+  - "nothing beyond the base app"
+compose:
+  overlay: compose/
+certify:
+  tests: test/

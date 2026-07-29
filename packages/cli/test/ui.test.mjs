@@ -398,3 +398,38 @@ test("ten-terminals model: concurrent builds, independently viewable and actiona
     assert.equal(evil.selected, false);
   });
 });
+
+test("intake uploads: /api/upload stores documents in the run workspace", async () => {
+  const ws = tmpDir("upload");
+  fs.writeFileSync(path.join(ws, "run.json"), JSON.stringify({ projectType: "demo" }));
+  fs.writeFileSync(path.join(ws, "journal.jsonl"), "");
+  await withServer(ws, async (base) => {
+    const resp = await (await fetch(`${base}/api/upload`, {
+      method: "POST",
+      body: JSON.stringify({
+        files: [
+          { name: "kyc-policy.md", data: Buffer.from("# Policy\nAll cases require review.").toString("base64") },
+          { name: "../../evil.sh", data: Buffer.from("rm -rf /").toString("base64") },
+        ],
+      }),
+    })).json();
+    assert.equal(resp.dir, path.join(ws, "inputs"));
+    assert.deepEqual(resp.saved, ["kyc-policy.md", "evil.sh"], "path traversal stripped to a basename");
+    assert.equal(fs.readFileSync(path.join(ws, "inputs", "kyc-policy.md"), "utf8"), "# Policy\nAll cases require review.");
+    assert.ok(!fs.existsSync(path.join(ws, "..", "evil.sh")), "nothing escapes the workspace");
+    // The page ships the picker so intake can consume what was just uploaded.
+    const page = await (await fetch(`${base}/`)).text();
+    assert.ok(page.includes("docUpload"), "intake gate renders the document picker");
+    assert.ok(page.includes("windowPanel"), "checkpoint window banner present in the page");
+  });
+});
+
+test("distribution: storefront offers the certified catalog shipped with the install, from any empty dir", async () => {
+  const emptyRoot = tmpDir("anywhere");
+  await withServer(emptyRoot, async (base) => {
+    const runs = await (await fetch(`${base}/api/runs`)).json();
+    const names = runs.projectTypes.map((p) => p.name);
+    assert.ok(names.includes("agentic-app"), `packaged catalog discovered (got: ${names.join(", ")})`);
+    assert.deepEqual(runs.runs, [], "no runs yet in a fresh dir");
+  });
+});

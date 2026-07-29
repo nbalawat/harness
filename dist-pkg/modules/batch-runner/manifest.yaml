@@ -1,0 +1,11 @@
+name: batch-runner
+version: 0.1.0
+description: "Long operations with progress and resume — the difference between a demo and a tool."
+provides:
+  - "python: batch.run(items, process, checkpoint) — resumable, per-item error capture, progress report"
+requires:
+  - "nothing beyond the base app"
+compose:
+  overlay: compose/
+certify:
+  tests: test/

@@ -1,0 +1,12 @@
+name: webhook-out
+version: 0.1.0
+description: "Notify other systems on events with signing and retries — integration's front door, with an outbox you can inspect."
+provides:
+  - "python: webhooks.subscribe(event, url, secret) / emit(event, payload) -> deliveries via rest-client, HMAC-signed"
+requires:
+  - "rest-client"
+  - "persistence-core"
+compose:
+  overlay: compose/
+certify:
+  tests: test/

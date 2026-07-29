@@ -1,0 +1,11 @@
+name: sqlite-adapter
+version: 0.1.0
+description: "Single-file durable Store honoring the persistence-core interface — laptop-class durability without a database server."
+provides:
+  - "python: sqlite_store.SqliteStore(path) — insert/list, same contract as db.store"
+requires:
+  - "nothing beyond the base app"
+compose:
+  overlay: compose/
+certify:
+  tests: test/

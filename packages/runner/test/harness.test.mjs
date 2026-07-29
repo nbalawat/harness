@@ -1052,3 +1052,52 @@ test("validation: mcp attachment rules (unknown instance, no tools, orphan tool,
   const def = load(["    mcp: [sandbox]", "    allowedTools: [Read, mcp__sandbox__request]", "    outputs: [{name: x, file: x.json}]"]);
   assert.deepEqual(def.nodes[0].mcp, ["sandbox"]);
 });
+
+// ---------------------------------------------------------------------------
+// Review windows: awareness without obligation
+// ---------------------------------------------------------------------------
+
+const WINDOW_DAG = [
+  "name: win",
+  "version: 0.0.1",
+  "nodes:",
+  "  - id: work",
+  "    kind: deterministic",
+  '    command: node -e "require(String.fromCharCode(110,111,100,101,58,102,115)).writeFileSync(\'out.json\',\'{}\')"',
+  "    outputs: [{name: out, file: out.json}]",
+  "  - id: checkpoint",
+  "    kind: gate",
+  "    window: 3",
+  "    deps: [work]",
+  "    questions: [{id: verdict, prompt: 'Continue?', default: 'yes'}]",
+  "    outputs: [{name: review, file: review.json}]",
+].join("\n");
+
+test("review window: unanswered checkpoint proceeds on the default after the window", async () => {
+  const dir = writeFixture(tmpDir("win-pt"), WINDOW_DAG);
+  const ctx = makeCtx(tmpDir("win-ws"), dir, { acceptDefaults: false, mockAgents: false });
+  const t0 = Date.now();
+  const result = await runLoop(ctx);
+  assert.equal(result.status, "completed", "the run kept moving — no park, no human required");
+  assert.ok(Date.now() - t0 >= 2500, "but it genuinely waited out the window first");
+  const gate = events(ctx, "gate.answered").find((e) => e.nodeId === "checkpoint");
+  assert.equal(gate.source, "window", "provenance shows this was approval-by-default, not a human");
+  assert.ok(events(ctx, "gate.window_open").length === 1);
+});
+
+test("review window: an answer arriving during the window wins over the default", async () => {
+  const dir = writeFixture(tmpDir("win2-pt"), WINDOW_DAG.replace("window: 3", "window: 8"));
+  const ws = tmpDir("win2-ws");
+  const ctx = makeCtx(ws, dir, { acceptDefaults: false, mockAgents: false });
+  // Simulate the dashboard answering 1.5s into the window.
+  setTimeout(() => {
+    fs.writeFileSync(path.join(ws, "ui-answers.json"), JSON.stringify({ checkpoint: { verdict: "no - hold the line" } }));
+  }, 1500);
+  const t0 = Date.now();
+  const result = await runLoop(ctx);
+  assert.equal(result.status, "completed");
+  assert.ok(Date.now() - t0 < 7000, "did not wait out the full window once answered");
+  const gate = events(ctx, "gate.answered").find((e) => e.nodeId === "checkpoint");
+  assert.equal(gate.answers.verdict, "no - hold the line", "the human's answer was used");
+  assert.equal(gate.source, "recorded");
+});

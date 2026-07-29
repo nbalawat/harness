@@ -269,15 +269,44 @@ async function runGate(
   const answers: Record<string, string> = {};
   const sources = new Set<string>();
 
+  // Review window: unanswered gate + every question has a default + a window
+  // declared -> WAIT (not park) for a dashboard answer, then proceed on
+  // defaults. The run keeps moving; the human keeps the right to intervene.
+  const unanswered = questions.filter((q) => recorded[q.id] === undefined);
+  if (
+    node.window &&
+    !ctx.acceptDefaults &&
+    !ctx.interactive &&
+    !ctx.mockAgents && // mock/certification replays must stay fast and deterministic
+    unanswered.length > 0 &&
+    unanswered.every((q) => q.default !== undefined)
+  ) {
+    const deadline = Date.now() + node.window * 1000;
+    ctx.journal.append({ type: "gate.window_open", nodeId: node.id, deadlineMs: deadline, windowSeconds: node.window });
+    const answersFile = path.join(ctx.workspace, "ui-answers.json");
+    while (Date.now() < deadline) {
+      await new Promise((r) => setTimeout(r, 1500));
+      try {
+        const ui = JSON.parse(fs.readFileSync(answersFile, "utf8")) as Record<string, Record<string, string>>;
+        if (ui[node.id] && questions.every((q) => (ui[node.id][q.id] ?? recorded[q.id]) !== undefined)) {
+          Object.assign(recorded, ui[node.id]);
+          break;
+        }
+      } catch {
+        /* no answers yet */
+      }
+    }
+  }
+
   for (const q of questions) {
     if (recorded[q.id] !== undefined) {
       answers[q.id] = recorded[q.id];
       sources.add("recorded");
       continue;
     }
-    if (ctx.acceptDefaults && q.default !== undefined) {
-      answers[q.id] = q.default; // unattended replay: defaults apply silently
-      sources.add("default");
+    if ((ctx.acceptDefaults || node.window) && q.default !== undefined) {
+      answers[q.id] = q.default; // unattended replay or an expired review window
+      sources.add(node.window && !ctx.acceptDefaults ? "window" : "default");
       continue;
     }
     if (!ctx.interactive) return "parked"; // durable park; dashboard/resume answers later

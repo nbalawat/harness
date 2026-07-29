@@ -1,0 +1,19 @@
+name: agent-runtime-adk
+version: 0.1.0
+description: "The agent-runtime contract implemented on Google ADK — an LlmAgent driven by an ADK Runner executes every reply; the model behind it is stub/live-cli/live-api like the base runtime."
+provides:
+  - "python: agent_runtime.respond/mode/_roster — identical contract to the base runtime, executed through a Google ADK Runner"
+requires:
+  - "persistence-core"
+conflicts:
+  - "agent-runtime"
+  - "agent-runtime-strands"
+  - "agent-runtime-langgraph"
+app_deps:
+  - "google-adk>=2"
+  - "cryptography<49"
+compose:
+  overlay: compose/
+certify:
+  tests: test/
+  python_deps: ["google-adk>=2", "cryptography<49"]

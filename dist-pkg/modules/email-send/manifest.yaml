@@ -1,0 +1,11 @@
+name: email-send
+version: 0.1.0
+description: "Templated transactional mail with suppression rules — compliance-sensitive enough to centralize."
+provides:
+  - "python: mailer.send(to, template, vars) — rendered via prompt-registry-style templates, suppression list honored, outbox in dev"
+requires:
+  - "persistence-core"
+compose:
+  overlay: compose/
+certify:
+  tests: test/

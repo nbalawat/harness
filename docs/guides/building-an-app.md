@@ -5,10 +5,22 @@ pipeline of AI agents and deterministic checks that ends in a working, tested,
 security-scanned application you watched being built. You make five decisions
 along the way — everything else is done and *proven* for you.
 
-## 1. One-time setup
+## 1. One-time setup (two commands)
 
 ```bash
-node harness.cjs setup --install-sdk
+npm install -g @nbalawat/harness   # ships the engine + the certified catalog
+harness ui                          # storefront on http://localhost:4400
+```
+
+No GitHub, no checkout, no build step: the npm package carries the certified
+project types, the module catalog, and the MCP servers. `harness ui` from any
+folder shows the storefront; that folder becomes where your app builds live.
+Build as many apps in parallel as you like — one browser tab per build.
+
+Before your first **live** build, run the preflight once:
+
+```bash
+harness setup --install-sdk
 ```
 
 This is the preflight. It verifies Node (>= 20), git, uv, docker (optional), the
@@ -17,22 +29,19 @@ authentication (an `ANTHROPIC_API_KEY`, or a logged-in Claude Code CLI). Every
 required row must be green before a live build. `--install-sdk` provisions the
 engine into `~/.harness/runtime` if it's missing.
 
-Then install the project type your platform team certified:
-
-```bash
-node harness.cjs install agentic-app@0.9.0 --registry <git-url>
-```
-
-The install is tamper-proof: the package's content digest must match its
-certification record or the install is refused.
+Firms distributing their own certified types can also push them through the
+git registry (`harness install agentic-app@0.9.0 --registry <git-url>`); the
+install is tamper-proof — the package's content digest must match its
+certification record or the install is refused. The npm package is simply the
+same catalog, pre-installed.
 
 ## 2. Start a build
 
 Two equivalent ways:
 
-- **Dashboard (recommended):** `node harness.cjs ui .` → open http://localhost:4400
-  → **Build a new app** → name it → Start building.
-- **CLI:** `node harness.cjs run agentic-app@0.9.0 --workspace my-app`, then open
+- **Dashboard (recommended):** `harness ui` → open http://localhost:4400
+  → **Start building** → name it → answer intake.
+- **CLI:** `harness run agentic-app@0.9.0 --workspace my-app`, then open
   the dashboard.
 
 Either way the run immediately **parks at intake** — nothing runs and nothing is
@@ -45,11 +54,23 @@ Overview tab as "Waiting on you". Your five decision points:
 
 | Stage | What you do |
 |---|---|
-| **Intake** | Name the app, describe the problem, optionally point at a folder of documents (PDF/docx/HTML/notes), pick deploy target (local / cloud-run). |
+| **Intake** | Name the app, describe the problem, and hand over supporting documents (PDF/docx/HTML/notes) — **upload them right in the intake form** (they're stored with the run) or point at a folder path. Pick deploy target (local / cloud-run) and how closely you want to supervise. |
 | **Clarify** | Agents read every document first, then ask **only the questions the documents couldn't answer** (hard cap: 6, each with a default and a "why"). |
 | **Design select** | 3–4 genuinely different, fully rendered design directions. **The one you pick ships verbatim as your app's frontend** — layout, typography, everything. It is then locked. |
 | **Design review** | The requirements-traceability matrix: every requirement mapped to the module/table/agent/design element that addresses it, plus every assumption made on your behalf. Approve before any build spend. |
 | **UAT** | Final sign-off with the full evidence pack (tests, evals, security scan, coverage) in front of you. |
+
+**Supervision is a dial, not a burden.** At intake you choose:
+
+- `gates-only` (default) — you're only asked at the five decision points above.
+- `every-slice` — after each delivered feature slice the run adds a
+  **checkpoint**: it pauses up to 5 minutes with the slice's evidence
+  (screenshot, objectives ledger) so you can look before it continues. Answer
+  in the window and your verdict applies immediately; walk away and it
+  proceeds on approval-by-default, recorded as an assumption in the Decisions
+  tab. You get an intervention *window*, never an obligation — and a cheap
+  revision (`Request changes` on any slice) remains available afterwards
+  because unchanged steps re-use their previous results at no cost.
 
 Between gates, real agent sessions do the work. If an agent hits genuine
 ambiguity mid-step, its question appears at the top of Overview — answer within

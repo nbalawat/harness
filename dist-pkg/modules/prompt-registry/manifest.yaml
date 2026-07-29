@@ -1,0 +1,12 @@
+name: prompt-registry
+version: 0.1.0
+description: "App prompts as versioned data, not string literals buried in code — reviewable and hot-fixable without a rebuild."
+provides:
+  - "python: prompts.register(name, text, version) / get(name) / render(name, **vars)"
+  - "http: GET /admin/prompts"
+requires:
+  - "nothing beyond the base app"
+compose:
+  overlay: compose/
+certify:
+  tests: test/

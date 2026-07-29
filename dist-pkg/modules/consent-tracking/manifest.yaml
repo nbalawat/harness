@@ -1,0 +1,11 @@
+name: consent-tracking
+version: 0.1.0
+description: "Record the basis for holding each person's data where that matters — consent is evidence, not a checkbox memory."
+provides:
+  - "python: consent.grant(subject, purpose, basis) / check(subject, purpose) / withdraw(subject, purpose)"
+requires:
+  - "persistence-core"
+compose:
+  overlay: compose/
+certify:
+  tests: test/

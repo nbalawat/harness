@@ -1,0 +1,19 @@
+{
+  "type": "object",
+  "properties": {
+    "questions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "prompt": { "type": "string", "minLength": 5 },
+          "default": { "type": "string" },
+          "why": { "type": "string", "minLength": 5 }
+        },
+        "required": ["id", "prompt", "default", "why"]
+      }
+    }
+  },
+  "required": ["questions"]
+}

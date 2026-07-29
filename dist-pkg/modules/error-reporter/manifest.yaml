@@ -1,0 +1,11 @@
+name: error-reporter
+version: 0.1.0
+description: "Capture and group unhandled exceptions with context — errors owners can triage instead of logs nobody reads."
+provides:
+  - "python: errors.capture(exc, context) grouped by type+location / http: GET /admin/errors"
+requires:
+  - "persistence-core"
+compose:
+  overlay: compose/
+certify:
+  tests: test/

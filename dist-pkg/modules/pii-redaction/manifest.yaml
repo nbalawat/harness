@@ -1,0 +1,11 @@
+name: pii-redaction
+version: 0.1.0
+description: "Detect and mask PII in stored text and transcripts — the most common compliance ask, done once and tested."
+provides:
+  - "python: pii.detect(text) -> [(kind, match)] / pii.redact(text) -> masked text"
+requires:
+  - "nothing beyond the base app"
+compose:
+  overlay: compose/
+certify:
+  tests: test/

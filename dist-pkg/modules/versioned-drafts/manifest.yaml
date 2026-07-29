@@ -1,0 +1,11 @@
+name: versioned-drafts
+version: 0.1.0
+description: "Draft/publish semantics for content-like records — 'live' and 'working copy' must never be the same row."
+provides:
+  - "python: drafts.save(key, content) / publish(key) / current(key) / draft(key) / versions(key)"
+requires:
+  - "persistence-core"
+compose:
+  overlay: compose/
+certify:
+  tests: test/

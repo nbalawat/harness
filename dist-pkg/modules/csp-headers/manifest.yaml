@@ -1,0 +1,11 @@
+name: csp-headers
+version: 0.1.0
+description: "Security headers as configuration — the response-header counterpart of the textContent-only frontend policy."
+provides:
+  - "middleware: CSP, X-Content-Type-Options, X-Frame-Options, Referrer-Policy on every response"
+requires:
+  - "nothing beyond the base app"
+compose:
+  overlay: compose/
+certify:
+  tests: test/

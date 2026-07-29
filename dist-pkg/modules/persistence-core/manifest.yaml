@@ -1,0 +1,12 @@
+name: persistence-core
+version: 0.1.0
+description: Data layer with table registry. v0 is an in-memory store honoring the same interface the Postgres adapter will implement.
+provides:
+  - python: db.store (insert/list keyed by table registry)
+requires:
+  - backend/models.py defining TABLES (generated from data_model.json)
+compose:
+  overlay: compose/
+certify:
+  tests: test/
+

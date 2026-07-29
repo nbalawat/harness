@@ -1,0 +1,11 @@
+name: notifications-ui
+version: 0.1.0
+description: "In-app toasts/inbox for events and SLA breaches — one queue, deduped, never stacking forever."
+provides:
+  - "js: HarnessNotify.push(queue, msg) deduped with cap; render into #notifications"
+requires:
+  - "nothing beyond the design shell"
+compose:
+  overlay: compose/
+certify:
+  command: node --check "$HARNESS_MODULE_DIR/compose/frontend/mod_notify.js" && ! grep -q ".innerHTML =" "$HARNESS_MODULE_DIR/compose/frontend/mod_notify.js" && node "$HARNESS_MODULE_DIR/test/test.mjs"

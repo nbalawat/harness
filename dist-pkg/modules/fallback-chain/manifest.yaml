@@ -1,0 +1,11 @@
+name: fallback-chain
+version: 0.1.0
+description: "Model/provider failover policy in one place — retries and degradation are policy, not per-endpoint improvisation."
+provides:
+  - "python: fallback.try_chain(steps) -> (result, used) trying each callable in order, recording failures"
+requires:
+  - "nothing beyond the base app"
+compose:
+  overlay: compose/
+certify:
+  tests: test/

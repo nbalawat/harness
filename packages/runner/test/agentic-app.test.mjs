@@ -643,7 +643,7 @@ test("slice objectives carry executable evidence: the acceptance report in the a
   }
 });
 
-test("every-slice supervision: the build parks at each slice checkpoint until you approve", async () => {
+test("every-slice supervision: each slice ends in a review window — pause, then proceed on the default", async () => {
   const answers = readAnswers("answers.json");
   answers.intake = { ...answers.intake, supervision: "every-slice" };
   const ctx = makeCtx(tmpDir("supervise"), answers);
@@ -659,7 +659,6 @@ test("every-slice supervision: the build parks at each slice checkpoint until yo
   };
   let r = parked;
   for (let guard = 0; guard < 12 && r.status === "parked"; guard++) {
-    if (r.parkedNodeId === "review-slice-1") break;
     const node = ctx.def.nodes.find((n) => n.id === r.parkedNodeId);
     const qs = node.questions ?? [{ id: "q" }];
     const auto = { ...(ctx.answers[r.parkedNodeId] ?? {}) };
@@ -674,18 +673,17 @@ test("every-slice supervision: the build parks at each slice checkpoint until yo
     }
     r = await answerAndResume(r.parkedNodeId, auto);
   }
-  assert.equal(r.status, "parked");
-  assert.equal(r.parkedNodeId, "review-slice-1", "the build WAITS after slice 1 for your verdict");
-  const state = foldState(ctx.journal.read());
-  assert.ok(state.committed.has("slice-1"));
-  assert.ok(!state.committed.has("slice-2"), "nothing further built before approval");
-
-  // Approve the checkpoint -> build continues into slice-2 and beyond.
-  ctx.acceptDefaults = true; // hands-off for the rest
-  const done = await runLoop(ctx);
-  assert.equal(done.status, "completed");
+  // Checkpoints are WINDOWS, not walls: with every question defaulted, the
+  // review gate pauses (in live mode: up to its 5-minute window) and then
+  // proceeds on approval-by-default — the run never hard-parks on a checkpoint.
+  assert.equal(r.status, "completed", "checkpoints never leave the build stranded");
   const final = foldState(ctx.journal.read());
   assert.ok(final.committed.has("review-slice-1") && final.committed.has("slice-3"));
+  for (let n = 1; n <= 3; n++) {
+    const gate = events(ctx, "gate.answered").find((e) => e.nodeId === `review-slice-${n}`);
+    assert.ok(gate, `review-slice-${n} was a real decision point`);
+    assert.equal(gate.source, "window", `review-slice-${n} proceeded on the window default — provenance visible`);
+  }
 });
 
 test("gates-only supervision (default): review checkpoints are skipped, not silently absent", () => {

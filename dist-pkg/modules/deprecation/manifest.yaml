@@ -1,0 +1,9 @@
+name: deprecation
+version: 0.1.0
+description: "Sunset path for modules — mark, warn, migrate; a catalog of hundreds needs a way to shrink too."
+kind: tool
+provides:
+  - "node: check.mjs <modules-dir> — lists deprecated modules (manifest deprecated: true + successor) and validates their metadata"
+requires: []
+certify:
+  command: node "$HARNESS_MODULE_DIR/test/test.mjs"

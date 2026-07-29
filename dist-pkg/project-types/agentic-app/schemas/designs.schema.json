@@ -1,0 +1,23 @@
+{
+  "type": "object",
+  "properties": {
+    "options": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 4,
+      "items": {
+        "type": "object",
+        "properties": {
+          "addresses": { "type": "array", "items": { "type": "string" } },
+          "id": { "type": "string", "pattern": "^option-[1-4]$" },
+          "name": { "type": "string" },
+          "screens": { "type": "array", "minItems": 2, "items": { "type": "string" } },
+          "tokens_file": { "type": "string" },
+          "preview_file": { "type": "string" }
+        },
+        "required": ["id", "name", "screens", "tokens_file", "preview_file", "addresses"]
+      }
+    }
+  },
+  "required": ["options"]
+}

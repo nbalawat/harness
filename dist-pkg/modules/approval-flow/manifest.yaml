@@ -1,0 +1,13 @@
+name: approval-flow
+version: 0.1.0
+description: "Draft -> review -> approve/reject with a full trail — THE core loop of internal tools (our first three real apps all needed it)."
+provides:
+  - "python: approval_flow.submit/approve/reject/pending with audit records"
+  - "http: /workflow/submissions endpoints"
+requires:
+  - "persistence-core"
+  - "audit-log"
+compose:
+  overlay: compose/
+certify:
+  tests: test/
