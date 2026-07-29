@@ -2674,6 +2674,60 @@ annual_debt_service,980000</textarea></div>
       </div>
 
       <div class="screen-body board-scroll">
+
+        <!-- LIVE: tiered-approval-decisions slice — real approval-tier derivation, authority-gated decisions -->
+        <div class="panel" id="approvals-live-panel" style="margin-bottom:var(--s5)">
+          <div class="panel-head">
+            <h3>Live approval workspace</h3>
+            <span class="spacer"></span>
+            <span class="chip hollow">Analyst &le;$250k &middot; Senior officer &le;$1M &middot; Committee &gt;$1M</span>
+          </div>
+          <div class="panel-body">
+            <div class="grid g3" style="align-items:end;margin-bottom:var(--s3)">
+              <div class="field"><label for="ap-deal-id">Deal id</label><input type="text" id="ap-deal-id" value="DEAL-001"></div>
+              <div class="hitl" style="border:0;padding:0;margin:0">
+                <button class="btn primary" type="button" id="ap-tier-btn">Check approval tier</button>
+              </div>
+              <span class="tiny muted" id="ap-tier-status"></span>
+            </div>
+
+            <div class="tiny muted" id="ap-tier-result" style="margin-bottom:var(--s3)"></div>
+
+            <div class="grid g3" style="align-items:end;margin-bottom:var(--s2)">
+              <div class="field">
+                <label for="ap-decider">Deciding officer (named, required)</label>
+                <select id="ap-decider">
+                  <option value="user-analyst-1">Tom Berkey &mdash; Credit Analyst (&le;$250k)</option>
+                  <option value="user-officer-1" selected>Priya Raghunathan &mdash; Senior Credit Officer (&le;$1M)</option>
+                  <option value="user-committee-chair-1">Eleanor Voss &mdash; Credit Committee Chair (any exposure)</option>
+                </select>
+              </div>
+              <div class="field"><label for="ap-notes">Decision notes</label><input type="text" id="ap-notes" placeholder="e.g. grade and exceptions reviewed"></div>
+              <div class="hitl" style="border:0;padding:0;margin:0">
+                <button class="btn accept" type="button" id="ap-approve-btn">Approve</button>
+              </div>
+            </div>
+            <div class="tiny muted" id="ap-approve-status" style="margin-bottom:var(--s3)"></div>
+
+            <div class="grid g3" style="align-items:end;margin-bottom:var(--s2)">
+              <div class="field"><label for="ap-decline-reason">Adverse-action reason (required to decline)</label><input type="text" id="ap-decline-reason" placeholder="e.g. DSCR below policy minimum of 1.20x on the most recent fiscal year"></div>
+              <div class="hitl" style="border:0;padding:0;margin:0">
+                <button class="btn reject" type="button" id="ap-decline-btn">Decline</button>
+              </div>
+              <span class="tiny muted" id="ap-decline-status"></span>
+            </div>
+
+            <div class="grid g3" style="align-items:end">
+              <div class="field"><label for="ap-rework-reason">Rework reason</label><input type="text" id="ap-rework-reason" placeholder="e.g. re-spread with guarantor debt schedule"></div>
+              <div class="field"><label for="ap-rework-assignee">Reassign to</label><input type="text" id="ap-rework-assignee" value="user-analyst-1"></div>
+              <div class="hitl" style="border:0;padding:0;margin:0">
+                <button class="btn" type="button" id="ap-rework-btn">Return for rework</button>
+              </div>
+            </div>
+            <span class="tiny muted" id="ap-rework-status"></span>
+          </div>
+        </div>
+
         <div class="board">
 
           <!-- tier 1 -->
@@ -3468,5 +3522,6 @@ annual_debt_service,980000</textarea></div>
 <script src="deals.js" defer></script>
 <script src="spread.js" defer></script>
 <script src="memo.js" defer></script>
+<script src="approvals.js" defer></script>
 </body>
 </html>

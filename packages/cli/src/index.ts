@@ -109,7 +109,9 @@ async function cmdRun(args: string[]): Promise<number> {
 
   const result = await runLoop(ctx);
   report(ctx, result.status, result.failedNodeId ?? result.parkedNodeId);
-  (await import("./telemetry.js")).recordRun(ctx, result, "run");
+  const tel = await import("./telemetry.js");
+  tel.recordRun(ctx, result, "run");
+  await tel.syncTelemetry();
   return result.status === "completed" ? 0 : result.status === "parked" ? 0 : 1;
 }
 
@@ -128,7 +130,9 @@ async function cmdResume(args: string[]): Promise<number> {
   console.log(`resuming ${ctx.def.name}@${ctx.def.version}`);
   const result = await runLoop(ctx);
   report(ctx, result.status, result.failedNodeId ?? result.parkedNodeId);
-  (await import("./telemetry.js")).recordRun(ctx, result, "resume");
+  const tel = await import("./telemetry.js");
+  tel.recordRun(ctx, result, "resume");
+  await tel.syncTelemetry();
   return result.status === "failed" ? 1 : 0;
 }
 
@@ -151,7 +155,9 @@ async function cmdRevise(args: string[]): Promise<number> {
   if (flags.resume === true) {
     const result = await runLoop(ctx);
     report(ctx, result.status, result.failedNodeId ?? result.parkedNodeId);
-    (await import("./telemetry.js")).recordRun(ctx, result, "revise");
+    const tel = await import("./telemetry.js");
+  tel.recordRun(ctx, result, "revise");
+  await tel.syncTelemetry();
     return result.status === "failed" ? 1 : 0;
   }
   console.log(`run 'harness resume ${workspace}' to re-derive`);
@@ -221,8 +227,30 @@ async function main(): Promise<void> {
       break;
     }
     case "telemetry": {
-      const { summarize } = await import("./telemetry.js");
-      console.log(summarize());
+      const { flags } = parseFlags(rest);
+      const { summarize, syncTelemetry } = await import("./telemetry.js");
+      if (flags.sync === true) console.log(await syncTelemetry());
+      else console.log(summarize());
+      break;
+    }
+    case "publish": {
+      const { positional, flags } = parseFlags(rest);
+      const registryUrl = (flags["registry-url"] as string) ?? process.env.HARNESS_REGISTRY_URL;
+      if (!positional[0] || !registryUrl) {
+        console.error("usage: harness publish <workspace> --registry-url <url> [--team t] [--owner o] [--name n]");
+        console.error("       (or set HARNESS_REGISTRY_URL)");
+        process.exitCode = 1;
+        break;
+      }
+      const { publishWorkspace } = await import("./publish.js");
+      const result = await publishWorkspace(path.resolve(positional[0]), {
+        registryUrl,
+        owner: flags.owner as string | undefined,
+        team: flags.team as string | undefined,
+        name: flags.name as string | undefined,
+      });
+      console.log(result.message);
+      if (!result.ok) process.exitCode = 1;
       break;
     }
     case "self-update": {
@@ -343,7 +371,7 @@ async function main(): Promise<void> {
       return; // keep serving
     }
     default:
-      console.log("usage: harness <run|resume|revise|status|ui|setup|certify|install|list|telemetry|self-update>");
+      console.log("usage: harness <run|resume|revise|status|ui|setup|certify|install|list|publish|telemetry|self-update>");
       console.log("  harness run <project-type-dir> [--workspace dir] [--answers file] [--mock-agents]");
       console.log("  harness resume <workspace> [--answers file]");
       console.log('  harness revise <workspace> <nodeId> --feedback "what to change" [--resume]');

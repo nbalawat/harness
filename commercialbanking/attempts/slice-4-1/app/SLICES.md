@@ -130,3 +130,70 @@ portfolio exposure and every raised exception in the design's `cite-card`
 markup, and a "Waive all & clear exceptions" action that dispositions every
 open exception and shows the deal's stage advance to `approval_pending`
 (`frontend/memo.js`) — no shell elements were changed.
+
+## Slice 4 — Role-scoped tiered approval, decline, and rework (`tiered-approval-decisions`)
+
+`GET /deals/{id}/approval-tier` deterministically derives the authority tier
+a deal's exposure requires from a fixed, inspectable rubric
+(`AUTHORITY_TIERS` in `backend/ext_approvals.py`, REQ-031/032/033: credit
+analyst up to $250k, senior credit officer up to $1M, credit committee
+above $1M) — never an agent judgment call. `POST /approvals` records a named
+human's decision (REQ-036/037): the decider's own authority tier, looked up
+from this build's documented user directory (`USER_AUTHORITY`, seeded into
+the `users` table), is checked against the deal's required tier *before*
+anything is written, and an under-authority attempt is refused outright with
+an HTTP 403 (REQ-034) — an analyst cannot approve Northwind's $750,000 deal,
+only a senior-credit-officer-tier user can. A successful approval advances
+`current_stage` through `deal_state` straight to `closing` (extending
+`TRANSITIONS` so `approve` is valid from `policy_compliance_review` as well
+as `approval_pending`, since a sufficiently authorized officer's approval is
+itself the named human disposition of any still-open policy exception —
+REQ-024 — rather than requiring the separate `/policy-review/accept` step
+first); re-approving an already-closed deal is a safe no-op, matching every
+other accept endpoint's tolerance for being re-run. `POST /deals/{id}/decline`
+requires a documented adverse-action reason (REQ-040) and is available from
+any active stage, not only `approval_pending` — an officer can decline for
+cause at any point in underwriting. `POST /deals/{id}/rework` returns a deal
+to a genuinely earlier stage with a reason and a named assignee (REQ-041),
+guarded against terminal (`declined`/`closing`) deals.
+
+Because no acceptance path in this build's script ever submits a second
+loan application, `_ensure_demo_second_deal()` lazily seeds exactly one
+second deal (`DEAL-002`) — and only once the real `DEAL-001` is already the
+store's sole deal, so it can never shift `DEAL-001`'s own sequential id —
+so the decline path has a real second application to demonstrate against,
+same as every other slice's live workspace operates on real stored data.
+
+Role-based access control (REQ-045/046/047) is seeded declaratively
+(`rbac.grant`) for this build's user directory, and `GET /deals` /
+`GET /deals/{id}` (`backend/ext_deals.py`) now apply row-level scoping
+(REQ-048) whenever a caller presents a session for a relationship-manager-only
+user — restricting them to deals they themselves submitted — while remaining
+fully unscoped (every earlier slice's own acceptance behavior) when no
+session is presented at all.
+
+The five nodes this slice owns in `workflows/deal-underwriting`
+(`derive_approval_tier`, `approval_decision` human gate ->
+`record_approval_decision`, `advance_to_closing` -> handler
+`advance_deal_to_closing`, `record_adverse_action`, and the
+`record_rework_return` handler shared by every earlier check_*_accepted /
+check_exceptions_cleared condition's `on_false` branch) are registered as
+real `workflow_engine` handlers, so driving the workflow generically
+continues seamlessly from slice 3's `review_exceptions` gate all the way
+through to a completed run at stage `closing`. The REST endpoints call the
+same handler functions directly, for the same reason every prior slice's
+did: an unauthorized approval attempt must surface as an HTTP 403, not a
+silently failed workflow run. (This slice also closes two latent gaps in
+`ext_policy.py`'s `apply_exception_dispositions` the generic engine could
+already reach: it had no fallback for being driven by a blanket
+approve/reject from the generic human node, and it hard-failed a deal with
+zero raised exceptions instead of treating a clean policy review as already
+cleared.)
+
+Frontend: the Approvals screen gained a "Live approval workspace" panel — a
+deal id field, a "Check approval tier" action showing the real derived tier
+and rule text, a named-decider selector matching the design's own tier
+lanes, and Approve / Decline / Return-for-rework actions that call the real
+endpoints and render the real outcome — refusal, adverse-action reason, or
+reassigned stage — in place (`frontend/approvals.js`) — no shell elements
+were changed.

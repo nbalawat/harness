@@ -267,9 +267,21 @@ def record_approval_decision(context):
     deal_id = tier_info["deal_id"]
     deal = _get_deal(deal_id)
     decision_details = context.get("decision_details") or {}
-    decision = (decision_details.get("decision") or "").strip().lower()
-    decided_by_id = decision_details.get("decided_by_id")
-    decision_notes = decision_details.get("decision_notes") or ""
+    if decision_details:
+        decision = (decision_details.get("decision") or "").strip().lower()
+        decided_by_id = decision_details.get("decided_by_id")
+        decision_notes = decision_details.get("decision_notes") or ""
+    else:
+        # Driven through the generic workflow_engine rather than the REST
+        # /approvals endpoint: the human node only carries a blanket
+        # approve/reject, matching every sibling apply_*_decision handler's
+        # review_* fallback in this codebase. A blanket reject can't carry a
+        # documented adverse-action reason (REQ-040), so it maps to
+        # return-for-rework rather than a decline.
+        review = context.get("approval_decision") or {}
+        decision = "approve" if review.get("approved") else "return_for_rework"
+        decided_by_id = review.get("by")
+        decision_notes = ""
 
     required_tier = tier_info["required_authority_tier"]
     user_tier = _user_tier(decided_by_id)
@@ -338,6 +350,20 @@ def advance_deal_to_closing(context):
         raise workflow_engine.WorkflowError(f"no deal '{deal_id}' to advance to closing")
 
     previous_stage = deal["current_stage"]
+    if previous_stage == "closing":
+        # Idempotent replay: this deal was already approved and closed by an
+        # earlier decision — re-approving it (e.g. a second /approvals call
+        # for the same deal) is a no-op success, not an error, matching how
+        # every other accept endpoint in this codebase tolerates being
+        # re-run rather than hard-failing on repeat calls.
+        return {
+            "deal_id": deal_id,
+            "previous_stage": previous_stage,
+            "new_stage": "closing",
+            "transition_valid": True,
+            "deal_status": deal.get("status"),
+            "waived_exception_ids": [],
+        }
     try:
         new_stage = stage_machine.advance(previous_stage, "approve")
     except IllegalTransition as e:
@@ -345,6 +371,11 @@ def advance_deal_to_closing(context):
 
     now = _now_iso()
     deal["current_stage"] = new_stage
+    # Flip status off "active" (mirrors record_adverse_action's decline
+    # branch) so aggregate_portfolio_exposure — which filters active deals
+    # only (ext_policy.py) — stops counting this closed deal's exposure
+    # toward every later deal's concentration math.
+    deal["status"] = "approved"
     deal["last_activity_at"] = now
     decided_by_id = decision.get("decided_by_id")
 
@@ -395,6 +426,17 @@ def record_adverse_action(context):
         raise workflow_engine.WorkflowError("adverse_action_reason is required to decline a deal (REQ-040)")
 
     previous_stage = deal["current_stage"]
+    if previous_stage == "declined":
+        # Idempotent replay: already declined — a repeat call (e.g. a demo
+        # or UI double-submit) succeeds as a no-op rather than erroring.
+        return {
+            "deal_id": deal_id,
+            "adverse_action_reason": reason,
+            "decided_by_id": decided_by_id,
+            "decided_at": _now_iso(),
+            "deal_status": "declined",
+            "current_stage": "declined",
+        }
     try:
         new_stage = stage_machine.advance(previous_stage, "decline")
     except IllegalTransition as e:
@@ -442,21 +484,46 @@ def record_rework_return(context):
     deal = _get_deal(deal_id)
     if deal is None:
         raise workflow_engine.WorkflowError(f"no deal '{deal_id}' to return for rework")
+    previous_stage = deal["current_stage"]
+    if previous_stage in ("declined", "closing"):
+        raise workflow_engine.WorkflowError(f"deal '{deal_id}' is at terminal stage '{previous_stage}' and cannot be returned for rework")
 
     decision_details = context.get("decision_details") or {}
-    decided_by_id = decision_details.get("decided_by_id")
-    reason = (decision_details.get("rework_reason") or "").strip() or "Returned for rework."
-    assignee = decision_details.get("rework_assigned_to_id")
-    requested_stage = decision_details.get("returned_to_stage")
+    now = _now_iso()
 
-    current_index = STAGE_ORDER.index(deal["current_stage"]) if deal["current_stage"] in STAGE_ORDER else 0
-    if requested_stage in STAGE_ORDER and STAGE_ORDER.index(requested_stage) <= current_index:
+    if decision_details:
+        # REST-driven /deals/{id}/rework: a named human explicitly names an
+        # earlier stage to send the deal back to (REQ-041) — deal_state's
+        # fixed single-target return_for_rework event can't express an
+        # arbitrary jump, so this is validated directly against STAGE_ORDER
+        # rather than through stage_machine.advance.
+        decided_by_id = decision_details.get("decided_by_id")
+        reason = (decision_details.get("rework_reason") or "").strip() or "Returned for rework."
+        assignee = decision_details.get("rework_assigned_to_id")
+        requested_stage = decision_details.get("returned_to_stage")
+        current_index = STAGE_ORDER.index(previous_stage) if previous_stage in STAGE_ORDER else 0
+        if requested_stage not in STAGE_ORDER or STAGE_ORDER.index(requested_stage) > current_index:
+            raise workflow_engine.WorkflowError(
+                f"'{requested_stage}' is not a valid earlier-or-current stage for a deal at '{previous_stage}'"
+            )
         target_stage = requested_stage
     else:
-        target_stage = STAGE_ORDER[max(current_index - 1, 0)]
+        # Driven through the generic workflow_engine as the shared on_false
+        # target of every earlier check_*_accepted / check_exceptions_cleared
+        # condition: the human node only carries a blanket reject, with no
+        # named target stage. Every sibling apply_*_decision handler's own
+        # reject branch leaves current_stage exactly where deal_state's own
+        # return_for_rework event puts it (a same-stage redraft loop) — this
+        # shared fallback goes through stage_machine.advance too, rather than
+        # inventing a deeper regression the state machine was never asked for.
+        decided_by_id = (context.get("review_triage") or context.get("review_spread") or context.get("review_memo") or context.get("review_exceptions") or context.get("approval_decision") or {}).get("by")
+        reason = "Returned for rework."
+        assignee = None
+        try:
+            target_stage = stage_machine.advance(previous_stage, "return_for_rework")
+        except IllegalTransition as e:
+            raise workflow_engine.WorkflowError(str(e))
 
-    now = _now_iso()
-    previous_stage = deal["current_stage"]
     deal["current_stage"] = target_stage
     if assignee:
         deal["assigned_owner_id"] = assignee
@@ -525,7 +592,7 @@ class ReworkRequest(BaseModel):
     decided_by_id: str
     rework_reason: str
     rework_assigned_to_id: str
-    returned_to_stage: str | None = None
+    returned_to_stage: str
 
 
 @router.get("/deals/{deal_id}/approval-tier")
@@ -541,7 +608,6 @@ def get_approval_tier(deal_id: str):
 
 @router.post("/approvals")
 def create_approval(req: ApprovalRequest):
-    _ensure_demo_second_deal()
     _get_deal_or_404(req.deal_id)
     context = {
         "record_intake": {"deal_id": req.deal_id},

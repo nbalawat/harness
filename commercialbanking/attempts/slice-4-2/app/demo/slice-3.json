@@ -1,0 +1,10 @@
+{
+  "screen": "screen-memo",
+  "caption": "Running the credit memo agent drafts a memo citing the deal's accepted ratios, spread lines and policy rules; accepting it hands off to the policy compliance agent, which evaluates concentration, prohibited-industry and LTV rules against portfolio exposure and writes up each breach as a disposable exception.",
+  "steps": [
+    { "action": "fill", "selector": "#memo-deal-id", "value": "DEAL-001" },
+    { "action": "click", "selector": "#memo-run-btn" },
+    { "action": "click", "selector": "#memo-accept-btn" },
+    { "action": "click", "selector": "#policy-run-btn" }
+  ]
+}

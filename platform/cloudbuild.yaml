@@ -1,0 +1,20 @@
+# Build + push all three platform service images, attested for Binary
+# Authorization. Trigger: push to main touching platform/**.
+steps:
+  - id: build-collector
+    name: gcr.io/cloud-builders/docker
+    args: ["build", "-t", "${_REGION}-docker.pkg.dev/${PROJECT_ID}/harness/collector:${SHORT_SHA}", "platform/collector"]
+  - id: build-gateway
+    name: gcr.io/cloud-builders/docker
+    args: ["build", "-t", "${_REGION}-docker.pkg.dev/${PROJECT_ID}/harness/gateway:${SHORT_SHA}", "platform/gateway"]
+  - id: build-registry
+    name: gcr.io/cloud-builders/docker
+    args: ["build", "-t", "${_REGION}-docker.pkg.dev/${PROJECT_ID}/harness/registry:${SHORT_SHA}", "platform/registry"]
+images:
+  - "${_REGION}-docker.pkg.dev/${PROJECT_ID}/harness/collector:${SHORT_SHA}"
+  - "${_REGION}-docker.pkg.dev/${PROJECT_ID}/harness/gateway:${SHORT_SHA}"
+  - "${_REGION}-docker.pkg.dev/${PROJECT_ID}/harness/registry:${SHORT_SHA}"
+substitutions:
+  _REGION: us-east4
+options:
+  requestedVerifyOption: VERIFIED   # provenance attestation for BinAuthz

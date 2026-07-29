@@ -368,6 +368,51 @@ budget envelopes cap per-build spend; gateway quotas cap per-user/team spend;
 BigQuery scheduled queries reconcile gateway-metered vs journal-recorded cost
 daily and alert on drift; project-level budget alerts are the backstop.
 
+## 10. Implementation status
+
+The deployable pieces of this architecture exist in the repo and are covered
+by the platform test suite (`platform/test/platform.test.mjs`, part of
+`npm test`):
+
+| Piece | Where | Proven by |
+|---|---|---|
+| llm-gateway (identity, allow-list, daily quota, streaming passthrough, usage metering joinable to run ids) | `platform/gateway/server.mjs` | e2e tests: 401/403/429 paths never touch the upstream; SSE byte-for-byte with usage extracted |
+| telemetry-collector (schema validation, per-event rejection, fleet aggregates incl. failure Pareto) | `platform/collector/server.mjs` | e2e tests + real CLI runs syncing into it |
+| app-registry + firm gallery (evidence-required publish, derived badges, immutable versions, gallery page) | `platform/registry/server.mjs` | e2e test publishing the real KYC Review Desk workspace |
+| `harness publish` (evidence pack assembly from artifacts + journal) | `packages/cli/src/publish.ts` | same e2e test, via the real CLI |
+| CLI telemetry queue + sync (offline-first, never blocks a build) | `packages/cli/src/telemetry.ts` | e2e test incl. collector-down resilience |
+| Container images + build pipeline | `platform/*/Dockerfile`, `platform/cloudbuild.yaml` | node:22-slim + single file per service |
+| Terraform (distribution, gateway, telemetry pipeline, gallery, run-service base) | `infra/modules/*`, `infra/envs/dev` | `terraform validate` green |
+
+**Deployed and tested on GCP (2026-07-29, project `agentic-experiments`):**
+all three services live on Cloud Run via this Terraform + Cloud Build, and the
+dataflows verified against the real deployment:
+
+- **DF-1/DF-5 (partial):** Artifact Registry repos created; all service images
+  built by Cloud Build (~30s each) and rolled via Terraform.
+- **DF-3 complete:** a real `harness run` synced its fleet event to the
+  deployed collector → Pub/Sub → **BigQuery row confirmed by query** (event,
+  type@version, identity attribution). Offline resilience verified locally.
+- **DF-4 complete:** `harness publish fsi-kyc-desk` against the Cloud Run
+  registry — evidence pack verified, badges derived (acceptance-green,
+  security-clean, rtm-covered, build-completed), gallery page serving, 9.9MB
+  slice-6 screenshot fetchable with immutable cache headers; evidence-free
+  publish rejected 422; large files ship via per-file attach (Cloud Run 32MB
+  request cap).
+- **DF-2 (edge controls):** deployed gateway enforces identity (401) and
+  model allow-list (403) at the edge; quota + streaming metering proven in
+  the local e2e suite. Real Vertex model calls still need Claude Model Garden
+  enablement + SA-token auth on the upstream leg (next step).
+
+Deploy lessons encoded in the repo: containers write only to /tmp (Cloud Run
+/app is read-only for non-root); `/healthz` is intercepted by Google's
+frontend on run.app URLs — services expose `/health`; image tags must be
+unique per rollout for Terraform to roll a revision.
+
+Still architectural (per rollout phases): LB+IAP wiring, VPC-SC perimeter,
+GKE Tier-2 builders, DLP policy templates, BigQuery scheduled queries,
+GCS-backed registry storage (dev uses container-local /tmp).
+
 ---
 
 *Sequencing note: this architecture deploys incrementally along the

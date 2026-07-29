@@ -1,0 +1,10 @@
+{
+  "screen": "screen-approvals",
+  "caption": "Checking DEAL-001's approval tier shows the authority the deal's $750,000 exposure requires; a senior credit officer's named approval is recorded and the deal advances toward closing, waiving any residual policy exceptions as part of that same decision.",
+  "steps": [
+    { "action": "fill", "selector": "#ap-deal-id", "value": "DEAL-001" },
+    { "action": "click", "selector": "#ap-tier-btn" },
+    { "action": "fill", "selector": "#ap-notes", "value": "Within senior credit officer authority; grade and exceptions reviewed" },
+    { "action": "click", "selector": "#ap-approve-btn" }
+  ]
+}

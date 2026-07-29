@@ -7,7 +7,7 @@
   ],
   "scripts": {
     "build": "tsc -b packages/spec packages/runner packages/cli",
-    "test": "npm run build && node --test packages/*/test/*.test.mjs",
+    "test": "npm run build && node --test packages/*/test/*.test.mjs platform/test/*.test.mjs",
     "demo": "node packages/cli/dist/index.js run project-types/demo --workspace .demo-run --answers project-types/demo/fixtures/answers.json --mock-agents",
     "demo:status": "node packages/cli/dist/index.js status .demo-run",
     "bundle": "npm run build && node scripts/bundle.mjs",
