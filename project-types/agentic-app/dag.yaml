@@ -10,7 +10,7 @@
 # escalateModel: retries run one tier up with the failure feedback.
 # See docs/DESIGN.md §7/§7b for the design rationale per node.
 name: agentic-app
-version: 0.9.0
+version: 0.10.0
 description: Builds a working agentic AI application from your problem statement and documents — requirements with provenance, approvable designs, certified modules, feature-by-feature build with tests, security scan, and governance evidence.
 
 cost:
@@ -240,6 +240,15 @@ nodes:
     outputs:
       - { name: design_choice, file: design_choice.json, schema: schemas/design_choice.schema.json }
 
+  - id: design-contract
+    phase: Design
+    description: "Turns your chosen design into an enforceable promise: every screen and interactive element it contains, inventoried for delivery tracking."
+    kind: deterministic
+    deps: [design-select, design-options]
+    command: node "$HARNESS_PROJECT_DIR/scripts/design-contract.cjs"
+    outputs:
+      - { name: design_contract, file: design_contract.json, schema: schemas/design_contract.schema.json }
+
   # -- Detailed design -------------------------------------------------------
   - id: data-design
     phase: Design
@@ -312,7 +321,7 @@ nodes:
     description: "Plans the build as vertical slices — each one a user-visible feature delivered end to end."
     kind: agent
     model: claude-opus-5
-    deps: [requirements-synthesis, architecture, data-design, agent-design, workflow-design, design-review]
+    deps: [requirements-synthesis, architecture, data-design, agent-design, workflow-design, design-review, design-contract]
     prompt: prompts/slice-plan.md
     mock: node "$HARNESS_PROJECT_DIR/mocks/slice-plan.cjs"
     verify: node "$HARNESS_PROJECT_DIR/scripts/check-slice-plan.cjs"
@@ -647,6 +656,16 @@ nodes:
     outputs:
       - { name: integration_report, file: integration_report.json, schema: schemas/integration_report.schema.json }
 
+  - id: design-coverage
+    phase: Verification
+    description: "Proves design delivery: boots the finished app, visits every screen you approved, verifies its elements exist, and screenshots each one live. An approved screen missing from the app fails the build."
+    kind: deterministic
+    deps: [slice-1, slice-2, slice-3, slice-4, slice-5, slice-6, integrate, design-contract, slice-plan]
+    command: node "$HARNESS_PROJECT_DIR/scripts/design-coverage.cjs"
+    outputs:
+      - { name: design_coverage, file: design_coverage.json, schema: schemas/design_coverage.schema.json }
+      - { name: coverage_shots, file: coverage, dir: true }
+
   - id: security-scan
     phase: Verification
     description: "Deterministic security scan — secrets, dynamic code, unsafe patterns. High findings block."
@@ -669,7 +688,7 @@ nodes:
     phase: Ship
     description: "You exercise the app and give final approval."
     kind: gate
-    deps: [governance-report]
+    deps: [governance-report, design-coverage]
     questions:
       - { id: approved, prompt: "Exercise the app (docker compose up). Approve? (yes/no)" }
     outputs:

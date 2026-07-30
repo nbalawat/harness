@@ -701,3 +701,70 @@ test("each slice demonstrates ITS increment: demo declarations ship with the app
   const d2 = readJson(path.join(golden.workspace, "artifacts/slice-2/app/demo/slice-2.json"));
   assert.notEqual(d1.screen, d2.screen, "different slices demonstrate different surfaces");
 });
+
+// ---------------------------------------------------------------------------
+// Design delivery: the approved design is an enforced promise
+// ---------------------------------------------------------------------------
+
+test("design contract: every screen of the chosen design is inventoried", () => {
+  const contract = readJson(artifact(golden, "design-contract", "design_contract.json"));
+  assert.equal(contract.totals.screens, 3);
+  assert.deepEqual(contract.screens.map((s) => s.id), ["screen-chat", "screen-history", "screen-agents"]);
+  assert.ok(contract.totals.elements >= 3, "interactive elements inventoried");
+});
+
+test("slice plan covers every approved screen (the verifier enforces it)", () => {
+  const plan = readJson(artifact(golden, "slice-plan", "slice_plan.json"));
+  const covered = plan.slices.flatMap((s) => s.covers);
+  for (const screen of ["screen-chat", "screen-history", "screen-agents"]) {
+    assert.ok(covered.includes(screen), `${screen} assigned to a slice`);
+  }
+});
+
+test("design coverage: the finished app proves every promised screen live, with evidence", () => {
+  const cov = readJson(artifact(golden, "design-coverage", "design_coverage.json"));
+  assert.equal(cov.totals.screens_present, cov.totals.screens, "no dead mockup screens ship");
+  for (const s of cov.screens) {
+    assert.ok(s.present, `${s.id} live in the running app`);
+    assert.ok(s.covered_by_slice >= 1, `${s.id} attributed to the slice that delivered it`);
+    if (s.shot) {
+      assert.ok(
+        fs.existsSync(path.join(golden.workspace, "artifacts", "design-coverage", s.shot)),
+        `${s.id} has its live screenshot`,
+      );
+    }
+  }
+});
+
+test("slice screenshots are pairwise DISTINCT — each demonstrates its own increment", async () => {
+  const crypto = await import("node:crypto");
+  const hashes = new Map();
+  for (let n = 1; n <= 3; n++) {
+    const p = path.join(golden.workspace, `artifacts/slice-${n}/app/screenshots/slice-${n}.png`);
+    if (!fs.existsSync(p)) return; // browser-less environment: enforcement self-disables
+    const h = crypto.createHash("sha256").update(fs.readFileSync(p)).digest("hex");
+    assert.ok(!hashes.has(h), `slice-${n} shot duplicates slice-${hashes.get(h)}'s`);
+    hashes.set(h, n);
+  }
+});
+
+test("a slice plan that leaves an approved screen unassigned is REJECTED", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "harness-cov-neg-"));
+  const plan = readJson(artifact(golden, "slice-plan", "slice_plan.json"));
+  const crippled = { slices: plan.slices.map((s) => ({ ...s, covers: ["screen-chat"] })) }; // history+agents dropped
+  fs.writeFileSync(path.join(dir, "slice_plan.json"), JSON.stringify(crippled));
+  fs.writeFileSync(
+    path.join(dir, "inputs.json"),
+    JSON.stringify({
+      requirements: { data: readJson(artifact(golden, "requirements-synthesis", "requirements.json")) },
+      design_contract: { data: readJson(artifact(golden, "design-contract", "design_contract.json")) },
+    }),
+  );
+  const out = spawnSync(
+    process.execPath,
+    [path.join(REPO_ROOT, "project-types/agentic-app/scripts/check-slice-plan.cjs")],
+    { cwd: dir, encoding: "utf8" },
+  );
+  assert.notEqual(out.status, 0, "unassigned screens must fail the plan");
+  assert.match(out.stderr, /unassigned: screen-history, screen-agents/);
+});

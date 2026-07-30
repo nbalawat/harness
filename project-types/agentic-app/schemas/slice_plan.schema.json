@@ -1,36 +1,89 @@
 {
-  "type": "object",
-  "properties": {
-    "slices": {
+ "type": "object",
+ "properties": {
+  "slices": {
+   "type": "array",
+   "minItems": 1,
+   "maxItems": 6,
+   "items": {
+    "type": "object",
+    "properties": {
+     "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9-]+$"
+     },
+     "name": {
+      "type": "string",
+      "minLength": 3
+     },
+     "story": {
+      "type": "string",
+      "minLength": 15
+     },
+     "addresses": {
       "type": "array",
       "minItems": 1,
-      "maxItems": 6,
       "items": {
-        "type": "object",
-        "properties": {
-          "id": { "type": "string", "pattern": "^[a-z0-9-]+$" },
-          "name": { "type": "string", "minLength": 3 },
-          "story": { "type": "string", "minLength": 15 },
-          "addresses": { "type": "array", "minItems": 1, "items": { "type": "string" } },
-          "acceptance": {
-            "type": "array",
-            "minItems": 1,
-            "items": {
-              "type": "object",
-              "properties": {
-                "method": { "enum": ["GET", "POST"] },
-                "path": { "type": "string", "pattern": "^/" },
-                "body": { "type": "object" },
-                "expect_status": { "type": "integer" },
-                "expect_contains": { "type": "array", "items": { "type": "string" } }
-              },
-              "required": ["method", "path"]
-            }
-          }
-        },
-        "required": ["id", "name", "story", "addresses", "acceptance"]
+       "type": "string"
       }
-    }
-  },
-  "required": ["slices"]
+     },
+     "acceptance": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+       "type": "object",
+       "properties": {
+        "method": {
+         "enum": [
+          "GET",
+          "POST"
+         ]
+        },
+        "path": {
+         "type": "string",
+         "pattern": "^/"
+        },
+        "body": {
+         "type": "object"
+        },
+        "expect_status": {
+         "type": "integer"
+        },
+        "expect_contains": {
+         "type": "array",
+         "items": {
+          "type": "string"
+         }
+        }
+       },
+       "required": [
+        "method",
+        "path"
+       ]
+      }
+     },
+     "covers": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+       "type": "string",
+       "pattern": "^screen-[a-z0-9-]+$"
+      },
+      "description": "Design-contract screens this slice brings to life. Every contract screen must be covered by some slice."
+     }
+    },
+    "required": [
+     "acceptance",
+     "addresses",
+     "covers",
+     "id",
+     "name",
+     "story"
+    ]
+   }
+  }
+ },
+ "required": [
+  "slices"
+ ]
 }

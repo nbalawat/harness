@@ -1,23 +1,26 @@
-INFO:     Started server process [84436]
+INFO:     Started server process [96184]
 INFO:     Waiting for application startup.
 INFO:     Application startup complete.
-INFO:     Uvicorn running on http://127.0.0.1:58259 (Press CTRL+C to quit)
-INFO:     127.0.0.1:58282 - "GET /health HTTP/1.1" 200 OK
-INFO:     127.0.0.1:58373 - "POST /deals/intake HTTP/1.1" 200 OK
-INFO:     127.0.0.1:58374 - "GET /deals HTTP/1.1" 200 OK
-INFO:     127.0.0.1:58375 - "POST /deals/DEAL-001/triage/run HTTP/1.1" 200 OK
-INFO:     127.0.0.1:58376 - "POST /deals/DEAL-001/triage/accept HTTP/1.1" 200 OK
-INFO:     127.0.0.1:58377 - "POST /deals/DEAL-001/spread/run HTTP/1.1" 200 OK
-INFO:     127.0.0.1:58378 - "POST /deals/DEAL-001/spread/accept HTTP/1.1" 200 OK
-INFO:     127.0.0.1:58380 - "GET /deals/DEAL-001/ratios HTTP/1.1" 200 OK
-INFO:     127.0.0.1:58381 - "GET /deals/DEAL-001/risk-grade HTTP/1.1" 200 OK
-INFO:     127.0.0.1:58382 - "POST /deals/DEAL-001/memo/run HTTP/1.1" 200 OK
-INFO:     127.0.0.1:58383 - "POST /deals/DEAL-001/memo/accept HTTP/1.1" 200 OK
-INFO:     127.0.0.1:58384 - "POST /deals/DEAL-001/policy-review/run HTTP/1.1" 200 OK
-INFO:     127.0.0.1:58385 - "GET /policy-rules HTTP/1.1" 200 OK
-INFO:     127.0.0.1:58386 - "GET /deals/DEAL-001/approval-tier HTTP/1.1" 200 OK
-INFO:     127.0.0.1:58388 - "POST /approvals HTTP/1.1" 403 Forbidden
-INFO:     127.0.0.1:58389 - "POST /approvals HTTP/1.1" 200 OK
-INFO:     127.0.0.1:58390 - "POST /deals/DEAL-002/decline HTTP/1.1" 200 OK
-INFO:     127.0.0.1:58391 - "POST /approvals HTTP/1.1" 200 OK
-INFO:     127.0.0.1:58393 - "POST /deals/DEAL-002/decline HTTP/1.1" 200 OK
+INFO:     Uvicorn running on http://127.0.0.1:58963 (Press CTRL+C to quit)
+INFO:     127.0.0.1:58967 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58968 - "POST /deals/intake HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58969 - "GET /deals HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58970 - "POST /deals/DEAL-001/triage/run HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58971 - "POST /deals/DEAL-001/triage/accept HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58972 - "POST /deals/DEAL-001/spread/run HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58973 - "POST /deals/DEAL-001/spread/accept HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58974 - "GET /deals/DEAL-001/ratios HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58975 - "GET /deals/DEAL-001/risk-grade HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58976 - "POST /deals/DEAL-001/memo/run HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58977 - "POST /deals/DEAL-001/memo/accept HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58978 - "POST /deals/DEAL-001/policy-review/run HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58979 - "GET /policy-rules HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58980 - "GET /deals/DEAL-001/approval-tier HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58981 - "POST /approvals HTTP/1.1" 403 Forbidden
+INFO:     127.0.0.1:58982 - "POST /approvals HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58983 - "POST /deals/DEAL-002/decline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58984 - "GET / HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [96184]

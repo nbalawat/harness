@@ -1,0 +1,12 @@
+{
+  "files_scanned": 91,
+  "findings": [
+    {
+      "severity": "medium",
+      "rule": "inner-html",
+      "file": "frontend/index.html",
+      "detail": ".innerHTML ="
+    }
+  ],
+  "high_count": 0
+}

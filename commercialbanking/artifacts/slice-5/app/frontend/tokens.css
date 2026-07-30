@@ -1,0 +1,114 @@
+/* ==========================================================================
+   Pipeline Atlas — token layer
+   Commercial Banking Underwriting
+   Light, spatial, colour-coded data board.
+   This file carries ONLY tokens. Structure lives in index.html.
+   ========================================================================== */
+
+:root {
+  /* ---- Contract tokens (required) ------------------------------------- */
+  --primary: #2f5bea;
+  --on-primary: #ffffff;
+  --bg: #eef1f7;
+  --fg: #16203a;
+  --surface: #ffffff;
+  --border: #dde3ee;
+  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue",
+    Helvetica, Arial, "Noto Sans", sans-serif;
+
+  /* ---- Extended palette ----------------------------------------------- */
+  --primary-weak: #e7edfe;
+  --primary-mid: #b9caf9;
+  --primary-deep: #1d3ea8;
+
+  --fg-muted: #5c6885;
+  --fg-faint: #8a94ac;
+  --surface-sunken: #f5f7fc;
+  --surface-raised: #ffffff;
+  --board-bg: #e6eaf4;
+  --border-strong: #c4cddf;
+  --border-dashed: #b9c4da;
+
+  /* ---- Semantic status ------------------------------------------------ */
+  --ok: #10855a;
+  --ok-weak: #dff6ec;
+  --warn: #b4720a;
+  --warn-weak: #fdf0d6;
+  --danger: #c8365a;
+  --danger-weak: #fde6ec;
+  --info: #1f74a8;
+  --info-weak: #ddf0fa;
+  --neutral: #6b7793;
+  --neutral-weak: #eceff6;
+
+  /* ---- Agent (pending) treatment -------------------------------------- */
+  --agent: #7b4ae0;
+  --agent-weak: #f1eafe;
+  --agent-mid: #d7c4fb;
+  --agent-line: #b593f2;
+
+  /* ---- Eight stage lane colours ---------------------------------------- */
+  --stage-1: #3f7fd6; /* intake            */
+  --stage-2: #2f9bb5; /* extraction        */
+  --stage-3: #1f9d84; /* spreading         */
+  --stage-4: #589a3a; /* risk grading      */
+  --stage-5: #9a8f28; /* memo drafting     */
+  --stage-6: #c07a1e; /* policy compliance */
+  --stage-7: #b8563f; /* approval          */
+  --stage-8: #8a4bb0; /* closing           */
+
+  --stage-1-weak: #e4eefb;
+  --stage-2-weak: #e0f3f8;
+  --stage-3-weak: #ddf4ef;
+  --stage-4-weak: #e9f4e1;
+  --stage-5-weak: #f5f3da;
+  --stage-6-weak: #fbeed9;
+  --stage-7-weak: #fbe7e2;
+  --stage-8-weak: #f3e8fa;
+
+  /* ---- Risk grade scale (1 strongest -> 8 weakest) --------------------- */
+  --grade-1: #0f7a52;
+  --grade-2: #2f8f4e;
+  --grade-3: #6a9a2c;
+  --grade-4: #a8912a;
+  --grade-5: #c07f1c;
+  --grade-6: #cc6524;
+  --grade-7: #c8425a;
+  --grade-8: #9c2740;
+
+  /* ---- Geometry -------------------------------------------------------- */
+  --r-sm: 6px;
+  --r-md: 10px;
+  --r-lg: 14px;
+  --r-xl: 20px;
+  --r-pill: 999px;
+
+  --lane-w: 268px;
+  --rail-w: 216px;
+  --header-h: 62px;
+
+  /* ---- Space ----------------------------------------------------------- */
+  --s1: 4px;
+  --s2: 8px;
+  --s3: 12px;
+  --s4: 16px;
+  --s5: 22px;
+  --s6: 30px;
+  --s7: 42px;
+
+  /* ---- Elevation (soft, airy) ------------------------------------------ */
+  --shadow-card: 0 1px 2px rgba(22, 32, 58, 0.05), 0 3px 8px rgba(22, 32, 58, 0.06);
+  --shadow-lift: 0 2px 4px rgba(22, 32, 58, 0.06), 0 10px 24px rgba(22, 32, 58, 0.11);
+  --shadow-rail: 0 1px 3px rgba(22, 32, 58, 0.06);
+  --shadow-inset: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+
+  /* ---- Type ------------------------------------------------------------ */
+  --font-mono: "SFMono-Regular", "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  --t-xs: 10.5px;
+  --t-sm: 12px;
+  --t-md: 13.5px;
+  --t-lg: 16px;
+  --t-xl: 21px;
+  --t-2xl: 28px;
+  --tracking-caps: 0.08em;
+}

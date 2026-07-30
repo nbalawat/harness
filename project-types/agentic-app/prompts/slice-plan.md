@@ -18,3 +18,12 @@ SLICE SIZING (time is the scarce resource — plan for it):
 - Acceptance stays small: 2-4 checks per slice, each fast HTTP assertions —
   the cumulative suite re-runs every slice, so every check you add is paid on
   every later slice.
+
+
+DESIGN COVERAGE (non-negotiable): inputs include design_contract — the inventory
+of every screen in the design the user APPROVED. Each slice declares `covers`:
+the contract screens it brings fully to life (frontend wired to real backend
+behavior, not mockup). EVERY contract screen must appear in some slice's covers
+— the verifier rejects any plan that leaves an approved screen unassigned.
+Assign each screen to the slice whose feature naturally lives on it; spread
+screens across slices so every slice has a visible new surface to demonstrate.

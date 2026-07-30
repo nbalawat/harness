@@ -1,5 +1,5 @@
 {
-  "digest": "46845f28bbb6b83f",
+  "digest": "b30b09296ee22319",
   "files": {
     "agent-design/agent_roster.json": "6dfba59a3d3e9535",
     "architecture/architecture.json": "f8b9d68ebd2911b7",
@@ -7,6 +7,8 @@
     "data-design/data_model.json": "6e02141500f5a10c",
     "deploy/deploy/plan.md": "360fc7e3f059295d",
     "deploy/deploy/service.yaml": "0a7ef78e4545d8b3",
+    "design-contract/design_contract.json": "602c35283752767f",
+    "design-coverage/design_coverage.json": "9d093989f21ea983",
     "design-options/designs/option-1/index.html": "74d9ef5543718c64",
     "design-options/designs/option-1/tokens.css": "8508de77988cadf9",
     "design-options/designs/option-2/index.html": "10607a195f80057a",
@@ -159,7 +161,7 @@
     "slice-3/app/README.md": "234a29c30715f5e0",
     "slice-3/app/SLICES.md": "421fe0661e387c60",
     "slice-3/app/workflows/workflows.json": "1c5a685105c2174f",
-    "slice-plan/slice_plan.json": "1fc258e7b795bf05",
+    "slice-plan/slice_plan.json": "0a4b87141d259a48",
     "traceability/rtm.json": "4a11b3b79e0aca60",
     "uat/uat.json": "9f542bf97dc128ab",
     "workflow-design/workflows.json": "1c5a685105c2174f"

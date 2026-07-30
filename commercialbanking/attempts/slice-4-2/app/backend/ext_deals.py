@@ -32,6 +32,11 @@ Composition contract:
                 credit-memo pattern elsewhere in this codebase: the model's
                 reply is advisory narrative only, never the source of a
                 figure or a routing decision.
+  * identity -> ext_auth.current_user(authorization) — optional: no header
+                means no session and therefore no scoping, which is how every
+                acceptance call in this build reads these endpoints
+  * scoping  -> rls.scope against DEAL_RLS_POLICY (row-level-security module)
+                for any caller that DOES present a session (REQ-045/048)
   * audit    -> ext_audit.record + the domain audit_trail table
   * routes   -> mounted outside /api/ so the /api/{table} catch-all in
                 main.py can never shadow them
@@ -44,7 +49,7 @@ from pydantic import BaseModel
 import agent_runtime
 import assignment
 import blob_store
-import rbac
+import rls
 import workflow_engine
 from db import store
 from deal_state import machine as stage_machine
@@ -100,25 +105,26 @@ def _get_deal_or_404(deal_id):
     return deal
 
 
-def _rm_scope(authorization):
-    """Row-level scoping (REQ-045, REQ-048): an authenticated relationship
-    manager sees only the deals they themselves submitted. Returns the
-    scoping user id, or None when no scoping applies (no session at all, or a
-    session held by a role granted portfolio-wide read: credit_analyst,
-    credit_officer, admin) — every acceptance call in this build
-    calls these endpoints with no Authorization header at all, so the
-    unscoped, backward-compatible "see everything" behavior every earlier
-    slice's acceptance relies on is preserved whenever no session is
-    presented."""
+# Row-level scoping policy (REQ-045, REQ-048), evaluated by the composed
+# row-level-security module: a deal belongs to the user who submitted it, and
+# portfolio-wide read is a granted role, never a default — so a relationship
+# manager (or any session-holder with no grants at all) sees only their own
+# submissions, while a credit analyst, credit officer or admin sees the book.
+DEAL_RLS_POLICY = {
+    "owner_field": "submitted_by_id",
+    "bypass_roles": ["credit_analyst", "credit_officer", "admin"],
+}
+
+
+def _scope_deals(rows, authorization):
+    """Apply DEAL_RLS_POLICY through rls.scope. No Authorization header at all
+    means no session and therefore no scoping — every acceptance call in this
+    build calls these endpoints unauthenticated, so the "see everything"
+    behavior every earlier slice's acceptance relies on is preserved."""
     actor = current_user(authorization)
     if actor is None:
-        return None
-    if rbac.has_role(actor, "credit_analyst") or rbac.has_role(actor, "credit_officer") or rbac.has_role(actor, "admin"):
-        # Portfolio-wide read is a granted role, never a default: anyone else
-        # holding a session (a relationship manager, or a user with no grants
-        # at all) is scoped to the deals they themselves submitted (REQ-048).
-        return None
-    return actor
+        return list(rows)
+    return rls.scope(rows, actor, DEAL_RLS_POLICY)
 
 
 def _artifacts_for(deal_id):
@@ -480,17 +486,13 @@ def intake(req: IntakeRequest):
 @router.get("/deals")
 def list_deals(authorization: str | None = Header(default=None)):
     rows = [_deal_view(d) for d in store.list("deals")]
-    owner = _rm_scope(authorization)
-    if owner is not None:
-        rows = [r for r in rows if r.get("submitted_by_id") == owner]
-    return rows
+    return _scope_deals(rows, authorization)
 
 
 @router.get("/deals/{deal_id}")
 def get_deal(deal_id: str, authorization: str | None = Header(default=None)):
     deal = _get_deal_or_404(deal_id)
-    owner = _rm_scope(authorization)
-    if owner is not None and deal.get("submitted_by_id") != owner:
+    if not _scope_deals([deal], authorization):
         raise HTTPException(status_code=404, detail=f"no deal '{deal_id}'")
     view = _deal_view(deal)
     view["artifacts"] = _artifacts_for(deal_id)

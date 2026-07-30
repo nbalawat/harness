@@ -1,10 +1,12 @@
 {
-  "digest": "da4d87ea35f2fda7",
+  "digest": "51f3375be9c34713",
   "files": {
     "agent-design/agent_roster.json": "6dfba59a3d3e9535",
     "architecture/architecture.json": "fdf6c291b9343588",
     "clarify/clarifications.json": "1136576d3cfefad4",
     "data-design/data_model.json": "6e02141500f5a10c",
+    "design-contract/design_contract.json": "02560e4adabb24fc",
+    "design-coverage/design_coverage.json": "9d093989f21ea983",
     "design-options/designs/option-1/index.html": "74d9ef5543718c64",
     "design-options/designs/option-1/tokens.css": "8508de77988cadf9",
     "design-options/designs/option-2/index.html": "10607a195f80057a",
@@ -157,7 +159,7 @@
     "slice-3/app/README.md": "234a29c30715f5e0",
     "slice-3/app/SLICES.md": "421fe0661e387c60",
     "slice-3/app/workflows/workflows.json": "1c5a685105c2174f",
-    "slice-plan/slice_plan.json": "1fc258e7b795bf05",
+    "slice-plan/slice_plan.json": "0a4b87141d259a48",
     "traceability/rtm.json": "4a11b3b79e0aca60",
     "uat/uat.json": "9f542bf97dc128ab",
     "workflow-design/workflows.json": "1c5a685105c2174f"

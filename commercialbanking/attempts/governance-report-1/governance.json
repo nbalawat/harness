@@ -1,0 +1,36 @@
+{
+  "standards_profile": "firm-baseline-v0",
+  "security": {
+    "high_findings": 0,
+    "total_findings": 1,
+    "files_scanned": 91,
+    "evidence": "security_report.json"
+  },
+  "validation": {
+    "backend_tests": "pass",
+    "agent_evals": "pass",
+    "compose_config": "skipped",
+    "evidence": "integration_report.json"
+  },
+  "requirements": {
+    "total": 58,
+    "covered": 58,
+    "uncovered": 0,
+    "assumptions": 31,
+    "evidence": "rtm.json"
+  },
+  "agents": {
+    "count": 8,
+    "names": [
+      "Intake Triage Agent",
+      "Financial Spreading Agent",
+      "Credit Memo Agent",
+      "Policy Compliance Agent",
+      "Portfolio Query Planner",
+      "Portfolio Answer Agent",
+      "SLA Escalation Briefer",
+      "Adverse Action Reason Drafter"
+    ],
+    "eval_criteria_total": 69
+  }
+}

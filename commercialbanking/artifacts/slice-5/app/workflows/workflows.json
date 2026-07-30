@@ -1,0 +1,593 @@
+{
+  "workflows": [
+    {
+      "name": "deal-underwriting",
+      "description": "The end-to-end commercial credit underwriting process: intake and triage, financial spreading, deterministic ratio computation and risk grading, memo drafting, policy compliance review, tiered human approval, and closing — with a mandatory human acceptance gate after every agent draft and a return-for-rework path out of each gate.",
+      "addresses": [
+        "REQ-001",
+        "REQ-002",
+        "REQ-004",
+        "REQ-005",
+        "REQ-006",
+        "REQ-007",
+        "REQ-008",
+        "REQ-009",
+        "REQ-010",
+        "REQ-011",
+        "REQ-012",
+        "REQ-013",
+        "REQ-014",
+        "REQ-015",
+        "REQ-016",
+        "REQ-018",
+        "REQ-019",
+        "REQ-020",
+        "REQ-021",
+        "REQ-023",
+        "REQ-024",
+        "REQ-029",
+        "REQ-030",
+        "REQ-031",
+        "REQ-032",
+        "REQ-033",
+        "REQ-034",
+        "REQ-036",
+        "REQ-037",
+        "REQ-038",
+        "REQ-039",
+        "REQ-040",
+        "REQ-041",
+        "REQ-042"
+      ],
+      "nodes": [
+        {
+          "id": "record_intake",
+          "kind": "deterministic",
+          "handler": "record_deal_intake",
+          "output_schema": {
+            "required": [
+              "deal_id",
+              "borrower_name",
+              "industry",
+              "requested_amount",
+              "ltv_percentage",
+              "stored_artifact_ids",
+              "current_stage"
+            ]
+          }
+        },
+        {
+          "id": "triage_request",
+          "kind": "agent",
+          "prompt": "You are the intake triage agent for deal ${record_intake_deal_id} (borrower ${record_intake_borrower_name}, industry ${record_intake_industry}, requested exposure ${record_intake_requested_amount}). Read ONLY the stored source artifacts ${record_intake_stored_artifact_ids} (email bodies and spreadsheet exports). Classify the request type and product type, judge whether it is suitable for underwriting, list every required document that is missing from the artifacts, and recommend the analyst queue it should be routed to. Do not spread financials, compute ratios, grade risk, or make any decision — that work belongs to other stages. Return a proposal only; a human will accept, edit, or reject it.",
+          "output_schema": {
+            "required": [
+              "request_type",
+              "product_type",
+              "underwriting_suitable",
+              "missing_documents",
+              "recommended_queue",
+              "rationale"
+            ]
+          }
+        },
+        {
+          "id": "persist_triage_draft",
+          "kind": "deterministic",
+          "handler": "persist_triage_draft",
+          "output_schema": {
+            "required": ["triage_output_id", "deal_id", "draft_status"]
+          }
+        },
+        {
+          "id": "review_triage",
+          "kind": "human",
+          "question": "Triage proposal for deal ${record_intake_deal_id}: request type ${triage_request_request_type}, product ${triage_request_product_type}, suitable for underwriting = ${triage_request_underwriting_suitable}, missing documents ${triage_request_missing_documents}, recommended queue ${triage_request_recommended_queue}. Accept, edit, reject, or return this deal for rework — and confirm the analyst queue."
+        },
+        {
+          "id": "apply_triage_decision",
+          "kind": "deterministic",
+          "handler": "apply_triage_review_decision",
+          "output_schema": {
+            "required": [
+              "deal_id",
+              "triage_status",
+              "accepted_queue",
+              "accepted_by_id",
+              "accepted_at"
+            ]
+          }
+        },
+        {
+          "id": "check_triage_accepted",
+          "kind": "condition",
+          "path": "apply_triage_decision.triage_status",
+          "equals": "accepted",
+          "on_false": "record_rework_return"
+        },
+        {
+          "id": "route_to_queue",
+          "kind": "deterministic",
+          "handler": "route_deal_to_analyst_queue",
+          "output_schema": {
+            "required": [
+              "deal_id",
+              "analyst_queue_id",
+              "assigned_owner_id",
+              "previous_stage",
+              "new_stage"
+            ]
+          }
+        },
+        {
+          "id": "spread_financials",
+          "kind": "agent",
+          "prompt": "You are the financial spreading agent for deal ${record_intake_deal_id}. Extract every line item of the standard spread template from the borrower financial statements in artifacts ${record_intake_stored_artifact_ids}. For EVERY figure you emit, attach the source document id, the location within that document (sheet/page, cell/line), and the raw extracted text it came from. Never infer, average, or invent a figure that is not present in a source document — leave it null and say so. Do not compute ratios, assign a grade, or write a memo. Return a proposal only; a human reviewer will accept or edit each figure.",
+          "output_schema": {
+            "required": ["line_items", "unextractable_line_item_keys"]
+          }
+        },
+        {
+          "id": "persist_spread_draft",
+          "kind": "deterministic",
+          "handler": "persist_spread_draft",
+          "output_schema": {
+            "required": [
+              "deal_id",
+              "spread_line_item_ids",
+              "draft_status",
+              "provenance_complete"
+            ]
+          }
+        },
+        {
+          "id": "review_spread",
+          "kind": "human",
+          "question": "Review the proposed financial spread for deal ${record_intake_deal_id} (${persist_spread_draft_spread_line_item_ids}). Each figure is shown beside the source document and location it was drawn from; unextractable items: ${spread_financials_unextractable_line_item_keys}. Accept, edit the values, reject, or return the deal for rework."
+        },
+        {
+          "id": "apply_spread_decision",
+          "kind": "deterministic",
+          "handler": "apply_spread_review_decision",
+          "output_schema": {
+            "required": [
+              "deal_id",
+              "spread_status",
+              "accepted_line_item_ids",
+              "accepted_by_id",
+              "accepted_at"
+            ]
+          }
+        },
+        {
+          "id": "check_spread_accepted",
+          "kind": "condition",
+          "path": "apply_spread_decision.spread_status",
+          "equals": "accepted",
+          "on_false": "record_rework_return"
+        },
+        {
+          "id": "compute_ratios",
+          "kind": "deterministic",
+          "handler": "compute_credit_ratios",
+          "output_schema": {
+            "required": [
+              "deal_id",
+              "dscr",
+              "leverage",
+              "current_ratio",
+              "formulas",
+              "inputs"
+            ]
+          }
+        },
+        {
+          "id": "assign_risk_grade",
+          "kind": "deterministic",
+          "handler": "assign_risk_grade",
+          "output_schema": {
+            "required": [
+              "deal_id",
+              "grade",
+              "rubric_rule_applied",
+              "inputs",
+              "rubric_version"
+            ]
+          }
+        },
+        {
+          "id": "draft_memo",
+          "kind": "agent",
+          "prompt": "You are the credit memo agent for deal ${record_intake_deal_id} (borrower ${record_intake_borrower_name}, industry ${record_intake_industry}, requested exposure ${record_intake_requested_amount}). Draft the underwriting memo using ONLY the accepted spread line items ${apply_spread_decision_accepted_line_item_ids}, the computed ratios DSCR ${compute_ratios_dscr} / leverage ${compute_ratios_leverage} / current ratio ${compute_ratios_current_ratio}, and risk grade ${assign_risk_grade_grade} assigned by rule ${assign_risk_grade_rubric_rule_applied}. Cite the specific ratio ids, spread line item ids, and policy rule ids behind every claim. Do not recompute any ratio, do not change the grade, do not recommend an approval decision. Return a draft only.",
+          "output_schema": {
+            "required": [
+              "content",
+              "cited_ratios",
+              "cited_spread_items",
+              "cited_policy_rules"
+            ]
+          }
+        },
+        {
+          "id": "persist_memo_draft",
+          "kind": "deterministic",
+          "handler": "persist_memo_draft",
+          "output_schema": {
+            "required": [
+              "deal_id",
+              "memo_draft_id",
+              "draft_status",
+              "citations_resolvable"
+            ]
+          }
+        },
+        {
+          "id": "review_memo",
+          "kind": "human",
+          "question": "Review the drafted credit memo ${persist_memo_draft_memo_draft_id} for deal ${record_intake_deal_id}, shown beside its cited ratios, spread figures, and policy rules. Accept, edit, reject, or return the deal for rework."
+        },
+        {
+          "id": "apply_memo_decision",
+          "kind": "deterministic",
+          "handler": "apply_memo_review_decision",
+          "output_schema": {
+            "required": [
+              "deal_id",
+              "memo_status",
+              "accepted_memo_id",
+              "accepted_by_id",
+              "accepted_at"
+            ]
+          }
+        },
+        {
+          "id": "check_memo_accepted",
+          "kind": "condition",
+          "path": "apply_memo_decision.memo_status",
+          "equals": "accepted",
+          "on_false": "record_rework_return"
+        },
+        {
+          "id": "aggregate_exposure",
+          "kind": "deterministic",
+          "handler": "aggregate_portfolio_exposure",
+          "output_schema": {
+            "required": [
+              "deal_id",
+              "deal_exposure_amount",
+              "exposure_by_dimension",
+              "computed_at"
+            ]
+          }
+        },
+        {
+          "id": "policy_review",
+          "kind": "agent",
+          "prompt": "You are the policy compliance agent for deal ${record_intake_deal_id}. Review the accepted memo ${apply_memo_decision_accepted_memo_id} against the active versioned lending policy rule set, covering at minimum concentration limits (using portfolio exposure ${aggregate_exposure_exposure_by_dimension} and this deal's ${aggregate_exposure_deal_exposure_amount}), prohibited industries (borrower industry: ${record_intake_industry}), and loan-to-value caps (deal LTV: ${record_intake_ltv_percentage}). For each violation raise a written exception naming the policy rule id and describing precisely how the deal breaches it. Do not waive, resolve, or approve anything, and do not alter the memo. Return exceptions only; a human dispositions them.",
+          "output_schema": {
+            "required": ["exceptions", "rules_evaluated", "policy_version"]
+          }
+        },
+        {
+          "id": "persist_exceptions",
+          "kind": "deterministic",
+          "handler": "persist_policy_exceptions",
+          "output_schema": {
+            "required": ["deal_id", "exception_ids", "open_exception_count"]
+          }
+        },
+        {
+          "id": "review_exceptions",
+          "kind": "human",
+          "question": "Deal ${record_intake_deal_id} has ${persist_exceptions_open_exception_count} open policy exception(s) raised against policy version ${policy_review_policy_version}. Disposition each one — accept/waive it with a written reason, mark it resolved, or return the deal for rework."
+        },
+        {
+          "id": "apply_exception_dispositions",
+          "kind": "deterministic",
+          "handler": "apply_exception_dispositions",
+          "output_schema": {
+            "required": [
+              "deal_id",
+              "open_exception_count",
+              "disposition_status",
+              "dispositioned_by_id",
+              "dispositioned_at"
+            ]
+          }
+        },
+        {
+          "id": "check_exceptions_cleared",
+          "kind": "condition",
+          "path": "apply_exception_dispositions.disposition_status",
+          "equals": "cleared",
+          "on_false": "record_rework_return"
+        },
+        {
+          "id": "derive_approval_tier",
+          "kind": "deterministic",
+          "handler": "derive_approval_tier",
+          "output_schema": {
+            "required": [
+              "deal_id",
+              "exposure_amount",
+              "required_authority_tier",
+              "tier_rule_applied"
+            ]
+          }
+        },
+        {
+          "id": "approval_decision",
+          "kind": "human",
+          "question": "Deal ${record_intake_deal_id} (${record_intake_borrower_name}, exposure ${derive_approval_tier_exposure_amount}, risk grade ${assign_risk_grade_grade}, DSCR ${compute_ratios_dscr}) requires approval at the ${derive_approval_tier_required_authority_tier} tier. As an authenticated approver at or above that tier, approve, decline (with an adverse-action reason), or return the deal for rework. No agent may make this decision.",
+          "output_schema": {
+            "required": ["decision", "decision_notes"]
+          }
+        },
+        {
+          "id": "record_approval_decision",
+          "kind": "deterministic",
+          "handler": "record_approval_decision",
+          "output_schema": {
+            "required": [
+              "deal_id",
+              "decision",
+              "decided_by_id",
+              "decided_at",
+              "required_authority_tier",
+              "authority_check_passed"
+            ]
+          }
+        },
+        {
+          "id": "check_approved",
+          "kind": "condition",
+          "path": "record_approval_decision.decision",
+          "equals": "approved",
+          "on_false": "check_declined"
+        },
+        {
+          "id": "advance_to_closing",
+          "kind": "deterministic",
+          "handler": "advance_deal_to_closing",
+          "output_schema": {
+            "required": [
+              "deal_id",
+              "previous_stage",
+              "new_stage",
+              "transition_valid",
+              "deal_status"
+            ]
+          }
+        },
+        {
+          "id": "check_run_complete",
+          "kind": "condition",
+          "path": "advance_to_closing.deal_status",
+          "equals": "pending",
+          "on_false": "end"
+        },
+        {
+          "id": "check_declined",
+          "kind": "condition",
+          "path": "record_approval_decision.decision",
+          "equals": "declined",
+          "on_false": "record_rework_return"
+        },
+        {
+          "id": "record_adverse_action",
+          "kind": "deterministic",
+          "handler": "record_adverse_action",
+          "output_schema": {
+            "required": [
+              "deal_id",
+              "adverse_action_reason",
+              "decided_by_id",
+              "decided_at",
+              "deal_status"
+            ]
+          }
+        },
+        {
+          "id": "check_decline_complete",
+          "kind": "condition",
+          "path": "record_adverse_action.deal_status",
+          "equals": "pending",
+          "on_false": "end"
+        },
+        {
+          "id": "record_rework_return",
+          "kind": "deterministic",
+          "handler": "record_rework_return",
+          "output_schema": {
+            "required": [
+              "deal_id",
+              "returned_to_stage",
+              "rework_reason",
+              "rework_assigned_to_id",
+              "decided_by_id",
+              "decided_at"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "portfolio-qa",
+      "description": "Read-only portfolio question answering: a credit officer's natural-language question is scoped to the deals their role permits, translated into a structured query, executed deterministically against stored deal data, and answered only from the returned rows with the supporting deal records cited.",
+      "addresses": [
+        "REQ-025",
+        "REQ-026",
+        "REQ-027",
+        "REQ-028",
+        "REQ-048"
+      ],
+      "nodes": [
+        {
+          "id": "capture_question",
+          "kind": "deterministic",
+          "handler": "capture_portfolio_question",
+          "output_schema": {
+            "required": [
+              "question_id",
+              "question_text",
+              "asking_user_id",
+              "asking_user_role"
+            ]
+          }
+        },
+        {
+          "id": "resolve_scope",
+          "kind": "deterministic",
+          "handler": "resolve_user_visibility_scope",
+          "output_schema": {
+            "required": ["asking_user_id", "scope_filter", "visible_deal_count"]
+          }
+        },
+        {
+          "id": "plan_query",
+          "kind": "agent",
+          "prompt": "You are the portfolio Q&A planning agent. Translate the question \"${capture_question_question_text}\" into a structured READ-ONLY query over deal data (deals, credit_ratios, risk_grades, policy_exceptions, sla_tracking). Emit filters, sort, and the fields to return. You may not write, update, delete, or advance anything, and you may not widen the caller's visibility scope ${resolve_scope_scope_filter} — the query is executed under that scope regardless. If the question cannot be answered from stored deal fields, say so in unanswerable_reason instead of guessing a query.",
+          "output_schema": {
+            "required": [
+              "target_entity",
+              "filters",
+              "requested_fields",
+              "unanswerable_reason"
+            ]
+          }
+        },
+        {
+          "id": "execute_query",
+          "kind": "deterministic",
+          "handler": "execute_scoped_deal_query",
+          "output_schema": {
+            "required": [
+              "question_id",
+              "result_rows",
+              "result_deal_ids",
+              "row_count",
+              "has_results",
+              "scope_applied"
+            ]
+          }
+        },
+        {
+          "id": "check_has_results",
+          "kind": "condition",
+          "path": "execute_query.has_results",
+          "equals": true,
+          "on_false": "record_no_results"
+        },
+        {
+          "id": "compose_answer",
+          "kind": "agent",
+          "prompt": "You are the portfolio Q&A answering agent. Answer \"${capture_question_question_text}\" using ONLY these ${execute_query_row_count} retrieved rows: ${execute_query_result_rows}. Every figure you state must appear in those rows — never estimate, extrapolate, or mention a deal outside ${execute_query_result_deal_ids}. Cite the deal id behind each figure. If the rows do not support an answer, say exactly that.",
+          "output_schema": {
+            "required": ["answer_text", "cited_deal_ids"]
+          }
+        },
+        {
+          "id": "record_answer",
+          "kind": "deterministic",
+          "handler": "record_qa_answer",
+          "output_schema": {
+            "required": [
+              "question_id",
+              "answer_id",
+              "cited_deal_ids",
+              "citations_within_scope",
+              "answer_status"
+            ]
+          }
+        },
+        {
+          "id": "check_answer_complete",
+          "kind": "condition",
+          "path": "record_answer.answer_status",
+          "equals": "pending",
+          "on_false": "end"
+        },
+        {
+          "id": "record_no_results",
+          "kind": "deterministic",
+          "handler": "record_qa_no_results",
+          "output_schema": {
+            "required": ["question_id", "answer_id", "message", "answer_status"]
+          }
+        }
+      ]
+    },
+    {
+      "name": "sla-escalation",
+      "description": "Daily service-level sweep: compute each active deal's business-days idle, flag deals past the 5 business day threshold, summarize the stalled work for a credit officer, and record the officer's escalation decision (reassign, return for rework, or acknowledge) to the audit trail.",
+      "addresses": [
+        "REQ-041",
+        "REQ-042",
+        "REQ-051",
+        "REQ-052",
+        "REQ-053"
+      ],
+      "nodes": [
+        {
+          "id": "compute_idle_ages",
+          "kind": "deterministic",
+          "handler": "compute_business_days_idle",
+          "output_schema": {
+            "required": [
+              "evaluated_deal_ids",
+              "breaching_deal_ids",
+              "breach_count",
+              "has_breaches",
+              "computed_at"
+            ]
+          }
+        },
+        {
+          "id": "check_breaches",
+          "kind": "condition",
+          "path": "compute_idle_ages.has_breaches",
+          "equals": true,
+          "on_false": "end"
+        },
+        {
+          "id": "flag_sla_breaches",
+          "kind": "deterministic",
+          "handler": "flag_sla_breach",
+          "output_schema": {
+            "required": ["sla_tracking_ids", "breach_count", "flagged_at"]
+          }
+        },
+        {
+          "id": "summarize_breaches",
+          "kind": "agent",
+          "prompt": "You are the SLA escalation summary agent. For each deal in ${compute_idle_ages_breaching_deal_ids} (SLA records ${flag_sla_breaches_sla_tracking_ids}), write a one-paragraph summary stating the current stage, the assigned owner, the business days idle, and what the deal is waiting on. Use only stored deal and SLA fields; do not restate borrower financial detail. You may not reassign, advance, or decide anything — propose at most a suggested next action for the credit officer to consider.",
+          "output_schema": {
+            "required": ["deal_summaries", "suggested_actions"]
+          }
+        },
+        {
+          "id": "escalation_decision",
+          "kind": "human",
+          "question": "${flag_sla_breaches_breach_count} deal(s) have been idle past 5 business days: ${summarize_breaches_deal_summaries}. For each, decide as credit officer — reassign the owner, return the deal to an earlier stage for rework (with reason and assignee), or acknowledge and leave it in place.",
+          "output_schema": {
+            "required": ["per_deal_actions"]
+          }
+        },
+        {
+          "id": "apply_escalation_decision",
+          "kind": "deterministic",
+          "handler": "apply_sla_escalation_decision",
+          "output_schema": {
+            "required": [
+              "affected_deal_ids",
+              "actions_applied",
+              "decided_by_id",
+              "decided_at",
+              "audit_entry_ids"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

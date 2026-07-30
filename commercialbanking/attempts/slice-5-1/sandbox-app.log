@@ -1,0 +1,27 @@
+Installed 21 packages in 63ms
+INFO:     Started server process [97575]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:59099 (Press CTRL+C to quit)
+INFO:     127.0.0.1:59108 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59109 - "POST /deals/intake HTTP/1.1" 422 Unprocessable Content
+INFO:     127.0.0.1:59112 - "POST /deals/intake HTTP/1.1" 422 Unprocessable Content
+INFO:     127.0.0.1:59115 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59115 - "POST /chat HTTP/1.1" 422 Unprocessable Content
+INFO:     127.0.0.1:59116 - "POST /deals/DEAL-001/triage/run HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:59119 - "POST /chat HTTP/1.1" 422 Unprocessable Content
+INFO:     127.0.0.1:59120 - "POST /api/conversations HTTP/1.1" 422 Unprocessable Content
+INFO:     127.0.0.1:59123 - "POST /api/conversations HTTP/1.1" 422 Unprocessable Content
+INFO:     127.0.0.1:59126 - "POST /deals/intake HTTP/1.1" 422 Unprocessable Content
+INFO:     127.0.0.1:59127 - "GET /sla/dashboard HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59127 - "GET /deals HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59127 - "GET /deals/DEAL-999/audit HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:59127 - "GET /portfolio/questions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59128 - "GET /qa.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59128 - "GET /audit.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59128 - "GET /sladash.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59128 - "GET / HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [97575]

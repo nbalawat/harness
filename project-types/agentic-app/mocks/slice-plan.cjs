@@ -10,6 +10,7 @@ writeJson("slice_plan.json", {
   slices: [
     {
       id: "core-chat",
+      covers: ["screen-chat"],
       name: "Core chat",
       story: "An analyst asks the assistant a question and gets an answer end to end.",
       addresses: byCat("agent", "functional"),
@@ -20,6 +21,7 @@ writeJson("slice_plan.json", {
     },
     {
       id: "conversation-history",
+      covers: ["screen-history"],
       name: "Conversation history",
       story: "Conversations are stored and an analyst can review past ones.",
       addresses: byCat("data"),
@@ -30,6 +32,7 @@ writeJson("slice_plan.json", {
     },
     {
       id: "reply-approval",
+      covers: ["screen-agents"],
       name: "Reply approval",
       story: "An analyst approves an assistant draft before it is used.",
       addresses: byCat("ux", "functional"),

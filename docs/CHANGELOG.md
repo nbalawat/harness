@@ -6,6 +6,22 @@ to https://github.com/nbalawat/harness.
 
 ## Platform
 
+### Design delivery is now an enforced promise — agentic-app 0.10.0 (2026-07-30)
+The gap: users approved a rich multi-screen design, then couldn't tell how
+much of it actually got built; slice screenshots looked identical. Now the
+chosen design is an enforceable contract: `design-contract` (deterministic)
+inventories every screen + interactive element of the approved option; the
+slice plan must assign every screen to a slice (`covers`, rejected otherwise);
+each slice's demo is REQUIRED, must target a screen the slice covers, and its
+screenshot must differ from every previous slice's (byte-identical = failed
+slice, no composite fallback); covered screens can never disappear from the
+shell; and a final `design-coverage` node boots the finished app, verifies
+every promised screen + element is live, and screenshots each screen — any
+missing screen fails the build before UAT. Dashboard: "Design delivery" panel
+(promised vs live, per-screen chips, delivered-in-slice attribution, live
+shots). 36 nodes; goldens re-certified byte-deterministic.
+
+
 ### Review windows, intake uploads, npm distribution (2026-07-28)
 **Review windows** — the middle band between "waits for everything" and
 "waits for nothing": a gate with `window: <seconds>` and all-defaulted

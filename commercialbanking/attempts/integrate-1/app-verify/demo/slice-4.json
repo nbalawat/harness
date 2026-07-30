@@ -1,0 +1,13 @@
+{
+  "screen": "screen-approvals",
+  "caption": "The approval tier is derived from DEAL-001's $750,000 exposure, a named senior credit officer records the approval that carries the deal to closing, and the same officer declines DEAL-002 with a documented adverse-action reason — every decision authority-gated and attributed to a named human.",
+  "steps": [
+    { "action": "fill", "selector": "#ap-deal-id", "value": "DEAL-001" },
+    { "action": "click", "selector": "#ap-tier-btn" },
+    { "action": "fill", "selector": "#ap-notes", "value": "Within senior credit officer authority; grade and exceptions reviewed" },
+    { "action": "click", "selector": "#ap-approve-btn" },
+    { "action": "fill", "selector": "#ap-deal-id", "value": "DEAL-002" },
+    { "action": "fill", "selector": "#ap-decline-reason", "value": "DSCR below policy minimum of 1.20x on the most recent fiscal year" },
+    { "action": "click", "selector": "#ap-decline-btn" }
+  ]
+}

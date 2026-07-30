@@ -1,10 +1,12 @@
 {
-  "digest": "79bc8d7df90e37bb",
+  "digest": "e5a6cdc7007c001f",
   "files": {
     "agent-design/agent_roster.json": "6dfba59a3d3e9535",
     "architecture/architecture.json": "f491bcfb6168f774",
     "clarify/clarifications.json": "1136576d3cfefad4",
     "data-design/data_model.json": "6e02141500f5a10c",
+    "design-contract/design_contract.json": "b38ade4051e3f599",
+    "design-coverage/design_coverage.json": "9d093989f21ea983",
     "design-options/designs/option-1/index.html": "64c23e0a97e39156",
     "design-options/designs/option-1/tokens.css": "8508de77988cadf9",
     "design-options/designs/option-2/index.html": "5dc979d3d8f462e4",
@@ -157,7 +159,7 @@
     "slice-3/app/README.md": "8de84b845b24409a",
     "slice-3/app/SLICES.md": "9c26c93d7651dce6",
     "slice-3/app/workflows/workflows.json": "1c5a685105c2174f",
-    "slice-plan/slice_plan.json": "1fc258e7b795bf05",
+    "slice-plan/slice_plan.json": "0a4b87141d259a48",
     "traceability/rtm.json": "9a5d76b5d7d779b7",
     "uat/uat.json": "9f542bf97dc128ab",
     "workflow-design/workflows.json": "1c5a685105c2174f"

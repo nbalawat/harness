@@ -1,0 +1,8 @@
+{
+  "screen": "screen-chat",
+  "caption": "Asking the Portfolio Q&A agent a natural-language question returns an answer grounded strictly in stored deal data, with the exact supporting deals cited — read-only, and logged to the audit trail.",
+  "steps": [
+    { "action": "fill", "selector": "#input", "value": "Show me all deals above $500k with DSCR under 5" },
+    { "action": "click", "selector": "#qa-ask-btn" }
+  ]
+}

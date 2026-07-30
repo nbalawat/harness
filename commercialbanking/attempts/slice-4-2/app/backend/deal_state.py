@@ -30,11 +30,14 @@ TRANSITIONS = {
 # explicit return-to-stage events below and to render the board.
 STAGE_ORDER = ["intake", "financial_spreading", "credit_memo_review", "policy_compliance_review", "approval_pending", "closing"]
 
-# REQ-041: a credit officer may return a deal to any genuinely earlier stage
-# for rework. Those jumps are events on this machine like every other stage
-# movement — `return_to_<stage>`, defined only from stages that come later
-# than the target — so no caller ever has to set `current_stage` directly and
-# this table stays the single source of truth for what movement is legal.
+# REQ-041: a credit officer may return a deal to any earlier stage for rework.
+# Those jumps are events on this machine like every other stage movement —
+# `return_to_<stage>`, defined on a stage only for targets at or before it in
+# STAGE_ORDER (never forwards) — so no caller ever has to set `current_stage`
+# directly and this table stays the single source of truth for what movement
+# is legal. The at-the-same-stage target is deliberately included: it is the
+# same-stage redraft loop the plain `return_for_rework` event already models,
+# and it is what a deal already sitting at the first stage returns to.
 for _index, _stage in enumerate(STAGE_ORDER):
     if _stage not in TRANSITIONS:
         continue  # terminal stage: nothing leaves it

@@ -1,0 +1,16 @@
+{
+  "total": 2,
+  "passed": 2,
+  "results": [
+    {
+      "id": "greeting",
+      "pass": true,
+      "reply": "[Intake Triage Agent] I can help with that: hello there"
+    },
+    {
+      "id": "identity",
+      "pass": true,
+      "reply": "[Intake Triage Agent] I can help with that: who am I talking to?"
+    }
+  ]
+}

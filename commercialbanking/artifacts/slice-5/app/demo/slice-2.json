@@ -1,0 +1,9 @@
+{
+  "screen": "screen-spread",
+  "caption": "Running the spreading agent on a routed deal extracts every spread line item beside its exact source document and location, and accepting the spread deterministically computes DSCR, leverage, current ratio and a risk grade from an inspectable rubric.",
+  "steps": [
+    { "action": "fill", "selector": "#spread-deal-id", "value": "DEAL-001" },
+    { "action": "click", "selector": "#spread-run-btn" },
+    { "action": "click", "selector": "#spread-accept-btn" }
+  ]
+}

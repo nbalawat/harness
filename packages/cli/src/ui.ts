@@ -319,6 +319,24 @@ export function buildState(workspace: string): Record<string, unknown> {
     }
   }
 
+  // Design delivery: the promise (contract) vs the proof (coverage).
+  const contractDoc = readArtifactJson(workspace, state.artifacts, "design_contract") as
+    | { totals?: { screens: number; elements: number } }
+    | null;
+  const coverageDoc = readArtifactJson(workspace, state.artifacts, "design_coverage") as
+    | { screens?: Array<Record<string, unknown>>; totals?: Record<string, number> }
+    | null;
+  const designDelivery = contractDoc
+    ? {
+        promised: contractDoc.totals ?? null,
+        delivered: coverageDoc?.totals ?? null,
+        screens: (coverageDoc?.screens ?? []).map((sc) => ({
+          ...sc,
+          shotHref: sc.shot ? `/artifact/design-coverage/${sc.shot}` : null,
+        })),
+      }
+    : null;
+
   const intakeDoc = readArtifactJson(workspace, state.artifacts, "intake");
   const designChoiceDoc = readArtifactJson(workspace, state.artifacts, "design_choice");
   const rosterDoc = readArtifactJson(workspace, state.artifacts, "agent_roster");
@@ -382,6 +400,7 @@ export function buildState(workspace: string): Record<string, unknown> {
     quality,
     designChoice: (designChoiceDoc?.chosen_option as string | undefined) ?? null,
     windowGate,
+    designDelivery,
     appAgents: Array.isArray(rosterDoc?.agents) ? rosterDoc!.agents : null,
     agentOpportunityMap: Array.isArray(rosterDoc?.opportunity_map) ? rosterDoc!.opportunity_map : null,
     appWorkflows: Array.isArray(workflowsDoc?.workflows) ? workflowsDoc!.workflows : null,
@@ -1426,6 +1445,7 @@ button.ghost { background:transparent; border:1px solid var(--border); color:var
   <div class="secwrap" id="sec-design" style="display:none">
     <div class="seclabel">The design <span class="hint">— what your app looks like</span></div>
     <div class="card" id="designPanel" style="display:none"><h2 id="designHead">Design options — pick one</h2><div class="designs" id="designs"></div></div>
+    <div class="card" id="deliveryPanel" style="display:none"><h2>Design delivery — what you approved vs what's live <span class="hint" id="deliveryTotals"></span></h2><div id="deliveryGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:.6rem"></div></div>
   </div>
   <div class="secwrap" id="sec-anatomy" style="display:none">
     <div class="seclabel">What&#39;s inside <span class="hint">— the processes and agents your app runs</span></div>
@@ -1932,6 +1952,25 @@ async function tick() {
       };
     }
   } else { wg.style.display = 'none'; }
+
+  // design delivery
+  const dp = document.getElementById('deliveryPanel');
+  if (s.designDelivery && s.designDelivery.promised) {
+    const dd = s.designDelivery;
+    document.getElementById('sec-design').style.display = '';
+    dp.style.display = '';
+    if (dd.delivered) {
+      setText('deliveryTotals', dd.delivered.screens_present + '/' + dd.promised.screens + ' screens live · ' + dd.delivered.elements_present + '/' + dd.promised.elements + ' elements present');
+    } else {
+      setText('deliveryTotals', dd.promised.screens + ' screens and ' + dd.promised.elements + ' elements promised — delivery proof runs after the build');
+    }
+    setHTML('deliveryGrid', (dd.screens.length ? dd.screens : []).map(sc =>
+      '<div style="border:1px solid var(--grid);border-radius:10px;padding:.6rem .8rem">' +
+      '<div style="display:flex;align-items:center;gap:.4rem"><span class="chip ' + (sc.present ? 'ok' : 'bad') + '">' + (sc.present ? 'live' : 'missing') + '</span><b style="font-size:.85rem">' + esc(sc.title || sc.id) + '</b></div>' +
+      '<div class="hint" style="margin-top:.25rem">' + (sc.covered_by_slice ? 'delivered in slice ' + sc.covered_by_slice : 'unassigned') + ' · ' + sc.elements_present + '/' + sc.elements_declared + ' elements</div>' +
+      (sc.shotHref ? '<a href="' + esc(sc.shotHref) + q() + '" target="_blank" class="hint" style="display:block;margin-top:.25rem">live screenshot →</a>' : '') +
+      '</div>').join('') || '<div class="empty">screen-by-screen proof appears when design-coverage runs</div>');
+  } else dp.style.display = 'none';
 
   // agent mid-step question
   const aq = document.getElementById('agentQPanel');

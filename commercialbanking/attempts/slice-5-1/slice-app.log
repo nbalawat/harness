@@ -1,0 +1,58 @@
+INFO:     Started server process [97819]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:59151 (Press CTRL+C to quit)
+INFO:     127.0.0.1:59154 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59155 - "POST /deals/intake HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59154 - "GET /deals HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59155 - "POST /deals/DEAL-001/triage/run HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59154 - "POST /deals/DEAL-001/triage/accept HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59155 - "POST /deals/DEAL-001/spread/run HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59154 - "POST /deals/DEAL-001/spread/accept HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59155 - "GET /deals/DEAL-001/ratios HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59154 - "GET /deals/DEAL-001/risk-grade HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59155 - "POST /deals/DEAL-001/memo/run HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59154 - "POST /deals/DEAL-001/memo/accept HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59155 - "POST /deals/DEAL-001/policy-review/run HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59154 - "GET /policy-rules HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59155 - "GET /deals/DEAL-001/approval-tier HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59154 - "POST /approvals HTTP/1.1" 403 Forbidden
+INFO:     127.0.0.1:59155 - "POST /approvals HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59154 - "POST /deals/DEAL-002/decline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59155 - "POST /portfolio/qa HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59154 - "GET /sla/dashboard HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59155 - "GET /deals/DEAL-001/audit HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59163 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59163 - "GET /tokens.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59164 - "GET /app.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59165 - "GET /deals.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59166 - "GET /spread.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59167 - "GET /memo.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59168 - "GET /approvals.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59164 - "GET /audit.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59165 - "GET /sladash.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59163 - "GET /qa.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59163 - "GET /agent/mode HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59164 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59168 - "GET /deals HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59165 - "GET /agents HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59167 - "GET /api/users HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59166 - "GET /portfolio/questions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59163 - "GET /deals/DEAL-001/audit HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59164 - "GET /sla/dashboard HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59165 - "GET /api/users HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59165 - "GET /favicon.ico HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:59176 - "GET / HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:59176 - "GET /agent/mode HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59177 - "GET /agents HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59178 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59179 - "GET /deals HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59180 - "GET /api/users HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59176 - "GET /deals/DEAL-001/audit HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59181 - "GET /portfolio/questions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59177 - "GET /sla/dashboard HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59179 - "GET /api/users HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [97819]
