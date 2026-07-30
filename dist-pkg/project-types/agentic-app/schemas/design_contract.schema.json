@@ -1,0 +1,29 @@
+{
+  "type": "object",
+  "properties": {
+    "chosen_option": { "type": "string" },
+    "screens": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "pattern": "^screen-[a-z0-9-]+$" },
+          "title": { "type": "string" },
+          "elements": { "type": "array" },
+          "element_count": { "type": "integer" }
+        },
+        "required": ["id", "title", "elements", "element_count"]
+      }
+    },
+    "totals": {
+      "type": "object",
+      "properties": {
+        "screens": { "type": "integer", "minimum": 1 },
+        "elements": { "type": "integer" }
+      },
+      "required": ["screens", "elements"]
+    }
+  },
+  "required": ["chosen_option", "screens", "totals"]
+}

@@ -145,17 +145,17 @@ var require_visit = __commonJS({
     visit.BREAK = BREAK;
     visit.SKIP = SKIP;
     visit.REMOVE = REMOVE;
-    function visit_(key, node, visitor, path14) {
-      const ctrl = callVisitor(key, node, visitor, path14);
+    function visit_(key, node, visitor, path15) {
+      const ctrl = callVisitor(key, node, visitor, path15);
       if (identity.isNode(ctrl) || identity.isPair(ctrl)) {
-        replaceNode(key, path14, ctrl);
-        return visit_(key, ctrl, visitor, path14);
+        replaceNode(key, path15, ctrl);
+        return visit_(key, ctrl, visitor, path15);
       }
       if (typeof ctrl !== "symbol") {
         if (identity.isCollection(node)) {
-          path14 = Object.freeze(path14.concat(node));
+          path15 = Object.freeze(path15.concat(node));
           for (let i = 0; i < node.items.length; ++i) {
-            const ci = visit_(i, node.items[i], visitor, path14);
+            const ci = visit_(i, node.items[i], visitor, path15);
             if (typeof ci === "number")
               i = ci - 1;
             else if (ci === BREAK)
@@ -166,13 +166,13 @@ var require_visit = __commonJS({
             }
           }
         } else if (identity.isPair(node)) {
-          path14 = Object.freeze(path14.concat(node));
-          const ck = visit_("key", node.key, visitor, path14);
+          path15 = Object.freeze(path15.concat(node));
+          const ck = visit_("key", node.key, visitor, path15);
           if (ck === BREAK)
             return BREAK;
           else if (ck === REMOVE)
             node.key = null;
-          const cv = visit_("value", node.value, visitor, path14);
+          const cv = visit_("value", node.value, visitor, path15);
           if (cv === BREAK)
             return BREAK;
           else if (cv === REMOVE)
@@ -193,17 +193,17 @@ var require_visit = __commonJS({
     visitAsync.BREAK = BREAK;
     visitAsync.SKIP = SKIP;
     visitAsync.REMOVE = REMOVE;
-    async function visitAsync_(key, node, visitor, path14) {
-      const ctrl = await callVisitor(key, node, visitor, path14);
+    async function visitAsync_(key, node, visitor, path15) {
+      const ctrl = await callVisitor(key, node, visitor, path15);
       if (identity.isNode(ctrl) || identity.isPair(ctrl)) {
-        replaceNode(key, path14, ctrl);
-        return visitAsync_(key, ctrl, visitor, path14);
+        replaceNode(key, path15, ctrl);
+        return visitAsync_(key, ctrl, visitor, path15);
       }
       if (typeof ctrl !== "symbol") {
         if (identity.isCollection(node)) {
-          path14 = Object.freeze(path14.concat(node));
+          path15 = Object.freeze(path15.concat(node));
           for (let i = 0; i < node.items.length; ++i) {
-            const ci = await visitAsync_(i, node.items[i], visitor, path14);
+            const ci = await visitAsync_(i, node.items[i], visitor, path15);
             if (typeof ci === "number")
               i = ci - 1;
             else if (ci === BREAK)
@@ -214,13 +214,13 @@ var require_visit = __commonJS({
             }
           }
         } else if (identity.isPair(node)) {
-          path14 = Object.freeze(path14.concat(node));
-          const ck = await visitAsync_("key", node.key, visitor, path14);
+          path15 = Object.freeze(path15.concat(node));
+          const ck = await visitAsync_("key", node.key, visitor, path15);
           if (ck === BREAK)
             return BREAK;
           else if (ck === REMOVE)
             node.key = null;
-          const cv = await visitAsync_("value", node.value, visitor, path14);
+          const cv = await visitAsync_("value", node.value, visitor, path15);
           if (cv === BREAK)
             return BREAK;
           else if (cv === REMOVE)
@@ -247,23 +247,23 @@ var require_visit = __commonJS({
       }
       return visitor;
     }
-    function callVisitor(key, node, visitor, path14) {
+    function callVisitor(key, node, visitor, path15) {
       if (typeof visitor === "function")
-        return visitor(key, node, path14);
+        return visitor(key, node, path15);
       if (identity.isMap(node))
-        return visitor.Map?.(key, node, path14);
+        return visitor.Map?.(key, node, path15);
       if (identity.isSeq(node))
-        return visitor.Seq?.(key, node, path14);
+        return visitor.Seq?.(key, node, path15);
       if (identity.isPair(node))
-        return visitor.Pair?.(key, node, path14);
+        return visitor.Pair?.(key, node, path15);
       if (identity.isScalar(node))
-        return visitor.Scalar?.(key, node, path14);
+        return visitor.Scalar?.(key, node, path15);
       if (identity.isAlias(node))
-        return visitor.Alias?.(key, node, path14);
+        return visitor.Alias?.(key, node, path15);
       return void 0;
     }
-    function replaceNode(key, path14, node) {
-      const parent = path14[path14.length - 1];
+    function replaceNode(key, path15, node) {
+      const parent = path15[path15.length - 1];
       if (identity.isCollection(parent)) {
         parent.items[key] = node;
       } else if (identity.isPair(parent)) {
@@ -873,10 +873,10 @@ var require_Collection = __commonJS({
     var createNode = require_createNode();
     var identity = require_identity();
     var Node = require_Node();
-    function collectionFromPath(schema, path14, value) {
+    function collectionFromPath(schema, path15, value) {
       let v = value;
-      for (let i = path14.length - 1; i >= 0; --i) {
-        const k = path14[i];
+      for (let i = path15.length - 1; i >= 0; --i) {
+        const k = path15[i];
         if (typeof k === "number" && Number.isInteger(k) && k >= 0) {
           const a = [];
           a[k] = v;
@@ -895,7 +895,7 @@ var require_Collection = __commonJS({
         sourceObjects: /* @__PURE__ */ new Map()
       });
     }
-    var isEmptyPath = (path14) => path14 == null || typeof path14 === "object" && !!path14[Symbol.iterator]().next().done;
+    var isEmptyPath = (path15) => path15 == null || typeof path15 === "object" && !!path15[Symbol.iterator]().next().done;
     var Collection = class extends Node.NodeBase {
       constructor(type, schema) {
         super(type);
@@ -925,11 +925,11 @@ var require_Collection = __commonJS({
        * be a Pair instance or a `{ key, value }` object, which may not have a key
        * that already exists in the map.
        */
-      addIn(path14, value) {
-        if (isEmptyPath(path14))
+      addIn(path15, value) {
+        if (isEmptyPath(path15))
           this.add(value);
         else {
-          const [key, ...rest] = path14;
+          const [key, ...rest] = path15;
           const node = this.get(key, true);
           if (identity.isCollection(node))
             node.addIn(rest, value);
@@ -943,8 +943,8 @@ var require_Collection = __commonJS({
        * Removes a value from the collection.
        * @returns `true` if the item was found and removed.
        */
-      deleteIn(path14) {
-        const [key, ...rest] = path14;
+      deleteIn(path15) {
+        const [key, ...rest] = path15;
         if (rest.length === 0)
           return this.delete(key);
         const node = this.get(key, true);
@@ -958,8 +958,8 @@ var require_Collection = __commonJS({
        * scalar values from their surrounding node; to disable set `keepScalar` to
        * `true` (collections are always returned intact).
        */
-      getIn(path14, keepScalar) {
-        const [key, ...rest] = path14;
+      getIn(path15, keepScalar) {
+        const [key, ...rest] = path15;
         const node = this.get(key, true);
         if (rest.length === 0)
           return !keepScalar && identity.isScalar(node) ? node.value : node;
@@ -977,8 +977,8 @@ var require_Collection = __commonJS({
       /**
        * Checks if the collection includes a value with the key `key`.
        */
-      hasIn(path14) {
-        const [key, ...rest] = path14;
+      hasIn(path15) {
+        const [key, ...rest] = path15;
         if (rest.length === 0)
           return this.has(key);
         const node = this.get(key, true);
@@ -988,8 +988,8 @@ var require_Collection = __commonJS({
        * Sets a value in this collection. For `!!set`, `value` needs to be a
        * boolean to add/remove the item from the set.
        */
-      setIn(path14, value) {
-        const [key, ...rest] = path14;
+      setIn(path15, value) {
+        const [key, ...rest] = path15;
         if (rest.length === 0) {
           this.set(key, value);
         } else {
@@ -3504,9 +3504,9 @@ var require_Document = __commonJS({
           this.contents.add(value);
       }
       /** Adds a value to the document. */
-      addIn(path14, value) {
+      addIn(path15, value) {
         if (assertCollection(this.contents))
-          this.contents.addIn(path14, value);
+          this.contents.addIn(path15, value);
       }
       /**
        * Create a new `Alias` node, ensuring that the target `node` has the required anchor.
@@ -3581,14 +3581,14 @@ var require_Document = __commonJS({
        * Removes a value from the document.
        * @returns `true` if the item was found and removed.
        */
-      deleteIn(path14) {
-        if (Collection.isEmptyPath(path14)) {
+      deleteIn(path15) {
+        if (Collection.isEmptyPath(path15)) {
           if (this.contents == null)
             return false;
           this.contents = null;
           return true;
         }
-        return assertCollection(this.contents) ? this.contents.deleteIn(path14) : false;
+        return assertCollection(this.contents) ? this.contents.deleteIn(path15) : false;
       }
       /**
        * Returns item at `key`, or `undefined` if not found. By default unwraps
@@ -3603,10 +3603,10 @@ var require_Document = __commonJS({
        * scalar values from their surrounding node; to disable set `keepScalar` to
        * `true` (collections are always returned intact).
        */
-      getIn(path14, keepScalar) {
-        if (Collection.isEmptyPath(path14))
+      getIn(path15, keepScalar) {
+        if (Collection.isEmptyPath(path15))
           return !keepScalar && identity.isScalar(this.contents) ? this.contents.value : this.contents;
-        return identity.isCollection(this.contents) ? this.contents.getIn(path14, keepScalar) : void 0;
+        return identity.isCollection(this.contents) ? this.contents.getIn(path15, keepScalar) : void 0;
       }
       /**
        * Checks if the document includes a value with the key `key`.
@@ -3617,10 +3617,10 @@ var require_Document = __commonJS({
       /**
        * Checks if the document includes a value at `path`.
        */
-      hasIn(path14) {
-        if (Collection.isEmptyPath(path14))
+      hasIn(path15) {
+        if (Collection.isEmptyPath(path15))
           return this.contents !== void 0;
-        return identity.isCollection(this.contents) ? this.contents.hasIn(path14) : false;
+        return identity.isCollection(this.contents) ? this.contents.hasIn(path15) : false;
       }
       /**
        * Sets a value in this document. For `!!set`, `value` needs to be a
@@ -3637,13 +3637,13 @@ var require_Document = __commonJS({
        * Sets a value in this document. For `!!set`, `value` needs to be a
        * boolean to add/remove the item from the set.
        */
-      setIn(path14, value) {
-        if (Collection.isEmptyPath(path14)) {
+      setIn(path15, value) {
+        if (Collection.isEmptyPath(path15)) {
           this.contents = value;
         } else if (this.contents == null) {
-          this.contents = Collection.collectionFromPath(this.schema, Array.from(path14), value);
+          this.contents = Collection.collectionFromPath(this.schema, Array.from(path15), value);
         } else if (assertCollection(this.contents)) {
-          this.contents.setIn(path14, value);
+          this.contents.setIn(path15, value);
         }
       }
       /**
@@ -5603,9 +5603,9 @@ var require_cst_visit = __commonJS({
     visit.BREAK = BREAK;
     visit.SKIP = SKIP;
     visit.REMOVE = REMOVE;
-    visit.itemAtPath = (cst, path14) => {
+    visit.itemAtPath = (cst, path15) => {
       let item = cst;
-      for (const [field, index] of path14) {
+      for (const [field, index] of path15) {
         const tok = item?.[field];
         if (tok && "items" in tok) {
           item = tok.items[index];
@@ -5614,23 +5614,23 @@ var require_cst_visit = __commonJS({
       }
       return item;
     };
-    visit.parentCollection = (cst, path14) => {
-      const parent = visit.itemAtPath(cst, path14.slice(0, -1));
-      const field = path14[path14.length - 1][0];
+    visit.parentCollection = (cst, path15) => {
+      const parent = visit.itemAtPath(cst, path15.slice(0, -1));
+      const field = path15[path15.length - 1][0];
       const coll = parent?.[field];
       if (coll && "items" in coll)
         return coll;
       throw new Error("Parent collection not found");
     };
-    function _visit(path14, item, visitor) {
-      let ctrl = visitor(item, path14);
+    function _visit(path15, item, visitor) {
+      let ctrl = visitor(item, path15);
       if (typeof ctrl === "symbol")
         return ctrl;
       for (const field of ["key", "value"]) {
         const token = item[field];
         if (token && "items" in token) {
           for (let i = 0; i < token.items.length; ++i) {
-            const ci = _visit(Object.freeze(path14.concat([[field, i]])), token.items[i], visitor);
+            const ci = _visit(Object.freeze(path15.concat([[field, i]])), token.items[i], visitor);
             if (typeof ci === "number")
               i = ci - 1;
             else if (ci === BREAK)
@@ -5641,10 +5641,10 @@ var require_cst_visit = __commonJS({
             }
           }
           if (typeof ctrl === "function" && field === "key")
-            ctrl = ctrl(item, path14);
+            ctrl = ctrl(item, path15);
         }
       }
-      return typeof ctrl === "function" ? ctrl(item, path14) : ctrl;
+      return typeof ctrl === "function" ? ctrl(item, path15) : ctrl;
     }
     exports2.visit = visit;
   }
@@ -6946,14 +6946,14 @@ var require_parser = __commonJS({
             case "scalar":
             case "single-quoted-scalar":
             case "double-quoted-scalar": {
-              const fs14 = this.flowScalar(this.type);
+              const fs15 = this.flowScalar(this.type);
               if (atNextItem || it.value) {
-                map.items.push({ start, key: fs14, sep: [] });
+                map.items.push({ start, key: fs15, sep: [] });
                 this.onKeyLine = true;
               } else if (it.sep) {
-                this.stack.push(fs14);
+                this.stack.push(fs15);
               } else {
-                Object.assign(it, { key: fs14, sep: [] });
+                Object.assign(it, { key: fs15, sep: [] });
                 this.onKeyLine = true;
               }
               return;
@@ -7081,13 +7081,13 @@ var require_parser = __commonJS({
             case "scalar":
             case "single-quoted-scalar":
             case "double-quoted-scalar": {
-              const fs14 = this.flowScalar(this.type);
+              const fs15 = this.flowScalar(this.type);
               if (!it || it.value)
-                fc.items.push({ start: [], key: fs14, sep: [] });
+                fc.items.push({ start: [], key: fs15, sep: [] });
               else if (it.sep)
-                this.stack.push(fs14);
+                this.stack.push(fs15);
               else
-                Object.assign(it, { key: fs14, sep: [] });
+                Object.assign(it, { key: fs15, sep: [] });
               return;
             }
             case "flow-map-end":
@@ -10708,8 +10708,8 @@ var require_utils = __commonJS({
       }
       return ind;
     }
-    function removeDotSegments(path14) {
-      let input = path14;
+    function removeDotSegments(path15) {
+      let input = path15;
       const output = [];
       let nextSlash = -1;
       let len = 0;
@@ -10961,8 +10961,8 @@ var require_schemes = __commonJS({
         wsComponent.secure = void 0;
       }
       if (wsComponent.resourceName) {
-        const [path14, query] = wsComponent.resourceName.split("?");
-        wsComponent.path = path14 && path14 !== "/" ? path14 : void 0;
+        const [path15, query] = wsComponent.resourceName.split("?");
+        wsComponent.path = path15 && path15 !== "/" ? path15 : void 0;
         wsComponent.query = query;
         wsComponent.resourceName = void 0;
       }
@@ -15162,7 +15162,8 @@ var init_registry = __esm({
 var telemetry_exports = {};
 __export(telemetry_exports, {
   recordRun: () => recordRun,
-  summarize: () => summarize2
+  summarize: () => summarize2,
+  syncTelemetry: () => syncTelemetry
 });
 function recordRun(ctx, result, command) {
   if (process.env.HARNESS_TELEMETRY === "0")
@@ -15181,7 +15182,48 @@ function recordRun(ctx, result, command) {
     };
     fs8.mkdirSync(storeRoot(), { recursive: true });
     fs8.appendFileSync(path8.join(storeRoot(), "telemetry.jsonl"), JSON.stringify(line) + "\n");
+    const fleetEvent = {
+      ts: line.ts,
+      event: `run.${result.status}`,
+      projectType: ctx.def.name,
+      version: ctx.def.version,
+      command,
+      costUsd: line.costUsd,
+      mock: line.mock,
+      nodeId: result.failedNodeId ?? result.parkedNodeId ?? void 0,
+      identity: process.env.HARNESS_IDENTITY ?? `${os4.userInfo().username}@firm.local`
+    };
+    fs8.appendFileSync(path8.join(storeRoot(), "telemetry-queue.jsonl"), JSON.stringify(fleetEvent) + "\n");
   } catch {
+  }
+}
+async function syncTelemetry() {
+  const url = process.env.HARNESS_TELEMETRY_URL;
+  if (!url)
+    return "no HARNESS_TELEMETRY_URL configured \u2014 events stay queued locally";
+  const queue = path8.join(storeRoot(), "telemetry-queue.jsonl");
+  if (!fs8.existsSync(queue))
+    return "queue empty";
+  const events = fs8.readFileSync(queue, "utf8").split("\n").filter(Boolean).map((l) => JSON.parse(l));
+  if (!events.length)
+    return "queue empty";
+  try {
+    const res = await fetch(new URL("/v1/events", url), {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-firm-identity": process.env.HARNESS_IDENTITY ?? `${os4.userInfo().username}@firm.local`
+      },
+      body: JSON.stringify({ events }),
+      signal: AbortSignal.timeout(2e3)
+    });
+    if (!res.ok)
+      return `collector rejected batch (${res.status}) \u2014 events stay queued`;
+    const data = await res.json();
+    fs8.writeFileSync(queue, "");
+    return `synced ${data.accepted} event(s) to ${url}`;
+  } catch (e) {
+    return `collector unreachable \u2014 ${events.length} event(s) stay queued (${String(e).slice(0, 80)})`;
   }
 }
 function summarize2() {
@@ -15205,11 +15247,12 @@ function summarize2() {
   return `${lines.length} recorded run(s) \u2014 ${file}
 ${rows.join("\n")}`;
 }
-var fs8, path8;
+var fs8, os4, path8;
 var init_telemetry = __esm({
   "packages/cli/dist/telemetry.js"() {
     "use strict";
     fs8 = __toESM(require("node:fs"), 1);
+    os4 = __toESM(require("node:os"), 1);
     path8 = __toESM(require("node:path"), 1);
     init_dist();
     init_registry();
@@ -15291,6 +15334,122 @@ var init_setup = __esm({
   }
 });
 
+// packages/cli/dist/publish.js
+var publish_exports = {};
+__export(publish_exports, {
+  publishWorkspace: () => publishWorkspace
+});
+function readJsonIf(p) {
+  try {
+    return JSON.parse(fs10.readFileSync(p, "utf8"));
+  } catch {
+    return null;
+  }
+}
+function latestAppDir(workspace) {
+  const journal = new Journal(workspace);
+  const state = foldState(journal.read());
+  let found = null;
+  for (const e of journal.read()) {
+    if (e.type !== "node.committed" || !e.nodeId)
+      continue;
+    if (!state.committed.has(String(e.nodeId)))
+      continue;
+    const candidate = path10.join(workspace, "artifacts", String(e.nodeId), "app");
+    if (fs10.existsSync(path10.join(candidate, "frontend", "index.html")))
+      found = candidate;
+  }
+  return found;
+}
+async function publishWorkspace(workspace, opts) {
+  const runConfig = readJsonIf(path10.join(workspace, "run.json"));
+  if (!runConfig)
+    return { ok: false, message: `${workspace} is not a run workspace (no run.json)` };
+  const journal = new Journal(workspace);
+  const events = journal.read();
+  if (!events.length)
+    return { ok: false, message: "empty journal \u2014 nothing to publish" };
+  const state = foldState(events);
+  const def = runConfig.projectTypeDir ? loadProjectTypeFile(fs10.existsSync(path10.join(workspace, "dag-snapshot.yaml")) ? path10.join(workspace, "dag-snapshot.yaml") : path10.join(runConfig.projectTypeDir, "dag.yaml")) : null;
+  const intake = readJsonIf(path10.join(workspace, "artifacts", "intake", "intake.json"));
+  const appDir = latestAppDir(workspace);
+  const governance = readJsonIf(path10.join(workspace, "artifacts", "governance-report", "governance.json"));
+  const files = {};
+  const add = (rel, abs) => {
+    if (fs10.existsSync(abs))
+      files[rel] = fs10.readFileSync(abs).toString("base64");
+  };
+  const attachments = [];
+  if (appDir) {
+    add("acceptance_report.json", path10.join(appDir, "acceptance_report.json"));
+    const shots = path10.join(appDir, "screenshots");
+    if (fs10.existsSync(shots)) {
+      for (const f of fs10.readdirSync(shots).filter((f2) => f2.endsWith(".png")).sort()) {
+        attachments.push({ rel: `screenshots/${f}`, abs: path10.join(shots, f) });
+      }
+    }
+    add("SLICES.md", path10.join(appDir, "SLICES.md"));
+  }
+  add("governance.json", path10.join(workspace, "artifacts", "governance-report", "governance.json"));
+  add("rtm.json", path10.join(workspace, "artifacts", "traceability", "rtm.json"));
+  const status = events.some((e) => e.type === "run.completed") ? "completed" : events.at(-1)?.type ?? "unknown";
+  const summary = {
+    status,
+    costUsd: Number(state.totalCostUsd.toFixed(2)),
+    nodesCommitted: state.committed.size,
+    startedAt: events[0]?.ts ?? null,
+    finishedAt: events.at(-1)?.ts ?? null,
+    gateDecisions: events.filter((e) => e.type === "gate.answered").length,
+    revisions: events.filter((e) => e.type === "node.reopened").length,
+    agents: governance?.agents?.count ?? null,
+    securityHighFindings: governance?.security?.high_findings ?? null,
+    requirementsCovered: governance?.requirements ? `${governance.requirements.covered}/${governance.requirements.total}` : null
+  };
+  files["journal-summary.json"] = Buffer.from(JSON.stringify(summary, null, 2)).toString("base64");
+  const payload = {
+    name: opts.name ?? intake?.project_name ?? path10.basename(workspace),
+    owner: opts.owner ?? `${os5.userInfo().username}@firm.local`,
+    team: opts.team ?? null,
+    projectType: def?.name ?? "unknown",
+    version: def?.version ?? "unknown",
+    summary,
+    files
+  };
+  const res = await fetch(new URL("/v1/publish", opts.registryUrl), {
+    method: "POST",
+    headers: { "content-type": "application/json", "x-firm-identity": payload.owner },
+    body: JSON.stringify(payload)
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok)
+    return { ok: false, message: `publish rejected: ${data.error ?? res.status}` };
+  let attached = 0;
+  for (const a of attachments) {
+    const up = await fetch(new URL(`/v1/apps/${data.id}/${data.publishedVersion}/attach?path=${encodeURIComponent(a.rel)}`, opts.registryUrl), { method: "POST", headers: { "content-type": "application/octet-stream", "x-firm-identity": payload.owner }, body: fs10.readFileSync(a.abs) });
+    if (up.ok)
+      attached++;
+    else
+      console.error(`  attach failed for ${a.rel}: ${up.status}`);
+  }
+  return {
+    ok: true,
+    message: `published '${payload.name}' as ${data.id} v${data.publishedVersion}
+  badges: ${(data.badges ?? []).join(", ") || "none"}
+  gallery: ${new URL(`/v1/apps/${data.id}`, opts.registryUrl)}
+  evidence files: ${Object.keys(files).length} inline + ${attached}/${attachments.length} attached`
+  };
+}
+var fs10, os5, path10;
+var init_publish = __esm({
+  "packages/cli/dist/publish.js"() {
+    "use strict";
+    fs10 = __toESM(require("node:fs"), 1);
+    os5 = __toESM(require("node:os"), 1);
+    path10 = __toESM(require("node:path"), 1);
+    init_dist();
+  }
+});
+
 // packages/cli/dist/mcp.js
 var mcp_exports = {};
 __export(mcp_exports, {
@@ -15300,7 +15459,7 @@ __export(mcp_exports, {
 function probeServer(entry, timeoutMs = 15e3) {
   return new Promise((resolve5) => {
     const child = (0, import_node_child_process4.spawn)(process.execPath, [entry], {
-      env: { ...process.env, HARNESS_MCP_CONFIG: "{}", HARNESS_ATTEMPT_DIR: path10.dirname(entry) },
+      env: { ...process.env, HARNESS_MCP_CONFIG: "{}", HARNESS_ATTEMPT_DIR: path11.dirname(entry) },
       stdio: ["pipe", "pipe", "ignore"]
     });
     const timer = setTimeout(() => {
@@ -15340,17 +15499,17 @@ function probeServer(entry, timeoutMs = 15e3) {
 }
 async function certifyMcp(mcpDir) {
   const servers = [];
-  const names = fs10.existsSync(mcpDir) ? fs10.readdirSync(mcpDir, { withFileTypes: true }).filter((e) => e.isDirectory()).map((e) => e.name).sort() : [];
+  const names = fs11.existsSync(mcpDir) ? fs11.readdirSync(mcpDir, { withFileTypes: true }).filter((e) => e.isDirectory()).map((e) => e.name).sort() : [];
   for (const name of names) {
-    const dir = path10.join(mcpDir, name);
+    const dir = path11.join(mcpDir, name);
     const problems = [];
     let tools = [];
-    const manifestPath = path10.join(dir, "server.json");
-    if (!fs10.existsSync(manifestPath)) {
+    const manifestPath = path11.join(dir, "server.json");
+    if (!fs11.existsSync(manifestPath)) {
       problems.push("missing server.json");
     } else {
       try {
-        const manifest = JSON.parse(fs10.readFileSync(manifestPath, "utf8"));
+        const manifest = JSON.parse(fs11.readFileSync(manifestPath, "utf8"));
         if (manifest.name !== name)
           problems.push(`server.json name '${manifest.name}' != directory '${name}'`);
         for (const field of ["version", "description"])
@@ -15362,10 +15521,10 @@ async function certifyMcp(mcpDir) {
         problems.push(`server.json invalid: ${String(e).slice(0, 120)}`);
       }
     }
-    if (!fs10.existsSync(path10.join(dir, "server.mjs"))) {
+    if (!fs11.existsSync(path11.join(dir, "server.mjs"))) {
       problems.push("missing server.mjs");
     } else {
-      const probe = await probeServer(path10.join(dir, "server.mjs"));
+      const probe = await probeServer(path11.join(dir, "server.mjs"));
       if (probe.error)
         problems.push(`protocol probe failed: ${probe.error}`);
       else {
@@ -15376,8 +15535,8 @@ async function certifyMcp(mcpDir) {
           problems.push("server exposes no tools");
       }
     }
-    const testFile = path10.join(dir, "test", "test.mjs");
-    if (fs10.existsSync(testFile)) {
+    const testFile = path11.join(dir, "test", "test.mjs");
+    if (fs11.existsSync(testFile)) {
       const test = (0, import_node_child_process4.spawnSync)(process.execPath, [testFile], { encoding: "utf8", timeout: 3e5 });
       if (test.status !== 0)
         problems.push(`contract tests failed:
@@ -15392,17 +15551,17 @@ ${(test.stderr ?? "").slice(-400)}`);
 function scaffoldMcp(name, mcpDir) {
   if (!/^[a-z][a-z0-9-]+$/.test(name))
     throw new Error("mcp server names are lowercase-kebab");
-  const dir = path10.join(mcpDir, name);
-  if (fs10.existsSync(dir))
+  const dir = path11.join(mcpDir, name);
+  if (fs11.existsSync(dir))
     throw new Error(`${name} already exists`);
-  fs10.mkdirSync(path10.join(dir, "test"), { recursive: true });
-  fs10.writeFileSync(path10.join(dir, "server.json"), JSON.stringify({
+  fs11.mkdirSync(path11.join(dir, "test"), { recursive: true });
+  fs11.writeFileSync(path11.join(dir, "server.json"), JSON.stringify({
     name,
     version: "0.1.0",
     description: "TODO: one line on the capability this server packages",
     config_schema: { type: "object", properties: {}, additionalProperties: false }
   }, null, 2) + "\n");
-  fs10.writeFileSync(path10.join(dir, "server.mjs"), `// @harness/${name} \u2014 TODO describe. Stdio MCP (newline-delimited JSON-RPC).
+  fs11.writeFileSync(path11.join(dir, "server.mjs"), `// @harness/${name} \u2014 TODO describe. Stdio MCP (newline-delimited JSON-RPC).
 import * as readline from "node:readline";
 
 const CONFIG = JSON.parse(process.env.HARNESS_MCP_CONFIG || "{}");
@@ -15441,7 +15600,7 @@ rl.on("line", async (line) => {
   }
 });
 `);
-  fs10.writeFileSync(path10.join(dir, "test", "test.mjs"), `import assert from "node:assert/strict";
+  fs11.writeFileSync(path11.join(dir, "test", "test.mjs"), `import assert from "node:assert/strict";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawn } from "node:child_process";
@@ -15480,12 +15639,12 @@ console.log("${name} contract OK");
 `);
   return dir;
 }
-var fs10, path10, import_node_child_process4, import_ajv3, Ajv3;
+var fs11, path11, import_node_child_process4, import_ajv3, Ajv3;
 var init_mcp = __esm({
   "packages/cli/dist/mcp.js"() {
     "use strict";
-    fs10 = __toESM(require("node:fs"), 1);
-    path10 = __toESM(require("node:path"), 1);
+    fs11 = __toESM(require("node:fs"), 1);
+    path11 = __toESM(require("node:path"), 1);
     import_node_child_process4 = require("node:child_process");
     import_ajv3 = __toESM(require_ajv(), 1);
     Ajv3 = import_ajv3.default.default ?? import_ajv3.default;
@@ -15498,43 +15657,43 @@ __export(certifyModules_exports, {
   certifyModules: () => certifyModules
 });
 function overlay(moduleDir, appDir) {
-  const composeDir = path11.join(moduleDir, "compose");
-  if (!fs11.existsSync(composeDir))
+  const composeDir = path12.join(moduleDir, "compose");
+  if (!fs12.existsSync(composeDir))
     return;
-  fs11.cpSync(composeDir, appDir, { recursive: true });
+  fs12.cpSync(composeDir, appDir, { recursive: true });
 }
 function moduleDeps(modulesDir, name, seen = /* @__PURE__ */ new Set()) {
   if (seen.has(name))
     return [];
   seen.add(name);
-  const manifestPath = path11.join(modulesDir, name, "manifest.yaml");
-  if (!fs11.existsSync(manifestPath))
+  const manifestPath = path12.join(modulesDir, name, "manifest.yaml");
+  if (!fs12.existsSync(manifestPath))
     return [];
   let manifest = {};
   try {
-    manifest = (0, import_yaml2.parse)(fs11.readFileSync(manifestPath, "utf8"));
+    manifest = (0, import_yaml2.parse)(fs12.readFileSync(manifestPath, "utf8"));
   } catch {
     return [];
   }
   const out = [];
   for (const req of manifest.requires ?? []) {
-    if (typeof req === "string" && fs11.existsSync(path11.join(modulesDir, req, "manifest.yaml"))) {
+    if (typeof req === "string" && fs12.existsSync(path12.join(modulesDir, req, "manifest.yaml"))) {
       out.push(...moduleDeps(modulesDir, req, seen), req);
     }
   }
   return [...new Set(out)];
 }
 function makeScratchApp(modulesDir, projectTypeDir, moduleDir) {
-  const app = fs11.mkdtempSync(path11.join(os4.tmpdir(), "harness-module-"));
-  fs11.cpSync(path11.join(projectTypeDir, "templates", "base"), app, { recursive: true });
+  const app = fs12.mkdtempSync(path12.join(os6.tmpdir(), "harness-module-"));
+  fs12.cpSync(path12.join(projectTypeDir, "templates", "base"), app, { recursive: true });
   for (const name of SUBSTRATE)
-    overlay(path11.join(modulesDir, name), app);
-  for (const dep of moduleDeps(modulesDir, path11.basename(moduleDir)))
-    overlay(path11.join(modulesDir, dep), app);
+    overlay(path12.join(modulesDir, name), app);
+  for (const dep of moduleDeps(modulesDir, path12.basename(moduleDir)))
+    overlay(path12.join(modulesDir, dep), app);
   overlay(moduleDir, app);
-  fs11.writeFileSync(path11.join(app, "backend", "models.py"), 'TABLES = {\n    "conversations": ["id", "user"],\n    "messages": ["id", "conversation_id", "content"],\n    "approvals": ["id", "message", "approved"],\n}\n');
-  fs11.mkdirSync(path11.join(app, "agents", "evals"), { recursive: true });
-  fs11.writeFileSync(path11.join(app, "agents", "roster.json"), JSON.stringify({
+  fs12.writeFileSync(path12.join(app, "backend", "models.py"), 'TABLES = {\n    "conversations": ["id", "user"],\n    "messages": ["id", "conversation_id", "content"],\n    "approvals": ["id", "message", "approved"],\n}\n');
+  fs12.mkdirSync(path12.join(app, "agents", "evals"), { recursive: true });
+  fs12.writeFileSync(path12.join(app, "agents", "roster.json"), JSON.stringify({
     agents: [
       {
         name: "Test Assistant",
@@ -15545,21 +15704,21 @@ function makeScratchApp(modulesDir, projectTypeDir, moduleDir) {
       }
     ]
   }, null, 2));
-  const mainPy = path11.join(app, "backend", "main.py");
-  fs11.writeFileSync(mainPy, fs11.readFileSync(mainPy, "utf8").replaceAll("__APP_NAME__", "Module Cert App"));
+  const mainPy = path12.join(app, "backend", "main.py");
+  fs12.writeFileSync(mainPy, fs12.readFileSync(mainPy, "utf8").replaceAll("__APP_NAME__", "Module Cert App"));
   return app;
 }
 function certifyOne(modulesDir, projectTypeDir, name) {
-  const moduleDir = path11.join(modulesDir, name);
+  const moduleDir = path12.join(modulesDir, name);
   const problems = [];
   let tested = [];
-  const manifestPath = path11.join(moduleDir, "manifest.yaml");
+  const manifestPath = path12.join(moduleDir, "manifest.yaml");
   let manifest = {};
-  if (!fs11.existsSync(manifestPath)) {
+  if (!fs12.existsSync(manifestPath)) {
     problems.push("missing manifest.yaml");
   } else {
     try {
-      manifest = (0, import_yaml2.parse)(fs11.readFileSync(manifestPath, "utf8"));
+      manifest = (0, import_yaml2.parse)(fs12.readFileSync(manifestPath, "utf8"));
     } catch (e) {
       problems.push(`manifest.yaml unparseable: ${String(e).slice(0, 100)}`);
     }
@@ -15583,24 +15742,24 @@ function certifyOne(modulesDir, projectTypeDir, name) {
         problems.push("pack must list the modules it bundles");
       } else {
         for (const m of manifest.modules) {
-          if (!fs11.existsSync(path11.join(modulesDir, m, "manifest.yaml")))
+          if (!fs12.existsSync(path12.join(modulesDir, m, "manifest.yaml")))
             problems.push(`pack references unknown module '${m}'`);
         }
       }
     }
     for (const c of manifest.conflicts ?? []) {
-      if (!fs11.existsSync(path11.join(modulesDir, c, "manifest.yaml")))
+      if (!fs12.existsSync(path12.join(modulesDir, c, "manifest.yaml")))
         problems.push(`conflicts references unknown module '${c}'`);
     }
   }
-  const guide = path11.join(moduleDir, "agent-guide.md");
-  if (!fs11.existsSync(guide) || fs11.readFileSync(guide, "utf8").trim().length < 80) {
+  const guide = path12.join(moduleDir, "agent-guide.md");
+  if (!fs12.existsSync(guide) || fs12.readFileSync(guide, "utf8").trim().length < 80) {
     problems.push("agent-guide.md missing or too thin to guide a build agent");
   }
   const kind = manifest.kind ?? "app";
   if (kind === "app") {
-    const composeDir = path11.join(moduleDir, "compose");
-    if (!fs11.existsSync(composeDir) || fs11.readdirSync(composeDir).length === 0) {
+    const composeDir = path12.join(moduleDir, "compose");
+    if (!fs12.existsSync(composeDir) || fs12.readdirSync(composeDir).length === 0) {
       problems.push("compose/ overlay missing or empty");
     }
   }
@@ -15629,23 +15788,23 @@ ${(cmd.stderr ?? cmd.stdout ?? "").slice(-400)}`);
   }
   const app = makeScratchApp(modulesDir, projectTypeDir, moduleDir);
   const pyFiles = [];
-  for (const entry of fs11.readdirSync(path11.join(app, "backend"))) {
+  for (const entry of fs12.readdirSync(path12.join(app, "backend"))) {
     if (entry.endsWith(".py"))
-      pyFiles.push(path11.join(app, "backend", entry));
+      pyFiles.push(path12.join(app, "backend", entry));
   }
   const compile = (0, import_node_child_process5.spawnSync)("python3", ["-m", "py_compile", ...pyFiles], { encoding: "utf8", timeout: 6e4 });
   if (compile.status !== 0)
     problems.push(`python compile failed:
 ${(compile.stderr ?? "").slice(-400)}`);
   if (problems.length === 0 && manifest.certify?.tests) {
-    const src = path11.join(moduleDir, manifest.certify.tests);
-    const dest = path11.join(app, "backend", "module_tests");
-    fs11.mkdirSync(dest, { recursive: true });
-    for (const f of fs11.readdirSync(src).filter((f2) => f2.endsWith(".py"))) {
-      fs11.copyFileSync(path11.join(src, f), path11.join(dest, f));
+    const src = path12.join(moduleDir, manifest.certify.tests);
+    const dest = path12.join(app, "backend", "module_tests");
+    fs12.mkdirSync(dest, { recursive: true });
+    for (const f of fs12.readdirSync(src).filter((f2) => f2.endsWith(".py"))) {
+      fs12.copyFileSync(path12.join(src, f), path12.join(dest, f));
     }
     const extraDeps = (manifest.certify?.python_deps ?? []).flatMap((d) => ["--with", d]);
-    const pytest = (0, import_node_child_process5.spawnSync)("uv", ["run", "--with", "fastapi", "--with", "httpx", "--with", "pytest", ...extraDeps, "python", "-m", "pytest", "module_tests", "-q"], { cwd: path11.join(app, "backend"), encoding: "utf8", timeout: 3e5, env: { ...process.env, HARNESS_AGENT_MODE: "stub" } });
+    const pytest = (0, import_node_child_process5.spawnSync)("uv", ["run", "--with", "fastapi", "--with", "httpx", "--with", "pytest", ...extraDeps, "python", "-m", "pytest", "module_tests", "-q"], { cwd: path12.join(app, "backend"), encoding: "utf8", timeout: 3e5, env: { ...process.env, HARNESS_AGENT_MODE: "stub" } });
     if (pytest.status !== 0) {
       problems.push(`module tests failed:
 ${(pytest.stdout ?? "").slice(-600)}`);
@@ -15667,21 +15826,21 @@ ${(cmd.stderr ?? cmd.stdout ?? "").slice(-400)}`);
   }
   if (tested.length === 0)
     problems.push("no certify tests declared \u2014 every module must prove its contract");
-  fs11.rmSync(app, { recursive: true, force: true });
+  fs12.rmSync(app, { recursive: true, force: true });
   return { name, ok: problems.length === 0, problems, tested: tested.join("+") || "none" };
 }
 function certifyModules(modulesDir, projectTypeDir) {
-  const names = fs11.readdirSync(modulesDir, { withFileTypes: true }).filter((e) => e.isDirectory()).map((e) => e.name).sort();
+  const names = fs12.readdirSync(modulesDir, { withFileTypes: true }).filter((e) => e.isDirectory()).map((e) => e.name).sort();
   const modules = names.map((n) => certifyOne(modulesDir, projectTypeDir, n));
   return { ok: modules.every((m) => m.ok), modules };
 }
-var fs11, os4, path11, import_node_child_process5, import_yaml2, SUBSTRATE;
+var fs12, os6, path12, import_node_child_process5, import_yaml2, SUBSTRATE;
 var init_certifyModules = __esm({
   "packages/cli/dist/certifyModules.js"() {
     "use strict";
-    fs11 = __toESM(require("node:fs"), 1);
-    os4 = __toESM(require("node:os"), 1);
-    path11 = __toESM(require("node:path"), 1);
+    fs12 = __toESM(require("node:fs"), 1);
+    os6 = __toESM(require("node:os"), 1);
+    path12 = __toESM(require("node:path"), 1);
     import_node_child_process5 = require("node:child_process");
     import_yaml2 = __toESM(require_dist(), 1);
     SUBSTRATE = ["persistence-core", "agent-runtime", "chat-shell"];
@@ -15698,7 +15857,7 @@ __export(ui_exports, {
 });
 function readJsonSafe(file) {
   try {
-    return JSON.parse(fs12.readFileSync(file, "utf8"));
+    return JSON.parse(fs13.readFileSync(file, "utf8"));
   } catch {
     return null;
   }
@@ -15706,27 +15865,27 @@ function readJsonSafe(file) {
 function readArtifactJson(workspace, artifacts, name) {
   for (const byNode of Object.values(artifacts)) {
     if (byNode[name])
-      return readJsonSafe(path12.join(workspace, byNode[name]));
+      return readJsonSafe(path13.join(workspace, byNode[name]));
   }
   return null;
 }
 function readConfig(workspace) {
-  return JSON.parse(fs12.readFileSync(path12.join(workspace, "run.json"), "utf8"));
+  return JSON.parse(fs13.readFileSync(path13.join(workspace, "run.json"), "utf8"));
 }
 function loadDef(workspace, projectTypeDir) {
-  const snapshot = path12.join(workspace, "dag.snapshot.yaml");
-  return fs12.existsSync(snapshot) ? loadProjectTypeFile(snapshot) : loadProjectType(projectTypeDir);
+  const snapshot = path13.join(workspace, "dag.snapshot.yaml");
+  return fs13.existsSync(snapshot) ? loadProjectTypeFile(snapshot) : loadProjectType(projectTypeDir);
 }
 function walk(dir, base) {
-  if (!fs12.existsSync(dir))
+  if (!fs13.existsSync(dir))
     return [];
   const out = [];
-  for (const entry of fs12.readdirSync(dir, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name))) {
-    const p = path12.join(dir, entry.name);
+  for (const entry of fs13.readdirSync(dir, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name))) {
+    const p = path13.join(dir, entry.name);
     if (entry.isDirectory())
       out.push(...walk(p, base));
     else
-      out.push(path12.relative(base, p));
+      out.push(path13.relative(base, p));
   }
   return out;
 }
@@ -15740,7 +15899,7 @@ function resolveQuestions2(workspace, node, artifacts) {
     if (!rel)
       continue;
     try {
-      let value = JSON.parse(fs12.readFileSync(path12.join(workspace, rel), "utf8"));
+      let value = JSON.parse(fs13.readFileSync(path13.join(workspace, rel), "utf8"));
       for (const seg of (node.questionsFrom.path ?? "questions").split(".")) {
         value = value?.[seg];
       }
@@ -15869,7 +16028,7 @@ function buildState(workspace) {
   for (const byNode of Object.values(state.artifacts)) {
     if (byNode.rtm) {
       try {
-        assumptions = JSON.parse(fs12.readFileSync(path12.join(workspace, byNode.rtm), "utf8")).assumptions;
+        assumptions = JSON.parse(fs13.readFileSync(path13.join(workspace, byNode.rtm), "utf8")).assumptions;
       } catch {
       }
     }
@@ -15918,13 +16077,23 @@ function buildState(workspace) {
       };
     }
   }
+  const contractDoc = readArtifactJson(workspace, state.artifacts, "design_contract");
+  const coverageDoc = readArtifactJson(workspace, state.artifacts, "design_coverage");
+  const designDelivery = contractDoc ? {
+    promised: contractDoc.totals ?? null,
+    delivered: coverageDoc?.totals ?? null,
+    screens: (coverageDoc?.screens ?? []).map((sc) => ({
+      ...sc,
+      shotHref: sc.shot ? `/artifact/design-coverage/${sc.shot}` : null
+    }))
+  } : null;
   const intakeDoc = readArtifactJson(workspace, state.artifacts, "intake");
   const designChoiceDoc = readArtifactJson(workspace, state.artifacts, "design_choice");
   const rosterDoc = readArtifactJson(workspace, state.artifacts, "agent_roster");
   const workflowsDoc = readArtifactJson(workspace, state.artifacts, "workflows");
-  const pendingQuestion = readJsonSafe(path12.join(workspace, "pending-question.json"));
+  const pendingQuestion = readJsonSafe(path13.join(workspace, "pending-question.json"));
   const sliceShots = [];
-  for (const rel of walk(path12.join(workspace, "artifacts"), path12.join(workspace, "artifacts"))) {
+  for (const rel of walk(path13.join(workspace, "artifacts"), path13.join(workspace, "artifacts"))) {
     const m = rel.match(new RegExp("^(slice-[0-9]+)/app/screenshots/(slice-[0-9]+)[.]png$"));
     if (m && m[1] === m[2].replace("slice-", "slice-")) {
       if (rel.startsWith(m[2].split(".")[0])) {
@@ -15933,7 +16102,7 @@ function buildState(workspace) {
         const planned = slicePlanDoc?.slices?.[idx - 1];
         if (planned)
           shot.name = planned.name;
-        const demo = readJsonSafe(path12.join(workspace, "artifacts", m[1], "app", "demo", `${m[2]}.json`));
+        const demo = readJsonSafe(path13.join(workspace, "artifacts", m[1], "app", "demo", `${m[2]}.json`));
         if (demo?.caption)
           shot.caption = demo.caption;
         sliceShots.push(shot);
@@ -15944,7 +16113,7 @@ function buildState(workspace) {
   for (const byNode of Object.values(state.artifacts)) {
     if (byNode.designs) {
       try {
-        designOptions = JSON.parse(fs12.readFileSync(path12.join(workspace, byNode.designs), "utf8")).options;
+        designOptions = JSON.parse(fs13.readFileSync(path13.join(workspace, byNode.designs), "utf8")).options;
       } catch {
       }
     }
@@ -15972,6 +16141,7 @@ function buildState(workspace) {
     quality,
     designChoice: designChoiceDoc?.chosen_option ?? null,
     windowGate,
+    designDelivery,
     appAgents: Array.isArray(rosterDoc?.agents) ? rosterDoc.agents : null,
     agentOpportunityMap: Array.isArray(rosterDoc?.opportunity_map) ? rosterDoc.opportunity_map : null,
     appWorkflows: Array.isArray(workflowsDoc?.workflows) ? workflowsDoc.workflows : null,
@@ -15992,7 +16162,7 @@ function buildState(workspace) {
     elapsedMs: firstTs && lastTs ? Date.parse(String(lastTs)) - Date.parse(String(firstTs)) : 0,
     activeMs,
     startedAt: firstTs ?? null,
-    rawArtifacts: walk(path12.join(workspace, "artifacts"), path12.join(workspace, "artifacts")),
+    rawArtifacts: walk(path13.join(workspace, "artifacts"), path13.join(workspace, "artifacts")),
     events: events.map((e) => ({ ts: e.ts, type: e.type, nodeId: e.nodeId ?? null, text: narrate(e, costMap) })).filter((e) => e.text !== null).slice(-160)
   };
 }
@@ -16034,11 +16204,11 @@ function buildNodeDetail(workspace, nodeId) {
   for (const out of node.outputs ?? []) {
     if (!out.file || !out.file.endsWith(".json"))
       continue;
-    const abs = path12.join(workspace, "artifacts", nodeId, out.file);
-    if (!fs12.existsSync(abs))
+    const abs = path13.join(workspace, "artifacts", nodeId, out.file);
+    if (!fs13.existsSync(abs))
       continue;
     try {
-      const data = JSON.parse(fs12.readFileSync(abs, "utf8"));
+      const data = JSON.parse(fs13.readFileSync(abs, "utf8"));
       if (typeof data !== "object" || data === null || Array.isArray(data))
         continue;
       const entries = Object.entries(data).slice(0, 24).map(([k, v]) => ({
@@ -16053,8 +16223,8 @@ function buildNodeDetail(workspace, nodeId) {
   const planMatch = nodeId.match(/^slice-(\d+)$/);
   if (planMatch) {
     try {
-      const planPath = path12.join(workspace, "artifacts", "slice-plan", "slice_plan.json");
-      const plan = JSON.parse(fs12.readFileSync(planPath, "utf8"));
+      const planPath = path13.join(workspace, "artifacts", "slice-plan", "slice_plan.json");
+      const plan = JSON.parse(fs13.readFileSync(planPath, "utf8"));
       const sl = plan.slices[Number(planMatch[1]) - 1];
       if (sl)
         plannedDesc = `${sl.name} \u2014 ${sl.story}` + (sl.addresses?.length ? ` (covers ${sl.addresses.join(", ")})` : "");
@@ -16063,7 +16233,7 @@ function buildNodeDetail(workspace, nodeId) {
   }
   if (planMatch) {
     try {
-      const rep = JSON.parse(fs12.readFileSync(path12.join(workspace, "artifacts", nodeId, "app", "acceptance_report.json"), "utf8"));
+      const rep = JSON.parse(fs13.readFileSync(path13.join(workspace, "artifacts", nodeId, "app", "acceptance_report.json"), "utf8"));
       const mine = rep.slices[rep.slices.length - 1];
       if (mine) {
         results.unshift({
@@ -16084,7 +16254,7 @@ function buildNodeDetail(workspace, nodeId) {
   let promptText = null;
   if (node.prompt) {
     try {
-      promptText = fs12.readFileSync(path12.join(config.projectTypeDir, node.prompt), "utf8").slice(0, 6e3);
+      promptText = fs13.readFileSync(path13.join(config.projectTypeDir, node.prompt), "utf8").slice(0, 6e3);
     } catch {
       promptText = null;
     }
@@ -16110,19 +16280,19 @@ function buildNodeDetail(workspace, nodeId) {
   };
 }
 function mergeAnswers(workspace, nodeId, answers) {
-  const file = path12.join(workspace, "ui-answers.json");
+  const file = path13.join(workspace, "ui-answers.json");
   const config = readConfig(workspace);
   const existing = {};
-  if (config.answersFile && fs12.existsSync(config.answersFile)) {
-    Object.assign(existing, JSON.parse(fs12.readFileSync(config.answersFile, "utf8")));
+  if (config.answersFile && fs13.existsSync(config.answersFile)) {
+    Object.assign(existing, JSON.parse(fs13.readFileSync(config.answersFile, "utf8")));
   }
-  if (fs12.existsSync(file)) {
-    const prev = JSON.parse(fs12.readFileSync(file, "utf8"));
+  if (fs13.existsSync(file)) {
+    const prev = JSON.parse(fs13.readFileSync(file, "utf8"));
     for (const [k, v] of Object.entries(prev))
       existing[k] = { ...existing[k], ...v };
   }
   existing[nodeId] = { ...existing[nodeId], ...answers };
-  fs12.writeFileSync(file, JSON.stringify(existing, null, 2));
+  fs13.writeFileSync(file, JSON.stringify(existing, null, 2));
   return file;
 }
 function getFreePort() {
@@ -16139,15 +16309,15 @@ function scanRuns(root) {
   const runs = [];
   let entries = [];
   try {
-    entries = fs12.readdirSync(root, { withFileTypes: true });
+    entries = fs13.readdirSync(root, { withFileTypes: true });
   } catch {
     return runs;
   }
   for (const entry of entries) {
     if (!entry.isDirectory())
       continue;
-    const dir = path12.join(root, entry.name);
-    if (!fs12.existsSync(path12.join(dir, "run.json")) || !fs12.existsSync(path12.join(dir, "journal.jsonl")))
+    const dir = path13.join(root, entry.name);
+    if (!fs13.existsSync(path13.join(dir, "run.json")) || !fs13.existsSync(path13.join(dir, "journal.jsonl")))
       continue;
     try {
       const st = buildState(dir);
@@ -16168,7 +16338,7 @@ function scanRuns(root) {
         thumb,
         progress: { done: nodes.filter((n) => n.state === "committed" || n.state === "skipped").length, total: nodes.length },
         needsYou: Boolean(st.parkedGate || st.pendingQuestion),
-        updatedAt: fs12.statSync(path12.join(dir, "journal.jsonl")).mtime.toISOString()
+        updatedAt: fs13.statSync(path13.join(dir, "journal.jsonl")).mtime.toISOString()
       });
     } catch {
     }
@@ -16179,24 +16349,24 @@ function scanRuns(root) {
 function cliEntryPath() {
   try {
     const sibling = (0, import_node_url.fileURLToPath)(new URL("./index.js", importMetaUrl));
-    if (fs12.existsSync(sibling))
+    if (fs13.existsSync(sibling))
       return sibling;
   } catch {
   }
   return process.argv[1];
 }
 function startUiServer(target, port) {
-  const singleMode = fs12.existsSync(path12.join(target, "run.json"));
-  const root = singleMode ? path12.dirname(target) : target;
+  const singleMode = fs13.existsSync(path13.join(target, "run.json"));
+  const root = singleMode ? path13.dirname(target) : target;
   let workspace = singleMode ? target : null;
   let resuming = false;
-  const artifactsRoot = (ws) => path12.join(ws ?? workspace ?? target, "artifacts");
+  const artifactsRoot = (ws) => path13.join(ws ?? workspace ?? target, "artifacts");
   function wsFrom(url) {
     const ws = url.searchParams.get("ws");
     if (!ws)
       return null;
-    const abs = path12.resolve(ws);
-    if (!abs.startsWith(path12.resolve(root)) || !fs12.existsSync(path12.join(abs, "run.json")))
+    const abs = path13.resolve(ws);
+    if (!abs.startsWith(path13.resolve(root)) || !fs13.existsSync(path13.join(abs, "run.json")))
       return null;
     return abs;
   }
@@ -16210,30 +16380,30 @@ function startUiServer(target, port) {
     const roots = [];
     let base;
     try {
-      base = path12.dirname((0, import_node_url.fileURLToPath)(importMetaUrl));
+      base = path13.dirname((0, import_node_url.fileURLToPath)(importMetaUrl));
     } catch {
-      base = path12.dirname(process.argv[1] ?? ".");
+      base = path13.dirname(process.argv[1] ?? ".");
     }
-    for (let i = 0; i < 5 && base !== path12.dirname(base); i++) {
-      const cand = path12.join(base, "project-types");
-      if (fs12.existsSync(cand))
+    for (let i = 0; i < 5 && base !== path13.dirname(base); i++) {
+      const cand = path13.join(base, "project-types");
+      if (fs13.existsSync(cand))
         roots.push(cand);
-      base = path12.dirname(base);
+      base = path13.dirname(base);
     }
-    const home = process.env.HARNESS_HOME ?? path12.join(os5.homedir(), ".harness");
-    if (fs12.existsSync(path12.join(home, "store")))
-      roots.push(path12.join(home, "store"));
+    const home = process.env.HARNESS_HOME ?? path13.join(os7.homedir(), ".harness");
+    if (fs13.existsSync(path13.join(home, "store")))
+      roots.push(path13.join(home, "store"));
     return roots;
   }
   function availableProjectTypes() {
     const out = [];
     const seen = /* @__PURE__ */ new Set();
-    for (const ptRoot of [path12.join(root, "project-types"), ...packagedProjectTypeRoots()]) {
-      if (!fs12.existsSync(ptRoot))
+    for (const ptRoot of [path13.join(root, "project-types"), ...packagedProjectTypeRoots()]) {
+      if (!fs13.existsSync(ptRoot))
         continue;
-      for (const entry of fs12.readdirSync(ptRoot)) {
-        const dir = path12.join(ptRoot, entry);
-        if (!fs12.existsSync(path12.join(dir, "dag.yaml")))
+      for (const entry of fs13.readdirSync(ptRoot)) {
+        const dir = path13.join(ptRoot, entry);
+        if (!fs13.existsSync(path13.join(dir, "dag.yaml")))
           continue;
         try {
           const def = loadProjectType(dir);
@@ -16264,8 +16434,8 @@ function startUiServer(target, port) {
   function spawnResume(extraArgs = [], ws) {
     const w = ws ?? workspace;
     const cliEntry = cliEntryPath();
-    const uiAnswers = path12.join(w, "ui-answers.json");
-    const args = extraArgs.length > 0 ? [cliEntry, "resume", w, ...extraArgs] : [cliEntry, "resume", w, ...fs12.existsSync(uiAnswers) ? ["--answers", uiAnswers] : []];
+    const uiAnswers = path13.join(w, "ui-answers.json");
+    const args = extraArgs.length > 0 ? [cliEntry, "resume", w, ...extraArgs] : [cliEntry, "resume", w, ...fs13.existsSync(uiAnswers) ? ["--answers", uiAnswers] : []];
     resuming = true;
     const child = (0, import_node_child_process6.spawn)(process.execPath, args, { stdio: "ignore", detached: false });
     child.on("exit", () => resuming = false);
@@ -16282,7 +16452,7 @@ function startUiServer(target, port) {
     for (const n of def.nodes) {
       const rel = state.artifacts[n.id]?.[artifactName];
       if (rel)
-        found = { node: n.id, dir: path12.join(w, rel) };
+        found = { node: n.id, dir: path13.join(w, rel) };
     }
     return found;
   }
@@ -16315,23 +16485,23 @@ function startUiServer(target, port) {
       app.error = preview ? "no app artifact committed yet" : "project type declares no preview";
       return;
     }
-    const runDir = path12.join(w, "app-preview");
-    fs12.rmSync(runDir, { recursive: true, force: true });
-    fs12.cpSync(latest.dir, runDir, { recursive: true });
+    const runDir = path13.join(w, "app-preview");
+    fs13.rmSync(runDir, { recursive: true, force: true });
+    fs13.cpSync(latest.dir, runDir, { recursive: true });
     const appPort = await getFreePort();
     app.status = "starting";
     app.node = latest.node;
     app.error = void 0;
-    const logFile = path12.join(w, "app-preview.log");
-    const log = fs12.openSync(logFile, "w");
+    const logFile = path13.join(w, "app-preview.log");
+    const log = fs13.openSync(logFile, "w");
     const child = (0, import_node_child_process6.spawn)(preview.command, {
       shell: true,
       detached: true,
-      cwd: path12.join(runDir, preview.cwd ?? "."),
+      cwd: path13.join(runDir, preview.cwd ?? "."),
       env: { ...process.env, PORT: String(appPort) },
       stdio: ["ignore", log, log]
     });
-    fs12.closeSync(log);
+    fs13.closeSync(log);
     app.pid = child.pid ?? null;
     child.on("exit", () => {
       if (app.pid === child.pid && app.status !== "stopped") {
@@ -16339,7 +16509,7 @@ function startUiServer(target, port) {
         if (app.status === "failed") {
           let tail = "";
           try {
-            tail = fs12.readFileSync(logFile, "utf8").split("\n").slice(-6).join(" | ");
+            tail = fs13.readFileSync(logFile, "utf8").split("\n").slice(-6).join(" | ");
           } catch {
           }
           app.error = "app process exited during startup: " + tail.slice(-300);
@@ -16385,18 +16555,18 @@ function startUiServer(target, port) {
               res.writeHead(400).end(JSON.stringify({ error: "name must be lowercase letters/digits/hyphens" }));
               return;
             }
-            const ptAbs = path12.resolve(projectTypeDir);
-            if (!availableProjectTypes().some((p) => path12.resolve(p.dir) === ptAbs)) {
+            const ptAbs = path13.resolve(projectTypeDir);
+            if (!availableProjectTypes().some((p) => path13.resolve(p.dir) === ptAbs)) {
               res.writeHead(400).end(JSON.stringify({ error: "unknown project type" }));
               return;
             }
-            const ws = path12.join(root, name);
-            if (fs12.existsSync(ws)) {
+            const ws = path13.join(root, name);
+            if (fs13.existsSync(ws)) {
               res.writeHead(400).end(JSON.stringify({ error: `'${name}' already exists \u2014 pick another name` }));
               return;
             }
             (0, import_node_child_process6.spawn)(process.execPath, [cliEntryPath(), "run", ptAbs, "--workspace", ws], { stdio: "ignore", detached: false });
-            for (let i = 0; i < 40 && !fs12.existsSync(path12.join(ws, "journal.jsonl")); i++) {
+            for (let i = 0; i < 40 && !fs13.existsSync(path13.join(ws, "journal.jsonl")); i++) {
               await new Promise((r) => setTimeout(r, 250));
             }
             res.writeHead(200, { "content-type": "application/json" });
@@ -16410,8 +16580,8 @@ function startUiServer(target, port) {
         req.on("data", (chunk) => body += chunk);
         req.on("end", () => {
           const { dir } = JSON.parse(body);
-          const abs = path12.resolve(dir);
-          if (!abs.startsWith(path12.resolve(root)) || !fs12.existsSync(path12.join(abs, "run.json"))) {
+          const abs = path13.resolve(dir);
+          if (!abs.startsWith(path13.resolve(root)) || !fs13.existsSync(path13.join(abs, "run.json"))) {
             res.writeHead(400).end("not a run workspace under the served root");
             return;
           }
@@ -16448,14 +16618,14 @@ function startUiServer(target, port) {
           try {
             const { files } = JSON.parse(body);
             const ws = wsFrom(url) ?? workspace;
-            const dir = path12.join(ws, "inputs");
-            fs12.mkdirSync(dir, { recursive: true });
+            const dir = path13.join(ws, "inputs");
+            fs13.mkdirSync(dir, { recursive: true });
             const saved = [];
             for (const f of files ?? []) {
-              const name = path12.basename(String(f.name)).replace(/[^\w.\- ]/g, "_");
+              const name = path13.basename(String(f.name)).replace(/[^\w.\- ]/g, "_");
               if (!name || !f.data)
                 continue;
-              fs12.writeFileSync(path12.join(dir, name), Buffer.from(String(f.data), "base64"));
+              fs13.writeFileSync(path13.join(dir, name), Buffer.from(String(f.data), "base64"));
               saved.push(name);
             }
             res.writeHead(200, { "content-type": "application/json" });
@@ -16469,7 +16639,7 @@ function startUiServer(target, port) {
         req.on("data", (chunk) => body += chunk);
         req.on("end", () => {
           const { id, answers } = JSON.parse(body);
-          fs12.writeFileSync(path12.join(workspace, "pending-answer.json"), JSON.stringify({ id, answers }, null, 2));
+          fs13.writeFileSync(path13.join(workspace, "pending-answer.json"), JSON.stringify({ id, answers }, null, 2));
           res.writeHead(200, { "content-type": "application/json" });
           res.end(JSON.stringify({ ok: true }));
         });
@@ -16483,12 +16653,12 @@ function startUiServer(target, port) {
         res.end(JSON.stringify(detail));
       } else if (url.pathname.startsWith("/view/")) {
         const rel = decodeURIComponent(url.pathname.slice("/view/".length));
-        const abs = path12.normalize(path12.join(artifactsRoot(), rel));
-        if (!abs.startsWith(artifactsRoot() + path12.sep) || !fs12.existsSync(abs) || !fs12.statSync(abs).isFile()) {
+        const abs = path13.normalize(path13.join(artifactsRoot(), rel));
+        if (!abs.startsWith(artifactsRoot() + path13.sep) || !fs13.existsSync(abs) || !fs13.statSync(abs).isFile()) {
           res.writeHead(404).end("not found");
           return;
         }
-        let body = fs12.readFileSync(abs, "utf8");
+        let body = fs13.readFileSync(abs, "utf8");
         if (abs.endsWith(".json")) {
           try {
             body = JSON.stringify(JSON.parse(body), null, 2);
@@ -16499,24 +16669,24 @@ function startUiServer(target, port) {
         res.end(VIEW_PAGE.replace("__TITLE__", rel).replace("__BODY__", body.replace(/&/g, "&amp;").replace(/</g, "&lt;")));
       } else if (url.pathname.startsWith("/thumb/")) {
         const [, , runName, slice] = url.pathname.split("/").map(decodeURIComponent);
-        const runDir = path12.join(root, path12.basename(runName ?? ""));
-        const shot = path12.join(runDir, "artifacts", path12.basename(slice ?? ""), "app", "screenshots", `${path12.basename(slice ?? "")}.png`);
-        if (!fs12.existsSync(path12.join(runDir, "run.json")) || !fs12.existsSync(shot)) {
+        const runDir = path13.join(root, path13.basename(runName ?? ""));
+        const shot = path13.join(runDir, "artifacts", path13.basename(slice ?? ""), "app", "screenshots", `${path13.basename(slice ?? "")}.png`);
+        if (!fs13.existsSync(path13.join(runDir, "run.json")) || !fs13.existsSync(shot)) {
           res.writeHead(404).end("not found");
           return;
         }
         res.writeHead(200, { "content-type": "image/png", "cache-control": "max-age=60" });
-        res.end(fs12.readFileSync(shot));
+        res.end(fs13.readFileSync(shot));
       } else if (url.pathname.startsWith("/artifact/")) {
         const rel = decodeURIComponent(url.pathname.slice("/artifact/".length));
         const aroot = artifactsRoot(wsFrom(url));
-        const abs = path12.normalize(path12.join(aroot, rel));
-        if (!abs.startsWith(aroot + path12.sep) || !fs12.existsSync(abs) || !fs12.statSync(abs).isFile()) {
+        const abs = path13.normalize(path13.join(aroot, rel));
+        if (!abs.startsWith(aroot + path13.sep) || !fs13.existsSync(abs) || !fs13.statSync(abs).isFile()) {
           res.writeHead(404).end("not found");
           return;
         }
-        res.writeHead(200, { "content-type": MIME[path12.extname(abs)] ?? "text/plain; charset=utf-8" });
-        res.end(fs12.readFileSync(abs));
+        res.writeHead(200, { "content-type": MIME[path13.extname(abs)] ?? "text/plain; charset=utf-8" });
+        res.end(fs13.readFileSync(abs));
       } else if (url.pathname === "/api/answer" && req.method === "POST") {
         let body = "";
         req.on("data", (chunk) => body += chunk);
@@ -16561,11 +16731,11 @@ function startUiServer(target, port) {
             target2 = slice;
             feedback = "The user reviewed this slice in the running app and it does not match what was agreed. Fix the implementation according to this feedback (requirements are unchanged):\n\n" + text;
           } else {
-            const crDir = path12.join(workspace, "change-requests");
-            fs12.mkdirSync(crDir, { recursive: true });
-            const n = fs12.readdirSync(crDir).filter((f) => f.endsWith(".json")).length + 1;
+            const crDir = path13.join(workspace, "change-requests");
+            fs13.mkdirSync(crDir, { recursive: true });
+            const n = fs13.readdirSync(crDir).filter((f) => f.endsWith(".json")).length + 1;
             const cr = { id: `CR-${n}`, text, ts: (/* @__PURE__ */ new Date()).toISOString() };
-            fs12.writeFileSync(path12.join(crDir, `cr-${n}.json`), JSON.stringify(cr, null, 2));
+            fs13.writeFileSync(path13.join(crDir, `cr-${n}.json`), JSON.stringify(cr, null, 2));
             target2 = ctx.def.nodes.find((nd) => (nd.outputs ?? []).some((o) => o.name === "requirements"))?.id;
             feedback = `User change request ${cr.id} (raised after reviewing the built app): ${text}
 
@@ -16601,15 +16771,15 @@ Add this as a NEW requirement: provenance source "user-feedback" referencing ` +
     server.listen(port, "127.0.0.1", () => resolve5(server));
   });
 }
-var fs12, http, net, os5, path12, import_node_child_process6, import_node_url, MIME, DOC_LABELS, VIEW_PAGE, PAGE;
+var fs13, http, net, os7, path13, import_node_child_process6, import_node_url, MIME, DOC_LABELS, VIEW_PAGE, PAGE;
 var init_ui = __esm({
   "packages/cli/dist/ui.js"() {
     "use strict";
-    fs12 = __toESM(require("node:fs"), 1);
+    fs13 = __toESM(require("node:fs"), 1);
     http = __toESM(require("node:http"), 1);
     net = __toESM(require("node:net"), 1);
-    os5 = __toESM(require("node:os"), 1);
-    path12 = __toESM(require("node:path"), 1);
+    os7 = __toESM(require("node:os"), 1);
+    path13 = __toESM(require("node:path"), 1);
     import_node_child_process6 = require("node:child_process");
     import_node_url = require("node:url");
     init_dist();
@@ -16967,6 +17137,7 @@ button.ghost { background:transparent; border:1px solid var(--border); color:var
   <div class="secwrap" id="sec-design" style="display:none">
     <div class="seclabel">The design <span class="hint">\u2014 what your app looks like</span></div>
     <div class="card" id="designPanel" style="display:none"><h2 id="designHead">Design options \u2014 pick one</h2><div class="designs" id="designs"></div></div>
+    <div class="card" id="deliveryPanel" style="display:none"><h2>Design delivery \u2014 what you approved vs what's live <span class="hint" id="deliveryTotals"></span></h2><div id="deliveryGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:.6rem"></div></div>
   </div>
   <div class="secwrap" id="sec-anatomy" style="display:none">
     <div class="seclabel">What&#39;s inside <span class="hint">\u2014 the processes and agents your app runs</span></div>
@@ -17474,6 +17645,25 @@ async function tick() {
     }
   } else { wg.style.display = 'none'; }
 
+  // design delivery
+  const dp = document.getElementById('deliveryPanel');
+  if (s.designDelivery && s.designDelivery.promised) {
+    const dd = s.designDelivery;
+    document.getElementById('sec-design').style.display = '';
+    dp.style.display = '';
+    if (dd.delivered) {
+      setText('deliveryTotals', dd.delivered.screens_present + '/' + dd.promised.screens + ' screens live \xB7 ' + dd.delivered.elements_present + '/' + dd.promised.elements + ' elements present');
+    } else {
+      setText('deliveryTotals', dd.promised.screens + ' screens and ' + dd.promised.elements + ' elements promised \u2014 delivery proof runs after the build');
+    }
+    setHTML('deliveryGrid', (dd.screens.length ? dd.screens : []).map(sc =>
+      '<div style="border:1px solid var(--grid);border-radius:10px;padding:.6rem .8rem">' +
+      '<div style="display:flex;align-items:center;gap:.4rem"><span class="chip ' + (sc.present ? 'ok' : 'bad') + '">' + (sc.present ? 'live' : 'missing') + '</span><b style="font-size:.85rem">' + esc(sc.title || sc.id) + '</b></div>' +
+      '<div class="hint" style="margin-top:.25rem">' + (sc.covered_by_slice ? 'delivered in slice ' + sc.covered_by_slice : 'unassigned') + ' \xB7 ' + sc.elements_present + '/' + sc.elements_declared + ' elements</div>' +
+      (sc.shotHref ? '<a href="' + esc(sc.shotHref) + q() + '" target="_blank" class="hint" style="display:block;margin-top:.25rem">live screenshot \u2192</a>' : '') +
+      '</div>').join('') || '<div class="empty">screen-by-screen proof appears when design-coverage runs</div>');
+  } else dp.style.display = 'none';
+
   // agent mid-step question
   const aq = document.getElementById('agentQPanel');
   if (s.pendingQuestion && !s.resuming) {
@@ -17714,8 +17904,8 @@ safeTick(); setInterval(safeTick, 2500);
 });
 
 // packages/cli/dist/index.js
-var fs13 = __toESM(require("node:fs"), 1);
-var path13 = __toESM(require("node:path"), 1);
+var fs14 = __toESM(require("node:fs"), 1);
+var path14 = __toESM(require("node:path"), 1);
 init_dist();
 function parseFlags(args) {
   const positional = [];
@@ -17740,11 +17930,11 @@ function parseFlags(args) {
 function loadAnswers(file) {
   if (!file)
     return void 0;
-  return JSON.parse(fs13.readFileSync(file, "utf8"));
+  return JSON.parse(fs14.readFileSync(file, "utf8"));
 }
 function buildContext(workspace, config) {
-  const snapshot = path13.join(workspace, "dag.snapshot.yaml");
-  const def = fs13.existsSync(snapshot) ? loadProjectTypeFile(snapshot) : loadProjectType(config.projectTypeDir);
+  const snapshot = path14.join(workspace, "dag.snapshot.yaml");
+  const def = fs14.existsSync(snapshot) ? loadProjectTypeFile(snapshot) : loadProjectType(config.projectTypeDir);
   return {
     workspace,
     projectTypeDir: config.projectTypeDir,
@@ -17779,18 +17969,18 @@ async function cmdRun(args) {
     }
     projectTypeDir = resolved;
   } else {
-    projectTypeDir = path13.resolve(positional[0] ?? ".");
+    projectTypeDir = path14.resolve(positional[0] ?? ".");
   }
-  const workspace = path13.resolve(flags.workspace ?? ".harness-run");
+  const workspace = path14.resolve(flags.workspace ?? ".harness-run");
   const config = {
     projectTypeDir,
-    answersFile: flags.answers ? path13.resolve(flags.answers) : void 0,
+    answersFile: flags.answers ? path14.resolve(flags.answers) : void 0,
     mockAgents: flags["mock-agents"] === true,
     acceptDefaults: flags["accept-defaults"] === true
   };
-  fs13.mkdirSync(workspace, { recursive: true });
-  fs13.writeFileSync(path13.join(workspace, "run.json"), JSON.stringify(config, null, 2));
-  fs13.copyFileSync(path13.join(projectTypeDir, "dag.yaml"), path13.join(workspace, "dag.snapshot.yaml"));
+  fs14.mkdirSync(workspace, { recursive: true });
+  fs14.writeFileSync(path14.join(workspace, "run.json"), JSON.stringify(config, null, 2));
+  fs14.copyFileSync(path14.join(projectTypeDir, "dag.yaml"), path14.join(workspace, "dag.snapshot.yaml"));
   const ctx = buildContext(workspace, config);
   ctx.journal.append({
     type: "run.created",
@@ -17800,15 +17990,17 @@ async function cmdRun(args) {
   console.log(`running ${ctx.def.name}@${ctx.def.version} (${ctx.def.nodes.length} nodes)`);
   const result = await runLoop(ctx);
   report(ctx, result.status, result.failedNodeId ?? result.parkedNodeId);
-  (await Promise.resolve().then(() => (init_telemetry(), telemetry_exports))).recordRun(ctx, result, "run");
+  const tel = await Promise.resolve().then(() => (init_telemetry(), telemetry_exports));
+  tel.recordRun(ctx, result, "run");
+  await tel.syncTelemetry();
   return result.status === "completed" ? 0 : result.status === "parked" ? 0 : 1;
 }
 async function cmdResume(args) {
   const { positional, flags } = parseFlags(args);
-  const workspace = path13.resolve(positional[0] ?? ".harness-run");
-  const config = JSON.parse(fs13.readFileSync(path13.join(workspace, "run.json"), "utf8"));
+  const workspace = path14.resolve(positional[0] ?? ".harness-run");
+  const config = JSON.parse(fs14.readFileSync(path14.join(workspace, "run.json"), "utf8"));
   if (flags.answers)
-    config.answersFile = path13.resolve(flags.answers);
+    config.answersFile = path14.resolve(flags.answers);
   if (flags["accept-defaults"] === true)
     config.acceptDefaults = true;
   const ctx = buildContext(workspace, config);
@@ -17818,21 +18010,23 @@ async function cmdResume(args) {
   console.log(`resuming ${ctx.def.name}@${ctx.def.version}`);
   const result = await runLoop(ctx);
   report(ctx, result.status, result.failedNodeId ?? result.parkedNodeId);
-  (await Promise.resolve().then(() => (init_telemetry(), telemetry_exports))).recordRun(ctx, result, "resume");
+  const tel = await Promise.resolve().then(() => (init_telemetry(), telemetry_exports));
+  tel.recordRun(ctx, result, "resume");
+  await tel.syncTelemetry();
   return result.status === "failed" ? 1 : 0;
 }
 async function cmdRevise(args) {
   const { positional, flags } = parseFlags(args);
-  const workspace = path13.resolve(positional[0] ?? ".harness-run");
+  const workspace = path14.resolve(positional[0] ?? ".harness-run");
   const nodeId = positional[1];
   const feedback = flags.feedback;
   if (!nodeId || !feedback) {
     console.error('usage: harness revise <workspace> <nodeId> --feedback "what to change" [--resume]');
     return 1;
   }
-  const config = JSON.parse(fs13.readFileSync(path13.join(workspace, "run.json"), "utf8"));
+  const config = JSON.parse(fs14.readFileSync(path14.join(workspace, "run.json"), "utf8"));
   if (flags.answers)
-    config.answersFile = path13.resolve(flags.answers);
+    config.answersFile = path14.resolve(flags.answers);
   if (flags["accept-defaults"] === true)
     config.acceptDefaults = true;
   const ctx = buildContext(workspace, config);
@@ -17842,7 +18036,9 @@ async function cmdRevise(args) {
   if (flags.resume === true) {
     const result = await runLoop(ctx);
     report(ctx, result.status, result.failedNodeId ?? result.parkedNodeId);
-    (await Promise.resolve().then(() => (init_telemetry(), telemetry_exports))).recordRun(ctx, result, "revise");
+    const tel = await Promise.resolve().then(() => (init_telemetry(), telemetry_exports));
+    tel.recordRun(ctx, result, "revise");
+    await tel.syncTelemetry();
     return result.status === "failed" ? 1 : 0;
   }
   console.log(`run 'harness resume ${workspace}' to re-derive`);
@@ -17850,8 +18046,8 @@ async function cmdRevise(args) {
 }
 function cmdStatus(args) {
   const { positional } = parseFlags(args);
-  const workspace = path13.resolve(positional[0] ?? ".harness-run");
-  const config = JSON.parse(fs13.readFileSync(path13.join(workspace, "run.json"), "utf8"));
+  const workspace = path14.resolve(positional[0] ?? ".harness-run");
+  const config = JSON.parse(fs14.readFileSync(path14.join(workspace, "run.json"), "utf8"));
   const ctx = buildContext(workspace, config);
   report(ctx, "status");
   return 0;
@@ -17910,8 +18106,33 @@ async function main() {
       break;
     }
     case "telemetry": {
-      const { summarize: summarize3 } = await Promise.resolve().then(() => (init_telemetry(), telemetry_exports));
-      console.log(summarize3());
+      const { flags } = parseFlags(rest);
+      const { summarize: summarize3, syncTelemetry: syncTelemetry2 } = await Promise.resolve().then(() => (init_telemetry(), telemetry_exports));
+      if (flags.sync === true)
+        console.log(await syncTelemetry2());
+      else
+        console.log(summarize3());
+      break;
+    }
+    case "publish": {
+      const { positional, flags } = parseFlags(rest);
+      const registryUrl = flags["registry-url"] ?? process.env.HARNESS_REGISTRY_URL;
+      if (!positional[0] || !registryUrl) {
+        console.error("usage: harness publish <workspace> --registry-url <url> [--team t] [--owner o] [--name n]");
+        console.error("       (or set HARNESS_REGISTRY_URL)");
+        process.exitCode = 1;
+        break;
+      }
+      const { publishWorkspace: publishWorkspace2 } = await Promise.resolve().then(() => (init_publish(), publish_exports));
+      const result = await publishWorkspace2(path14.resolve(positional[0]), {
+        registryUrl,
+        owner: flags.owner,
+        team: flags.team,
+        name: flags.name
+      });
+      console.log(result.message);
+      if (!result.ok)
+        process.exitCode = 1;
       break;
     }
     case "self-update": {
@@ -17928,9 +18149,9 @@ async function main() {
         code = 1;
         break;
       }
-      const os6 = await import("node:os");
+      const os8 = await import("node:os");
       const { spawnSync: spawnSync6 } = await import("node:child_process");
-      const checkout = fs13.mkdtempSync(path13.join(os6.tmpdir(), "harness-update-"));
+      const checkout = fs14.mkdtempSync(path14.join(os8.tmpdir(), "harness-update-"));
       const cloneArgs = ["clone", "--depth", "1", ...flags.ref ? ["--branch", flags.ref] : [], registry, checkout];
       for (const [what, cmd, args, cwd] of [
         ["fetch", "git", cloneArgs, void 0],
@@ -17946,9 +18167,9 @@ ${(r.stderr ?? "").slice(-500)}`);
         }
       }
       if (code === 0) {
-        const fresh = path13.join(checkout, "dist-bundle", "harness.cjs");
-        fs13.copyFileSync(entry, entry + ".bak");
-        fs13.copyFileSync(fresh, entry);
+        const fresh = path14.join(checkout, "dist-bundle", "harness.cjs");
+        fs14.copyFileSync(entry, entry + ".bak");
+        fs14.copyFileSync(fresh, entry);
         console.log(`updated ${entry} (previous version kept at ${entry}.bak)`);
       }
       break;
@@ -17956,7 +18177,7 @@ ${(r.stderr ?? "").slice(-500)}`);
     case "certify-mcp": {
       const { positional } = parseFlags(rest);
       const { certifyMcp: certifyMcp2 } = await Promise.resolve().then(() => (init_mcp(), mcp_exports));
-      const { ok, servers } = await certifyMcp2(path13.resolve(positional[0] ?? "mcp"));
+      const { ok, servers } = await certifyMcp2(path14.resolve(positional[0] ?? "mcp"));
       for (const s2 of servers) {
         console.log(`  ${s2.ok ? "OK " : "FAIL"}  ${s2.name.padEnd(20)} tools: ${s2.tools.join(", ") || "-"}`);
         for (const prob of s2.problems)
@@ -17976,7 +18197,7 @@ all ${servers.length} mcp server(s) certified` : "\nMCP CERTIFICATION FAILED");
       }
       const { scaffoldMcp: scaffoldMcp2 } = await Promise.resolve().then(() => (init_mcp(), mcp_exports));
       try {
-        const dir = scaffoldMcp2(positional[0], path13.resolve(positional[1] ?? "mcp"));
+        const dir = scaffoldMcp2(positional[0], path14.resolve(positional[1] ?? "mcp"));
         console.log(`scaffolded ${dir} \u2014 implement TOOLS in server.mjs, then: harness certify-mcp`);
       } catch (e) {
         console.error(String(e instanceof Error ? e.message : e));
@@ -17987,10 +18208,10 @@ all ${servers.length} mcp server(s) certified` : "\nMCP CERTIFICATION FAILED");
     case "certify-modules": {
       const { positional } = parseFlags(rest);
       const { certifyModules: certifyModules2 } = await Promise.resolve().then(() => (init_certifyModules(), certifyModules_exports));
-      const modulesDir = path13.resolve(positional[0] ?? "modules");
-      const ptDir = path13.resolve(positional[1] ?? "project-types/agentic-app");
+      const modulesDir = path14.resolve(positional[0] ?? "modules");
+      const ptDir = path14.resolve(positional[1] ?? "project-types/agentic-app");
       const { ok, modules } = certifyModules2(modulesDir, ptDir);
-      console.log(`certifying ${modules.length} module(s) against substrate templates in ${path13.basename(ptDir)}
+      console.log(`certifying ${modules.length} module(s) against substrate templates in ${path14.basename(ptDir)}
 `);
       for (const m of modules) {
         console.log(`  ${m.ok ? "OK " : "FAIL"}  ${m.name.padEnd(20)} ${m.tested}`);
@@ -18024,7 +18245,7 @@ all ${modules.length} modules certified` : "\nMODULE CERTIFICATION FAILED");
       break;
     case "ui": {
       const { positional, flags } = parseFlags(rest);
-      const workspace = path13.resolve(positional[0] ?? ".");
+      const workspace = path14.resolve(positional[0] ?? ".");
       const port = Number(flags.port ?? 4400);
       const { startUiServer: startUiServer2 } = await Promise.resolve().then(() => (init_ui(), ui_exports));
       await startUiServer2(workspace, port);
@@ -18032,7 +18253,7 @@ all ${modules.length} modules certified` : "\nMODULE CERTIFICATION FAILED");
       return;
     }
     default:
-      console.log("usage: harness <run|resume|revise|status|ui|setup|certify|install|list|telemetry|self-update>");
+      console.log("usage: harness <run|resume|revise|status|ui|setup|certify|install|list|publish|telemetry|self-update>");
       console.log("  harness run <project-type-dir> [--workspace dir] [--answers file] [--mock-agents]");
       console.log("  harness resume <workspace> [--answers file]");
       console.log('  harness revise <workspace> <nodeId> --feedback "what to change" [--resume]');

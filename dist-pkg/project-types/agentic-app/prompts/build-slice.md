@@ -19,8 +19,20 @@ REVISIONS: if ./feedback.md contains user revision feedback, the user reviewed t
 
 WORKFLOW HANDLERS: if app/workflows/workflows.json exists, every deterministic node's `handler` name is an implementation contract — register real handlers (see the app-conventions skill) for the handlers your slice's features need, with outputs satisfying each node's output_schema. The workflow endpoints must actually run end to end for processes your slice claims to deliver.
 
-DEMONSTRATE YOUR SLICE (contract): write app/demo/slice-<N>.json showing YOUR feature in action:
+DELIVER YOUR COVERED SCREENS (non-negotiable): your slice's `covers` lists the
+design screens YOU must bring fully to life this slice. For each one: every
+button, form, and list on it must be wired to real backend behavior — a screen
+that still looks like the mockup with dead controls is a FAILED slice. The
+design-coverage verifier at the end of the build boots the app and fails if
+any approved screen is missing or inert; screens covered by earlier slices
+must keep working (never remove them).
+
+DEMONSTRATE YOUR SLICE (contract, ENFORCED): write app/demo/slice-<N>.json showing YOUR feature in action:
 {"screen": "screen-<name>", "caption": "<one sentence: what this slice delivered, as visible in the shot>", "steps": [{"action":"fill","selector":"#...","value":"..."},{"action":"click","selector":"#..."}]}
-The verifier executes your steps against the running app and screenshots THAT screen — this is how the user sees what your slice added, so target the surface your feature lives on and stage realistic data through the steps. A slice whose demo shows the same generic chat view as every other slice has failed its purpose.
+The verifier REQUIRES this file, executes your steps against the running app,
+and screenshots THAT screen alone. "screen" must be one of your slice's covered
+screens. A screenshot byte-identical to a previous slice's FAILS verification —
+stage real data through your steps so the shot visibly shows what this slice
+added. There is no fallback: a demo that cannot run is a failed slice.
 
 REVIEW BEFORE DONE (mandatory): after implementing, invoke the slice-reviewer subagent (Task tool) on your work. Address every finding it reports — fidelity breaks, shadowed routes, module bypasses, cumulative-acceptance risks — then re-run it until it replies NO FINDINGS. The verifier boots the app after you; the reviewer is how you avoid paying for a failed boot.

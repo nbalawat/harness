@@ -1,6 +1,7 @@
 // A slice's exit criteria: boot the app and run CUMULATIVE acceptance — this
 // slice's checks plus every previous slice's (features never regress) — then
 // the backend test suite. Runs inside the slice node's retry loop.
+const crypto = require("node:crypto");
 const fs = require("node:fs");
 const net = require("node:net");
 const path = require("node:path");
@@ -29,6 +30,33 @@ function freePort() {
 
 async function main() {
   // Fast static checks first.
+  // The slice's demo declaration is a CONTRACT, not a nicety: without it the
+  // user cannot see what this slice added. Missing demo = failed slice.
+  const thisSlice = slices[sliceIndex - 1];
+  const demoFile = path.join(app, "demo", `slice-${sliceIndex}.json`);
+  if (!fs.existsSync(demoFile)) {
+    fail(`app/demo/slice-${sliceIndex}.json missing — declare how to DEMONSTRATE this slice (screen + steps + caption); the user sees your slice through it`);
+  }
+  let demo;
+  try {
+    demo = JSON.parse(fs.readFileSync(demoFile, "utf8"));
+  } catch (e) {
+    fail(`app/demo/slice-${sliceIndex}.json is not valid JSON: ${e}`);
+  }
+  if (!demo.screen || !demo.caption) fail(`app/demo/slice-${sliceIndex}.json must declare "screen" and "caption"`);
+  if (Array.isArray(thisSlice.covers) && thisSlice.covers.length && !thisSlice.covers.includes(demo.screen)) {
+    fail(`demo targets ${demo.screen} but this slice covers ${thisSlice.covers.join(", ")} — demonstrate a surface THIS slice delivers`);
+  }
+  // Every screen covered by slices 1..N must exist in the shell: covered
+  // screens are the design promise being delivered, never removed.
+  const indexHtmlEarly = fs.readFileSync(path.join(app, "frontend/index.html"), "utf8");
+  for (const s of slices) {
+    for (const screen of s.covers ?? []) {
+      if (!indexHtmlEarly.includes(`id="${screen}"`)) {
+        fail(`covered design screen '${screen}' (slice ${s.id}) is missing from frontend/index.html — the approved design's screens must all survive`);
+      }
+    }
+  }
   const indexHtml = fs.readFileSync(path.join(app, "frontend/index.html"), "utf8");
   if (indexHtml.includes("__APP_NAME__")) {
     fail("branding placeholder __APP_NAME__ present");
@@ -114,50 +142,49 @@ async function main() {
       await page.waitForTimeout(900);
       fs.mkdirSync(path.join(app, "screenshots"), { recursive: true });
 
-      // THE SLICE'S OWN DEMO: the builder declares how to show ITS feature
-      // (app/demo/slice-N.json: screen + steps + caption). The shot is that
-      // screen, focused — each slice's screenshot demonstrates its increment.
-      let demoShot = false;
-      const demoFile = path.join(app, "demo", `slice-${sliceIndex}.json`);
-      if (fs.existsSync(demoFile)) {
-        try {
-          const demo = JSON.parse(fs.readFileSync(demoFile, "utf8"));
-          for (const step of demo.steps ?? []) {
-            if (step.action === "fill") await page.fill(step.selector, String(step.value ?? ""));
-            if (step.action === "click") await page.locator(step.selector).first().click();
-            await page.waitForTimeout(500);
-          }
-          await page.waitForTimeout(700);
-          const target = demo.screen ? page.locator(`#${demo.screen}`) : null;
-          if (target && (await target.count()) > 0) {
-            await page.evaluate((id) => {
-              const el = document.getElementById(id);
-              if (el) { el.style.display = "block"; el.style.visibility = "visible"; el.removeAttribute("hidden"); }
-            }, demo.screen);
-            await target.first().screenshot({ path: path.join(app, "screenshots", `slice-${sliceIndex}.png`) });
-            demoShot = true;
-            console.log(`demo screenshot: slice ${sliceIndex} -> #${demo.screen}`);
-          }
-        } catch (e) {
-          console.log("slice demo failed, falling back to composite: " + String(e).slice(0, 120));
+      // THE SLICE'S OWN DEMO (enforced): execute the declared steps, then
+      // screenshot the declared screen alone. No composite fallback — a demo
+      // that cannot run is a failed slice, because the user would see nothing.
+      if ((await page.locator(`#${demo.screen}`).count()) === 0) {
+        throw new Error(`demo screen #${demo.screen} not found in the running app`);
+      }
+      for (const step of demo.steps ?? []) {
+        if (step.action === "fill") await page.fill(step.selector, String(step.value ?? ""));
+        if (step.action === "click") await page.locator(step.selector).first().click();
+        await page.waitForTimeout(500);
+      }
+      await page.waitForTimeout(700);
+      await page.evaluate((id) => {
+        for (const s of document.querySelectorAll('[id^="screen-"]')) { s.style.display = "none"; }
+        const el = document.getElementById(id);
+        if (el) { el.style.display = "block"; el.style.visibility = "visible"; el.removeAttribute("hidden"); }
+      }, demo.screen);
+      await page.waitForTimeout(250);
+      const shotPath = path.join(app, "screenshots", `slice-${sliceIndex}.png`);
+      await page.locator(`#${demo.screen}`).first().screenshot({ path: shotPath });
+      await browser.close();
+
+      // DISTINCTNESS: a screenshot identical to a previous slice's shows the
+      // user nothing new — the demo failed its purpose. Fail into the retry
+      // loop with feedback instead of shipping a useless shot.
+      const newShot = crypto.createHash("sha256").update(fs.readFileSync(shotPath)).digest("hex");
+      for (let prev = 1; prev < sliceIndex; prev++) {
+        const prevPath = path.join(app, "screenshots", `slice-${prev}.png`);
+        if (!fs.existsSync(prevPath)) continue;
+        const prevHash = crypto.createHash("sha256").update(fs.readFileSync(prevPath)).digest("hex");
+        if (prevHash === newShot) {
+          fail(`slice ${sliceIndex}'s demo screenshot is IDENTICAL to slice ${prev}'s — your demo must show the feature THIS slice added (stage data via steps, target your own surface #${demo.screen})`);
         }
       }
-      if (!demoShot) {
-        // Fallback composite: all screens revealed, full page.
-        await page.evaluate(() => {
-          for (const s of document.querySelectorAll('[id^="screen-"]')) {
-            s.style.display = "block";
-            s.style.visibility = "visible";
-            s.removeAttribute("hidden");
-          }
-        });
-        await page.waitForTimeout(300);
-        await page.screenshot({ path: path.join(app, "screenshots", `slice-${sliceIndex}.png`), fullPage: true });
-      }
-      await browser.close();
-      console.log(`progress screenshot captured for slice ${sliceIndex} (full page)`);
+      console.log(`demo screenshot: slice ${sliceIndex} -> #${demo.screen} (distinct)`);
     } catch (e) {
-      console.log("progress screenshot skipped: " + String(e).slice(0, 120));
+      if (String(e).includes("IDENTICAL")) throw e;
+      const browserGone = /playwright|browserType|executable|channel/i.test(String(e));
+      if (browserGone) {
+        console.log("browser unavailable — screenshot enforcement skipped: " + String(e).slice(0, 120));
+      } else {
+        fail(`slice demo failed to execute: ${String(e).slice(0, 300)} — fix app/demo/slice-${sliceIndex}.json (screen: ${demo.screen})`);
+      }
     }
   } finally {
     kill();
