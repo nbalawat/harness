@@ -72,11 +72,30 @@ nodes:
     description: "Collects your problem statement, supporting documents, and key choices."
     kind: gate
     questions:
-      - { id: project_name, prompt: "What should the application be called?" }
-      - { id: problem_statement, prompt: "Describe the problem this application should solve." }
-      - { id: documents_dir, prompt: "Path to a folder of supporting documents (or 'none').", default: "none" }
-      - { id: deploy_target, prompt: "Deploy target?", default: "local", why: "Enables/disables the cloud deploy stage." }
-      - { id: supervision, prompt: "How closely do you want to supervise the build? (gates-only / every-slice)", default: "gates-only", why: "every-slice adds a checkpoint after each delivered slice: the run PAUSES up to 5 minutes for your verdict, then proceeds on approval-by-default (recorded as an assumption). Intervene when you want to; never blocked when you don't." }
+      - { id: project_name, prompt: "What should the application be called?", placeholder: "e.g. KYC Review Desk" }
+      - id: problem_statement
+        prompt: "Describe the problem this application should solve."
+        type: long
+        placeholder: "Who uses it, what they need to accomplish, the workflow stages, where AI agents should help, and which decisions must stay human. The richer this is, the fewer questions you'll be asked later."
+      - id: documents_dir
+        prompt: "Supporting documents (policies, specs, notes — any format)."
+        type: files
+        default: "none"
+        why: "Everything you provide is read into an evidence corpus; requirements trace back to your documents instead of being invented."
+      - id: deploy_target
+        prompt: "Where should the finished app run?"
+        type: choice
+        default: "local"
+        options:
+          - { value: "local", label: "My machine", hint: "Run locally from the dashboard; no cloud stage." }
+          - { value: "cloud-run", label: "Google Cloud Run", hint: "Adds a certified deploy stage that produces a reviewed deploy plan." }
+      - id: supervision
+        prompt: "How closely do you want to supervise the build?"
+        type: choice
+        default: "every-slice"
+        options:
+          - { value: "every-slice", label: "Checkpoint every slice (recommended)", hint: "After each delivered feature: a 5-minute review window with its evidence and screenshot. Answer to decide; walk away and it proceeds on approval-by-default, recorded as an assumption." }
+          - { value: "gates-only", label: "Five decisions only", hint: "You're asked at intake, clarify, design pick, design review, and final sign-off. Slices build straight through with no pauses." }
     outputs:
       - { name: intake, file: intake.json, schema: schemas/intake.schema.json }
 
@@ -583,7 +602,7 @@ nodes:
     when: { artifact: intake, path: supervision, equals: "every-slice" }
     deps: [slice-1]
     questions:
-      - { id: verdict, prompt: "Slice 1 is verified (see its evidence in the drawer and its screenshot). Continue the build? (yes to continue — use 'Request changes' on the slice first if you want it revised)", default: "yes", why: "Your checkpoint: nothing further is built until you approve this slice." }
+      - { id: verdict, prompt: "Slice 1 is delivered and verified — continue the build?", type: boolean, default: "yes", why: "Your checkpoint. Review its screenshot and evidence first; use Request changes on the slice if you want it revised before continuing." }
     outputs:
       - { name: review_slice_1, file: review.json }
 
@@ -595,7 +614,7 @@ nodes:
     when: { artifact: intake, path: supervision, equals: "every-slice" }
     deps: [slice-2]
     questions:
-      - { id: verdict, prompt: "Slice 2 is verified (see its evidence in the drawer and its screenshot). Continue the build? (yes to continue — use 'Request changes' on the slice first if you want it revised)", default: "yes", why: "Your checkpoint: nothing further is built until you approve this slice." }
+      - { id: verdict, prompt: "Slice 2 is delivered and verified — continue the build?", type: boolean, default: "yes", why: "Your checkpoint. Review its screenshot and evidence first; use Request changes on the slice if you want it revised before continuing." }
     outputs:
       - { name: review_slice_2, file: review.json }
 
@@ -607,7 +626,7 @@ nodes:
     when: { artifact: intake, path: supervision, equals: "every-slice" }
     deps: [slice-3]
     questions:
-      - { id: verdict, prompt: "Slice 3 is verified (see its evidence in the drawer and its screenshot). Continue the build? (yes to continue — use 'Request changes' on the slice first if you want it revised)", default: "yes", why: "Your checkpoint: nothing further is built until you approve this slice." }
+      - { id: verdict, prompt: "Slice 3 is delivered and verified — continue the build?", type: boolean, default: "yes", why: "Your checkpoint. Review its screenshot and evidence first; use Request changes on the slice if you want it revised before continuing." }
     outputs:
       - { name: review_slice_3, file: review.json }
 
@@ -619,7 +638,7 @@ nodes:
     when: { artifact: intake, path: supervision, equals: "every-slice" }
     deps: [slice-4]
     questions:
-      - { id: verdict, prompt: "Slice 4 is verified (see its evidence in the drawer and its screenshot). Continue the build? (yes to continue — use 'Request changes' on the slice first if you want it revised)", default: "yes", why: "Your checkpoint: nothing further is built until you approve this slice." }
+      - { id: verdict, prompt: "Slice 4 is delivered and verified — continue the build?", type: boolean, default: "yes", why: "Your checkpoint. Review its screenshot and evidence first; use Request changes on the slice if you want it revised before continuing." }
     outputs:
       - { name: review_slice_4, file: review.json }
 
@@ -631,7 +650,7 @@ nodes:
     when: { artifact: intake, path: supervision, equals: "every-slice" }
     deps: [slice-5]
     questions:
-      - { id: verdict, prompt: "Slice 5 is verified (see its evidence in the drawer and its screenshot). Continue the build? (yes to continue — use 'Request changes' on the slice first if you want it revised)", default: "yes", why: "Your checkpoint: nothing further is built until you approve this slice." }
+      - { id: verdict, prompt: "Slice 5 is delivered and verified — continue the build?", type: boolean, default: "yes", why: "Your checkpoint. Review its screenshot and evidence first; use Request changes on the slice if you want it revised before continuing." }
     outputs:
       - { name: review_slice_5, file: review.json }
 
@@ -643,7 +662,7 @@ nodes:
     when: { artifact: intake, path: supervision, equals: "every-slice" }
     deps: [slice-6]
     questions:
-      - { id: verdict, prompt: "Slice 6 is verified (see its evidence in the drawer and its screenshot). Continue the build? (yes to continue — use 'Request changes' on the slice first if you want it revised)", default: "yes", why: "Your checkpoint: nothing further is built until you approve this slice." }
+      - { id: verdict, prompt: "Slice 6 is delivered and verified — continue the build?", type: boolean, default: "yes", why: "Your checkpoint. Review its screenshot and evidence first; use Request changes on the slice if you want it revised before continuing." }
     outputs:
       - { name: review_slice_6, file: review.json }
 
@@ -690,7 +709,7 @@ nodes:
     kind: gate
     deps: [governance-report, design-coverage]
     questions:
-      - { id: approved, prompt: "Exercise the app (docker compose up). Approve? (yes/no)" }
+      - { id: approved, prompt: "You have exercised the app and reviewed the evidence pack. Approve for release?", type: boolean }
     outputs:
       - { name: uat, file: uat.json, schema: schemas/uat.schema.json }
 

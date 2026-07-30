@@ -768,3 +768,19 @@ test("a slice plan that leaves an approved screen unassigned is REJECTED", () =>
   assert.notEqual(out.status, 0, "unassigned screens must fail the plan");
   assert.match(out.stderr, /unassigned: screen-history, screen-agents/);
 });
+
+test("intake questions are typed: choices visible, documents droppable, every-slice the default", () => {
+  const def = loadProjectType(PT_DIR);
+  const intake = def.nodes.find((n) => n.id === "intake");
+  const byId = Object.fromEntries(intake.questions.map((q) => [q.id, q]));
+  assert.equal(byId.problem_statement.type, "long", "problem statement is long-form");
+  assert.equal(byId.documents_dir.type, "files", "documents get a drop zone");
+  for (const id of ["deploy_target", "supervision"]) {
+    assert.equal(byId[id].type, "choice", `${id} is a visible choice`);
+    assert.ok(byId[id].options.length >= 2, `${id} options enumerated`);
+    for (const o of byId[id].options) assert.ok(o.hint, `${id}/${o.value} explains itself`);
+  }
+  assert.equal(byId.supervision.default, "every-slice", "checkpoints are the default — the build waits for you by default");
+  const uat = def.nodes.find((n) => n.id === "uat");
+  assert.equal(uat.questions[0].type, "boolean", "UAT approval is a yes/no");
+});

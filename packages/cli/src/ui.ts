@@ -1278,6 +1278,20 @@ button.ghost { background:transparent; border:1px solid var(--border); color:var
 .dcard .dhead { display:flex; align-items:baseline; gap:.6rem; margin-bottom:.5rem; }
 .dcard .dhead b { font-size:.95rem; }
 .dcard .dhead .when { color:var(--muted); font-size:.74rem; margin-left:auto; }
+.q textarea { width:100%; box-sizing:border-box; border:1px solid var(--grid); border-radius:8px; padding:.55rem .7rem; font:inherit; background:var(--page); color:inherit; resize:vertical; min-height:96px; }
+.optgrid { display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:.5rem; margin:.35rem 0 .2rem; }
+.optgrid.two { grid-template-columns:repeat(2, minmax(90px, 150px)); }
+.optcard, .q .optcard { position:relative; border:1.5px solid var(--grid); border-radius:10px; padding:.6rem .85rem; cursor:pointer; display:flex; flex-direction:column; gap:.2rem; background:var(--page); margin:0; }
+.optcard b { display:block; }
+.optcard .hint { display:block; line-height:1.4; }
+.optcard:hover { border-color:var(--accent); }
+.optcard input { position:absolute; opacity:0; pointer-events:none; }
+.optcard:has(input:checked) { border-color:var(--accent); box-shadow:0 0 0 1px var(--accent) inset; }
+.optcard:has(input:checked) b { color:var(--accent); }
+.optcard b { font-size:.86rem; }
+.optcard .hint { font-size:.74rem; }
+.dropzone { border:2px dashed var(--grid); border-radius:12px; padding:1rem; text-align:center; color:var(--ink2); cursor:pointer; margin-top:.45rem; display:flex; flex-direction:column; gap:.15rem; font-size:.86rem; }
+.dropzone.drag, .dropzone:hover { border-color:var(--accent); color:var(--accent); background:var(--page); }
 .qa { display:grid; grid-template-columns:minmax(220px,1.1fr) 1fr; gap:.4rem 1.2rem; padding:.45rem 0; border-top:1px solid var(--grid); align-items:baseline; }
 .qa .q { color:var(--ink2); font-size:.84rem; }
 .qa .a { font-weight:580; }
@@ -1553,6 +1567,65 @@ function q(extra) {
   const str = params.toString();
   return str ? '?' + str : '';
 }
+/** One question -> its form field. The type decides the control: choice cards
+ * (the answer space made visible), yes/no toggles, long-form textarea, a
+ * document drop zone, or plain text. */
+function qField(qq) {
+  const why = qq.why ? '<div class="why">' + esc(qq.why) + '</div>' : '';
+  let control;
+  let defHint = '';
+  if (qq.type === 'choice' && Array.isArray(qq.options)) {
+    control = '<div class="optgrid">' + qq.options.map(o =>
+      '<label class="optcard"><input type="radio" name="' + esc(qq.id) + '" value="' + esc(o.value) + '"' + (qq.default === o.value ? ' checked' : '') + '>' +
+      '<b>' + esc(o.label || o.value) + '</b>' +
+      (o.hint ? '<span class="hint">' + esc(o.hint) + '</span>' : '') +
+      '</label>').join('') + '</div>';
+  } else if (qq.type === 'boolean') {
+    control = '<div class="optgrid two">' + ['yes','no'].map(v =>
+      '<label class="optcard"><input type="radio" name="' + esc(qq.id) + '" value="' + v + '"' + (qq.default === v ? ' checked' : '') + '><b>' + (v === 'yes' ? 'Yes' : 'No') + '</b></label>').join('') + '</div>';
+  } else if (qq.type === 'long') {
+    control = '<textarea name="' + esc(qq.id) + '" placeholder="' + esc(qq.placeholder ?? '') + '">' + esc(qq.default ?? '') + '</textarea>';
+  } else if (qq.type === 'files' || qq.id === 'documents_dir') {
+    control = '<input type="text" name="' + esc(qq.id) + '" value="' + esc(qq.default ?? '') + '">' +
+      '<div class="dropzone" id="dropzone"><b>Drop your documents here</b><span class="hint">or click to browse — stored with this run; the path fills in automatically</span></div>' +
+      '<input type="file" id="docUpload" multiple style="display:none">' +
+      '<div class="hint" id="docUploadStatus"></div>';
+  } else {
+    control = '<input type="text" name="' + esc(qq.id) + '" value="' + esc(qq.default ?? '') + '" placeholder="' + esc(qq.placeholder ?? '') + '">';
+    if (qq.default !== undefined) defHint = '<div class="hint">pre-filled with the default — edit or keep</div>';
+  }
+  return '<div class="q"><label>' + esc(qq.prompt) + '</label>' + why + control + defHint + '</div>';
+}
+
+/** Drag-and-drop + click-to-browse for the documents question. */
+function wireUpload(form) {
+  const up = form.querySelector('#docUpload');
+  const dz = form.querySelector('#dropzone');
+  if (!up || !dz) return;
+  const send = async (picked) => {
+    if (!picked.length) return;
+    setText('docUploadStatus', 'uploading ' + picked.length + ' file(s)...');
+    const files = await Promise.all(picked.map(f => new Promise((resolve, reject) => {
+      const r = new FileReader();
+      r.onload = () => resolve({ name: f.name, data: String(r.result).split(',')[1] });
+      r.onerror = reject;
+      r.readAsDataURL(f);
+    })));
+    const resp = await fetch('/api/upload' + q(), { method: 'POST', body: JSON.stringify({ files }) });
+    const out = await resp.json();
+    if (out.dir) {
+      const target = form.querySelector('input[name="documents_dir"]');
+      if (target) target.value = out.dir;
+      setText('docUploadStatus', out.saved.length + ' document(s) stored with the run: ' + out.saved.join(', '));
+    } else setText('docUploadStatus', 'upload failed: ' + (out.error || 'unknown error'));
+  };
+  dz.onclick = () => up.click();
+  dz.ondragover = (ev) => { ev.preventDefault(); dz.classList.add('drag'); };
+  dz.ondragleave = () => dz.classList.remove('drag');
+  dz.ondrop = (ev) => { ev.preventDefault(); dz.classList.remove('drag'); send(Array.from(ev.dataTransfer.files)); };
+  up.onchange = () => send(Array.from(up.files));
+}
+
 async function goHome() { currentRun = null; history.replaceState(null, '', location.pathname); await fetch('/api/deselect', { method: 'POST' }); tick(); }
 async function startNewApp() {
   const name = document.getElementById('newName').value.trim();
@@ -1939,10 +2012,9 @@ async function tick() {
     if (form.dataset.node !== s.windowGate.nodeId) {
       form.dataset.node = s.windowGate.nodeId;
       form.innerHTML = (s.windowGate.description ? '<div class="hint" style="margin-bottom:.5rem">' + esc(s.windowGate.description) + '</div>' : '') +
-        s.windowGate.questions.map((q, i) =>
-          '<div class="q"><label>' + esc(q.prompt) + '</label>' +
-          '<input type="text" name="' + esc(q.id) + '" value="' + esc(q.default ?? '') + '"></div>').join('') +
+        s.windowGate.questions.map(qField).join('') +
         '<button type="submit" class="primary">Decide now</button>';
+      wireUpload(form);
       form.onsubmit = async (ev) => {
         ev.preventDefault();
         const answers = Object.fromEntries(new FormData(form).entries());
@@ -2145,35 +2217,9 @@ async function tick() {
     const form = document.getElementById('gateForm');
     if (form.dataset.node !== s.parkedGate.nodeId) {
       form.dataset.node = s.parkedGate.nodeId;
-      form.innerHTML = s.parkedGate.questions.map(qq =>
-        '<div class="q"><label>' + esc(qq.prompt) + '</label>' +
-        (qq.why ? '<div class="why">' + esc(qq.why) + '</div>' : '') +
-        '<input type="text" name="' + esc(qq.id) + '" value="' + esc(qq.default ?? '') + '">' +
-        (qq.id === 'documents_dir'
-          ? '<input type="file" id="docUpload" multiple style="margin-top:.4rem">' +
-            '<div class="hint" id="docUploadStatus">or upload documents here — they are stored with this run and the path fills in automatically</div>'
-          : (qq.default !== undefined ? '<div class="hint">pre-filled with the default — edit or keep</div>' : '')) +
-        '</div>').join('') +
+      form.innerHTML = s.parkedGate.questions.map(qField).join('') +
         '<button type="submit" class="primary">Answer &amp; resume run</button>';
-      const up = document.getElementById('docUpload');
-      if (up) up.onchange = async () => {
-        const picked = Array.from(up.files);
-        if (!picked.length) return;
-        setText('docUploadStatus', 'uploading ' + picked.length + ' file(s)...');
-        const files = await Promise.all(picked.map(f => new Promise((resolve, reject) => {
-          const r = new FileReader();
-          r.onload = () => resolve({ name: f.name, data: String(r.result).split(',')[1] });
-          r.onerror = reject;
-          r.readAsDataURL(f);
-        })));
-        const resp = await fetch('/api/upload' + q(), { method: 'POST', body: JSON.stringify({ files }) });
-        const out = await resp.json();
-        if (out.dir) {
-          const target = form.querySelector('input[name="documents_dir"]');
-          if (target) target.value = out.dir;
-          setText('docUploadStatus', out.saved.length + ' document(s) stored with the run: ' + out.saved.join(', '));
-        } else setText('docUploadStatus', 'upload failed: ' + (out.error || 'unknown error'));
-      };
+      wireUpload(form);
       form.onsubmit = async (ev) => {
         ev.preventDefault();
         const answers = Object.fromEntries(new FormData(form).entries());

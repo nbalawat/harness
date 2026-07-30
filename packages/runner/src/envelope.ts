@@ -316,7 +316,12 @@ async function runGate(
     const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
     const hint = q.default !== undefined ? ` [default: ${q.default}]` : "";
     const why = q.why ? `\n  (why: ${q.why})` : "";
-    const raw = await rl.question(`[gate:${node.id}] ${q.prompt}${why}${hint} `);
+    const opts = q.options?.length
+      ? `\n  options:\n` + q.options.map((o) => `    ${o.value}${o.label ? ` — ${o.label}` : ""}${o.hint ? `: ${o.hint}` : ""}`).join("\n")
+      : q.type === "boolean"
+        ? `\n  options: yes / no`
+        : "";
+    const raw = await rl.question(`[gate:${node.id}] ${q.prompt}${opts}${why}${hint} `);
     rl.close();
     if (raw.trim() === "" && q.default !== undefined) {
       answers[q.id] = q.default;

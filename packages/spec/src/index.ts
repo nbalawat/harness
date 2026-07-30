@@ -32,6 +32,15 @@ export interface GateQuestion {
   default?: string;
   /** Why we ask — which downstream decision this answer changes. */
   why?: string;
+  /**
+   * Input shape the UI renders. "choice" makes the answer space VISIBLE
+   * (option cards with hints), "boolean" renders yes/no, "long" a textarea,
+   * "files" a document drop zone. Default: free text.
+   */
+  type?: "text" | "long" | "choice" | "boolean" | "files";
+  /** For type "choice": every possible answer, each explained. */
+  options?: Array<{ value: string; label?: string; hint?: string }>;
+  placeholder?: string;
 }
 
 /** Gate questions sourced dynamically from an upstream JSON artifact. */
