@@ -1,0 +1,39 @@
+{
+  "gaps": {
+    "path": "/Users/nbalawat/development/harness/underwriting-desk/artifacts/gap-questions/gaps.json",
+    "data": {
+      "questions": [
+        {
+          "id": "GAP-052",
+          "prompt": "What is the risk grading rubric — how many risk grades (e.g., 1–5, A–E, Low/Medium/High/Critical), what are their labels, and what are the DSCR, leverage, and current-ratio thresholds that map each ratio combination to a grade?",
+          "default": "5-point numeric scale (1–5, where 1=lowest risk/best credit, 5=highest risk/reject) with DSCR ≥1.50 = grade 1, 1.25–1.49 = grade 2, 1.00–1.24 = grade 3, 0.85–0.99 = grade 4, <0.85 = grade 5; leverage ≤2.0x = -1 grade, 2.0–3.0x = base, >3.0x = +1 grade; current ratio ≥2.0 = -0.5 grade, 1.0–1.99 = base, <1.0 = +0.5 grade (clamped 1–5).",
+          "why": "The deterministic grading engine (REQ-010) and its unit tests (REQ-023) cannot be written without the exact rubric rules, thresholds, and grade labels. The rubric also drives the deal-detail and SLA dashboard UI (REQ-045, REQ-022) and the risk-grading stage approval logic. A placeholder rubric delays engineering."
+        },
+        {
+          "id": "GAP-053",
+          "prompt": "What are the concrete lending policy rules — the complete list of prohibited industries (NAICS codes or descriptive categories), the definition and thresholds of concentration limits (e.g., by industry, geography, borrower segment), and the LTV (loan-to-value) caps by facility type?",
+          "default": "Prohibited industries: liquor/gaming, adult entertainment, cannabis, firearms. Concentration: max 15% of portfolio by industry, max 10% by geography (state), max 5% to a single borrower. LTV caps: term loans ≤80%, lines of credit ≤70%, real-estate secured ≤75%.",
+          "why": "The policy compliance agent (REQ-007) and the structured policy rule configuration (REQ-034) cannot be built without the actual rules. The compliance engine's unit tests and the agent's memo citations (REQ-058) both depend on having the rule set codified. Without this, the policy-exception data model (REQ-035) and the agent's capability to detect breaches are incomplete."
+        },
+        {
+          "id": "GAP-054",
+          "prompt": "How is 'exposure' defined for the purposes of approval tiering and authorization (REQ-011, REQ-012, REQ-013, REQ-043)? Is it only the requested facility amount for this deal, or does it include the borrower's total existing relationship exposure (other active loans)?",
+          "default": "Exposure = requested facility amount alone (this deal only). Approval tiers: up to $250k = analyst, $250k–$1M = officer, >$1M = committee.",
+          "why": "The definition of exposure directly changes the data model (whether borrower has an aggregate facility field), the approval routing logic, and the tier-enforcement rule (REQ-043). If exposure includes existing facilities, the system must load and sum related deals at approval time; if it is deal-only, approval logic is simpler. This determines both backend authorization code and the RBAC model testing scope."
+        },
+        {
+          "id": "GAP-055",
+          "prompt": "How is credit committee approval (for deals >$1M exposure) recorded and decided — is it a single approval action entered by a committee chair (one recorded decision), or does each committee member vote individually with a quorum/majority rule (many recorded decisions)?",
+          "default": "Single recorded decision: committee chair (or designee) enters the committee's decision as one approval transaction; the specific member votes are not modeled.",
+          "why": "This determines the approval data model. A single decision requires only (user, timestamp, status). Multi-vote requires tracking individual member votes, quorum rules, and majority logic. This changes the approval schema, the RBAC roles (does every officer vote, or only a subset committee?), the UI for recording approvals, and the audit trail structure (one record vs. N records per approval)."
+        },
+        {
+          "id": "GAP-056",
+          "prompt": "What document input format does the system expect? Must the system perform OCR and layout parsing on scanned PDFs or images of financial statements, or do borrowers provide digital/native text financial statements (Excel, PDF with extractable text, structured JSON)?",
+          "default": "Borrower documents arrive as native-text PDFs (PDF with selectable/extractable text, no OCR required). The system uses text extraction and Claude's document API to ground the financial spreading agent (REQ-005) in the uploaded file content.",
+          "why": "This determines the architecture of the document extraction stage (REQ-030). Scanned/image-only documents require OCR (a separate preprocessing step, external service, added latency, and accuracy risk). Native text or structured formats allow direct extraction via API. This changes the pipeline's cost, latency, infrastructure (no OCR service vs. OCR service), and the spread agent's retrieval capability. The choice also affects what 'source citation' means: for OCR'd content, citations may be less precise."
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,366 @@
+{
+  "slices": [
+    {
+      "id": "deal-intake-and-pipeline",
+      "name": "Submit a deal and see it on the pipeline board",
+      "story": "As a relationship manager I log in with my role-assigned account, submit a new SMB loan request on the intake form (borrower, industry, facility type, requested and exposure amount), and the deal is created at the intake stage and appears immediately on the pipeline board in its stage column — with the audit trail recording who created it and RBAC limiting me to my own deals. This is the walking skeleton: one login, one form, one persisted Deal, one board.",
+      "addresses": [
+        "REQ-001",
+        "REQ-002",
+        "REQ-018",
+        "REQ-019",
+        "REQ-020",
+        "REQ-021",
+        "REQ-026",
+        "REQ-027",
+        "REQ-028",
+        "REQ-041",
+        "REQ-042",
+        "REQ-051"
+      ],
+      "acceptance": [
+        {
+          "method": "POST",
+          "path": "/api/auth/login",
+          "body": {
+            "username": "rm1",
+            "password": "demo1234"
+          },
+          "expect_status": 200,
+          "expect_contains": [
+            "relationship_manager"
+          ]
+        },
+        {
+          "method": "POST",
+          "path": "/api/deals",
+          "body": {
+            "borrower_name": "Acme Fabrication LLC",
+            "borrower_industry": "manufacturing",
+            "facility_type": "term_loan",
+            "requested_amount": 180000,
+            "exposure_amount": 180000,
+            "submitted_by_user_id": "user-rm1"
+          },
+          "expect_status": 201,
+          "expect_contains": [
+            "Acme Fabrication LLC",
+            "intake"
+          ]
+        },
+        {
+          "method": "GET",
+          "path": "/api/deals",
+          "expect_status": 200,
+          "expect_contains": [
+            "Acme Fabrication LLC",
+            "intake"
+          ]
+        },
+        {
+          "method": "GET",
+          "path": "/api/pipeline",
+          "expect_status": 200,
+          "expect_contains": [
+            "intake",
+            "document_extraction",
+            "approval"
+          ]
+        }
+      ],
+      "covers": [
+        "screen-intake",
+        "screen-pipeline"
+      ]
+    },
+    {
+      "id": "triage-and-draft-review",
+      "name": "Documents in, triage agent proposes a queue, human accepts",
+      "story": "As an analyst I see borrower documents uploaded against a deal and deterministically extracted into addressable page locations, the Intake Triage Agent classifies the request and flags missing documents with a proposed analyst queue, and that proposal lands in the Draft Review queue as a pending draft. Nothing advances until I accept it: on acceptance the deal is routed to the analyst queue and the stage transition plus the agent run telemetry are written to the audit trail.",
+      "addresses": [
+        "REQ-003",
+        "REQ-004",
+        "REQ-014",
+        "REQ-016",
+        "REQ-029",
+        "REQ-030",
+        "REQ-033",
+        "REQ-037",
+        "REQ-038",
+        "REQ-039",
+        "REQ-046",
+        "REQ-049",
+        "REQ-056"
+      ],
+      "acceptance": [
+        {
+          "method": "POST",
+          "path": "/api/deals/seed-deal-triage/documents",
+          "body": {
+            "original_filename": "2024-financial-statements.pdf",
+            "content_type": "application/pdf",
+            "document_type": "financial_statement",
+            "uploaded_by_user_id": "user-rm1",
+            "text_content": "Balance Sheet 2024\nTotal current assets 640000\nTotal current liabilities 320000\nTotal debt 900000\nEBITDA 410000\nAnnual debt service 250000"
+          },
+          "expect_status": 201,
+          "expect_contains": [
+            "2024-financial-statements.pdf",
+            "document_location"
+          ]
+        },
+        {
+          "method": "POST",
+          "path": "/api/deals/seed-deal-triage/agents/intake-triage/run",
+          "body": {},
+          "expect_status": 201,
+          "expect_contains": [
+            "classification",
+            "missing_documents",
+            "proposed_queue",
+            "pending"
+          ]
+        },
+        {
+          "method": "GET",
+          "path": "/api/deals/seed-deal-triage/drafts?status=pending",
+          "expect_status": 200,
+          "expect_contains": [
+            "triage",
+            "pending"
+          ]
+        },
+        {
+          "method": "POST",
+          "path": "/api/deals/seed-deal-triage/drafts/latest/review",
+          "body": {
+            "action": "accepted",
+            "reviewed_by_user_id": "user-analyst1"
+          },
+          "expect_status": 200,
+          "expect_contains": [
+            "accepted",
+            "assigned_analyst_id"
+          ]
+        }
+      ],
+      "covers": [
+        "screen-review"
+      ]
+    },
+    {
+      "id": "spread-ratios-and-risk-grade",
+      "name": "Cited financial spread, deterministic ratios and risk grade",
+      "story": "As a credit analyst I run the Financial Spreading Agent on a deal's extracted statements, review every template line beside the document-and-page citation attached to each figure, and accept the spread — which promotes it to deal-of-record data. Deterministic code (never an agent) then computes DSCR, leverage and current ratio and assigns the risk grade from the inspectable rubric, and the Deal Desk shows the spread, the ratios, and the grade with its rubric inputs and clickable citation traces.",
+      "addresses": [
+        "REQ-005",
+        "REQ-009",
+        "REQ-010",
+        "REQ-016",
+        "REQ-023",
+        "REQ-031",
+        "REQ-032",
+        "REQ-037",
+        "REQ-045",
+        "REQ-046",
+        "REQ-052"
+      ],
+      "acceptance": [
+        {
+          "method": "POST",
+          "path": "/api/deals/seed-deal-spread/agents/financial-spreading/run",
+          "body": {},
+          "expect_status": 201,
+          "expect_contains": [
+            "line_item_key",
+            "citations",
+            "document_location_id",
+            "pending"
+          ]
+        },
+        {
+          "method": "POST",
+          "path": "/api/deals/seed-deal-spread/drafts/latest/review",
+          "body": {
+            "action": "accepted",
+            "reviewed_by_user_id": "user-analyst1"
+          },
+          "expect_status": 200,
+          "expect_contains": [
+            "accepted",
+            "spread_line_item_ids"
+          ]
+        },
+        {
+          "method": "GET",
+          "path": "/api/deals/seed-deal-spread/ratios",
+          "expect_status": 200,
+          "expect_contains": [
+            "dscr",
+            "leverage",
+            "current_ratio",
+            "computed_by_version"
+          ]
+        },
+        {
+          "method": "GET",
+          "path": "/api/deals/seed-deal-spread/risk-grade",
+          "expect_status": 200,
+          "expect_contains": [
+            "grade",
+            "rubric_inputs"
+          ]
+        }
+      ],
+      "covers": [
+        "screen-deal"
+      ]
+    },
+    {
+      "id": "memo-compliance-and-tiered-approval",
+      "name": "Cited memo, policy exceptions, and the named human decision",
+      "story": "As a credit officer I read the Credit Memo Agent's draft with every assertion footnoted to a ratio, spread line or policy rule id, disposition the written exceptions the Policy Compliance Agent raised against the stored versioned lending policy, and then record my own named decision from the Approval Queue — approve within my tier, decline with a mandatory adverse-action reason, or return the deal to an earlier stage with a reason. The server derives the tier from exposure and rejects any over-tier or agent-originated decision.",
+      "addresses": [
+        "REQ-006",
+        "REQ-007",
+        "REQ-011",
+        "REQ-012",
+        "REQ-013",
+        "REQ-014",
+        "REQ-015",
+        "REQ-017",
+        "REQ-034",
+        "REQ-035",
+        "REQ-036",
+        "REQ-043",
+        "REQ-048",
+        "REQ-053",
+        "REQ-054",
+        "REQ-055"
+      ],
+      "acceptance": [
+        {
+          "method": "POST",
+          "path": "/api/deals/seed-deal-memo/agents/credit-memo/run",
+          "body": {},
+          "expect_status": 201,
+          "expect_contains": [
+            "memo",
+            "citations",
+            "pending"
+          ]
+        },
+        {
+          "method": "POST",
+          "path": "/api/deals/seed-deal-memo/agents/policy-compliance/run",
+          "body": {},
+          "expect_status": 201,
+          "expect_contains": [
+            "policy_rule_id",
+            "rule_threshold",
+            "agent_rationale"
+          ]
+        },
+        {
+          "method": "POST",
+          "path": "/api/deals/seed-deal-approval/decisions",
+          "body": {
+            "decision": "approve",
+            "decided_by_user_id": "user-analyst1",
+            "reason": "Ratios comfortable, within appetite"
+          },
+          "expect_status": 403,
+          "expect_contains": [
+            "tier"
+          ]
+        },
+        {
+          "method": "POST",
+          "path": "/api/deals/seed-deal-approval/decisions",
+          "body": {
+            "decision": "approve",
+            "decided_by_user_id": "user-officer1",
+            "reason": "Grade within appetite; exceptions dispositioned"
+          },
+          "expect_status": 201,
+          "expect_contains": [
+            "approve",
+            "user-officer1",
+            "senior_credit_officer"
+          ]
+        }
+      ],
+      "covers": [
+        "screen-approvals"
+      ]
+    },
+    {
+      "id": "sla-audit-and-portfolio-qa",
+      "name": "SLA watch, examiner-ready audit trail, portfolio Q&A",
+      "story": "As a credit officer I open the SLA Watch board to see every deal idle more than 5 business days with its named owner, ask the Portfolio Q&A Agent questions across the deals my role entitles me to see — getting deal-id citations on every fact and an explicit 'not supported by the record' when the evidence or my entitlement does not cover the question — and filter and export the append-only audit trail for examiner review.",
+      "addresses": [
+        "REQ-003",
+        "REQ-008",
+        "REQ-018",
+        "REQ-022",
+        "REQ-024",
+        "REQ-025",
+        "REQ-040",
+        "REQ-044",
+        "REQ-047",
+        "REQ-049",
+        "REQ-050"
+      ],
+      "acceptance": [
+        {
+          "method": "GET",
+          "path": "/api/sla/idle-deals",
+          "expect_status": 200,
+          "expect_contains": [
+            "seed-deal-idle",
+            "business_days_idle"
+          ]
+        },
+        {
+          "method": "POST",
+          "path": "/api/portfolio/questions",
+          "body": {
+            "question": "Which active deals are currently at the approval stage?",
+            "asking_user_id": "user-officer1"
+          },
+          "expect_status": 200,
+          "expect_contains": [
+            "answer",
+            "cited_deal_ids"
+          ]
+        },
+        {
+          "method": "POST",
+          "path": "/api/portfolio/questions",
+          "body": {
+            "question": "What is the exposure on deal seed-deal-approval?",
+            "asking_user_id": "user-rm1"
+          },
+          "expect_status": 200,
+          "expect_contains": [
+            "not supported by the record"
+          ]
+        },
+        {
+          "method": "GET",
+          "path": "/api/audit?deal_id=seed-deal-approval&format=csv",
+          "expect_status": 200,
+          "expect_contains": [
+            "event_type",
+            "actor_user_id"
+          ]
+        }
+      ],
+      "covers": [
+        "screen-sla",
+        "screen-audit",
+        "screen-chat"
+      ]
+    }
+  ]
+}

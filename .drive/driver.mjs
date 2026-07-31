@@ -60,7 +60,7 @@ for (let i = 0; i < 4000; i++) {
     resumeWith("design-select", { chosen_option: "option-2" });
   } else if (nodeId === "design-review") {
     const qs = null;
-    resumeWith("design-review", { approved: "yes", notes: "Approved. Keep the pipeline board as the home screen." });
+    resumeWith("design-review", { approve_design: "yes" });
   } else if (nodeId === "uat") {
     resumeWith("uat", { approved: "yes" });
   } else if (nodeId) {

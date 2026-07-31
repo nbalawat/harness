@@ -1,0 +1,2932 @@
+{
+  "requirements": {
+    "path": "/Users/nbalawat/development/harness/underwriting-desk/artifacts/requirements-synthesis/requirements.json",
+    "data": {
+      "requirements": [
+        {
+          "id": "REQ-001",
+          "text": "The system runs SMB loan underwriting as an explicit multi-stage workflow with the ordered stages: intake -> document extraction -> financial spreading -> risk grading -> memo drafting -> policy compliance check -> tiered approval -> closing. Stage transitions are modeled explicitly rather than implied by data state.",
+          "category": "functional",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src-intake",
+            "claim": "claim-001"
+          }
+        },
+        {
+          "id": "REQ-002",
+          "text": "A pipeline board displays every active deal and the workflow stage it currently occupies, so stage status is visible at a glance.",
+          "category": "ux",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src-intake",
+            "claim": "claim-002"
+          }
+        },
+        {
+          "id": "REQ-003",
+          "text": "Exactly five distinct AI agents operate inside the workflow, each scoped to a single narrow mandate; no general-purpose or catch-all agent is introduced.",
+          "category": "agent",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src-intake",
+            "claim": "claim-003"
+          }
+        },
+        {
+          "id": "REQ-004",
+          "text": "Intake triage agent: classifies an incoming loan request, flags documents that are missing for its request type, and proposes routing to the appropriate analyst queue.",
+          "category": "agent",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src-intake",
+            "claim": "claim-004"
+          }
+        },
+        {
+          "id": "REQ-005",
+          "text": "Financial spreading agent: extracts figures from borrower financial statements into the standard spread template, and attaches a source citation to every extracted number.",
+          "category": "agent",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src-intake",
+            "claim": "claim-005"
+          }
+        },
+        {
+          "id": "REQ-006",
+          "text": "Credit memo agent: drafts the underwriting memo and cites the specific ratios, spread figures, and policy rules each assertion relied on.",
+          "category": "agent",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src-intake",
+            "claim": "claim-006"
+          }
+        },
+        {
+          "id": "REQ-007",
+          "text": "Policy compliance agent: reviews every memo against lending policy — including concentration limits, prohibited industries, and LTV caps — and raises written exceptions where policy is breached.",
+          "category": "agent",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src-intake",
+            "claim": "claim-007"
+          }
+        },
+        {
+          "id": "REQ-008",
+          "text": "Portfolio Q&A agent: answers credit officers' questions spanning active deals, grounded strictly in stored deal data.",
+          "category": "agent",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src-intake",
+            "claim": "claim-008"
+          }
+        },
+        {
+          "id": "REQ-009",
+          "text": "DSCR, leverage, and current ratio are computed by deterministic code — never by an agent. Agents may read the computed values but may not produce or override them.",
+          "category": "functional",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src-intake",
+            "claim": "claim-009"
+          }
+        },
+        {
+          "id": "REQ-010",
+          "text": "The risk grade is assigned by deterministic logic from a transparent, inspectable rubric — never by an agent — and the rubric inputs that produced a given grade are shown to the user.",
+          "category": "functional",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src-intake",
+            "claim": "claim-010"
+          }
+        },
+        {
+          "id": "REQ-011",
+          "text": "A credit analyst may approve deals with exposure up to $250,000.",
+          "category": "functional",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src-intake",
+            "claim": "claim-011"
+          }
+        },
+        {
+          "id": "REQ-012",
+          "text": "A senior credit officer may approve deals with exposure up to $1,000,000.",
+          "category": "functional",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src-intake",
+            "claim": "claim-012"
+          }
+        },
+        {
+          "id": "REQ-013",
+          "text": "Deals with exposure above $1,000,000 require credit committee approval.",
+          "category": "functional",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src-intake",
+            "claim": "claim-013"
+          }
+        },
+        {
+          "id": "REQ-014",
+          "text": "No agent may approve a deal, decline a deal, or advance a deal past an approval step. This is enforced server-side in the workflow engine, not merely by agent prompting.",
+          "category": "security",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src-intake",
+            "claim": "claim-014"
+          }
+        },
+        {
+          "id": "REQ-015",
+          "text": "Every approval step records a mandatory named human decision — the identity of the deciding user is captured and non-optional.",
+          "category": "security",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src-intake",
+            "claim": "claim-015"
+          }
+        },
+        {
+          "id": "REQ-016",
+          "text": "Every agent output requires explicit human acceptance before the workflow proceeds to the next stage; an unaccepted agent draft blocks advancement.",
+          "category": "functional",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src-intake",
+            "claim": "claim-016"
+          }
+        },
+        {
+          "id": "REQ-017",
+          "text": "Declining a deal requires a documented adverse-action reason; the decline cannot be recorded without one.",
+          "category": "functional",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src-intake",
+            "claim": "claim-017"
+          }
+        },
+        {
+          "id": "REQ-018",
+          "text": "An immutable audit trail records every state change, every ratio calculation, every agent draft, and every human decision. Audit entries are append-only and cannot be edited or deleted through the application.",
+          "category": "data",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src-intake",
+            "claim": "claim-018"
+          }
+        },
+        {
+          "id": "REQ-019",
+          "text": "RBAC role 'relationship manager': may submit deals and may view only their own deals.",
+          "category": "security",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src-intake",
+            "claim": "claim-019"
+          }
+        },
+        {
+          "id": "REQ-020",
+          "text": "RBAC role 'credit analyst': may spread financials, draft memos, and make recommendations.",
+          "category": "security",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src-intake",
+            "claim": "claim-020"
+          }
+        },
+        {
+          "id": "REQ-021",
+          "text": "RBAC role 'credit officer': may approve, decline, or return deals.",
+          "category": "security",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src-intake",
+            "claim": "claim-021"
+          }
+        },
+        {
+          "id": "REQ-022",
+          "text": "An SLA dashboard surfaces deals that have been idle for more than 5 business days.",
+          "category": "ux",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src-intake",
+            "claim": "claim-022"
+          }
+        },
+        {
+          "id": "REQ-023",
+          "text": "Unit tests cover every ratio calculation and every grading rule.",
+          "category": "ops",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src-intake",
+            "claim": "claim-023"
+          }
+        },
+        {
+          "id": "REQ-024",
+          "text": "API tests cover every endpoint and every workflow transition, including rejected/illegal transitions.",
+          "category": "ops",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src-intake",
+            "claim": "claim-024"
+          }
+        },
+        {
+          "id": "REQ-025",
+          "text": "Every one of the five agents has an eval suite with fixed inputs and scored expectations.",
+          "category": "ops",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src-intake",
+            "claim": "claim-025"
+          }
+        },
+        {
+          "id": "REQ-026",
+          "text": "The system is deployable to Google Cloud Run: containerized, stateless request handling, configuration and secrets supplied via environment.",
+          "category": "ops",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src-intake",
+            "claim": "claim-026"
+          }
+        },
+        {
+          "id": "REQ-027",
+          "text": "A Deal is the central persisted entity, carrying borrower identity, requested facility, exposure amount, current workflow stage, assigned analyst, and lifecycle timestamps. All other artifacts (documents, spreads, ratios, grades, memos, exceptions, decisions) hang off the deal.",
+          "category": "data",
+          "confidence": "inferred",
+          "provenance": {
+            "source": "src-intake"
+          }
+        },
+        {
+          "id": "REQ-028",
+          "text": "Relationship managers can submit a new deal through an intake form capturing borrower details and the requested amount, which creates the deal at the intake stage.",
+          "category": "functional",
+          "confidence": "inferred",
+          "provenance": {
+            "source": "src-intake"
+          }
+        },
+        {
+          "id": "REQ-029",
+          "text": "Borrower documents can be uploaded and are stored durably and immutably; each stored document keeps its original filename, content type, upload user, and timestamp.",
+          "category": "data",
+          "confidence": "inferred",
+          "provenance": {
+            "source": "src-intake"
+          }
+        },
+        {
+          "id": "REQ-030",
+          "text": "The document extraction stage converts uploaded borrower documents into structured, addressable content that later stages and citations can reference by document and location.",
+          "category": "functional",
+          "confidence": "inferred",
+          "provenance": {
+            "source": "src-intake"
+          }
+        },
+        {
+          "id": "REQ-031",
+          "text": "A standard spread template exists as a defined line-item schema; the financial spreading agent fills it, and the spread is persisted as structured line items rather than free text.",
+          "category": "data",
+          "confidence": "inferred",
+          "provenance": {
+            "source": "src-intake"
+          }
+        },
+        {
+          "id": "REQ-032",
+          "text": "Citations are a first-class data structure: each cited value links to its supporting source (document + location for spread figures; ratio, spread line, or policy rule id for memo assertions) and is rendered as a clickable trace in the UI.",
+          "category": "data",
+          "confidence": "inferred",
+          "provenance": {
+            "source": "src-intake"
+          }
+        },
+        {
+          "id": "REQ-033",
+          "text": "Analyst work queues exist as a routable destination; the triage agent proposes a queue and deals appear in the assigned analyst's queue view.",
+          "category": "functional",
+          "confidence": "inferred",
+          "provenance": {
+            "source": "src-intake"
+          }
+        },
+        {
+          "id": "REQ-034",
+          "text": "Lending policy rules (concentration limits, prohibited industries, LTV caps) are stored as structured, versioned configuration data with stable rule ids — not hardcoded in prompts — so the compliance agent and memo citations can reference specific rules.",
+          "category": "data",
+          "confidence": "inferred",
+          "provenance": {
+            "source": "src-intake"
+          }
+        },
+        {
+          "id": "REQ-035",
+          "text": "Policy exceptions are persisted records attached to a deal, each with the breached rule, the agent's written rationale, and a human disposition (accepted / waived-with-justification / blocking).",
+          "category": "functional",
+          "confidence": "inferred",
+          "provenance": {
+            "source": "src-intake"
+          }
+        },
+        {
+          "id": "REQ-036",
+          "text": "Credit officers can return a deal to an earlier stage with a required reason; the return is a recorded workflow transition, not a silent state edit.",
+          "category": "functional",
+          "confidence": "inferred",
+          "provenance": {
+            "source": "src-intake"
+          }
+        },
+        {
+          "id": "REQ-037",
+          "text": "Agent outputs are persisted as pending drafts in a review state (pending / accepted / edited / rejected). Accepting or editing a draft is the act that promotes it into deal-of-record data; the original draft is retained alongside any human edit.",
+          "category": "agent",
+          "confidence": "inferred",
+          "provenance": {
+            "source": "src-intake"
+          }
+        },
+        {
+          "id": "REQ-038",
+          "text": "Every agent run records its model id, prompt/template version, inputs, raw output, latency, and token cost, so agent behavior is reproducible and auditable.",
+          "category": "agent",
+          "confidence": "inferred",
+          "provenance": {
+            "source": "src-intake"
+          }
+        },
+        {
+          "id": "REQ-039",
+          "text": "Agents are constrained to grounded retrieval over stored deal data and must abstain — returning an explicit 'not supported by the record' response — rather than speculate when evidence is absent.",
+          "category": "agent",
+          "confidence": "inferred",
+          "provenance": {
+            "source": "src-intake"
+          }
+        },
+        {
+          "id": "REQ-040",
+          "text": "The Portfolio Q&A agent's retrieval scope is filtered by the asking user's RBAC permissions, so it cannot surface deal data the user is not entitled to see.",
+          "category": "security",
+          "confidence": "inferred",
+          "provenance": {
+            "source": "src-intake"
+          }
+        },
+        {
+          "id": "REQ-041",
+          "text": "Users authenticate against built-in role-assigned accounts (assumption: no external SSO/IdP integration in v1), producing the named identity required for decisions and audit entries.",
+          "category": "security",
+          "confidence": "inferred",
+          "provenance": {
+            "source": "src-intake"
+          }
+        },
+        {
+          "id": "REQ-042",
+          "text": "Authorization is enforced server-side on every endpoint and every workflow transition; the relationship manager 'view own deals only' rule is applied at the data-access layer, not only by hiding UI affordances.",
+          "category": "security",
+          "confidence": "inferred",
+          "provenance": {
+            "source": "src-intake"
+          }
+        },
+        {
+          "id": "REQ-043",
+          "text": "The approval tier is derived deterministically from the deal's exposure amount, and an attempt to approve above one's tier is rejected server-side.",
+          "category": "security",
+          "confidence": "inferred",
+          "provenance": {
+            "source": "src-intake"
+          }
+        },
+        {
+          "id": "REQ-044",
+          "text": "SLA idle time is computed with a business-day calendar (excluding weekends and configured holidays) measured from the deal's last meaningful activity.",
+          "category": "functional",
+          "confidence": "inferred",
+          "provenance": {
+            "source": "src-intake"
+          }
+        },
+        {
+          "id": "REQ-045",
+          "text": "A deal detail view presents the full chronological deal record — documents, spread, computed ratios, grade with rubric trace, memo with citations, exceptions, decisions, and audit timeline — as the primary analyst and officer workspace.",
+          "category": "ux",
+          "confidence": "inferred",
+          "provenance": {
+            "source": "src-intake"
+          }
+        },
+        {
+          "id": "REQ-046",
+          "text": "A human-review UI lets the reviewer inspect an agent draft side-by-side with its cited evidence and accept, edit, or reject it, with a required reason on rejection.",
+          "category": "ux",
+          "confidence": "inferred",
+          "provenance": {
+            "source": "src-intake"
+          }
+        },
+        {
+          "id": "REQ-047",
+          "text": "The audit trail is viewable and filterable in the UI per deal and exportable for examiner review.",
+          "category": "ux",
+          "confidence": "inferred",
+          "provenance": {
+            "source": "src-intake"
+          }
+        },
+        {
+          "id": "REQ-048",
+          "text": "The closing stage records final terms and closes the deal, after which the deal becomes read-only except for audit-visible administrative actions.",
+          "category": "functional",
+          "confidence": "inferred",
+          "provenance": {
+            "source": "src-intake"
+          }
+        },
+        {
+          "id": "REQ-049",
+          "text": "Borrower financial data is treated as sensitive: secrets and model API keys are never committed or logged, and agent prompts/outputs stored for audit are access-controlled under the same RBAC as the deal.",
+          "category": "security",
+          "confidence": "inferred",
+          "provenance": {
+            "source": "src-intake"
+          }
+        },
+        {
+          "id": "REQ-050",
+          "text": "The build proceeds under every-slice supervision: each vertical slice is independently runnable, tested, and presented for human review before the next slice begins.",
+          "category": "ops",
+          "confidence": "inferred",
+          "provenance": {
+            "source": "src-intake"
+          }
+        },
+        {
+          "id": "REQ-051",
+          "text": "Structured request/agent logging and a health endpoint are provided for Cloud Run operability, with logs carrying deal id and correlation id.",
+          "category": "ops",
+          "confidence": "inferred",
+          "provenance": {
+            "source": "src-intake"
+          }
+        },
+        {
+          "id": "REQ-052",
+          "text": "The risk grading rubric's actual grade scale and thresholds are unspecified — how many grades, their labels, and the DSCR/leverage/current-ratio cutoffs that map to each. This determines the deterministic grading engine and its unit tests.",
+          "category": "functional",
+          "confidence": "unknown"
+        },
+        {
+          "id": "REQ-053",
+          "text": "The concrete lending policy parameters are unspecified — the prohibited industry list, the concentration limit definitions and thresholds, and the LTV caps by facility type. These are the rules the compliance agent evaluates against.",
+          "category": "data",
+          "confidence": "unknown"
+        },
+        {
+          "id": "REQ-054",
+          "text": "The definition of 'exposure' that drives approval tiering is unspecified — whether it is the requested facility amount alone, or the borrower's total aggregate relationship exposure including existing facilities. This changes both the data model and the tier routing logic.",
+          "category": "functional",
+          "confidence": "unknown"
+        },
+        {
+          "id": "REQ-055",
+          "text": "Credit committee approval mechanics above $1M are unspecified — whether it is a single recorded committee decision entered by a chair, or multiple individual member votes with a quorum/majority rule. This materially changes the approval data model and UI.",
+          "category": "functional",
+          "confidence": "unknown"
+        },
+        {
+          "id": "REQ-056",
+          "text": "The expected borrower document input format is unspecified — whether the system must perform real extraction from scanned/PDF financial statements (requiring OCR and layout parsing), or whether documents arrive as digital text/structured files. This materially changes the document extraction stage's architecture and cost.",
+          "category": "functional",
+          "confidence": "unknown"
+        }
+      ]
+    }
+  },
+  "architecture": {
+    "path": "/Users/nbalawat/development/harness/underwriting-desk/artifacts/architecture/architecture.json",
+    "data": {
+      "modules": [
+        "persistence-core",
+        "agent-runtime",
+        "chat-shell",
+        "postgres-adapter",
+        "migrations",
+        "blob-store",
+        "file-upload",
+        "file-preview",
+        "doc-extract",
+        "table-extract",
+        "rag-core",
+        "citation-tracker",
+        "search-index",
+        "workflow-engine",
+        "state-machine",
+        "approval-flow",
+        "audit-log",
+        "audit-view",
+        "row-history",
+        "assignment",
+        "sla-timers",
+        "versioned-drafts",
+        "auth-basic",
+        "rbac",
+        "row-level-security",
+        "agent-router",
+        "tool-registry",
+        "prompt-registry",
+        "eval-harness",
+        "transcript-store",
+        "pii-redaction",
+        "cost-meter",
+        "data-table",
+        "record-detail",
+        "forms-engine",
+        "dashboard-cards",
+        "screen-router",
+        "export-csv",
+        "env-config",
+        "secrets-manager",
+        "structured-logging",
+        "health-plus"
+      ],
+      "deploy_target": "cloud-run",
+      "runtime_choice": {
+        "runtime": "agent-runtime",
+        "why": "Neither the intake nor the requirements name a mandated department framework (no LangGraph / ADK / Strands mandate), so the default Claude Agent SDK runtime is kept. No adapter swap; no runtime conflict."
+      },
+      "pack_basis": {
+        "packs_considered": [
+          "pack-document-review",
+          "pack-intake-triage",
+          "pack-support-copilot"
+        ],
+        "started_from": "pack-document-review",
+        "why": "The app's spine is ingest -> extract -> human review queue -> decision trail over borrower documents, which is exactly pack-document-review. It is a hybrid though: the intake-triage half (queues, SLA, explicit stage machine) and the support-copilot half (grounded citations, approval gate, transcripts) are both required, so the two other packs were merged in rather than adopted whole.",
+        "added_beyond_pack": {
+          "from pack-intake-triage": [
+            "assignment (already in base pack)",
+            "state-machine",
+            "sla-timers",
+            "agent-router",
+            "forms-engine"
+          ],
+          "from pack-support-copilot": [
+            "rag-core",
+            "citation-tracker",
+            "transcript-store"
+          ],
+          "workflow spine": [
+            "workflow-engine",
+            "approval-flow",
+            "audit-view",
+            "versioned-drafts"
+          ],
+          "identity + authorization": [
+            "auth-basic",
+            "rbac",
+            "row-level-security"
+          ],
+          "agent governance": [
+            "tool-registry",
+            "prompt-registry",
+            "eval-harness",
+            "cost-meter",
+            "pii-redaction"
+          ],
+          "durability on a stateless runtime": [
+            "postgres-adapter",
+            "migrations"
+          ],
+          "ui surfaces": [
+            "data-table",
+            "record-detail",
+            "dashboard-cards",
+            "screen-router",
+            "file-preview",
+            "export-csv",
+            "search-index"
+          ],
+          "cloud-run operability": [
+            "env-config",
+            "secrets-manager",
+            "structured-logging",
+            "health-plus"
+          ]
+        },
+        "removed_from_pack": [],
+        "notable_exclusions": [
+          "ocr-bridge — GAP-056 settled that borrower documents arrive as native-text PDFs with extractable text; OCR is explicitly out of scope, so doc-extract + table-extract are sufficient.",
+          "email-ingest — the pack-intake-triage intake path is a form (REQ-028), not a mailbox; no requirement asks for forwarded email.",
+          "slack-notify / email-send / notifications-ui — no requirement asks for outbound notification; the SLA surface is a dashboard (REQ-022), not a push channel.",
+          "scheduling / batch-runner — SLA idle time is computed on read from a business-day calendar (REQ-044); nothing requires background jobs, and Cloud Run request handling is stateless (REQ-026).",
+          "soft-delete / data-retention — REQ-018 makes the audit trail append-only and undeletable; there is no retention/purge requirement to honor.",
+          "permissions-ui / admin-console — REQ-041 fixes identities to built-in role-assigned accounts, so there is no role-administration surface to build.",
+          "pdf-render — REQ-047 asks that the audit trail be exportable for examiner review; export-csv satisfies that without a document generator.",
+          "sso-oidc — REQ-041 explicitly assumes no external SSO/IdP in v1.",
+          "guardrails-io / data-classification — REQ-049's sensitivity handling is met by pii-redaction under transcript-store plus rbac-scoped access; no requirement asks for topic fences or column-level classification."
+        ]
+      },
+      "module_coverage": [
+        {
+          "module": "persistence-core",
+          "addresses": [
+            "REQ-027",
+            "REQ-029",
+            "REQ-031",
+            "REQ-035",
+            "REQ-037"
+          ]
+        },
+        {
+          "module": "agent-runtime",
+          "addresses": [
+            "REQ-003",
+            "REQ-004",
+            "REQ-005",
+            "REQ-006",
+            "REQ-007",
+            "REQ-008",
+            "REQ-038",
+            "REQ-039"
+          ]
+        },
+        {
+          "module": "chat-shell",
+          "addresses": [
+            "REQ-008",
+            "REQ-046"
+          ]
+        },
+        {
+          "module": "postgres-adapter",
+          "addresses": [
+            "REQ-018",
+            "REQ-026",
+            "REQ-027",
+            "REQ-029"
+          ]
+        },
+        {
+          "module": "migrations",
+          "addresses": [
+            "REQ-026",
+            "REQ-027"
+          ]
+        },
+        {
+          "module": "blob-store",
+          "addresses": [
+            "REQ-029"
+          ]
+        },
+        {
+          "module": "file-upload",
+          "addresses": [
+            "REQ-029"
+          ]
+        },
+        {
+          "module": "file-preview",
+          "addresses": [
+            "REQ-032",
+            "REQ-046"
+          ]
+        },
+        {
+          "module": "doc-extract",
+          "addresses": [
+            "REQ-005",
+            "REQ-030"
+          ]
+        },
+        {
+          "module": "table-extract",
+          "addresses": [
+            "REQ-005",
+            "REQ-030",
+            "REQ-031"
+          ]
+        },
+        {
+          "module": "rag-core",
+          "addresses": [
+            "REQ-008",
+            "REQ-039"
+          ]
+        },
+        {
+          "module": "citation-tracker",
+          "addresses": [
+            "REQ-005",
+            "REQ-006",
+            "REQ-032",
+            "REQ-046"
+          ]
+        },
+        {
+          "module": "search-index",
+          "addresses": [
+            "REQ-008"
+          ]
+        },
+        {
+          "module": "workflow-engine",
+          "addresses": [
+            "REQ-001",
+            "REQ-009",
+            "REQ-010",
+            "REQ-014",
+            "REQ-016",
+            "REQ-036",
+            "REQ-043",
+            "REQ-048"
+          ]
+        },
+        {
+          "module": "state-machine",
+          "addresses": [
+            "REQ-001",
+            "REQ-017",
+            "REQ-036",
+            "REQ-048"
+          ]
+        },
+        {
+          "module": "approval-flow",
+          "addresses": [
+            "REQ-011",
+            "REQ-012",
+            "REQ-013",
+            "REQ-015",
+            "REQ-016",
+            "REQ-017",
+            "REQ-035",
+            "REQ-037",
+            "REQ-043",
+            "REQ-046"
+          ]
+        },
+        {
+          "module": "audit-log",
+          "addresses": [
+            "REQ-015",
+            "REQ-018"
+          ]
+        },
+        {
+          "module": "audit-view",
+          "addresses": [
+            "REQ-045",
+            "REQ-047"
+          ]
+        },
+        {
+          "module": "row-history",
+          "addresses": [
+            "REQ-018",
+            "REQ-037"
+          ]
+        },
+        {
+          "module": "assignment",
+          "addresses": [
+            "REQ-004",
+            "REQ-033"
+          ]
+        },
+        {
+          "module": "sla-timers",
+          "addresses": [
+            "REQ-022",
+            "REQ-044"
+          ]
+        },
+        {
+          "module": "versioned-drafts",
+          "addresses": [
+            "REQ-016",
+            "REQ-034",
+            "REQ-037"
+          ]
+        },
+        {
+          "module": "auth-basic",
+          "addresses": [
+            "REQ-015",
+            "REQ-041"
+          ]
+        },
+        {
+          "module": "rbac",
+          "addresses": [
+            "REQ-019",
+            "REQ-020",
+            "REQ-021",
+            "REQ-042",
+            "REQ-049"
+          ]
+        },
+        {
+          "module": "row-level-security",
+          "addresses": [
+            "REQ-019",
+            "REQ-040",
+            "REQ-042"
+          ]
+        },
+        {
+          "module": "agent-router",
+          "addresses": [
+            "REQ-003"
+          ]
+        },
+        {
+          "module": "tool-registry",
+          "addresses": [
+            "REQ-003",
+            "REQ-009",
+            "REQ-010",
+            "REQ-014"
+          ]
+        },
+        {
+          "module": "prompt-registry",
+          "addresses": [
+            "REQ-034",
+            "REQ-038"
+          ]
+        },
+        {
+          "module": "eval-harness",
+          "addresses": [
+            "REQ-025"
+          ]
+        },
+        {
+          "module": "transcript-store",
+          "addresses": [
+            "REQ-038",
+            "REQ-049"
+          ]
+        },
+        {
+          "module": "pii-redaction",
+          "addresses": [
+            "REQ-049"
+          ]
+        },
+        {
+          "module": "cost-meter",
+          "addresses": [
+            "REQ-038"
+          ]
+        },
+        {
+          "module": "data-table",
+          "addresses": [
+            "REQ-002",
+            "REQ-033",
+            "REQ-047"
+          ]
+        },
+        {
+          "module": "record-detail",
+          "addresses": [
+            "REQ-010",
+            "REQ-045",
+            "REQ-046"
+          ]
+        },
+        {
+          "module": "forms-engine",
+          "addresses": [
+            "REQ-028",
+            "REQ-031"
+          ]
+        },
+        {
+          "module": "dashboard-cards",
+          "addresses": [
+            "REQ-002",
+            "REQ-022"
+          ]
+        },
+        {
+          "module": "screen-router",
+          "addresses": [
+            "REQ-002",
+            "REQ-045"
+          ]
+        },
+        {
+          "module": "export-csv",
+          "addresses": [
+            "REQ-047"
+          ]
+        },
+        {
+          "module": "env-config",
+          "addresses": [
+            "REQ-026",
+            "REQ-051"
+          ]
+        },
+        {
+          "module": "secrets-manager",
+          "addresses": [
+            "REQ-026",
+            "REQ-049"
+          ]
+        },
+        {
+          "module": "structured-logging",
+          "addresses": [
+            "REQ-018",
+            "REQ-051"
+          ]
+        },
+        {
+          "module": "health-plus",
+          "addresses": [
+            "REQ-026",
+            "REQ-051"
+          ]
+        }
+      ],
+      "build_budget_plan": {
+        "nodes": {
+          "slice-plan": 2.5,
+          "slice-1": 7,
+          "slice-2": 8,
+          "slice-3": 8,
+          "slice-4": 8,
+          "slice-5": 7.5,
+          "slice-6": 7
+        },
+        "total_usd": 48,
+        "rationale": "42 certified modules carry the substrate (durable store, workflow engine, approval trail, RBAC, citations, document extraction, SLA math, UI shells, Cloud Run operability), so each slice is mostly wiring plus this app's genuinely bespoke logic. The estimates sit well under the per-node $15 runaway guards because composition removes the expensive generation: only the ratio/grading engine, the policy rule set, and the five agent mandates are written from scratch. Total leaves ~$52 of the $100 run envelope for the design phase already in flight (design-options alone guards at $36).",
+        "node_notes": {
+          "slice-plan": "Derives the vertical slices; bounded planning output, cheapest node in the build phase.",
+          "slice-1": "Deal entity + intake form + auth/RBAC + pipeline board skeleton — heaviest composition, lightest bespoke code (persistence-core, postgres-adapter, migrations, forms-engine, auth-basic, rbac, row-level-security, data-table, screen-router).",
+          "slice-2": "Document upload, native-text PDF extraction, and the financial spreading agent with per-figure citations — three modules do the plumbing (file-upload, doc-extract, table-extract, citation-tracker) but the spread template and citation binding are bespoke.",
+          "slice-3": "Deterministic DSCR/leverage/current-ratio engine and the 5-point grading rubric from GAP-052, plus exhaustive unit tests (REQ-023). Entirely bespoke code with no module to lean on, hence the full allocation despite a narrow surface.",
+          "slice-4": "Credit memo agent and policy compliance agent over the versioned rule set from GAP-053, with drafts landing in the accept/edit/reject review UI (versioned-drafts, approval-flow, record-detail).",
+          "slice-5": "Tiered approval per GAP-054/GAP-055, decline with adverse-action reason, return-to-stage, and the audit view/export — approval-flow, state-machine, audit-view and export-csv cover most of it.",
+          "slice-6": "SLA dashboard with business-day math and escalation owner, portfolio Q&A agent under RBAC-scoped retrieval, and the eval suites for all five agents (sla-timers, dashboard-cards, rag-core, search-index, eval-harness)."
+        }
+      }
+    }
+  },
+  "data_model": {
+    "path": "/Users/nbalawat/development/harness/underwriting-desk/artifacts/data-design/data_model.json",
+    "data": {
+      "tables": [
+        {
+          "name": "deals",
+          "addresses": [
+            "REQ-001",
+            "REQ-002",
+            "REQ-027",
+            "REQ-028",
+            "REQ-043",
+            "REQ-044",
+            "REQ-048"
+          ],
+          "columns": [
+            {
+              "name": "id",
+              "type": "string"
+            },
+            {
+              "name": "borrower_name",
+              "type": "string"
+            },
+            {
+              "name": "borrower_industry",
+              "type": "string"
+            },
+            {
+              "name": "facility_type",
+              "type": "string"
+            },
+            {
+              "name": "requested_amount",
+              "type": "number"
+            },
+            {
+              "name": "exposure_amount",
+              "type": "number"
+            },
+            {
+              "name": "current_stage",
+              "type": "string"
+            },
+            {
+              "name": "assigned_analyst_id",
+              "type": "string"
+            },
+            {
+              "name": "submitted_by_user_id",
+              "type": "string"
+            },
+            {
+              "name": "created_at",
+              "type": "timestamp"
+            },
+            {
+              "name": "last_activity_at",
+              "type": "timestamp"
+            },
+            {
+              "name": "closed_at",
+              "type": "timestamp"
+            },
+            {
+              "name": "is_closed",
+              "type": "boolean"
+            },
+            {
+              "name": "approval_tier",
+              "type": "string"
+            }
+          ]
+        },
+        {
+          "name": "documents",
+          "addresses": [
+            "REQ-029",
+            "REQ-030"
+          ],
+          "columns": [
+            {
+              "name": "id",
+              "type": "string"
+            },
+            {
+              "name": "deal_id",
+              "type": "string"
+            },
+            {
+              "name": "original_filename",
+              "type": "string"
+            },
+            {
+              "name": "content_type",
+              "type": "string"
+            },
+            {
+              "name": "uploaded_by_user_id",
+              "type": "string"
+            },
+            {
+              "name": "uploaded_at",
+              "type": "timestamp"
+            },
+            {
+              "name": "storage_path",
+              "type": "string"
+            },
+            {
+              "name": "document_type",
+              "type": "string"
+            }
+          ]
+        },
+        {
+          "name": "document_locations",
+          "addresses": [
+            "REQ-030"
+          ],
+          "columns": [
+            {
+              "name": "id",
+              "type": "string"
+            },
+            {
+              "name": "document_id",
+              "type": "string"
+            },
+            {
+              "name": "page_number",
+              "type": "number"
+            },
+            {
+              "name": "section",
+              "type": "string"
+            },
+            {
+              "name": "extracted_text",
+              "type": "string"
+            }
+          ]
+        },
+        {
+          "name": "spread_line_items",
+          "addresses": [
+            "REQ-031"
+          ],
+          "columns": [
+            {
+              "name": "id",
+              "type": "string"
+            },
+            {
+              "name": "deal_id",
+              "type": "string"
+            },
+            {
+              "name": "line_item_key",
+              "type": "string"
+            },
+            {
+              "name": "category",
+              "type": "string"
+            },
+            {
+              "name": "label",
+              "type": "string"
+            },
+            {
+              "name": "value",
+              "type": "number"
+            },
+            {
+              "name": "unit",
+              "type": "string"
+            },
+            {
+              "name": "period",
+              "type": "string"
+            }
+          ]
+        },
+        {
+          "name": "citations",
+          "addresses": [
+            "REQ-005",
+            "REQ-006",
+            "REQ-032"
+          ],
+          "columns": [
+            {
+              "name": "id",
+              "type": "string"
+            },
+            {
+              "name": "deal_id",
+              "type": "string"
+            },
+            {
+              "name": "cited_value",
+              "type": "string"
+            },
+            {
+              "name": "source_type",
+              "type": "string"
+            },
+            {
+              "name": "source_reference",
+              "type": "json"
+            },
+            {
+              "name": "document_id",
+              "type": "string"
+            },
+            {
+              "name": "document_location_id",
+              "type": "string"
+            },
+            {
+              "name": "spread_line_item_id",
+              "type": "string"
+            },
+            {
+              "name": "ratio_id",
+              "type": "string"
+            },
+            {
+              "name": "policy_rule_id",
+              "type": "string"
+            },
+            {
+              "name": "created_at",
+              "type": "timestamp"
+            }
+          ]
+        },
+        {
+          "name": "ratios",
+          "addresses": [
+            "REQ-009"
+          ],
+          "columns": [
+            {
+              "name": "id",
+              "type": "string"
+            },
+            {
+              "name": "deal_id",
+              "type": "string"
+            },
+            {
+              "name": "ratio_type",
+              "type": "string"
+            },
+            {
+              "name": "value",
+              "type": "number"
+            },
+            {
+              "name": "computed_at",
+              "type": "timestamp"
+            },
+            {
+              "name": "computed_by_version",
+              "type": "string"
+            }
+          ]
+        },
+        {
+          "name": "risk_grades",
+          "addresses": [
+            "REQ-010",
+            "REQ-045"
+          ],
+          "columns": [
+            {
+              "name": "id",
+              "type": "string"
+            },
+            {
+              "name": "deal_id",
+              "type": "string"
+            },
+            {
+              "name": "grade",
+              "type": "string"
+            },
+            {
+              "name": "rubric_inputs",
+              "type": "json"
+            },
+            {
+              "name": "computed_at",
+              "type": "timestamp"
+            },
+            {
+              "name": "computed_by_version",
+              "type": "string"
+            }
+          ]
+        },
+        {
+          "name": "policy_rules",
+          "addresses": [
+            "REQ-034",
+            "REQ-053"
+          ],
+          "columns": [
+            {
+              "name": "id",
+              "type": "string"
+            },
+            {
+              "name": "rule_name",
+              "type": "string"
+            },
+            {
+              "name": "rule_type",
+              "type": "string"
+            },
+            {
+              "name": "description",
+              "type": "string"
+            },
+            {
+              "name": "parameters",
+              "type": "json"
+            },
+            {
+              "name": "version",
+              "type": "number"
+            },
+            {
+              "name": "effective_date",
+              "type": "timestamp"
+            },
+            {
+              "name": "is_active",
+              "type": "boolean"
+            }
+          ]
+        },
+        {
+          "name": "policy_exceptions",
+          "addresses": [
+            "REQ-007",
+            "REQ-035"
+          ],
+          "columns": [
+            {
+              "name": "id",
+              "type": "string"
+            },
+            {
+              "name": "deal_id",
+              "type": "string"
+            },
+            {
+              "name": "policy_rule_id",
+              "type": "string"
+            },
+            {
+              "name": "breached_value",
+              "type": "string"
+            },
+            {
+              "name": "rule_threshold",
+              "type": "string"
+            },
+            {
+              "name": "agent_rationale",
+              "type": "string"
+            },
+            {
+              "name": "human_disposition",
+              "type": "string"
+            },
+            {
+              "name": "disposition_by_user_id",
+              "type": "string"
+            },
+            {
+              "name": "disposition_reason",
+              "type": "string"
+            },
+            {
+              "name": "created_at",
+              "type": "timestamp"
+            },
+            {
+              "name": "disposition_at",
+              "type": "timestamp"
+            }
+          ]
+        },
+        {
+          "name": "memos",
+          "addresses": [
+            "REQ-006",
+            "REQ-045"
+          ],
+          "columns": [
+            {
+              "name": "id",
+              "type": "string"
+            },
+            {
+              "name": "deal_id",
+              "type": "string"
+            },
+            {
+              "name": "content",
+              "type": "string"
+            },
+            {
+              "name": "citations",
+              "type": "json"
+            },
+            {
+              "name": "drafted_at",
+              "type": "timestamp"
+            }
+          ]
+        },
+        {
+          "name": "agent_runs",
+          "addresses": [
+            "REQ-037",
+            "REQ-038"
+          ],
+          "columns": [
+            {
+              "name": "id",
+              "type": "string"
+            },
+            {
+              "name": "deal_id",
+              "type": "string"
+            },
+            {
+              "name": "agent_type",
+              "type": "string"
+            },
+            {
+              "name": "run_stage",
+              "type": "string"
+            },
+            {
+              "name": "model_id",
+              "type": "string"
+            },
+            {
+              "name": "prompt_template_version",
+              "type": "string"
+            },
+            {
+              "name": "inputs",
+              "type": "json"
+            },
+            {
+              "name": "raw_output",
+              "type": "string"
+            },
+            {
+              "name": "latency_ms",
+              "type": "number"
+            },
+            {
+              "name": "token_cost",
+              "type": "json"
+            },
+            {
+              "name": "ran_at",
+              "type": "timestamp"
+            }
+          ]
+        },
+        {
+          "name": "agent_drafts",
+          "addresses": [
+            "REQ-016",
+            "REQ-037",
+            "REQ-046"
+          ],
+          "columns": [
+            {
+              "name": "id",
+              "type": "string"
+            },
+            {
+              "name": "agent_run_id",
+              "type": "string"
+            },
+            {
+              "name": "deal_id",
+              "type": "string"
+            },
+            {
+              "name": "draft_type",
+              "type": "string"
+            },
+            {
+              "name": "draft_content",
+              "type": "string"
+            },
+            {
+              "name": "review_status",
+              "type": "string"
+            },
+            {
+              "name": "reviewed_by_user_id",
+              "type": "string"
+            },
+            {
+              "name": "review_action",
+              "type": "string"
+            },
+            {
+              "name": "review_reason",
+              "type": "string"
+            },
+            {
+              "name": "human_edits",
+              "type": "string"
+            },
+            {
+              "name": "created_at",
+              "type": "timestamp"
+            },
+            {
+              "name": "reviewed_at",
+              "type": "timestamp"
+            }
+          ]
+        },
+        {
+          "name": "approvals",
+          "addresses": [
+            "REQ-011",
+            "REQ-012",
+            "REQ-013",
+            "REQ-015",
+            "REQ-021",
+            "REQ-043"
+          ],
+          "columns": [
+            {
+              "name": "id",
+              "type": "string"
+            },
+            {
+              "name": "deal_id",
+              "type": "string"
+            },
+            {
+              "name": "approval_stage",
+              "type": "string"
+            },
+            {
+              "name": "approval_tier",
+              "type": "string"
+            },
+            {
+              "name": "approved_by_user_id",
+              "type": "string"
+            },
+            {
+              "name": "decision",
+              "type": "string"
+            },
+            {
+              "name": "reason",
+              "type": "string"
+            },
+            {
+              "name": "approved_at",
+              "type": "timestamp"
+            }
+          ]
+        },
+        {
+          "name": "declines",
+          "addresses": [
+            "REQ-017",
+            "REQ-021"
+          ],
+          "columns": [
+            {
+              "name": "id",
+              "type": "string"
+            },
+            {
+              "name": "deal_id",
+              "type": "string"
+            },
+            {
+              "name": "declined_by_user_id",
+              "type": "string"
+            },
+            {
+              "name": "adverse_action_reason",
+              "type": "string"
+            },
+            {
+              "name": "declined_at",
+              "type": "timestamp"
+            }
+          ]
+        },
+        {
+          "name": "stage_transitions",
+          "addresses": [
+            "REQ-001",
+            "REQ-036"
+          ],
+          "columns": [
+            {
+              "name": "id",
+              "type": "string"
+            },
+            {
+              "name": "deal_id",
+              "type": "string"
+            },
+            {
+              "name": "from_stage",
+              "type": "string"
+            },
+            {
+              "name": "to_stage",
+              "type": "string"
+            },
+            {
+              "name": "transitioned_by_user_id",
+              "type": "string"
+            },
+            {
+              "name": "transition_reason",
+              "type": "string"
+            },
+            {
+              "name": "transitioned_at",
+              "type": "timestamp"
+            }
+          ]
+        },
+        {
+          "name": "audit_log",
+          "addresses": [
+            "REQ-018",
+            "REQ-047"
+          ],
+          "columns": [
+            {
+              "name": "id",
+              "type": "string"
+            },
+            {
+              "name": "deal_id",
+              "type": "string"
+            },
+            {
+              "name": "event_type",
+              "type": "string"
+            },
+            {
+              "name": "entity_type",
+              "type": "string"
+            },
+            {
+              "name": "entity_id",
+              "type": "string"
+            },
+            {
+              "name": "actor_user_id",
+              "type": "string"
+            },
+            {
+              "name": "action",
+              "type": "string"
+            },
+            {
+              "name": "old_values",
+              "type": "json"
+            },
+            {
+              "name": "new_values",
+              "type": "json"
+            },
+            {
+              "name": "details",
+              "type": "json"
+            },
+            {
+              "name": "created_at",
+              "type": "timestamp"
+            }
+          ]
+        },
+        {
+          "name": "users",
+          "addresses": [
+            "REQ-019",
+            "REQ-020",
+            "REQ-021",
+            "REQ-041"
+          ],
+          "columns": [
+            {
+              "name": "id",
+              "type": "string"
+            },
+            {
+              "name": "username",
+              "type": "string"
+            },
+            {
+              "name": "email",
+              "type": "string"
+            },
+            {
+              "name": "password_hash",
+              "type": "string"
+            },
+            {
+              "name": "role",
+              "type": "string"
+            },
+            {
+              "name": "is_active",
+              "type": "boolean"
+            },
+            {
+              "name": "created_at",
+              "type": "timestamp"
+            }
+          ]
+        },
+        {
+          "name": "analyst_queues",
+          "addresses": [
+            "REQ-033"
+          ],
+          "columns": [
+            {
+              "name": "id",
+              "type": "string"
+            },
+            {
+              "name": "analyst_user_id",
+              "type": "string"
+            },
+            {
+              "name": "deal_id",
+              "type": "string"
+            },
+            {
+              "name": "queue_status",
+              "type": "string"
+            },
+            {
+              "name": "added_at",
+              "type": "timestamp"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "agent_roster": {
+    "path": "/Users/nbalawat/development/harness/underwriting-desk/artifacts/agent-design/agent_roster.json",
+    "data": {
+      "agents": [
+        {
+          "name": "Intake Triage Agent",
+          "role": "Reads a newly submitted deal and its uploaded documents, classifies the loan request, lists the documents that are missing or unreadable for that request type, and proposes which analyst queue should pick the deal up. It proposes only — a person accepts the triage before the deal is routed.",
+          "tools": [
+            "read_deal_record",
+            "list_deal_documents",
+            "read_document_text",
+            "read_document_locations",
+            "read_required_document_checklist",
+            "list_analyst_queues"
+          ],
+          "denied_tools": [
+            "assign_deal_to_analyst_queue",
+            "record_stage_transition",
+            "approve_deal",
+            "decline_deal",
+            "return_deal",
+            "compute_financial_ratios",
+            "assign_risk_grade",
+            "write_deal_record",
+            "write_audit_log",
+            "delete_document"
+          ],
+          "system_prompt": "You are the intake triage agent for SMB loan underwriting. Work only from the stored deal record and the text of documents already uploaded to that deal; never use outside knowledge about the borrower or the industry. Return a request classification, every required document that is missing or unextractable, and a proposed analyst queue with your reasoning — and reply 'not supported by the record' for anything the record cannot establish. You never compute ratios, never assign a grade, never express a view on approval, and your routing proposal is a suggestion that a human must accept.",
+          "eval_criteria": [
+            "Reply contains exactly one request classification drawn from the configured facility-type list; free-text classifications outside that list fail.",
+            "Reply contains a missing-documents section listing zero or more document types, each drawn from the required-document checklist for the classified request type; a document type not on the checklist fails.",
+            "Reply names exactly one proposed analyst queue, and that queue id exists in the queue list supplied in the prompt.",
+            "For a fixture where a required document is absent, that document type appears in the missing-documents list; for a complete fixture, the list is empty.",
+            "Reply contains none of the tokens 'approve', 'approved', 'decline', 'declined', 'DSCR', 'leverage ratio', 'current ratio', or 'risk grade' as a conclusion of its own.",
+            "For a fixture whose documents cannot support classification, the reply contains the exact phrase 'not supported by the record'."
+          ],
+          "addresses": [
+            "REQ-003",
+            "REQ-004",
+            "REQ-030",
+            "REQ-033",
+            "REQ-037",
+            "REQ-039",
+            "REQ-056"
+          ]
+        },
+        {
+          "name": "Financial Spreading Agent",
+          "role": "Reads borrower financial statements and fills the bank's standard spread template line by line, attaching to every single figure a citation pointing back to the document and page it came from. An analyst reviews the spread beside those citations before it becomes deal-of-record data.",
+          "tools": [
+            "read_deal_record",
+            "read_document_text",
+            "read_document_locations",
+            "read_spread_template"
+          ],
+          "denied_tools": [
+            "compute_financial_ratios",
+            "assign_risk_grade",
+            "persist_spread_line_items",
+            "write_deal_record",
+            "record_stage_transition",
+            "approve_deal",
+            "decline_deal",
+            "return_deal",
+            "write_audit_log",
+            "edit_spread_template"
+          ],
+          "system_prompt": "You are the financial spreading agent. Extract figures only from the specific document locations supplied for this deal, and place them on the standard spread template lines — never invent a line item and never carry a number over from memory or from another deal. Every number you emit must carry a citation naming its document id and document location id; an uncited figure is invalid output. Where the documents do not support a template line, write 'not supported by the record' rather than estimating, and never compute DSCR, leverage, or the current ratio — those are calculated by the system, not by you.",
+          "eval_criteria": [
+            "Every numeric value in the reply is accompanied by a citation containing both a document id and a document location id; the count of uncited numeric values must equal 0.",
+            "Every citation's document id and location id appear in the document-location list supplied in the prompt; a citation to an unknown id fails.",
+            "Every emitted line-item key exists in the standard spread template; any key outside the template fails.",
+            "Reply contains no computed DSCR, leverage, or current-ratio value — the tokens 'DSCR', 'leverage ratio', and 'current ratio' must not appear with a numeric result attached.",
+            "On the golden fixture statements, each extracted figure matches the expected value for its template line within a tolerance of 0 (exact match on stated amounts).",
+            "For template lines absent from the fixture documents, the reply carries the exact phrase 'not supported by the record' for that line rather than a number."
+          ],
+          "addresses": [
+            "REQ-003",
+            "REQ-005",
+            "REQ-031",
+            "REQ-032",
+            "REQ-037",
+            "REQ-039",
+            "REQ-056"
+          ]
+        },
+        {
+          "name": "Credit Memo Agent",
+          "role": "Drafts the underwriting memo from the deal's accepted spread, the system-computed ratios, and the assigned risk grade, footnoting each assertion to the exact ratio, spread line, or policy rule behind it. It writes the analysis; it never recommends a credit decision.",
+          "tools": [
+            "read_deal_record",
+            "read_spread_line_items",
+            "read_computed_ratios",
+            "read_risk_grade_with_rubric",
+            "read_policy_rules",
+            "read_memo_template"
+          ],
+          "denied_tools": [
+            "compute_financial_ratios",
+            "assign_risk_grade",
+            "persist_memo_with_citations",
+            "approve_deal",
+            "decline_deal",
+            "return_deal",
+            "record_stage_transition",
+            "write_deal_record",
+            "write_audit_log",
+            "edit_policy_rules"
+          ],
+          "system_prompt": "You are the credit memo agent. Write the underwriting memo strictly from this deal's record — the accepted spread line items, the ratios the system computed, the risk grade with its rubric inputs, and the stored lending policy rules. Every assertion must carry a citation to the specific ratio id, spread line item id, or policy rule id it relied on, and you must restate ratios and the grade exactly as given rather than recalculating or re-characterising them. Do not recommend approving or declining the deal — that judgement belongs to a named credit officer — and write 'not supported by the record' wherever the evidence is absent.",
+          "eval_criteria": [
+            "Every assertion paragraph in the reply carries at least one citation resolving to a ratio id, spread line item id, or policy rule id supplied in the prompt; the count of uncited assertions must equal 0.",
+            "Every cited id appears in the prompt's supplied id sets; a citation to an id not supplied fails.",
+            "Every ratio value and the risk grade appearing in the reply match the values supplied in the prompt exactly; any restated ratio or grade that differs fails.",
+            "Reply contains no recommendation language — the strings 'we recommend approval', 'recommend declining', 'should be approved', and 'should be declined' must be absent.",
+            "Reply contains every section heading required by the memo template.",
+            "On a fixture with a missing data element, the reply contains the exact phrase 'not supported by the record' in the affected section rather than a substituted figure."
+          ],
+          "addresses": [
+            "REQ-003",
+            "REQ-006",
+            "REQ-009",
+            "REQ-010",
+            "REQ-032",
+            "REQ-034",
+            "REQ-037",
+            "REQ-039"
+          ]
+        },
+        {
+          "name": "Policy Compliance Agent",
+          "role": "Checks each memo against the bank's stored lending policy — prohibited industries, concentration limits, and LTV caps — and writes a formal exception for every rule breached, naming the rule, the breached value, and the threshold. A credit officer dispositions each exception; the agent never clears a deal itself.",
+          "tools": [
+            "read_memo",
+            "read_deal_record",
+            "read_policy_rules",
+            "read_computed_ratios",
+            "read_risk_grade_with_rubric",
+            "read_portfolio_concentration_metrics"
+          ],
+          "denied_tools": [
+            "edit_policy_rules",
+            "record_exception_dispositions",
+            "waive_policy_exception",
+            "clear_compliance",
+            "approve_deal",
+            "decline_deal",
+            "return_deal",
+            "record_stage_transition",
+            "write_deal_record",
+            "write_audit_log"
+          ],
+          "system_prompt": "You are the policy compliance agent. Evaluate the deal and its memo only against the lending policy rules as currently stored and versioned in the system — never against policy you remember or infer. For every rule breached, raise a written exception naming the policy rule id, the value that breached it, the rule's threshold, and your rationale; where the deal data cannot establish compliance either way, say 'not supported by the record' instead of assuming compliance. You may not approve, decline, clear, or waive anything — every exception you raise is dispositioned by a named human.",
+          "eval_criteria": [
+            "Every exception in the reply names a policy rule id present in the active policy rule set supplied in the prompt; an exception citing an unknown or invented rule id fails.",
+            "Every exception includes all four fields: rule id, breached value, rule threshold, and rationale text.",
+            "On the prohibited-industry fixture (liquor/gaming, adult entertainment, cannabis, firearms), an exception is raised naming the prohibited-industry rule id; on a permitted-industry fixture, no such exception appears.",
+            "On the LTV fixture, an exception is raised when the deal's LTV exceeds its facility cap (term ≤80%, line of credit ≤70%, real-estate secured ≤75%) and is absent when it does not.",
+            "On the concentration fixture, an exception is raised when industry >15%, geography >10%, or single-borrower >5% of portfolio, and is absent when all three are within limits.",
+            "Reply contains no clearance or decision language — the strings 'compliance cleared', 'waived', 'approved', and 'declined' must be absent.",
+            "On a clean fixture, the reply states zero exceptions rather than manufacturing a marginal one."
+          ],
+          "addresses": [
+            "REQ-003",
+            "REQ-007",
+            "REQ-034",
+            "REQ-035",
+            "REQ-037",
+            "REQ-039",
+            "REQ-053"
+          ]
+        },
+        {
+          "name": "Portfolio Q&A Agent",
+          "role": "Answers credit officers' questions across the active portfolio — exposure, grades, stage, aging — using only stored deal data the asking user is entitled to see, and citing the deal behind every fact. It reads; it never changes anything.",
+          "tools": [
+            "query_rbac_scoped_deal_facts",
+            "read_scoped_deal_summary",
+            "read_scoped_computed_ratios",
+            "read_scoped_risk_grade"
+          ],
+          "denied_tools": [
+            "query_unscoped_deal_data",
+            "read_document_text",
+            "write_deal_record",
+            "record_stage_transition",
+            "approve_deal",
+            "decline_deal",
+            "return_deal",
+            "record_exception_dispositions",
+            "write_audit_log",
+            "export_audit_trail"
+          ],
+          "system_prompt": "You are the portfolio Q&A agent. Answer only from the pre-retrieved deal facts supplied for this question, which have already been filtered to the deals the asking user's role entitles them to see — never reference, name, or reason about a deal outside that list. Cite the deal id behind every fact you state, and if the supplied evidence does not answer the question, reply exactly 'not supported by the record' rather than estimating or generalising. You are read-only: you never change deal state, never make or suggest a credit decision, and never disclose document contents beyond the facts provided.",
+          "eval_criteria": [
+            "Every factual claim in the reply carries a deal id citation; the count of uncited factual claims must equal 0.",
+            "Every deal id appearing in the reply is a member of the visible_deal_ids list supplied in the prompt; any out-of-scope deal id fails.",
+            "On the out-of-scope fixture (question about a deal the user cannot see), the reply is exactly 'not supported by the record' and contains no borrower name or amount.",
+            "On the unanswerable fixture (question whose answer is not in the retrieved facts), the reply is exactly 'not supported by the record'.",
+            "On the aggregate fixture, the numeric answer matches the expected total computed from the supplied facts exactly.",
+            "Reply contains no state-change language — the strings 'I have approved', 'I have declined', 'I moved', and 'I updated' must be absent."
+          ],
+          "addresses": [
+            "REQ-003",
+            "REQ-008",
+            "REQ-019",
+            "REQ-039",
+            "REQ-040",
+            "REQ-042",
+            "REQ-049"
+          ]
+        }
+      ],
+      "opportunity_map": [
+        {
+          "slot": "Deal registration at intake",
+          "source": "deal-underwriting/register_deal",
+          "decision": "excluded",
+          "rationale": "REQ-028 has the relationship manager enter borrower details and amount on a form, and creating the deal record is a mechanical write — an agent would add latency and a hallucination surface with no benefit."
+        },
+        {
+          "slot": "Borrower document storage",
+          "source": "deal-underwriting/store_documents",
+          "decision": "excluded",
+          "rationale": "REQ-029 requires documents be stored durably and immutably with original filename, type, uploader, and timestamp — a deterministic write with no judgement in it."
+        },
+        {
+          "slot": "Document text extraction",
+          "source": "deal-underwriting/extract_documents; REQ-030, REQ-056",
+          "decision": "excluded",
+          "rationale": "Clarification GAP-056 confirms documents arrive as native-text PDFs needing no OCR, so extraction to addressable locations is deterministic parsing and keeping it mechanical preserves exact citation offsets."
+        },
+        {
+          "slot": "Intake triage and queue proposal",
+          "source": "deal-underwriting/triage; REQ-004",
+          "decision": "included",
+          "rationale": "REQ-004 explicitly calls for an agent that classifies the request, flags missing documents for that request type, and proposes an analyst queue.",
+          "agent": "Intake Triage Agent"
+        },
+        {
+          "slot": "Triage draft human review",
+          "source": "deal-underwriting/triage_review",
+          "decision": "excluded",
+          "rationale": "REQ-016 and REQ-046 require explicit human acceptance of every agent output before the workflow advances, so the reviewer seat cannot itself be filled by an agent."
+        },
+        {
+          "slot": "Triage acceptance branch",
+          "source": "deal-underwriting/triage_accepted",
+          "decision": "excluded",
+          "rationale": "REQ-001 models stage transitions explicitly, so branching on the recorded human action is a deterministic condition, not a judgement call."
+        },
+        {
+          "slot": "Analyst queue assignment",
+          "source": "deal-underwriting/route_to_queue; REQ-033",
+          "decision": "excluded",
+          "rationale": "REQ-004 limits the agent to proposing a queue and REQ-014 bars agents from advancing the workflow, so the actual assignment and stage move stay in the engine after human acceptance."
+        },
+        {
+          "slot": "Financial statement spreading",
+          "source": "deal-underwriting/spread_financials; REQ-005",
+          "decision": "included",
+          "rationale": "REQ-005 explicitly calls for an agent that fills the standard spread template from borrower statements with a source citation on every extracted number.",
+          "agent": "Financial Spreading Agent"
+        },
+        {
+          "slot": "Spread draft human review",
+          "source": "deal-underwriting/spread_review, deal-underwriting/spread_accepted",
+          "decision": "excluded",
+          "rationale": "REQ-016 blocks advancement on an unaccepted draft and REQ-046 puts a human in the accept/edit/reject seat beside the cited evidence, with the re-draft branch a deterministic condition on the recorded action."
+        },
+        {
+          "slot": "Spread persistence to deal-of-record",
+          "source": "deal-underwriting/persist_spread; REQ-037",
+          "decision": "excluded",
+          "rationale": "REQ-037 makes human acceptance the act that promotes a draft into deal-of-record data, so the write is mechanical and attributed to the reviewing human."
+        },
+        {
+          "slot": "DSCR / leverage / current ratio calculation",
+          "source": "deal-underwriting/compute_ratios; REQ-009",
+          "decision": "excluded",
+          "rationale": "REQ-009 states these ratios are computed by deterministic code and never by an agent — agents may read the computed values but may not produce or override them."
+        },
+        {
+          "slot": "Risk grade assignment",
+          "source": "deal-underwriting/assign_risk_grade; REQ-010, REQ-052",
+          "decision": "excluded",
+          "rationale": "REQ-010 requires the grade come from a transparent inspectable rubric in deterministic logic, never an agent, with the rubric inputs shown to the user."
+        },
+        {
+          "slot": "Advance to memo stage",
+          "source": "deal-underwriting/advance_to_memo_stage",
+          "decision": "excluded",
+          "rationale": "REQ-014 forbids any agent from advancing a deal, and REQ-018 requires the transition be recorded as an immutable audit entry by the engine."
+        },
+        {
+          "slot": "Underwriting context load",
+          "source": "credit-approval/load_deal_record",
+          "decision": "excluded",
+          "rationale": "Assembling the deal's spread, ratios, grade, and active policy rule ids is a deterministic query whose fidelity the downstream agents' citations depend on."
+        },
+        {
+          "slot": "Credit memo drafting",
+          "source": "credit-approval/draft_memo; REQ-006",
+          "decision": "included",
+          "rationale": "REQ-006 explicitly calls for an agent that drafts the underwriting memo and cites the ratios, spread figures, and policy rules behind each assertion.",
+          "agent": "Credit Memo Agent"
+        },
+        {
+          "slot": "Memo draft human review",
+          "source": "credit-approval/memo_review, credit-approval/memo_accepted",
+          "decision": "excluded",
+          "rationale": "REQ-016 and REQ-046 reserve accept/edit/reject of the memo for a human reviewing it against its citations, with a reason required on rejection and the re-draft branch a deterministic condition."
+        },
+        {
+          "slot": "Memo persistence with citations",
+          "source": "credit-approval/persist_memo",
+          "decision": "excluded",
+          "rationale": "REQ-032 and REQ-037 make citation storage and draft promotion a structured deterministic write tied to the accepting user."
+        },
+        {
+          "slot": "Policy compliance review",
+          "source": "credit-approval/check_policy_compliance; REQ-007",
+          "decision": "included",
+          "rationale": "REQ-007 explicitly calls for an agent that reviews every memo against lending policy and raises written exceptions where policy is breached.",
+          "agent": "Policy Compliance Agent"
+        },
+        {
+          "slot": "Policy exception disposition",
+          "source": "credit-approval/exception_disposition; REQ-035",
+          "decision": "excluded",
+          "rationale": "REQ-035 requires a human disposition of accepted / waived-with-justification / blocking on each exception, and REQ-014 bars an agent from clearing a deal."
+        },
+        {
+          "slot": "Exception disposition recording and clearance flag",
+          "source": "credit-approval/record_exception_dispositions, compliance_is_cleared",
+          "decision": "excluded",
+          "rationale": "REQ-018 requires the disposition and its deciding user be written to the append-only audit trail by the engine, and the clearance branch is a deterministic count of blocking exceptions."
+        },
+        {
+          "slot": "Approval tier derivation",
+          "source": "credit-approval/derive_approval_tier; REQ-043, REQ-054",
+          "decision": "excluded",
+          "rationale": "REQ-043 requires the tier be derived deterministically from exposure and over-tier attempts rejected server-side, with GAP-054 fixing the $250k / $1M thresholds."
+        },
+        {
+          "slot": "Approve / decline / return decision",
+          "source": "credit-approval/approval_decision; REQ-011, REQ-012, REQ-013, REQ-014, REQ-015, REQ-017, REQ-055",
+          "decision": "excluded",
+          "rationale": "REQ-014 forbids any agent from approving, declining, or advancing past an approval step and REQ-015 requires a mandatory named human decider — this is the core human-authority boundary of the product."
+        },
+        {
+          "slot": "Adverse-action reason drafting on decline",
+          "source": "REQ-017, credit-approval/approval_decision",
+          "decision": "excluded",
+          "rationale": "REQ-003 caps the system at exactly five narrowly scoped agents, and REQ-017's documented adverse-action reason must be the deciding officer's own recorded rationale rather than agent-generated text."
+        },
+        {
+          "slot": "Return-to-earlier-stage reason drafting",
+          "source": "REQ-036",
+          "decision": "excluded",
+          "rationale": "REQ-036 requires the officer's own reason on a recorded return transition, and REQ-003 leaves no roster slot for a sixth drafting agent."
+        },
+        {
+          "slot": "Credit decision recording",
+          "source": "credit-approval/record_credit_decision, decision_is_approve",
+          "decision": "excluded",
+          "rationale": "REQ-015 and REQ-018 require the named decider, tier authorization, and reason be captured immutably by the engine — server-side enforcement, not agent behaviour."
+        },
+        {
+          "slot": "Closing and final terms",
+          "source": "credit-approval/close_deal; REQ-048",
+          "decision": "excluded",
+          "rationale": "REQ-048 records final terms and makes the deal read-only thereafter; terms are entered by the closer and the state change is mechanical."
+        },
+        {
+          "slot": "RBAC-scoped retrieval for portfolio questions",
+          "source": "portfolio-inquiry/scope_retrieval, caller_has_scope",
+          "decision": "excluded",
+          "rationale": "REQ-040 and REQ-042 require the visibility filter be applied at the data-access layer server-side, so scoping must happen before the agent sees anything rather than inside it."
+        },
+        {
+          "slot": "Portfolio question answering",
+          "source": "portfolio-inquiry/answer_question; REQ-008",
+          "decision": "included",
+          "rationale": "REQ-008 explicitly calls for an agent that answers credit officers' questions across active deals grounded strictly in stored deal data.",
+          "agent": "Portfolio Q&A Agent"
+        },
+        {
+          "slot": "Q&A interaction audit recording",
+          "source": "portfolio-inquiry/record_qa_interaction; REQ-018, REQ-038",
+          "decision": "excluded",
+          "rationale": "REQ-018 makes audit entries append-only and engine-written, and REQ-038's run telemetry (model id, prompt version, latency, cost) is captured by instrumentation, not by an agent."
+        },
+        {
+          "slot": "Portfolio chat screen",
+          "source": "REQ-008, REQ-040",
+          "decision": "included",
+          "rationale": "The credit officer's chat surface is the front end of the portfolio-inquiry workflow and is served by the existing roster agent, adding no new mandate.",
+          "agent": "Portfolio Q&A Agent"
+        },
+        {
+          "slot": "Agent draft review workspace",
+          "source": "REQ-046, REQ-037",
+          "decision": "excluded",
+          "rationale": "REQ-046 defines this surface as the human's side-by-side accept/edit/reject seat; the drafts it displays already come from the triage, spreading, memo, and compliance agents."
+        },
+        {
+          "slot": "Deal detail workspace",
+          "source": "REQ-045, REQ-032",
+          "decision": "excluded",
+          "rationale": "The chronological deal record renders stored artifacts and clickable citation traces directly, so a summarizing agent would insert an ungrounded layer between the officer and the evidence."
+        },
+        {
+          "slot": "Pipeline board",
+          "source": "REQ-002",
+          "decision": "excluded",
+          "rationale": "REQ-002 asks only that every active deal and its current stage be visible at a glance — a deterministic board view with nothing for an agent to add."
+        },
+        {
+          "slot": "SLA dashboard escalation brief",
+          "source": "REQ-022, REQ-044, REQ-052",
+          "decision": "excluded",
+          "rationale": "REQ-044 computes idle time on a business-day calendar deterministically and GAP-052 asks only for red highlighting with a named escalation owner; REQ-003 also caps the roster at five agents."
+        },
+        {
+          "slot": "Risk grade explanation assistant",
+          "source": "REQ-010, REQ-052",
+          "decision": "excluded",
+          "rationale": "REQ-010 requires the rubric inputs that produced the grade be shown directly to the user, which is a more trustworthy explanation than an agent paraphrase, and REQ-003 forbids a sixth agent."
+        },
+        {
+          "slot": "Audit trail summarizer / examiner export narrative",
+          "source": "REQ-047, REQ-018",
+          "decision": "excluded",
+          "rationale": "REQ-018 requires an immutable append-only trail and REQ-047 asks for filterable viewing and export — examiners need the raw record, and an agent-written narrative would sit unauditably beside it."
+        },
+        {
+          "slot": "Lending policy search assistant for officers",
+          "source": "REQ-034, REQ-053",
+          "decision": "excluded",
+          "rationale": "REQ-034 stores policy as structured versioned configuration with stable rule ids that officers can browse directly, and REQ-003's exactly-five constraint blocks a dedicated policy-search agent."
+        },
+        {
+          "slot": "Intake form autofill from uploaded documents",
+          "source": "REQ-028, REQ-029",
+          "decision": "excluded",
+          "rationale": "REQ-028 has the relationship manager supply borrower details and amount at submission, and no requirement asks for autofill — building it would be gold-plating outside the REQ-003 agent budget."
+        },
+        {
+          "slot": "Agent run monitoring and eval suites",
+          "source": "REQ-025, REQ-038",
+          "decision": "excluded",
+          "rationale": "REQ-025's fixed-input scored eval suites and REQ-038's per-run telemetry are test and instrumentation code, not an agent mandate."
+        },
+        {
+          "slot": "General-purpose underwriting copilot",
+          "source": "REQ-003",
+          "decision": "excluded",
+          "rationale": "REQ-003 states exactly five distinct agents operate, each scoped to a single narrow mandate, and explicitly forbids introducing a general-purpose or catch-all agent."
+        }
+      ]
+    }
+  },
+  "designs_dir": {
+    "path": "/Users/nbalawat/development/harness/underwriting-desk/artifacts/design-options/designs"
+  },
+  "designs": {
+    "path": "/Users/nbalawat/development/harness/underwriting-desk/artifacts/design-options/designs.json",
+    "data": {
+      "options": [
+        {
+          "id": "option-1",
+          "name": "Credit Ledger",
+          "screens": [
+            "pipeline",
+            "intake",
+            "deal",
+            "review",
+            "approvals",
+            "sla",
+            "audit",
+            "chat"
+          ],
+          "addresses": [
+            "REQ-001",
+            "REQ-002",
+            "REQ-004",
+            "REQ-005",
+            "REQ-006",
+            "REQ-007",
+            "REQ-008",
+            "REQ-009",
+            "REQ-010",
+            "REQ-011",
+            "REQ-012",
+            "REQ-013",
+            "REQ-015",
+            "REQ-016",
+            "REQ-017",
+            "REQ-018",
+            "REQ-019",
+            "REQ-020",
+            "REQ-021",
+            "REQ-022",
+            "REQ-027",
+            "REQ-028",
+            "REQ-029",
+            "REQ-032",
+            "REQ-033",
+            "REQ-035",
+            "REQ-036",
+            "REQ-037",
+            "REQ-039",
+            "REQ-040",
+            "REQ-043",
+            "REQ-044",
+            "REQ-045",
+            "REQ-046",
+            "REQ-047",
+            "REQ-048"
+          ],
+          "tokens_file": "designs/option-1/tokens.css",
+          "preview_file": "designs/option-1/index.html"
+        },
+        {
+          "id": "option-2",
+          "name": "Operations Console",
+          "screens": [
+            "pipeline",
+            "intake",
+            "deal",
+            "review",
+            "approvals",
+            "sla",
+            "audit",
+            "chat"
+          ],
+          "addresses": [
+            "REQ-001",
+            "REQ-002",
+            "REQ-004",
+            "REQ-005",
+            "REQ-006",
+            "REQ-007",
+            "REQ-008",
+            "REQ-009",
+            "REQ-010",
+            "REQ-011",
+            "REQ-012",
+            "REQ-013",
+            "REQ-015",
+            "REQ-016",
+            "REQ-017",
+            "REQ-018",
+            "REQ-019",
+            "REQ-020",
+            "REQ-021",
+            "REQ-022",
+            "REQ-027",
+            "REQ-028",
+            "REQ-029",
+            "REQ-032",
+            "REQ-033",
+            "REQ-035",
+            "REQ-036",
+            "REQ-037",
+            "REQ-039",
+            "REQ-040",
+            "REQ-043",
+            "REQ-044",
+            "REQ-045",
+            "REQ-046",
+            "REQ-047",
+            "REQ-048"
+          ],
+          "tokens_file": "designs/option-2/tokens.css",
+          "preview_file": "designs/option-2/index.html"
+        },
+        {
+          "id": "option-3",
+          "name": "Deal Board",
+          "screens": [
+            "pipeline",
+            "intake",
+            "deal",
+            "review",
+            "approvals",
+            "sla",
+            "audit",
+            "chat"
+          ],
+          "addresses": [
+            "REQ-001",
+            "REQ-002",
+            "REQ-004",
+            "REQ-005",
+            "REQ-006",
+            "REQ-007",
+            "REQ-008",
+            "REQ-009",
+            "REQ-010",
+            "REQ-011",
+            "REQ-012",
+            "REQ-013",
+            "REQ-015",
+            "REQ-016",
+            "REQ-017",
+            "REQ-018",
+            "REQ-019",
+            "REQ-020",
+            "REQ-021",
+            "REQ-022",
+            "REQ-027",
+            "REQ-028",
+            "REQ-029",
+            "REQ-032",
+            "REQ-033",
+            "REQ-035",
+            "REQ-036",
+            "REQ-037",
+            "REQ-039",
+            "REQ-040",
+            "REQ-043",
+            "REQ-044",
+            "REQ-045",
+            "REQ-046",
+            "REQ-047",
+            "REQ-048"
+          ],
+          "tokens_file": "designs/option-3/tokens.css",
+          "preview_file": "designs/option-3/index.html"
+        },
+        {
+          "id": "option-4",
+          "name": "Underwriting Terminal",
+          "screens": [
+            "pipeline",
+            "intake",
+            "deal",
+            "review",
+            "approvals",
+            "sla",
+            "audit",
+            "chat"
+          ],
+          "addresses": [
+            "REQ-001",
+            "REQ-002",
+            "REQ-004",
+            "REQ-005",
+            "REQ-006",
+            "REQ-007",
+            "REQ-008",
+            "REQ-009",
+            "REQ-010",
+            "REQ-011",
+            "REQ-012",
+            "REQ-013",
+            "REQ-015",
+            "REQ-016",
+            "REQ-017",
+            "REQ-018",
+            "REQ-019",
+            "REQ-020",
+            "REQ-021",
+            "REQ-022",
+            "REQ-027",
+            "REQ-028",
+            "REQ-029",
+            "REQ-032",
+            "REQ-033",
+            "REQ-035",
+            "REQ-036",
+            "REQ-037",
+            "REQ-039",
+            "REQ-040",
+            "REQ-043",
+            "REQ-044",
+            "REQ-045",
+            "REQ-046",
+            "REQ-047",
+            "REQ-048"
+          ],
+          "tokens_file": "designs/option-4/tokens.css",
+          "preview_file": "designs/option-4/index.html"
+        }
+      ]
+    }
+  },
+  "gaps": {
+    "path": "/Users/nbalawat/development/harness/underwriting-desk/artifacts/gap-questions/gaps.json",
+    "data": {
+      "questions": [
+        {
+          "id": "GAP-052",
+          "prompt": "What is the risk grading rubric — how many risk grades (e.g., 1–5, A–E, Low/Medium/High/Critical), what are their labels, and what are the DSCR, leverage, and current-ratio thresholds that map each ratio combination to a grade?",
+          "default": "5-point numeric scale (1–5, where 1=lowest risk/best credit, 5=highest risk/reject) with DSCR ≥1.50 = grade 1, 1.25–1.49 = grade 2, 1.00–1.24 = grade 3, 0.85–0.99 = grade 4, <0.85 = grade 5; leverage ≤2.0x = -1 grade, 2.0–3.0x = base, >3.0x = +1 grade; current ratio ≥2.0 = -0.5 grade, 1.0–1.99 = base, <1.0 = +0.5 grade (clamped 1–5).",
+          "why": "The deterministic grading engine (REQ-010) and its unit tests (REQ-023) cannot be written without the exact rubric rules, thresholds, and grade labels. The rubric also drives the deal-detail and SLA dashboard UI (REQ-045, REQ-022) and the risk-grading stage approval logic. A placeholder rubric delays engineering."
+        },
+        {
+          "id": "GAP-053",
+          "prompt": "What are the concrete lending policy rules — the complete list of prohibited industries (NAICS codes or descriptive categories), the definition and thresholds of concentration limits (e.g., by industry, geography, borrower segment), and the LTV (loan-to-value) caps by facility type?",
+          "default": "Prohibited industries: liquor/gaming, adult entertainment, cannabis, firearms. Concentration: max 15% of portfolio by industry, max 10% by geography (state), max 5% to a single borrower. LTV caps: term loans ≤80%, lines of credit ≤70%, real-estate secured ≤75%.",
+          "why": "The policy compliance agent (REQ-007) and the structured policy rule configuration (REQ-034) cannot be built without the actual rules. The compliance engine's unit tests and the agent's memo citations (REQ-058) both depend on having the rule set codified. Without this, the policy-exception data model (REQ-035) and the agent's capability to detect breaches are incomplete."
+        },
+        {
+          "id": "GAP-054",
+          "prompt": "How is 'exposure' defined for the purposes of approval tiering and authorization (REQ-011, REQ-012, REQ-013, REQ-043)? Is it only the requested facility amount for this deal, or does it include the borrower's total existing relationship exposure (other active loans)?",
+          "default": "Exposure = requested facility amount alone (this deal only). Approval tiers: up to $250k = analyst, $250k–$1M = officer, >$1M = committee.",
+          "why": "The definition of exposure directly changes the data model (whether borrower has an aggregate facility field), the approval routing logic, and the tier-enforcement rule (REQ-043). If exposure includes existing facilities, the system must load and sum related deals at approval time; if it is deal-only, approval logic is simpler. This determines both backend authorization code and the RBAC model testing scope."
+        },
+        {
+          "id": "GAP-055",
+          "prompt": "How is credit committee approval (for deals >$1M exposure) recorded and decided — is it a single approval action entered by a committee chair (one recorded decision), or does each committee member vote individually with a quorum/majority rule (many recorded decisions)?",
+          "default": "Single recorded decision: committee chair (or designee) enters the committee's decision as one approval transaction; the specific member votes are not modeled.",
+          "why": "This determines the approval data model. A single decision requires only (user, timestamp, status). Multi-vote requires tracking individual member votes, quorum rules, and majority logic. This changes the approval schema, the RBAC roles (does every officer vote, or only a subset committee?), the UI for recording approvals, and the audit trail structure (one record vs. N records per approval)."
+        },
+        {
+          "id": "GAP-056",
+          "prompt": "What document input format does the system expect? Must the system perform OCR and layout parsing on scanned PDFs or images of financial statements, or do borrowers provide digital/native text financial statements (Excel, PDF with extractable text, structured JSON)?",
+          "default": "Borrower documents arrive as native-text PDFs (PDF with selectable/extractable text, no OCR required). The system uses text extraction and Claude's document API to ground the financial spreading agent (REQ-005) in the uploaded file content.",
+          "why": "This determines the architecture of the document extraction stage (REQ-030). Scanned/image-only documents require OCR (a separate preprocessing step, external service, added latency, and accuracy risk). Native text or structured formats allow direct extraction via API. This changes the pipeline's cost, latency, infrastructure (no OCR service vs. OCR service), and the spread agent's retrieval capability. The choice also affects what 'source citation' means: for OCR'd content, citations may be less precise."
+        }
+      ]
+    }
+  },
+  "clarifications": {
+    "path": "/Users/nbalawat/development/harness/underwriting-desk/artifacts/clarify/clarifications.json",
+    "data": {
+      "GAP-052": "5-point numeric scale (1–5, where 1=lowest risk/best credit, 5=highest risk/reject) with DSCR ≥1.50 = grade 1, 1.25–1.49 = grade 2, 1.00–1.24 = grade 3, 0.85–0.99 = grade 4, <0.85 = grade 5; leverage ≤2.0x = -1 grade, 2.0–3.0x = base, >3.0x = +1 grade; current ratio ≥2.0 = -0.5 grade, 1.0–1.99 = base, <1.0 = +0.5 grade (clamped 1–5). — and the SLA dashboard must highlight deals aging past 5 business days in red with an escalation owner.",
+      "GAP-053": "Prohibited industries: liquor/gaming, adult entertainment, cannabis, firearms. Concentration: max 15% of portfolio by industry, max 10% by geography (state), max 5% to a single borrower. LTV caps: term loans ≤80%, lines of credit ≤70%, real-estate secured ≤75%.",
+      "GAP-054": "Exposure = requested facility amount alone (this deal only). Approval tiers: up to $250k = analyst, $250k–$1M = officer, >$1M = committee.",
+      "GAP-055": "Single recorded decision: committee chair (or designee) enters the committee's decision as one approval transaction; the specific member votes are not modeled.",
+      "GAP-056": "Borrower documents arrive as native-text PDFs (PDF with selectable/extractable text, no OCR required). The system uses text extraction and Claude's document API to ground the financial spreading agent (REQ-005) in the uploaded file content."
+    }
+  },
+  "workflows": {
+    "path": "/Users/nbalawat/development/harness/underwriting-desk/artifacts/workflow-design/workflows.json",
+    "data": {
+      "workflows": [
+        {
+          "name": "deal-underwriting",
+          "description": "Analyst-side underwriting run: a submitted deal is triaged by an agent, routed to an analyst queue, its documents extracted, its financials spread by an agent under human acceptance, then ratios and the risk grade are computed by deterministic code and the deal is advanced to memo drafting.",
+          "addresses": [
+            "REQ-001",
+            "REQ-002",
+            "REQ-004",
+            "REQ-005",
+            "REQ-009",
+            "REQ-010",
+            "REQ-016",
+            "REQ-018",
+            "REQ-020",
+            "REQ-027",
+            "REQ-028",
+            "REQ-029",
+            "REQ-030",
+            "REQ-031",
+            "REQ-032",
+            "REQ-033",
+            "REQ-037",
+            "REQ-038",
+            "REQ-039",
+            "REQ-044",
+            "REQ-045",
+            "REQ-046",
+            "REQ-052",
+            "REQ-056"
+          ],
+          "nodes": [
+            {
+              "id": "register_deal",
+              "kind": "deterministic",
+              "handler": "create_deal_at_intake",
+              "output_schema": {
+                "required": [
+                  "deal_id",
+                  "borrower_name",
+                  "borrower_industry",
+                  "facility_type",
+                  "requested_amount",
+                  "exposure_amount",
+                  "submitted_by_user_id",
+                  "current_stage",
+                  "last_activity_at"
+                ]
+              }
+            },
+            {
+              "id": "store_documents",
+              "kind": "deterministic",
+              "handler": "store_borrower_documents",
+              "output_schema": {
+                "required": [
+                  "document_ids",
+                  "document_types",
+                  "document_count",
+                  "audit_log_id"
+                ]
+              }
+            },
+            {
+              "id": "extract_documents",
+              "kind": "deterministic",
+              "handler": "extract_document_locations",
+              "output_schema": {
+                "required": [
+                  "document_location_ids",
+                  "extracted_page_count",
+                  "unextractable_document_ids"
+                ]
+              }
+            },
+            {
+              "id": "triage",
+              "kind": "agent",
+              "prompt": "You are the intake triage agent. Using only the stored deal record and its extracted documents, classify loan request ${register_deal_deal_id} for borrower ${register_deal_borrower_name} (industry ${register_deal_borrower_industry}, facility ${register_deal_facility_type}, requested ${register_deal_requested_amount}). Documents on file: ${store_documents_document_types} across ${store_documents_document_count} files with extracted locations ${extract_documents_document_location_ids}. Return (a) the request classification, (b) every document required for this request type that is missing or unextractable, and (c) a proposed analyst queue with your reasoning. Do not compute ratios, assign a grade, or make any approval judgement. If the record does not support a conclusion, say 'not supported by the record' rather than speculating."
+            },
+            {
+              "id": "triage_review",
+              "kind": "human",
+              "question": "Review the intake triage draft for deal ${register_deal_deal_id} beside its cited documents. Classification: ${triage_classification}. Missing documents flagged: ${triage_missing_documents}. Proposed analyst queue: ${triage_proposed_queue}. Accept, edit, or reject this draft — a rejection requires a reason and returns the deal for further document collection."
+            },
+            {
+              "id": "triage_accepted",
+              "kind": "condition",
+              "path": "triage_review.action",
+              "equals": "accepted",
+              "on_false": "store_documents"
+            },
+            {
+              "id": "route_to_queue",
+              "kind": "deterministic",
+              "handler": "assign_deal_to_analyst_queue",
+              "output_schema": {
+                "required": [
+                  "deal_id",
+                  "assigned_analyst_id",
+                  "analyst_queue_id",
+                  "to_stage",
+                  "stage_transition_id",
+                  "audit_log_id"
+                ]
+              }
+            },
+            {
+              "id": "spread_financials",
+              "kind": "agent",
+              "prompt": "You are the financial spreading agent. Extract figures from the borrower financial statements for deal ${register_deal_deal_id} into the standard spread template. Source content is limited to document locations ${extract_documents_document_location_ids}. For EVERY extracted number, attach a citation naming the document id and document location id it came from — an uncited figure is invalid output. Emit line items keyed to the standard template only; do not invent line items, do not compute DSCR, leverage, or current ratio, and return 'not supported by the record' for any template line the documents do not support."
+            },
+            {
+              "id": "spread_review",
+              "kind": "human",
+              "question": "Review the financial spread drafted for deal ${register_deal_deal_id} side-by-side with each figure's cited document location. Accept, edit, or reject the spread — a rejection requires a reason and sends it back for re-drafting. The spread cannot become deal-of-record data until you accept or edit it."
+            },
+            {
+              "id": "spread_accepted",
+              "kind": "condition",
+              "path": "spread_review.action",
+              "equals": "accepted",
+              "on_false": "spread_financials"
+            },
+            {
+              "id": "persist_spread",
+              "kind": "deterministic",
+              "handler": "persist_spread_line_items",
+              "output_schema": {
+                "required": [
+                  "deal_id",
+                  "spread_line_item_ids",
+                  "citation_ids",
+                  "reviewed_by_user_id",
+                  "audit_log_id"
+                ]
+              }
+            },
+            {
+              "id": "compute_ratios",
+              "kind": "deterministic",
+              "handler": "compute_financial_ratios",
+              "output_schema": {
+                "required": [
+                  "deal_id",
+                  "ratio_ids",
+                  "dscr",
+                  "leverage",
+                  "current_ratio",
+                  "computed_by_version",
+                  "audit_log_id"
+                ]
+              }
+            },
+            {
+              "id": "assign_risk_grade",
+              "kind": "deterministic",
+              "handler": "assign_risk_grade_from_rubric",
+              "output_schema": {
+                "required": [
+                  "deal_id",
+                  "risk_grade_id",
+                  "grade",
+                  "rubric_inputs",
+                  "computed_by_version",
+                  "audit_log_id"
+                ]
+              }
+            },
+            {
+              "id": "advance_to_memo_stage",
+              "kind": "deterministic",
+              "handler": "record_stage_transition",
+              "output_schema": {
+                "required": [
+                  "deal_id",
+                  "from_stage",
+                  "to_stage",
+                  "stage_transition_id",
+                  "last_activity_at",
+                  "audit_log_id"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "credit-approval",
+          "description": "Officer-side decision run: an agent drafts the credit memo with citations, a human accepts it, a compliance agent raises written policy exceptions that a human dispositions, the approval tier is derived from exposure, and a named human approve/decline/return decision is recorded deterministically before closing.",
+          "addresses": [
+            "REQ-001",
+            "REQ-006",
+            "REQ-007",
+            "REQ-011",
+            "REQ-012",
+            "REQ-013",
+            "REQ-014",
+            "REQ-015",
+            "REQ-016",
+            "REQ-017",
+            "REQ-018",
+            "REQ-021",
+            "REQ-032",
+            "REQ-034",
+            "REQ-035",
+            "REQ-036",
+            "REQ-037",
+            "REQ-038",
+            "REQ-039",
+            "REQ-043",
+            "REQ-045",
+            "REQ-046",
+            "REQ-047",
+            "REQ-048",
+            "REQ-053",
+            "REQ-054",
+            "REQ-055"
+          ],
+          "nodes": [
+            {
+              "id": "load_deal_record",
+              "kind": "deterministic",
+              "handler": "load_deal_underwriting_context",
+              "output_schema": {
+                "required": [
+                  "deal_id",
+                  "borrower_name",
+                  "borrower_industry",
+                  "facility_type",
+                  "exposure_amount",
+                  "spread_line_item_ids",
+                  "ratio_values",
+                  "grade",
+                  "rubric_inputs",
+                  "active_policy_rule_ids"
+                ]
+              }
+            },
+            {
+              "id": "draft_memo",
+              "kind": "agent",
+              "prompt": "You are the credit memo agent. Draft the underwriting memo for deal ${load_deal_record_deal_id} — borrower ${load_deal_record_borrower_name}, industry ${load_deal_record_borrower_industry}, facility ${load_deal_record_facility_type}, exposure ${load_deal_record_exposure_amount}. Ground every assertion in the deal record: computed ratios ${load_deal_record_ratio_values}, risk grade ${load_deal_record_grade} produced from rubric inputs ${load_deal_record_rubric_inputs}, spread line items ${load_deal_record_spread_line_item_ids}, and active policy rules ${load_deal_record_active_policy_rule_ids}. Every assertion must carry a citation to the specific ratio, spread line item, or policy rule id it relied on. Do not recompute or restate a ratio or grade differently from the values given, do not recommend approval or decline, and write 'not supported by the record' where evidence is absent."
+            },
+            {
+              "id": "memo_review",
+              "kind": "human",
+              "question": "Review the credit memo drafted for deal ${load_deal_record_deal_id} side-by-side with each assertion's cited ratio, spread line, or policy rule. Accept, edit, or reject the draft — a rejection requires a reason and sends the memo back for re-drafting."
+            },
+            {
+              "id": "memo_accepted",
+              "kind": "condition",
+              "path": "memo_review.action",
+              "equals": "accepted",
+              "on_false": "draft_memo"
+            },
+            {
+              "id": "persist_memo",
+              "kind": "deterministic",
+              "handler": "persist_memo_with_citations",
+              "output_schema": {
+                "required": [
+                  "deal_id",
+                  "memo_id",
+                  "citation_ids",
+                  "reviewed_by_user_id",
+                  "audit_log_id"
+                ]
+              }
+            },
+            {
+              "id": "check_policy_compliance",
+              "kind": "agent",
+              "prompt": "You are the policy compliance agent. Review memo ${persist_memo_memo_id} for deal ${load_deal_record_deal_id} against every active lending policy rule in ${load_deal_record_active_policy_rule_ids}, including concentration limits, prohibited industries, and LTV caps. Deal facts: industry ${load_deal_record_borrower_industry}, facility ${load_deal_record_facility_type}, exposure ${load_deal_record_exposure_amount}, ratios ${load_deal_record_ratio_values}, grade ${load_deal_record_grade}. For each rule breached, raise a written exception naming the policy rule id, the breached value, the rule threshold, and your rationale. Evaluate rules only as stored — never from memory — and report 'not supported by the record' where the deal data cannot establish compliance either way. You may not approve, decline, or clear a deal."
+            },
+            {
+              "id": "exception_disposition",
+              "kind": "human",
+              "question": "Disposition every policy exception raised on deal ${load_deal_record_deal_id}: ${check_policy_compliance_exceptions}. For each, record accepted, waived-with-justification (justification required), or blocking. A blocking exception returns the deal to the analyst for rework instead of advancing to approval."
+            },
+            {
+              "id": "record_exception_dispositions",
+              "kind": "deterministic",
+              "handler": "record_exception_dispositions",
+              "output_schema": {
+                "required": [
+                  "deal_id",
+                  "policy_exception_ids",
+                  "blocking_exception_count",
+                  "compliance_cleared",
+                  "disposition_by_user_id",
+                  "return_transition_id",
+                  "audit_log_id"
+                ]
+              }
+            },
+            {
+              "id": "compliance_is_cleared",
+              "kind": "condition",
+              "path": "record_exception_dispositions.compliance_cleared",
+              "equals": true,
+              "on_false": "end"
+            },
+            {
+              "id": "derive_approval_tier",
+              "kind": "deterministic",
+              "handler": "derive_approval_tier_from_exposure",
+              "output_schema": {
+                "required": [
+                  "deal_id",
+                  "exposure_amount",
+                  "approval_tier",
+                  "required_role",
+                  "tier_rule_version",
+                  "audit_log_id"
+                ]
+              }
+            },
+            {
+              "id": "approval_decision",
+              "kind": "human",
+              "question": "Deal ${load_deal_record_deal_id} carries exposure ${derive_approval_tier_exposure_amount} and requires ${derive_approval_tier_approval_tier} authority (${derive_approval_tier_required_role}). Review the accepted memo, the risk grade ${load_deal_record_grade} with its rubric trace, and the dispositioned exceptions, then record your named decision: approve, decline (a documented adverse-action reason is mandatory), or return to an earlier stage (a reason is mandatory). No agent may make or advance this decision."
+            },
+            {
+              "id": "record_credit_decision",
+              "kind": "deterministic",
+              "handler": "record_credit_decision",
+              "output_schema": {
+                "required": [
+                  "deal_id",
+                  "decision",
+                  "decided_by_user_id",
+                  "approval_tier",
+                  "tier_authorized",
+                  "reason",
+                  "decision_record_id",
+                  "stage_transition_id",
+                  "audit_log_id"
+                ]
+              }
+            },
+            {
+              "id": "decision_is_approve",
+              "kind": "condition",
+              "path": "record_credit_decision.decision",
+              "equals": "approve",
+              "on_false": "end"
+            },
+            {
+              "id": "close_deal",
+              "kind": "deterministic",
+              "handler": "record_final_terms_and_close",
+              "output_schema": {
+                "required": [
+                  "deal_id",
+                  "final_terms",
+                  "closed_at",
+                  "is_closed",
+                  "stage_transition_id",
+                  "audit_log_id"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "portfolio-inquiry",
+          "description": "A credit officer asks a question spanning active deals; retrieval is scoped to what their role entitles them to see, the Q&A agent answers strictly from stored deal data or abstains, and the interaction is recorded to the audit trail.",
+          "addresses": [
+            "REQ-003",
+            "REQ-008",
+            "REQ-018",
+            "REQ-019",
+            "REQ-038",
+            "REQ-039",
+            "REQ-040",
+            "REQ-042",
+            "REQ-049"
+          ],
+          "nodes": [
+            {
+              "id": "scope_retrieval",
+              "kind": "deterministic",
+              "handler": "build_rbac_scoped_deal_context",
+              "output_schema": {
+                "required": [
+                  "asking_user_id",
+                  "user_role",
+                  "question_text",
+                  "visible_deal_ids",
+                  "has_visible_deals",
+                  "retrieved_facts"
+                ]
+              }
+            },
+            {
+              "id": "caller_has_scope",
+              "kind": "condition",
+              "path": "scope_retrieval.has_visible_deals",
+              "equals": true,
+              "on_false": "end"
+            },
+            {
+              "id": "answer_question",
+              "kind": "agent",
+              "prompt": "You are the portfolio Q&A agent. Answer the credit officer's question: ${scope_retrieval_question_text}. Your only permitted evidence is ${scope_retrieval_retrieved_facts}, drawn from deals ${scope_retrieval_visible_deal_ids} — the scope user ${scope_retrieval_asking_user_id} (role ${scope_retrieval_user_role}) is entitled to see. Cite the deal id behind each fact you state. Never infer beyond this evidence and never reference a deal outside the listed ids; if the record does not answer the question, reply exactly 'not supported by the record'. You may not change any deal state."
+            },
+            {
+              "id": "record_qa_interaction",
+              "kind": "deterministic",
+              "handler": "record_qa_interaction",
+              "output_schema": {
+                "required": [
+                  "agent_run_id",
+                  "asking_user_id",
+                  "answer_status",
+                  "cited_deal_ids",
+                  "audit_log_id"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

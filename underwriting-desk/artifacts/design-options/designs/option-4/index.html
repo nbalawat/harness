@@ -1,0 +1,2298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Underwriting Command Center — terminal</title>
+<link rel="stylesheet" href="tokens.css">
+<style>
+/* ==========================================================================
+   OPTION 4 — "UNDERWRITING TERMINAL"
+   Structure is made of rules and alignment. No gradients. No shadows.
+   No rounded corners. No illustration. One accent, used only for state.
+   Every vertical measure is a multiple of the line unit (--lh = 20px).
+   ========================================================================== */
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font);
+  font-size: var(--fs-base);
+  line-height: var(--lh);
+  font-variant-ligatures: none;
+  font-feature-settings: "kern" 1, "tnum" 1;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* faint paper ruling: horizontal hairlines every 20px, at 3% ink.
+   It is the only "texture" in the whole design and it enforces rhythm. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background-image: repeating-linear-gradient(
+    to bottom,
+    rgba(22, 21, 15, 0.028) 0px,
+    rgba(22, 21, 15, 0.028) 1px,
+    transparent 1px,
+    transparent var(--lh)
+  );
+}
+
+::selection { background: var(--fg); color: var(--bg); }
+
+a { color: inherit; text-decoration: none; }
+
+button, input, select, textarea {
+  font: inherit;
+  color: inherit;
+  letter-spacing: inherit;
+}
+
+:focus-visible {
+  outline: var(--stripe) solid var(--accent);
+  outline-offset: 1px;
+}
+
+/* ---------------------------------------------------------------- frame -- */
+
+.app {
+  position: relative;
+  z-index: 1;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  max-width: 1560px;
+  margin: 0 auto;
+  border-left: var(--hair) solid var(--rule);
+  border-right: var(--hair) solid var(--rule);
+  background: transparent;
+}
+
+/* --------------------------------------------------------------- header -- */
+
+.hd {
+  display: flex;
+  align-items: stretch;
+  min-height: var(--head-h);
+  border-bottom: var(--stripe) solid var(--fg);
+  background: var(--paper-deep);
+}
+
+.hd-brand {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: 0 var(--sp-4);
+  border-right: var(--hair) solid var(--rule-strong);
+}
+
+.hd-sigil {
+  font-size: var(--fs-sm);
+  line-height: 1;
+  letter-spacing: -0.06em;
+  color: var(--accent);
+  border: var(--hair) solid var(--fg);
+  padding: 3px 4px;
+  background: var(--paper-raised);
+}
+
+.hd-name {
+  font-size: var(--fs-md);
+  font-weight: var(--w-bold);
+  letter-spacing: var(--track-caps);
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.hd-ver {
+  font-size: var(--fs-tiny);
+  color: var(--ink-dim);
+  letter-spacing: var(--track-wide);
+  white-space: nowrap;
+}
+
+.hd-spacer { flex: 1 1 auto; min-width: var(--sp-4); }
+
+.hd-meta {
+  display: flex;
+  align-items: center;
+  border-left: var(--hair) solid var(--rule-strong);
+}
+
+.hd-cell {
+  padding: 0 var(--sp-4);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: var(--head-h);
+  border-right: var(--hair) solid var(--rule-hair);
+  white-space: nowrap;
+}
+.hd-cell:last-child { border-right: 0; }
+.hd-k {
+  font-size: var(--fs-micro);
+  text-transform: uppercase;
+  letter-spacing: var(--track-caps);
+  color: var(--ink-faint);
+  line-height: 12px;
+}
+.hd-v { font-size: var(--fs-xs); line-height: 14px; color: var(--ink-mid); }
+.hd-v b { font-weight: var(--w-bold); color: var(--fg); }
+
+/* ---------------------------------------------------------- agent mode -- */
+/* A five-way selector rendered as a command flag:  --agent=<name>            */
+
+#agent-mode {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  padding: 0 var(--sp-3) 0 var(--sp-4);
+  border-left: var(--hair) solid var(--rule-strong);
+  background: var(--paper-sunk);
+}
+
+#agent-mode .am-flag {
+  font-size: var(--fs-xs);
+  color: var(--ink-dim);
+  padding-right: var(--sp-2);
+  white-space: nowrap;
+}
+#agent-mode .am-flag b { color: var(--fg); font-weight: var(--w-medium); }
+
+.am-set {
+  display: flex;
+  border: var(--hair) solid var(--rule-strong);
+  background: var(--paper-raised);
+}
+
+.am-opt {
+  appearance: none;
+  background: transparent;
+  border: 0;
+  border-right: var(--hair) solid var(--rule-hair);
+  padding: 4px 8px;
+  font-size: var(--fs-tiny);
+  letter-spacing: var(--track-wide);
+  text-transform: uppercase;
+  color: var(--ink-dim);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background var(--t-fast), color var(--t-fast);
+}
+.am-opt:last-child { border-right: 0; }
+.am-opt:hover { background: var(--wash); color: var(--fg); }
+.am-opt[aria-pressed="true"] {
+  background: var(--fg);
+  color: var(--bg);
+  font-weight: var(--w-bold);
+}
+.am-opt .am-idx { color: var(--ink-ghost); margin-right: 5px; }
+.am-opt[aria-pressed="true"] .am-idx { color: var(--accent); }
+
+/* ------------------------------------------------- command palette line -- */
+
+.palette {
+  display: flex;
+  align-items: center;
+  min-height: var(--palette-h);
+  border-bottom: var(--hair) solid var(--rule);
+  background: var(--paper-raised);
+  padding: 0 var(--sp-4);
+  gap: var(--sp-2);
+}
+.pal-prompt {
+  color: var(--accent);
+  font-weight: var(--w-bold);
+  font-size: var(--fs-sm);
+  white-space: nowrap;
+}
+#cmd {
+  flex: 1 1 auto;
+  min-width: 8ch;
+  background: transparent;
+  border: 0;
+  padding: 4px 0;
+  font-size: var(--fs-sm);
+  letter-spacing: var(--track-tight);
+  color: var(--fg);
+}
+#cmd::placeholder { color: var(--ink-ghost); }
+#cmd:focus { outline: 0; }
+.pal-caret {
+  width: 8px; height: 15px;
+  background: var(--fg);
+  animation: blink 1.05s steps(1, end) infinite;
+}
+@keyframes blink { 0%, 55% { opacity: 1; } 56%, 100% { opacity: 0; } }
+.pal-hint {
+  font-size: var(--fs-micro);
+  color: var(--ink-faint);
+  letter-spacing: var(--track-caps);
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.pal-hint kbd {
+  font: inherit;
+  border: var(--hair) solid var(--rule-strong);
+  padding: 0 3px;
+  color: var(--ink-mid);
+}
+
+/* ------------------------------------------- tab-completion nav strip ---- */
+
+.tabstrip {
+  display: flex;
+  align-items: stretch;
+  min-height: var(--tabstrip-h);
+  border-bottom: var(--hair) solid var(--rule-strong);
+  background: var(--paper-deep);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.tabstrip::-webkit-scrollbar { display: none; }
+
+.tabstrip .ts-label {
+  display: flex; align-items: center;
+  padding: 0 var(--sp-3);
+  font-size: var(--fs-micro);
+  letter-spacing: var(--track-caps);
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  border-right: var(--hair) solid var(--rule-hair);
+  white-space: nowrap;
+}
+
+.tab {
+  appearance: none;
+  background: transparent;
+  border: 0;
+  border-right: var(--hair) solid var(--rule-hair);
+  padding: 0 var(--sp-3);
+  min-height: var(--tabstrip-h);
+  font-size: var(--fs-sm);
+  color: var(--ink-mid);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+  transition: background var(--t-fast), color var(--t-fast);
+}
+.tab:hover { background: var(--wash); color: var(--fg); }
+.tab .tab-key {
+  font-size: var(--fs-micro);
+  color: var(--ink-ghost);
+  border: var(--hair) solid var(--rule-hair);
+  padding: 0 3px;
+  line-height: 13px;
+}
+.tab .tab-badge {
+  font-size: var(--fs-micro);
+  color: var(--accent);
+  font-weight: var(--w-bold);
+}
+.tab[aria-selected="true"] {
+  background: var(--fg);
+  color: var(--bg);
+  font-weight: var(--w-bold);
+}
+.tab[aria-selected="true"] .tab-key { color: var(--bg); border-color: rgba(231,228,219,.4); }
+.tab[aria-selected="true"] .tab-badge { color: var(--bg); }
+.tab[aria-selected="true"]::before { content: "\25B8"; color: var(--bg); }
+.tab.is-ghost { color: var(--ink-ghost); }
+
+/* ---------------------------------------------------------------- main --- */
+
+main { flex: 1 1 auto; }
+
+.screen { display: none; padding: 0 0 var(--sp-8); }
+.screen.active { display: block; }
+
+/* ------------------------------------------------ command echo / prompt -- */
+
+.echo {
+  border-bottom: var(--hair) solid var(--rule);
+  padding: var(--sp-3) var(--sp-4) var(--sp-2);
+  background: var(--paper-raised);
+}
+.echo-line {
+  font-size: var(--fs-md);
+  letter-spacing: var(--track-tight);
+  white-space: nowrap;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.echo-line::-webkit-scrollbar { display: none; }
+.echo-line .p { color: var(--accent); font-weight: var(--w-bold); }
+.echo-line .c { font-weight: var(--w-bold); }
+.echo-line .f { color: var(--ink-dim); }
+.echo-line .cur {
+  display: inline-block; width: 8px; height: 14px;
+  background: var(--fg); vertical-align: -2px; margin-left: 3px;
+  animation: blink 1.05s steps(1, end) infinite;
+}
+.echo-sub {
+  font-size: var(--fs-xs);
+  color: var(--ink-dim);
+  max-width: var(--measure);
+}
+.echo-sub b { color: var(--ink-mid); font-weight: var(--w-medium); }
+
+/* ------------------------------------------------------------ sections --- */
+
+.pad { padding: 0 var(--sp-4); }
+
+.sec { margin-top: var(--sp-5); }
+.sec-hd {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: 0 var(--sp-4);
+  min-height: var(--lh);
+}
+.sec-hd h2, .sec-hd h3 {
+  margin: 0;
+  font-size: var(--fs-xs);
+  font-weight: var(--w-bold);
+  letter-spacing: var(--track-caps);
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.sec-hd .sec-mark { color: var(--accent); font-size: var(--fs-xs); }
+.sec-hd .sec-rule {
+  flex: 1 1 auto;
+  height: 0;
+  border-top: var(--hair) solid var(--rule);
+  margin-top: 1px;
+}
+.sec-hd .sec-meta {
+  font-size: var(--fs-micro);
+  letter-spacing: var(--track-caps);
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  white-space: nowrap;
+}
+
+.sec-body { padding: var(--sp-2) var(--sp-4) 0; }
+
+.note {
+  font-size: var(--fs-xs);
+  color: var(--ink-dim);
+  max-width: var(--measure);
+}
+.note b { color: var(--fg); font-weight: var(--w-medium); }
+
+/* -------------------------------------------------------------- panels --- */
+
+.panel {
+  border: var(--hair) solid var(--rule);
+  background: var(--surface);
+}
+.panel + .panel { margin-top: -1px; }
+.panel-hd {
+  display: flex; align-items: center; gap: var(--sp-3);
+  padding: 3px var(--sp-3);
+  border-bottom: var(--hair) solid var(--rule);
+  background: var(--paper-deep);
+  font-size: var(--fs-xs);
+  letter-spacing: var(--track-wide);
+}
+.panel-hd .ph-t { font-weight: var(--w-bold); text-transform: uppercase; letter-spacing: var(--track-caps); }
+.panel-hd .ph-s { color: var(--ink-dim); }
+.panel-hd .ph-sp { flex: 1 1 auto; }
+.panel-bd { padding: var(--sp-3); }
+.panel.is-flagged { border-left: var(--stripe) solid var(--accent); }
+.panel.is-locked { background: var(--paper-deep); }
+
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-4); }
+.grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--sp-4); }
+.grid-deal { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr); gap: var(--sp-4); }
+@media (max-width: 1080px) {
+  .grid-2, .grid-3, .grid-deal { grid-template-columns: 1fr; }
+}
+
+/* -------------------------------------------------------------- tables --- */
+
+.tbl-wrap { overflow-x: auto; border: var(--hair) solid var(--rule); background: var(--surface); }
+table.t {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--fs-sm);
+  font-variant-numeric: tabular-nums;
+}
+table.t thead th {
+  text-align: left;
+  font-size: var(--fs-micro);
+  font-weight: var(--w-bold);
+  letter-spacing: var(--track-caps);
+  text-transform: uppercase;
+  color: var(--ink-dim);
+  background: var(--paper-deep);
+  padding: 3px var(--sp-3);
+  border-bottom: var(--hair) solid var(--rule-heavy);
+  white-space: nowrap;
+}
+table.t tbody td {
+  padding: 2px var(--sp-3);
+  border-bottom: var(--hair) solid var(--rule-hair);
+  vertical-align: top;
+  white-space: nowrap;
+  height: var(--row-h);
+}
+table.t tbody tr:last-child td { border-bottom: 0; }
+table.t tbody tr:hover td { background: var(--wash); }
+table.t tbody tr.is-flagged td:first-child { box-shadow: inset var(--stripe) 0 0 var(--accent); }
+table.t tbody tr.is-selected td { background: var(--wash-2); }
+table.t .num { text-align: right; font-variant-numeric: tabular-nums; }
+table.t .dim { color: var(--ink-dim); }
+table.t .id { letter-spacing: var(--track-tight); }
+table.t td.wrap { white-space: normal; }
+table.t tfoot td {
+  padding: 3px var(--sp-3);
+  border-top: var(--hair) solid var(--rule-heavy);
+  background: var(--paper-deep);
+  font-size: var(--fs-xs);
+  color: var(--ink-mid);
+}
+.t-rule-top { border-top: var(--hair) solid var(--rule-strong); }
+
+/* ---------------------------------------------------------- bracket tags - */
+
+.tag {
+  display: inline-block;
+  font-size: var(--fs-tiny);
+  letter-spacing: var(--track-wide);
+  text-transform: uppercase;
+  color: var(--ink-mid);
+  white-space: nowrap;
+}
+.tag::before { content: "["; color: var(--ink-ghost); }
+.tag::after  { content: "]"; color: var(--ink-ghost); }
+.tag.t-hot     { color: var(--accent); font-weight: var(--w-bold); }
+.tag.t-hot::before, .tag.t-hot::after { color: var(--accent-line); }
+.tag.t-inv {
+  background: var(--fg); color: var(--bg); padding: 0 4px; font-weight: var(--w-bold);
+}
+.tag.t-inv::before, .tag.t-inv::after { color: var(--bg); }
+.tag.t-acc {
+  background: var(--accent); color: var(--on-primary); padding: 0 4px; font-weight: var(--w-bold);
+}
+.tag.t-acc::before, .tag.t-acc::after { color: var(--on-primary); }
+.tag.t-ok { color: var(--fg); font-weight: var(--w-medium); }
+.tag.t-mute { color: var(--ink-faint); }
+.tag.t-box {
+  border: var(--hair) solid var(--rule-strong);
+  padding: 0 4px;
+}
+
+/* ------------------------------------------------------ key/value blocks - */
+
+.kv { display: grid; grid-template-columns: 22ch minmax(0, 1fr); }
+.kv.kv-wide { grid-template-columns: 26ch minmax(0, 1fr); }
+.kv > dt {
+  font-size: var(--fs-xs);
+  color: var(--ink-dim);
+  padding: 1px 0;
+  letter-spacing: var(--track-tight);
+  position: relative;
+}
+.kv > dt::after {
+  content: "";
+  position: absolute; left: 0; right: var(--sp-3); bottom: 6px;
+  border-bottom: var(--hair) dotted var(--rule);
+  z-index: -1;
+}
+.kv > dd {
+  margin: 0;
+  padding: 1px 0;
+  font-size: var(--fs-sm);
+  color: var(--fg);
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.kv > dd .sub { color: var(--ink-dim); font-size: var(--fs-xs); }
+
+/* ---------------------------------------------------------- citations ---- */
+
+.cite {
+  font-size: var(--fs-tiny);
+  color: var(--accent-ink);
+  border-bottom: var(--hair) dotted var(--accent-line);
+  cursor: pointer;
+  white-space: nowrap;
+  background: transparent;
+  border-left: 0; border-right: 0; border-top: 0;
+  padding: 0 1px;
+}
+.cite:hover { background: var(--accent-wash); }
+.cite.c-mute { color: var(--ink-dim); border-bottom-color: var(--rule-strong); }
+
+/* ------------------------------------------------------- stage ladder ---- */
+
+.ladder { border: var(--hair) solid var(--rule); background: var(--surface); }
+.ladder-row {
+  display: grid;
+  grid-template-columns: 3ch 15ch 5ch minmax(0, 1fr) 12ch;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: 0 var(--sp-3);
+  border-bottom: var(--hair) solid var(--rule-hair);
+  font-size: var(--fs-sm);
+  height: var(--row-h);
+}
+.ladder-row:last-child { border-bottom: 0; }
+.ladder-row:hover { background: var(--wash); }
+.ladder-row .l-n { color: var(--ink-ghost); font-size: var(--fs-tiny); }
+.ladder-row .l-name { letter-spacing: var(--track-wide); text-transform: uppercase; font-size: var(--fs-xs); }
+.ladder-row .l-ct { text-align: right; font-variant-numeric: tabular-nums; }
+.ladder-row .l-bar { color: var(--fg); letter-spacing: -0.5px; overflow: hidden; white-space: nowrap; }
+.ladder-row .l-bar .hot { color: var(--accent); }
+.ladder-row .l-amt { text-align: right; color: var(--ink-dim); font-size: var(--fs-xs); }
+.ladder-row.is-block .l-name { color: var(--accent); font-weight: var(--w-bold); }
+
+/* --------------------------------------------------------------- forms --- */
+
+.form-grid { display: grid; grid-template-columns: 24ch minmax(0, 1fr); align-items: baseline; }
+.form-grid > label {
+  font-size: var(--fs-xs);
+  color: var(--ink-dim);
+  padding: 3px var(--sp-3) 3px 0;
+  letter-spacing: var(--track-tight);
+}
+.form-grid > label .req { color: var(--accent); }
+.form-grid > .fld { padding: 2px 0; min-width: 0; }
+
+.inp, .sel, .ta {
+  width: 100%;
+  background: var(--paper-sunk);
+  border: var(--hair) solid var(--rule-strong);
+  padding: 2px var(--sp-2);
+  font-size: var(--fs-sm);
+  color: var(--fg);
+  border-radius: var(--radius);
+}
+.inp:focus, .sel:focus, .ta:focus {
+  outline: 0;
+  border-color: var(--fg);
+  background: var(--paper-raised);
+  box-shadow: inset var(--stripe) 0 0 var(--accent);
+}
+.ta { resize: vertical; min-height: calc(var(--lh) * 3); line-height: var(--lh); }
+.sel { appearance: none; padding-right: 3ch; }
+.fld-hint { font-size: var(--fs-micro); color: var(--ink-faint); letter-spacing: var(--track-wide); }
+.fld-row { display: flex; gap: var(--sp-2); align-items: center; }
+
+/* -------------------------------------------------------------- buttons -- */
+
+.btn {
+  appearance: none;
+  background: var(--paper-raised);
+  color: var(--fg);
+  border: var(--hair) solid var(--rule-heavy);
+  border-radius: var(--radius);
+  padding: 2px var(--sp-3);
+  font-size: var(--fs-xs);
+  letter-spacing: var(--track-wide);
+  text-transform: uppercase;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background var(--t-fast), color var(--t-fast);
+}
+.btn:hover { background: var(--fg); color: var(--bg); }
+.btn:active { transform: translateY(1px); }
+.btn.b-primary {
+  background: var(--fg); color: var(--bg); font-weight: var(--w-bold);
+  border-color: var(--fg);
+}
+.btn.b-primary:hover { background: var(--accent); border-color: var(--accent); color: var(--on-primary); }
+.btn.b-danger { color: var(--accent-ink); border-color: var(--accent-line); }
+.btn.b-danger:hover { background: var(--accent); color: var(--on-primary); border-color: var(--accent); }
+.btn.b-ghost { background: transparent; border-color: var(--rule); color: var(--ink-dim); }
+.btn.b-ghost:hover { background: var(--wash-2); color: var(--fg); }
+.btn[disabled] { opacity: .42; cursor: not-allowed; }
+.btn[disabled]:hover { background: var(--paper-raised); color: var(--fg); }
+.btn .k { color: var(--ink-ghost); margin-left: 5px; }
+.btn.b-primary .k { color: rgba(231,228,219,.55); }
+
+.btnbar { display: flex; flex-wrap: wrap; gap: var(--sp-2); align-items: center; }
+.btnbar .sp { flex: 1 1 auto; }
+
+/* ------------------------------------------------------------- banners --- */
+
+.banner {
+  border: var(--hair) solid var(--rule-heavy);
+  border-left: 3px solid var(--accent);
+  background: var(--accent-wash);
+  padding: var(--sp-2) var(--sp-3);
+  font-size: var(--fs-xs);
+  color: var(--ink);
+  display: flex;
+  gap: var(--sp-3);
+  align-items: baseline;
+}
+.banner b { font-weight: var(--w-bold); }
+.banner .b-t {
+  font-weight: var(--w-bold);
+  letter-spacing: var(--track-caps);
+  text-transform: uppercase;
+  color: var(--accent-ink);
+  white-space: nowrap;
+}
+.banner.b-neutral {
+  border-left-color: var(--fg);
+  background: var(--wash);
+}
+.banner.b-neutral .b-t { color: var(--fg); }
+
+.callout {
+  border: var(--hair) dashed var(--rule-strong);
+  padding: var(--sp-2) var(--sp-3);
+  font-size: var(--fs-xs);
+  color: var(--ink-mid);
+  background: var(--paper-raised);
+}
+
+/* --------------------------------------------------- computed-by-code ---- */
+
+.compute {
+  border: var(--hair) solid var(--rule-heavy);
+  background: var(--paper-raised);
+}
+.compute-hd {
+  display: flex; align-items: center; gap: var(--sp-2);
+  padding: 2px var(--sp-3);
+  background: var(--fg); color: var(--bg);
+  font-size: var(--fs-micro);
+  letter-spacing: var(--track-caps);
+  text-transform: uppercase;
+  font-weight: var(--w-bold);
+}
+.compute-hd .cx { color: var(--accent); }
+.compute-row {
+  display: grid;
+  grid-template-columns: 16ch 10ch minmax(0, 1fr) 10ch;
+  gap: var(--sp-3);
+  align-items: baseline;
+  padding: 2px var(--sp-3);
+  border-bottom: var(--hair) solid var(--rule-hair);
+  font-size: var(--fs-sm);
+}
+.compute-row:last-child { border-bottom: 0; }
+.compute-row .c-k { color: var(--ink-dim); font-size: var(--fs-xs); text-transform: uppercase; letter-spacing: var(--track-wide); }
+.compute-row .c-v { font-weight: var(--w-bold); font-variant-numeric: tabular-nums; }
+.compute-row .c-formula { color: var(--ink-dim); font-size: var(--fs-xs); overflow-wrap: anywhere; }
+.compute-row .c-test { text-align: right; font-size: var(--fs-tiny); }
+
+/* ---------------------------------------------------------- diff gutter -- */
+
+.diff { border: var(--hair) solid var(--rule); background: var(--surface); font-size: var(--fs-sm); }
+.diff-hd {
+  display: flex; gap: var(--sp-3); align-items: center;
+  padding: 2px var(--sp-3);
+  background: var(--paper-deep);
+  border-bottom: var(--hair) solid var(--rule);
+  font-size: var(--fs-micro);
+  letter-spacing: var(--track-caps);
+  text-transform: uppercase;
+  color: var(--ink-dim);
+}
+.dline {
+  display: grid;
+  grid-template-columns: 5ch 2ch minmax(0, 1fr);
+  gap: 0;
+  align-items: start;
+  line-height: var(--lh);
+}
+.dline .ln {
+  color: var(--ink-ghost);
+  font-size: var(--fs-tiny);
+  text-align: right;
+  padding-right: var(--sp-2);
+  background: var(--paper-deep);
+  border-right: var(--hair) solid var(--rule-hair);
+  user-select: none;
+}
+.dline .gt { text-align: center; color: var(--ink-faint); user-select: none; }
+.dline .tx { padding: 0 var(--sp-3) 0 var(--sp-2); overflow-wrap: anywhere; }
+.dline.d-del { background: var(--wash); color: var(--ink-dim); }
+.dline.d-del .tx { text-decoration: line-through; text-decoration-color: var(--ink-ghost); }
+.dline.d-del .gt { color: var(--ink-mid); font-weight: var(--w-bold); }
+.dline.d-add { background: var(--accent-wash); }
+.dline.d-add .gt { color: var(--accent); font-weight: var(--w-bold); }
+.dline.d-add .tx { box-shadow: inset 2px 0 0 var(--accent); }
+
+/* ------------------------------------------------------------- prose ----- */
+
+.prose { font-size: var(--fs-sm); max-width: var(--measure); }
+.prose p { margin: 0 0 var(--lh); }
+.prose p:last-child { margin-bottom: 0; }
+.prose h4 {
+  margin: 0 0 2px;
+  font-size: var(--fs-xs);
+  letter-spacing: var(--track-caps);
+  text-transform: uppercase;
+}
+
+.ln-list { margin: 0; padding: 0; list-style: none; font-size: var(--fs-sm); }
+.ln-list li {
+  display: grid;
+  grid-template-columns: 4ch minmax(0, 1fr);
+  border-bottom: var(--hair) solid var(--rule-hair);
+  padding: 1px 0;
+}
+.ln-list li:last-child { border-bottom: 0; }
+.ln-list li .n { color: var(--ink-ghost); font-size: var(--fs-tiny); text-align: right; padding-right: var(--sp-3); }
+.ln-list li .b { overflow-wrap: anywhere; }
+
+/* --------------------------------------------------------- timeline ------ */
+
+.tl { margin: 0; padding: 0; list-style: none; font-size: var(--fs-sm); }
+.tl li {
+  display: grid;
+  grid-template-columns: 17ch 3ch minmax(0, 1fr);
+  align-items: baseline;
+  border-bottom: var(--hair) solid var(--rule-hair);
+  padding: 1px 0;
+}
+.tl li:last-child { border-bottom: 0; }
+.tl .ts { color: var(--ink-dim); font-size: var(--fs-xs); font-variant-numeric: tabular-nums; }
+.tl .mk { color: var(--ink-faint); text-align: center; }
+.tl li.is-now .mk { color: var(--accent); font-weight: var(--w-bold); }
+.tl li.is-now .bd { font-weight: var(--w-bold); }
+.tl .bd .who { color: var(--ink-dim); }
+
+/* ------------------------------------------------------------- chat ------ */
+
+.chat-wrap {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 34ch;
+  gap: 0;
+  border-top: var(--hair) solid var(--rule);
+}
+@media (max-width: 1080px) { .chat-wrap { grid-template-columns: 1fr; } }
+
+.chat-main { display: flex; flex-direction: column; min-height: 62vh; min-width: 0; }
+
+#messages {
+  list-style: none;
+  margin: 0;
+  padding: var(--sp-3) var(--sp-4) var(--sp-5);
+  flex: 1 1 auto;
+  overflow-y: auto;
+}
+#messages > li { padding: 0 0 var(--sp-3); max-width: 96ch; }
+#messages > li + li {
+  border-top: var(--hair) solid var(--rule-hair);
+  padding-top: var(--sp-3);
+}
+.msg-hd {
+  display: flex; align-items: baseline; gap: var(--sp-2);
+  font-size: var(--fs-micro);
+  letter-spacing: var(--track-caps);
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+.msg-hd .who { color: var(--fg); font-weight: var(--w-bold); }
+.msg-hd .sp { flex: 1 1 auto; }
+.msg-body { font-size: var(--fs-sm); overflow-wrap: anywhere; }
+.msg-body p { margin: 0 0 6px; }
+.msg-body p:last-child { margin-bottom: 0; }
+li.m-user .msg-body { color: var(--ink); }
+li.m-user .msg-body::before { content: "> "; color: var(--accent); font-weight: var(--w-bold); }
+li.m-agent .msg-body { color: var(--ink); }
+li.m-abstain { border-left: 3px solid var(--accent); padding-left: var(--sp-3); background: var(--accent-wash); }
+.cites { margin-top: 4px; display: flex; flex-wrap: wrap; gap: var(--sp-2); }
+
+#composer {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  border-top: var(--hair) solid var(--rule-heavy);
+  background: var(--paper-deep);
+  padding: var(--sp-2) var(--sp-4);
+}
+#composer .cx-prompt { color: var(--accent); font-weight: var(--w-bold); font-size: var(--fs-sm); white-space: nowrap; }
+#input {
+  flex: 1 1 auto;
+  min-width: 6ch;
+  background: var(--paper-sunk);
+  border: var(--hair) solid var(--rule-strong);
+  padding: 3px var(--sp-2);
+  font-size: var(--fs-sm);
+}
+#input:focus { outline: 0; border-color: var(--fg); box-shadow: inset var(--stripe) 0 0 var(--accent); }
+
+.chat-side { border-left: var(--hair) solid var(--rule); background: var(--paper-deep); min-width: 0; }
+.chat-side .cs-sec { border-bottom: var(--hair) solid var(--rule-hair); padding: var(--sp-3); }
+.chat-side .cs-t {
+  font-size: var(--fs-micro); letter-spacing: var(--track-caps);
+  text-transform: uppercase; color: var(--ink-faint); margin-bottom: 2px;
+}
+
+/* --------------------------------------------------------- status bar ---- */
+
+.status {
+  position: sticky;
+  bottom: 0;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  min-height: var(--status-h);
+  border-top: var(--stripe) solid var(--fg);
+  background: var(--paper-deep);
+  font-size: var(--fs-tiny);
+  letter-spacing: var(--track-wide);
+}
+.status .st {
+  padding: 0 var(--sp-3);
+  border-right: var(--hair) solid var(--rule);
+  color: var(--ink-dim);
+  white-space: nowrap;
+}
+.status .st b { color: var(--fg); font-weight: var(--w-bold); }
+.status .st.st-hot { color: var(--accent); font-weight: var(--w-bold); }
+.status .st.st-inv { background: var(--fg); color: var(--bg); font-weight: var(--w-bold); }
+.status .sp { flex: 1 1 auto; }
+
+/* ------------------------------------------------------------ helpers ---- */
+
+.hairline { border-top: var(--hair) solid var(--rule); }
+.mt0 { margin-top: 0; }
+.mt1 { margin-top: var(--sp-2); }
+.mt2 { margin-top: var(--sp-3); }
+.mt3 { margin-top: var(--sp-5); }
+.dim { color: var(--ink-dim); }
+.faint { color: var(--ink-faint); }
+.hot { color: var(--accent); }
+.b { font-weight: var(--w-bold); }
+.u { text-decoration: underline; text-underline-offset: 2px; }
+.nowrap { white-space: nowrap; }
+.caps { text-transform: uppercase; letter-spacing: var(--track-caps); font-size: var(--fs-micro); color: var(--ink-faint); }
+.num { font-variant-numeric: tabular-nums; }
+.sr {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- =================================================== HEADER ========== -->
+  <header class="hd">
+    <div class="hd-brand">
+      <span class="hd-sigil">UCC</span>
+      <span class="hd-name">Underwriting Command Center</span>
+      <span class="hd-ver">v2.4.1 · tty/underwriting-terminal</span>
+    </div>
+    <div class="hd-spacer"></div>
+
+    <!-- REQUIRED: agent switcher -->
+    <div id="agent-mode" role="group" aria-label="Active agent">
+      <span class="am-flag">--agent=<b id="agent-current">triage</b></span>
+      <div class="am-set">
+        <button type="button" class="am-opt" data-agent="triage" aria-pressed="true"
+                title="Intake triage agent — classify request, flag missing docs, propose analyst queue">
+          <span class="am-idx">1</span>triage</button>
+        <button type="button" class="am-opt" data-agent="spread" aria-pressed="false"
+                title="Financial spreading agent — extract figures into the standard spread, cite every number">
+          <span class="am-idx">2</span>spread</button>
+        <button type="button" class="am-opt" data-agent="memo" aria-pressed="false"
+                title="Credit memo agent — draft the underwriting memo with citations">
+          <span class="am-idx">3</span>memo</button>
+        <button type="button" class="am-opt" data-agent="policy" aria-pressed="false"
+                title="Policy compliance agent — review memo against lending policy, raise written exceptions">
+          <span class="am-idx">4</span>policy</button>
+        <button type="button" class="am-opt" data-agent="qa" aria-pressed="false"
+                title="Portfolio Q&amp;A agent — grounded answers across active deals, abstains when unsupported">
+          <span class="am-idx">5</span>qa</button>
+      </div>
+    </div>
+
+    <div class="hd-meta">
+      <div class="hd-cell">
+        <span class="hd-k">operator</span>
+        <span class="hd-v"><b>D. Okonkwo</b></span>
+      </div>
+      <div class="hd-cell">
+        <span class="hd-k">role</span>
+        <span class="hd-v">credit_officer</span>
+      </div>
+      <div class="hd-cell">
+        <span class="hd-k">rbac scope</span>
+        <span class="hd-v">approve · decline · return</span>
+      </div>
+      <div class="hd-cell">
+        <span class="hd-k">session</span>
+        <span class="hd-v num">2026-07-30 09:41 CT</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- ============================================ COMMAND PALETTE ======== -->
+  <div class="palette">
+    <span class="pal-prompt">ucc&gt;</span>
+    <input id="cmd" type="text" autocomplete="off" spellcheck="false"
+           placeholder="type a command — pipeline · intake · deal · review · approvals · sla · audit · chat">
+    <span class="pal-caret" aria-hidden="true"></span>
+    <span class="pal-hint"><kbd>TAB</kbd> complete <kbd>&crarr;</kbd> run <kbd>1..5</kbd> agent</span>
+  </div>
+
+  <!-- ============================================ TAB-COMPLETION STRIP === -->
+  <nav class="tabstrip" id="nav" aria-label="Screens">
+    <span class="ts-label">completions</span>
+    <button type="button" class="tab" data-screen="pipeline"  aria-selected="true"><span class="tab-key">g p</span>pipeline</button>
+    <button type="button" class="tab" data-screen="intake"    aria-selected="false"><span class="tab-key">g i</span>intake</button>
+    <button type="button" class="tab" data-screen="deal"      aria-selected="false"><span class="tab-key">g d</span>deal</button>
+    <button type="button" class="tab" data-screen="review"    aria-selected="false"><span class="tab-key">g r</span>review<span class="tab-badge">3</span></button>
+    <button type="button" class="tab" data-screen="approvals" aria-selected="false"><span class="tab-key">g a</span>approvals<span class="tab-badge">4</span></button>
+    <button type="button" class="tab" data-screen="sla"       aria-selected="false"><span class="tab-key">g s</span>sla<span class="tab-badge">3</span></button>
+    <button type="button" class="tab" data-screen="audit"     aria-selected="false"><span class="tab-key">g u</span>audit</button>
+    <button type="button" class="tab" data-screen="chat"      aria-selected="false"><span class="tab-key">g c</span>chat</button>
+    <span class="ts-label is-ghost" style="margin-left:auto">8 screens · 0 modals</span>
+  </nav>
+
+  <main>
+
+    <!-- ================================================ PIPELINE ========= -->
+    <section class="screen active" id="screen-pipeline" role="region" aria-label="Pipeline board">
+      <div class="echo">
+        <div class="echo-line"><span class="p">ucc&gt;</span> <span class="c">pipeline</span> <span class="f">--active --stages=8 --sort=stage --scope=desk:midwest-smb</span><span class="cur"></span></div>
+        <div class="echo-sub">8 workflow stages, left to right: <b>intake → extract → spread → grade → memo → policy → approval → closing</b>. No agent may advance a deal past an approval step.</div>
+      </div>
+
+      <div class="sec">
+        <div class="sec-hd"><span class="sec-mark">§</span><h2>Stage occupancy</h2><span class="sec-rule"></span><span class="sec-meta">12 active deals · $9,145,000 exposure</span></div>
+        <div class="sec-body">
+          <div class="ladder">
+            <div class="ladder-row"><span class="l-n">01</span><span class="l-name">intake</span><span class="l-ct">2</span><span class="l-bar">██████</span><span class="l-amt">$825,000</span></div>
+            <div class="ladder-row"><span class="l-n">02</span><span class="l-name">extraction</span><span class="l-ct">1</span><span class="l-bar">███</span><span class="l-amt">$640,000</span></div>
+            <div class="ladder-row"><span class="l-n">03</span><span class="l-name">spreading</span><span class="l-ct">2</span><span class="l-bar">██████</span><span class="l-amt">$1,395,000</span></div>
+            <div class="ladder-row"><span class="l-n">04</span><span class="l-name">grading</span><span class="l-ct">1</span><span class="l-bar">███</span><span class="l-amt">$320,000</span></div>
+            <div class="ladder-row is-block"><span class="l-n">05</span><span class="l-name">memo</span><span class="l-ct">2</span><span class="l-bar">██████<span class="hot">▮ blocked: draft unaccepted</span></span><span class="l-amt">$3,050,000</span></div>
+            <div class="ladder-row is-block"><span class="l-n">06</span><span class="l-name">policy</span><span class="l-ct">1</span><span class="l-bar">███<span class="hot">▮ 2 open exceptions</span></span><span class="l-amt">$1,850,000</span></div>
+            <div class="ladder-row"><span class="l-n">07</span><span class="l-name">approval</span><span class="l-ct">2</span><span class="l-bar">██████</span><span class="l-amt">$640,000</span></div>
+            <div class="ladder-row"><span class="l-n">08</span><span class="l-name">closing</span><span class="l-ct">1</span><span class="l-bar">███</span><span class="l-amt">$425,000</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="sec">
+        <div class="sec-hd"><span class="sec-mark">§</span><h2>Active deals</h2><span class="sec-rule"></span><span class="sec-meta">filter: status != closed</span></div>
+        <div class="sec-body">
+          <div class="tbl-wrap">
+            <table class="t">
+              <thead>
+                <tr>
+                  <th style="width:11ch">deal</th>
+                  <th style="width:30ch">borrower</th>
+                  <th style="width:20ch">facility</th>
+                  <th class="num" style="width:13ch">exposure</th>
+                  <th style="width:12ch">stage</th>
+                  <th style="width:9ch">grade</th>
+                  <th style="width:8ch">dscr</th>
+                  <th style="width:18ch">owner / queue</th>
+                  <th class="num" style="width:8ch">idle</th>
+                  <th style="width:24ch">state</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr class="is-flagged">
+                  <td class="id b">DL-1042</td>
+                  <td>Ridgeline Fabrication LLC</td>
+                  <td class="dim">CRE + equipment</td>
+                  <td class="num">$1,850,000</td>
+                  <td>06 policy</td>
+                  <td>4B</td>
+                  <td class="num">1.42</td>
+                  <td class="dim">A. Vasquez / senior</td>
+                  <td class="num">3d</td>
+                  <td><span class="tag t-hot">EXCEPTIONS 2</span> <span class="tag t-mute">POL-CONC-03</span></td>
+                </tr>
+                <tr class="is-flagged">
+                  <td class="id b">DL-1039</td>
+                  <td>Harbor Point Logistics Inc</td>
+                  <td class="dim">fleet term loan</td>
+                  <td class="num">$2,400,000</td>
+                  <td>05 memo</td>
+                  <td>5A</td>
+                  <td class="num">1.18</td>
+                  <td class="dim">M. Ellery / senior</td>
+                  <td class="num">7d</td>
+                  <td><span class="tag t-hot">BLOCKED</span> <span class="tag">DRAFT PENDING</span></td>
+                </tr>
+                <tr>
+                  <td class="id b">DL-1051</td>
+                  <td>Cascade Dental Partners PC</td>
+                  <td class="dim">practice acquisition</td>
+                  <td class="num">$640,000</td>
+                  <td>02 extraction</td>
+                  <td class="dim">—</td>
+                  <td class="dim">—</td>
+                  <td class="dim">R. Whitfield / analyst</td>
+                  <td class="num">1d</td>
+                  <td><span class="tag">EXTRACTING 6/9 DOCS</span></td>
+                </tr>
+                <tr>
+                  <td class="id b">DL-1047</td>
+                  <td>Sunterra Greenhouse Co</td>
+                  <td class="dim">expansion term</td>
+                  <td class="num">$975,000</td>
+                  <td>03 spreading</td>
+                  <td class="dim">—</td>
+                  <td class="num">1.61</td>
+                  <td class="dim">R. Whitfield / analyst</td>
+                  <td class="num">2d</td>
+                  <td><span class="tag">SPREAD PENDING ACCEPT</span></td>
+                </tr>
+                <tr class="is-flagged">
+                  <td class="id b">DL-1033</td>
+                  <td>Bayou Steel Supply Inc</td>
+                  <td class="dim">revolving LOC</td>
+                  <td class="num">$1,200,000</td>
+                  <td>05 memo</td>
+                  <td>5B</td>
+                  <td class="num">1.09</td>
+                  <td class="dim">A. Vasquez / senior</td>
+                  <td class="num">9d</td>
+                  <td><span class="tag t-hot">SLA BREACH</span> <span class="tag">MEMO EDITED</span></td>
+                </tr>
+                <tr>
+                  <td class="id b">DL-1055</td>
+                  <td>Vela Coffee Roasters LLC</td>
+                  <td class="dim">working capital LOC</td>
+                  <td class="num">$185,000</td>
+                  <td>01 intake</td>
+                  <td class="dim">—</td>
+                  <td class="dim">—</td>
+                  <td class="dim">J. Marchetti / rm</td>
+                  <td class="num">0d</td>
+                  <td><span class="tag">TRIAGE DRAFT PENDING</span></td>
+                </tr>
+                <tr>
+                  <td class="id b">DL-1054</td>
+                  <td>Northgate Auto Body LLC</td>
+                  <td class="dim">equipment term</td>
+                  <td class="num">$320,000</td>
+                  <td>04 grading</td>
+                  <td>4A</td>
+                  <td class="num">1.74</td>
+                  <td class="dim">R. Whitfield / analyst</td>
+                  <td class="num">1d</td>
+                  <td><span class="tag t-ok">GRADE COMPUTED</span></td>
+                </tr>
+                <tr>
+                  <td class="id b">DL-1050</td>
+                  <td>Meridian Physical Therapy PLLC</td>
+                  <td class="dim">tenant improvement</td>
+                  <td class="num">$240,000</td>
+                  <td>07 approval</td>
+                  <td>3B</td>
+                  <td class="num">1.88</td>
+                  <td class="dim">queue: analyst ≤$250k</td>
+                  <td class="num">2d</td>
+                  <td><span class="tag t-inv">AWAITING DECISION</span></td>
+                </tr>
+                <tr>
+                  <td class="id b">DL-1044</td>
+                  <td>Alder Creek Millwork Inc</td>
+                  <td class="dim">owner-occupied CRE</td>
+                  <td class="num">$400,000</td>
+                  <td>07 approval</td>
+                  <td>4B</td>
+                  <td class="num">1.35</td>
+                  <td class="dim">queue: senior ≤$1M</td>
+                  <td class="num">4d</td>
+                  <td><span class="tag t-inv">AWAITING DECISION</span></td>
+                </tr>
+                <tr>
+                  <td class="id b">DL-1029</td>
+                  <td>Petra Stoneworks LLC</td>
+                  <td class="dim">equipment term</td>
+                  <td class="num">$425,000</td>
+                  <td>08 closing</td>
+                  <td>3A</td>
+                  <td class="num">2.04</td>
+                  <td class="dim">closing ops</td>
+                  <td class="num">1d</td>
+                  <td><span class="tag t-ok">APPROVED 07-24</span></td>
+                </tr>
+                <tr>
+                  <td class="id b">DL-1053</td>
+                  <td>Foundry Row Brewing Co</td>
+                  <td class="dim">equipment + LOC</td>
+                  <td class="num">$640,000</td>
+                  <td>01 intake</td>
+                  <td class="dim">—</td>
+                  <td class="dim">—</td>
+                  <td class="dim">J. Marchetti / rm</td>
+                  <td class="num">6d</td>
+                  <td><span class="tag t-hot">MISSING DOCS 3</span></td>
+                </tr>
+                <tr>
+                  <td class="id b">DL-1046</td>
+                  <td>Trailhead Veterinary Group</td>
+                  <td class="dim">practice refi</td>
+                  <td class="num">$420,000</td>
+                  <td>03 spreading</td>
+                  <td class="dim">—</td>
+                  <td class="num">1.53</td>
+                  <td class="dim">R. Whitfield / analyst</td>
+                  <td class="num">2d</td>
+                  <td><span class="tag">SPREAD IN PROGRESS</span></td>
+                </tr>
+              </tbody>
+              <tfoot>
+                <tr>
+                  <td colspan="10">
+                    12 rows · exposure $9,145,000 · <span class="hot b">2 blocked</span> ·
+                    <span class="hot b">3 idle &gt; 5 business days</span> · 2 awaiting named decision ·
+                    <span class="dim">rendered 41ms</span>
+                  </td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+          <p class="note mt2">Row flag <span class="hot">▌</span> in the left gutter marks a deal that cannot advance. Blocking causes are: an unaccepted agent draft, an open policy exception, or a missing named human decision.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================================================== INTAKE ========= -->
+    <section class="screen" id="screen-intake" role="region" aria-label="Intake">
+      <div class="echo">
+        <div class="echo-line"><span class="p">ucc&gt;</span> <span class="c">intake</span> <span class="f">--new --role=relationship_manager --agent=triage</span><span class="cur"></span></div>
+        <div class="echo-sub">Relationship manager submits the request. The triage agent's classification is a <b>PENDING draft</b> — it never sets the queue by itself.</div>
+      </div>
+
+      <div class="sec">
+        <div class="sec-hd"><span class="sec-mark">§</span><h2>New request</h2><span class="sec-rule"></span><span class="sec-meta">draft DL-1055 · autosaved 09:38</span></div>
+        <div class="sec-body">
+          <div class="grid-2">
+            <div class="panel">
+              <div class="panel-hd"><span class="ph-t">borrower</span><span class="ph-sp"></span><span class="ph-s">required fields marked <span class="hot">*</span></span></div>
+              <div class="panel-bd">
+                <div class="form-grid">
+                  <label for="f-legal">legal_name<span class="req">*</span></label>
+                  <div class="fld"><input id="f-legal" class="inp" type="text" value="Vela Coffee Roasters LLC"></div>
+
+                  <label for="f-dba">dba</label>
+                  <div class="fld"><input id="f-dba" class="inp" type="text" value="Vela Coffee"></div>
+
+                  <label for="f-ein">tax_id_ein<span class="req">*</span></label>
+                  <div class="fld"><input id="f-ein" class="inp" type="text" value="47-38••••1"></div>
+
+                  <label for="f-naics">naics<span class="req">*</span></label>
+                  <div class="fld">
+                    <select id="f-naics" class="sel">
+                      <option selected>311920 — Coffee &amp; Tea Manufacturing</option>
+                      <option>722515 — Snack &amp; Nonalcoholic Beverage Bars</option>
+                      <option>424490 — Other Grocery Merchant Wholesalers</option>
+                    </select>
+                    <div class="fld-hint">checked against prohibited-industry list POL-IND-11 at submit</div>
+                  </div>
+
+                  <label for="f-since">entity_since</label>
+                  <div class="fld"><input id="f-since" class="inp" type="text" value="2016-04-11"></div>
+
+                  <label for="f-rm">relationship_manager</label>
+                  <div class="fld"><input id="f-rm" class="inp" type="text" value="J. Marchetti" readonly></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="panel">
+              <div class="panel-hd"><span class="ph-t">facility</span><span class="ph-sp"></span><span class="ph-s">exposure drives approval tier</span></div>
+              <div class="panel-bd">
+                <div class="form-grid">
+                  <label for="f-type">facility_type<span class="req">*</span></label>
+                  <div class="fld">
+                    <select id="f-type" class="sel">
+                      <option selected>Revolving line of credit</option>
+                      <option>Equipment term loan</option>
+                      <option>Owner-occupied CRE</option>
+                      <option>SBA 7(a)</option>
+                    </select>
+                  </div>
+
+                  <label for="f-amt">requested_amount<span class="req">*</span></label>
+                  <div class="fld"><input id="f-amt" class="inp num" type="text" value="185,000"></div>
+
+                  <label for="f-exp">total_exposure<span class="req">*</span></label>
+                  <div class="fld">
+                    <input id="f-exp" class="inp num" type="text" value="185,000">
+                    <div class="fld-hint">incl. existing $0 · tier resolves to <span class="tag t-box">ANALYST ≤ $250K</span></div>
+                  </div>
+
+                  <label for="f-purp">purpose<span class="req">*</span></label>
+                  <div class="fld"><input id="f-purp" class="inp" type="text" value="Green coffee inventory + seasonal working capital"></div>
+
+                  <label for="f-coll">collateral</label>
+                  <div class="fld"><input id="f-coll" class="inp" type="text" value="Blanket UCC-1 on business assets; roaster equipment"></div>
+
+                  <label for="f-guar">guarantors</label>
+                  <div class="fld"><input id="f-guar" class="inp" type="text" value="E. Ramirez (100%), personal guaranty"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="panel mt2">
+            <div class="panel-hd"><span class="ph-t">documents</span><span class="ph-s">6 attached · 3 flagged missing</span><span class="ph-sp"></span>
+              <button type="button" class="btn b-ghost">+ attach</button>
+            </div>
+            <div class="tbl-wrap" style="border:0">
+              <table class="t">
+                <thead>
+                  <tr><th style="width:6ch">#</th><th style="width:44ch">file</th><th style="width:20ch">type</th><th class="num" style="width:10ch">size</th><th style="width:16ch">uploaded</th><th style="width:22ch">state</th></tr>
+                </thead>
+                <tbody>
+                  <tr><td class="dim">001</td><td>2024-FY-Financial-Statements.pdf</td><td class="dim">financials</td><td class="num">1.8 MB</td><td class="dim">07-29 16:02</td><td><span class="tag t-ok">EXTRACTED</span></td></tr>
+                  <tr><td class="dim">002</td><td>2025-Q2-Interim-PL.xlsx</td><td class="dim">interim</td><td class="num">240 KB</td><td class="dim">07-29 16:02</td><td><span class="tag t-ok">EXTRACTED</span></td></tr>
+                  <tr><td class="dim">003</td><td>Business-Tax-Return-1120S-2024.pdf</td><td class="dim">tax return</td><td class="num">3.1 MB</td><td class="dim">07-29 16:04</td><td><span class="tag t-ok">EXTRACTED</span></td></tr>
+                  <tr><td class="dim">004</td><td>PFS-Ramirez-2026-06.pdf</td><td class="dim">personal fin stmt</td><td class="num">620 KB</td><td class="dim">07-29 16:05</td><td><span class="tag">QUEUED</span></td></tr>
+                  <tr><td class="dim">005</td><td>AR-Aging-2026-06.csv</td><td class="dim">receivables</td><td class="num">44 KB</td><td class="dim">07-29 16:05</td><td><span class="tag">QUEUED</span></td></tr>
+                  <tr><td class="dim">006</td><td>Lease-Roastery-Bldg-C.pdf</td><td class="dim">lease</td><td class="num">910 KB</td><td class="dim">07-30 08:12</td><td><span class="tag">QUEUED</span></td></tr>
+                  <tr class="is-flagged"><td class="dim">—</td><td class="dim">Business-Debt-Schedule</td><td class="dim">debt schedule</td><td class="num dim">—</td><td class="dim">—</td><td><span class="tag t-hot">MISSING · REQUIRED</span></td></tr>
+                  <tr class="is-flagged"><td class="dim">—</td><td class="dim">Personal-Tax-Return-1040-2024</td><td class="dim">tax return</td><td class="num dim">—</td><td class="dim">—</td><td><span class="tag t-hot">MISSING · REQUIRED</span></td></tr>
+                  <tr class="is-flagged"><td class="dim">—</td><td class="dim">Certificate-of-Good-Standing</td><td class="dim">entity doc</td><td class="num dim">—</td><td class="dim">—</td><td><span class="tag t-hot">MISSING · CONDITIONAL</span></td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="sec">
+        <div class="sec-hd"><span class="sec-mark">§</span><h2>Triage agent draft</h2><span class="sec-rule"></span><span class="sec-meta">agent: intake-triage · run 8e21c</span></div>
+        <div class="sec-body">
+          <div class="banner">
+            <span class="b-t">[pending]</span>
+            <span>Agent output. <b>Not applied.</b> Intake cannot advance to <b>02 extraction</b> until a named human accepts, edits, or rejects this draft. No agent may set the queue or advance the stage.</span>
+          </div>
+
+          <div class="panel is-flagged mt2">
+            <div class="panel-hd">
+              <span class="ph-t">classification</span>
+              <span class="ph-s">model gpt-uw-4.2 · prompt triage@v7 · 2.4s · 3,118 tok · $0.021</span>
+              <span class="ph-sp"></span>
+              <span class="tag t-hot">PENDING</span>
+            </div>
+            <div class="panel-bd">
+              <dl class="kv kv-wide">
+                <dt>request_class</dt><dd>Working-capital revolver — seasonal inventory <button class="cite" type="button">[^doc-001:p4]</button></dd>
+                <dt>complexity</dt><dd>Standard (single entity, one guarantor, no CRE)</dd>
+                <dt>proposed_queue</dt><dd>credit_analyst / midwest-smb <span class="sub">— rationale: exposure $185,000 &lt; $250,000 analyst ceiling</span></dd>
+                <dt>proposed_analyst</dt><dd>R. Whitfield <span class="sub">— 4 open deals, lowest queue depth</span></dd>
+                <dt>industry_check</dt><dd>NAICS 311920 not on prohibited list <button class="cite" type="button">[^POL-IND-11]</button></dd>
+                <dt>missing_documents</dt><dd>Business Debt Schedule; Personal Tax Return 1040 (2024); Certificate of Good Standing <span class="sub">(conditional — required only if entity &lt; 3y)</span></dd>
+                <dt>confidence</dt><dd>0.86 <span class="sub">— reduced by absent debt schedule</span></dd>
+                <dt>abstained_on</dt><dd class="dim">Existing bank exposure — no record in the file</dd>
+              </dl>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-hd"><span class="ph-t">human decision</span><span class="ph-s">required before advance</span><span class="ph-sp"></span></div>
+            <div class="panel-bd">
+              <div class="form-grid">
+                <label for="i-dec">decided_by<span class="req">*</span></label>
+                <div class="fld"><input id="i-dec" class="inp" type="text" placeholder="type your full name to sign this decision"></div>
+                <label for="i-reason">reason_if_reject<span class="req">*</span></label>
+                <div class="fld"><textarea id="i-reason" class="ta" placeholder="required on reject or edit — recorded verbatim in the audit trail"></textarea></div>
+              </div>
+              <div class="btnbar mt2">
+                <button type="button" class="btn b-primary">accept draft<span class="k">⌥A</span></button>
+                <button type="button" class="btn">edit &amp; accept<span class="k">⌥E</span></button>
+                <button type="button" class="btn b-danger">reject<span class="k">⌥R</span></button>
+                <span class="sp"></span>
+                <span class="caps">stage 01 intake · next 02 extraction · <span class="hot">gate closed</span></span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- =================================================== DEAL ========== -->
+    <section class="screen" id="screen-deal" role="region" aria-label="Deal workspace">
+      <div class="echo">
+        <div class="echo-line"><span class="p">ucc&gt;</span> <span class="c">deal</span> <span class="f">DL-1042 --show=spread,metrics,grade,memo,policy,timeline</span><span class="cur"></span></div>
+        <div class="echo-sub">Ridgeline Fabrication LLC · $1,850,000 · stage <b>06 policy</b> · <span class="hot">2 open exceptions</span></div>
+      </div>
+
+      <div class="sec">
+        <div class="sec-hd"><span class="sec-mark">§</span><h2>Borrower</h2><span class="sec-rule"></span><span class="sec-meta">DL-1042 · opened 2026-07-09</span></div>
+        <div class="sec-body">
+          <div class="grid-2">
+            <dl class="kv kv-wide">
+              <dt>legal_name</dt><dd>Ridgeline Fabrication LLC</dd>
+              <dt>naics</dt><dd>332312 — Fabricated Structural Metal Mfg</dd>
+              <dt>entity_since</dt><dd>2009-02-17 · 17y operating history</dd>
+              <dt>relationship_manager</dt><dd>J. Marchetti <span class="sub">(view scope: own deals)</span></dd>
+              <dt>analyst</dt><dd>A. Vasquez <span class="sub">(spread · draft · recommend)</span></dd>
+              <dt>guarantors</dt><dd>T. Ridge (68%), K. Ridge (32%) — unlimited personal</dd>
+            </dl>
+            <dl class="kv kv-wide">
+              <dt>facility</dt><dd>Owner-occupied CRE $1,350,000 + equipment term $500,000</dd>
+              <dt>total_exposure</dt><dd class="b">$1,850,000</dd>
+              <dt>approval_tier</dt><dd><span class="tag t-inv">CREDIT COMMITTEE &gt; $1M</span></dd>
+              <dt>collateral</dt><dd>14,200 sf industrial bldg, appraised $2,310,000 <button class="cite" type="button">[^doc-018:p1]</button></dd>
+              <dt>ltv</dt><dd>58.4% <span class="sub">— cap 75% <button class="cite" type="button">[^POL-LTV-02]</button></span></dd>
+              <dt>stage</dt><dd>06 policy · idle 3d · <span class="hot">advance blocked</span></dd>
+            </dl>
+          </div>
+        </div>
+      </div>
+
+      <div class="sec">
+        <div class="sec-hd"><span class="sec-mark">§</span><h2>Documents</h2><span class="sec-rule"></span><span class="sec-meta">9 of 9 required present</span></div>
+        <div class="sec-body">
+          <div class="tbl-wrap">
+            <table class="t">
+              <thead><tr><th style="width:12ch">ref</th><th style="width:46ch">file</th><th style="width:18ch">type</th><th style="width:14ch">period</th><th style="width:14ch">extracted</th><th style="width:22ch">state</th></tr></thead>
+              <tbody>
+                <tr><td class="id">doc-011</td><td>Ridgeline-FY2024-Reviewed-Financials.pdf</td><td class="dim">financials</td><td class="dim">FY2024</td><td class="dim">07-10 11:20</td><td><span class="tag t-ok">ACCEPTED</span></td></tr>
+                <tr><td class="id">doc-012</td><td>Ridgeline-FY2023-Reviewed-Financials.pdf</td><td class="dim">financials</td><td class="dim">FY2023</td><td class="dim">07-10 11:20</td><td><span class="tag t-ok">ACCEPTED</span></td></tr>
+                <tr><td class="id">doc-014</td><td>Ridgeline-2026-Q2-Interim.xlsx</td><td class="dim">interim</td><td class="dim">2026-06-30</td><td class="dim">07-10 11:22</td><td><span class="tag t-ok">ACCEPTED</span></td></tr>
+                <tr><td class="id">doc-016</td><td>Business-Debt-Schedule-2026-06.pdf</td><td class="dim">debt schedule</td><td class="dim">2026-06-30</td><td class="dim">07-10 11:24</td><td><span class="tag t-ok">ACCEPTED</span></td></tr>
+                <tr><td class="id">doc-018</td><td>Appraisal-4820-Foundry-Rd.pdf</td><td class="dim">appraisal</td><td class="dim">2026-05-28</td><td class="dim">07-11 09:03</td><td><span class="tag t-ok">ACCEPTED</span></td></tr>
+                <tr><td class="id">doc-021</td><td>AR-Aging-2026-06.csv</td><td class="dim">receivables</td><td class="dim">2026-06-30</td><td class="dim">07-11 09:04</td><td><span class="tag t-ok">ACCEPTED</span></td></tr>
+                <tr><td class="id">doc-023</td><td>PFS-T-Ridge-2026-04.pdf</td><td class="dim">personal fin stmt</td><td class="dim">2026-04-30</td><td class="dim">07-11 09:06</td><td><span class="tag t-ok">ACCEPTED</span></td></tr>
+                <tr><td class="id">doc-024</td><td>Rent-Roll-Foundry-Rd-2026.pdf</td><td class="dim">rent roll</td><td class="dim">2026-06-30</td><td class="dim">07-12 14:31</td><td><span class="tag">EDITED BY ANALYST</span></td></tr>
+                <tr><td class="id">doc-027</td><td>Insurance-Binder-2026.pdf</td><td class="dim">insurance</td><td class="dim">2026-2027</td><td class="dim">07-12 14:33</td><td><span class="tag t-ok">ACCEPTED</span></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="sec">
+        <div class="sec-hd"><span class="sec-mark">§</span><h2>Standard spread</h2><span class="sec-rule"></span><span class="sec-meta">agent: financial-spreading · accepted w/ 2 edits by A. Vasquez 07-14</span></div>
+        <div class="sec-body">
+          <div class="callout">Every figure carries a source citation. A figure without a citation is not accepted into the spread — the agent must abstain instead. Click a reference token to open the source page.</div>
+          <div class="tbl-wrap mt2">
+            <table class="t">
+              <thead>
+                <tr>
+                  <th style="width:5ch">ln</th>
+                  <th style="width:34ch">line item</th>
+                  <th class="num" style="width:15ch">FY2024</th>
+                  <th style="width:16ch">source</th>
+                  <th class="num" style="width:15ch">FY2023</th>
+                  <th style="width:16ch">source</th>
+                  <th class="num" style="width:15ch">TTM 2026-06</th>
+                  <th style="width:16ch">source</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td class="dim">L01</td><td>Revenue</td><td class="num">$8,412,000</td><td><button class="cite" type="button">[^doc-011:p2]</button></td><td class="num">$7,905,000</td><td><button class="cite" type="button">[^doc-012:p2]</button></td><td class="num">$8,930,000</td><td><button class="cite" type="button">[^doc-014:tab1]</button></td></tr>
+                <tr><td class="dim">L02</td><td>Cost of goods sold</td><td class="num">$6,058,000</td><td><button class="cite" type="button">[^doc-011:p2]</button></td><td class="num">$5,740,000</td><td><button class="cite" type="button">[^doc-012:p2]</button></td><td class="num">$6,401,000</td><td><button class="cite" type="button">[^doc-014:tab1]</button></td></tr>
+                <tr><td class="dim">L03</td><td>Gross profit</td><td class="num">$2,354,000</td><td><button class="cite c-mute" type="button">[^calc:L01-L02]</button></td><td class="num">$2,165,000</td><td><button class="cite c-mute" type="button">[^calc:L01-L02]</button></td><td class="num">$2,529,000</td><td><button class="cite c-mute" type="button">[^calc:L01-L02]</button></td></tr>
+                <tr><td class="dim">L04</td><td>Operating expenses</td><td class="num">$1,613,000</td><td><button class="cite" type="button">[^doc-011:p3]</button></td><td class="num">$1,548,000</td><td><button class="cite" type="button">[^doc-012:p3]</button></td><td class="num">$1,704,000</td><td><button class="cite" type="button">[^doc-014:tab1]</button></td></tr>
+                <tr><td class="dim">L05</td><td>Officer compensation</td><td class="num">$310,000</td><td><button class="cite" type="button">[^doc-011:p3]</button></td><td class="num">$295,000</td><td><button class="cite" type="button">[^doc-012:p3]</button></td><td class="num">$325,000</td><td><button class="cite" type="button">[^doc-014:tab2]</button></td></tr>
+                <tr><td class="dim">L06</td><td>EBITDA</td><td class="num b">$1,051,000</td><td><button class="cite c-mute" type="button">[^calc:L03-L04+D&amp;A]</button></td><td class="num">$937,000</td><td><button class="cite c-mute" type="button">[^calc]</button></td><td class="num b">$1,140,000</td><td><button class="cite c-mute" type="button">[^calc]</button></td></tr>
+                <tr><td class="dim">L07</td><td>Depreciation &amp; amortization</td><td class="num">$310,000</td><td><button class="cite" type="button">[^doc-011:p6]</button></td><td class="num">$320,000</td><td><button class="cite" type="button">[^doc-012:p6]</button></td><td class="num">$315,000</td><td><button class="cite" type="button">[^doc-014:tab3]</button></td></tr>
+                <tr><td class="dim">L08</td><td>Interest expense</td><td class="num">$164,000</td><td><button class="cite" type="button">[^doc-011:p6]</button></td><td class="num">$171,000</td><td><button class="cite" type="button">[^doc-012:p6]</button></td><td class="num">$158,000</td><td><button class="cite" type="button">[^doc-016:p1]</button></td></tr>
+                <tr><td class="dim">L09</td><td>Net income</td><td class="num">$577,000</td><td><button class="cite" type="button">[^doc-011:p2]</button></td><td class="num">$446,000</td><td><button class="cite" type="button">[^doc-012:p2]</button></td><td class="num">$667,000</td><td><button class="cite" type="button">[^doc-014:tab1]</button></td></tr>
+                <tr class="t-rule-top"><td class="dim">L10</td><td>Current assets</td><td class="num">$2,204,000</td><td><button class="cite" type="button">[^doc-011:p4]</button></td><td class="num">$1,982,000</td><td><button class="cite" type="button">[^doc-012:p4]</button></td><td class="num">$2,388,000</td><td><button class="cite" type="button">[^doc-014:tab4]</button></td></tr>
+                <tr><td class="dim">L11</td><td>&nbsp;&nbsp;of which A/R &gt; 90d</td><td class="num">$96,000</td><td><button class="cite" type="button">[^doc-021:row44]</button></td><td class="num dim">n/a</td><td><span class="dim">—</span></td><td class="num">$121,000</td><td><button class="cite" type="button">[^doc-021:row44]</button></td></tr>
+                <tr><td class="dim">L12</td><td>Current liabilities</td><td class="num">$1,388,000</td><td><button class="cite" type="button">[^doc-011:p4]</button></td><td class="num">$1,301,000</td><td><button class="cite" type="button">[^doc-012:p4]</button></td><td class="num">$1,472,000</td><td><button class="cite" type="button">[^doc-014:tab4]</button></td></tr>
+                <tr><td class="dim">L13</td><td>Total debt</td><td class="num">$3,120,000</td><td><button class="cite" type="button">[^doc-016:p1]</button></td><td class="num">$3,402,000</td><td><button class="cite" type="button">[^doc-016:p2]</button></td><td class="num">$2,981,000</td><td><button class="cite" type="button">[^doc-016:p1]</button></td></tr>
+                <tr><td class="dim">L14</td><td>Annual debt service (P&amp;I)</td><td class="num">$742,000</td><td><button class="cite" type="button">[^doc-016:p1]</button></td><td class="num">$758,000</td><td><button class="cite" type="button">[^doc-016:p2]</button></td><td class="num">$803,000</td><td><button class="cite" type="button">[^doc-016:p1]</button> <span class="tag t-mute">EDITED</span></td></tr>
+                <tr><td class="dim">L15</td><td>Tangible net worth</td><td class="num">$1,904,000</td><td><button class="cite" type="button">[^doc-011:p4]</button></td><td class="num">$1,510,000</td><td><button class="cite" type="button">[^doc-012:p4]</button></td><td class="num">$2,193,000</td><td><button class="cite" type="button">[^doc-014:tab4]</button></td></tr>
+              </tbody>
+              <tfoot>
+                <tr><td colspan="8">15 lines · 41 cited figures · 0 uncited · 2 analyst edits (L14 TTM debt service, L11 aging bucket) · spread template STD-SMB-v6</td></tr>
+              </tfoot>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="sec">
+        <div class="sec-hd"><span class="sec-mark">§</span><h2>Computed metrics</h2><span class="sec-rule"></span><span class="sec-meta">deterministic · engine calc-core 3.2.0</span></div>
+        <div class="sec-body">
+          <div class="compute">
+            <div class="compute-hd"><span class="cx">///</span> computed by code, not by agent — inputs are spread lines only, formulas are inspectable and reproducible</div>
+            <div class="compute-row">
+              <span class="c-k">dscr (ttm)</span>
+              <span class="c-v">1.42x</span>
+              <span class="c-formula">(EBITDA L06 $1,140,000 − distributions $0) ÷ annual debt service L14 $803,000</span>
+              <span class="c-test"><span class="tag t-ok">PASS ≥ 1.20</span></span>
+            </div>
+            <div class="compute-row">
+              <span class="c-k">leverage</span>
+              <span class="c-v">2.61x</span>
+              <span class="c-formula">total debt L13 $2,981,000 ÷ EBITDA L06 $1,140,000</span>
+              <span class="c-test"><span class="tag t-ok">PASS ≤ 3.50</span></span>
+            </div>
+            <div class="compute-row">
+              <span class="c-k">current ratio</span>
+              <span class="c-v">1.62</span>
+              <span class="c-formula">current assets L10 $2,388,000 ÷ current liabilities L12 $1,472,000</span>
+              <span class="c-test"><span class="tag t-ok">PASS ≥ 1.25</span></span>
+            </div>
+            <div class="compute-row">
+              <span class="c-k">debt / tnw</span>
+              <span class="c-v">1.36x</span>
+              <span class="c-formula">total debt L13 ÷ tangible net worth L15 $2,193,000</span>
+              <span class="c-test"><span class="tag t-ok">PASS ≤ 3.00</span></span>
+            </div>
+            <div class="compute-row">
+              <span class="c-k">ltv</span>
+              <span class="c-v">58.4%</span>
+              <span class="c-formula">CRE facility $1,350,000 ÷ appraised value $2,310,000 [^doc-018:p1]</span>
+              <span class="c-test"><span class="tag t-ok">PASS ≤ 75%</span></span>
+            </div>
+          </div>
+          <p class="note mt1">These five values are produced by the deterministic calculation engine. Agents may <b>cite</b> them; agents may not <b>produce</b> or overwrite them. Recomputed on every accepted spread edit — last run 07-14 15:02, hash <span class="dim">9f3a…c71</span>.</p>
+        </div>
+      </div>
+
+      <div class="sec">
+        <div class="sec-hd"><span class="sec-mark">§</span><h2>Risk grade</h2><span class="sec-rule"></span><span class="sec-meta">rubric RG-SMB-v4 · deterministic</span></div>
+        <div class="sec-body">
+          <div class="grid-deal">
+            <div class="tbl-wrap">
+              <table class="t">
+                <thead><tr><th style="width:26ch">rubric input</th><th class="num" style="width:12ch">value</th><th style="width:16ch">band</th><th class="num" style="width:9ch">weight</th><th class="num" style="width:9ch">points</th></tr></thead>
+                <tbody>
+                  <tr><td>DSCR (TTM)</td><td class="num">1.42x</td><td class="dim">1.25 – 1.50</td><td class="num">30%</td><td class="num">3</td></tr>
+                  <tr><td>Leverage</td><td class="num">2.61x</td><td class="dim">2.50 – 3.00</td><td class="num">20%</td><td class="num">4</td></tr>
+                  <tr><td>Current ratio</td><td class="num">1.62</td><td class="dim">≥ 1.50</td><td class="num">10%</td><td class="num">2</td></tr>
+                  <tr><td>Operating history</td><td class="num">17y</td><td class="dim">≥ 10y</td><td class="num">10%</td><td class="num">2</td></tr>
+                  <tr><td>Industry cyclicality</td><td class="num">med-high</td><td class="dim">NAICS 3323 tier 3</td><td class="num">15%</td><td class="num">5</td></tr>
+                  <tr><td>Collateral coverage</td><td class="num">1.71x</td><td class="dim">≥ 1.50</td><td class="num">10%</td><td class="num">2</td></tr>
+                  <tr><td>Guarantor strength</td><td class="num">strong</td><td class="dim">PFS liquidity 0.9x DS</td><td class="num">5%</td><td class="num">3</td></tr>
+                </tbody>
+                <tfoot><tr><td colspan="5">weighted score <b>3.35</b> → band 3.26–3.75 → grade <b>4B</b> · no analyst override applied</td></tr></tfoot>
+              </table>
+            </div>
+            <div class="panel">
+              <div class="panel-hd"><span class="ph-t">grade</span><span class="ph-sp"></span><span class="ph-s">assigned by code</span></div>
+              <div class="panel-bd">
+                <div style="font-size:var(--fs-2xl);font-weight:var(--w-bold);line-height:var(--lh-loose)">4B</div>
+                <div class="caps">pass / acceptable — enhanced monitoring</div>
+                <dl class="kv mt2">
+                  <dt>score</dt><dd>3.35 / 7.00</dd>
+                  <dt>rubric</dt><dd>RG-SMB-v4 <button class="cite c-mute" type="button">[^rubric:v4]</button></dd>
+                  <dt>computed</dt><dd class="num">2026-07-14 15:02:41</dd>
+                  <dt>override</dt><dd class="dim">none</dd>
+                  <dt>prior grade</dt><dd>4A <span class="sub">(2025 annual review)</span></dd>
+                </dl>
+                <p class="note mt2">The grade is a function of the rubric inputs above. Changing an input re-runs the rubric and writes a new audit entry; it never asks an agent.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="sec">
+        <div class="sec-hd"><span class="sec-mark">§</span><h2>Credit memo</h2><span class="sec-rule"></span><span class="sec-meta">agent: credit-memo · <span class="hot">accepted-with-edits 07-16 · A. Vasquez</span></span></div>
+        <div class="sec-body">
+          <div class="panel">
+            <div class="panel-hd"><span class="ph-t">memo DL-1042 · rev 3</span><span class="ph-s">model gpt-uw-4.2 · prompt memo@v11 · 18.7s · 24,410 tok · $0.31</span><span class="ph-sp"></span><span class="tag t-box">ACCEPTED W/ EDITS</span></div>
+            <div class="panel-bd prose">
+              <h4>1. Request</h4>
+              <p>Ridgeline Fabrication LLC requests $1,850,000 in total facilities: a $1,350,000 owner-occupied CRE term loan on 4820 Foundry Rd and a $500,000 equipment term loan for a second CNC plasma line. Total exposure places this request in the <b>credit committee</b> tier <button class="cite" type="button">[^POL-APPR-01]</button>.</p>
+              <h4>2. Repayment capacity</h4>
+              <p>TTM EBITDA of $1,140,000 <button class="cite" type="button">[^spread:L06]</button> against pro-forma annual debt service of $803,000 <button class="cite" type="button">[^spread:L14]</button> yields a DSCR of <b>1.42x</b> <button class="cite c-mute" type="button">[^calc:dscr]</button>, above the 1.20x policy floor <button class="cite" type="button">[^POL-DSCR-01]</button>. Revenue grew 6.2% year over year <button class="cite" type="button">[^doc-011:p2]</button>, and gross margin held at 28.0% <button class="cite" type="button">[^spread:L03]</button>.</p>
+              <h4>3. Balance sheet</h4>
+              <p>Leverage of 2.61x <button class="cite c-mute" type="button">[^calc:leverage]</button> and a current ratio of 1.62 <button class="cite c-mute" type="button">[^calc:current]</button> are both inside policy. A/R over 90 days rose to $121,000 <button class="cite" type="button">[^doc-021:row44]</button>, concentrated in two municipal customers; management represents both as in normal contract retainage <button class="cite" type="button">[^doc-024:p2]</button>.</p>
+              <h4>4. Collateral</h4>
+              <p>The property appraised at $2,310,000 as of 2026-05-28 <button class="cite" type="button">[^doc-018:p1]</button>, producing an LTV of 58.4% against the 75% cap <button class="cite" type="button">[^POL-LTV-02]</button>. Equipment is financed at 80% of invoice with a 5-year amortization.</p>
+              <h4>5. Weaknesses</h4>
+              <p>Metal fabrication is a cyclical, tier-3 industry under the rubric, and the desk's exposure to NAICS 3323 is near the concentration ceiling <button class="cite" type="button">[^POL-CONC-03]</button>. Guarantor liquidity of 0.9x annual debt service is adequate but not strong.</p>
+              <h4>6. Recommendation</h4>
+              <p>Analyst recommends approval at grade 4B subject to the two policy exceptions below being cleared or formally accepted by the credit committee. <span class="dim">Recommendation is an analyst act; the memo agent does not recommend, approve or decline.</span></p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="sec">
+        <div class="sec-hd"><span class="sec-mark">§</span><h2>Policy exceptions</h2><span class="sec-rule"></span><span class="sec-meta">agent: policy-compliance · 2 open · 1 cleared</span></div>
+        <div class="sec-body">
+          <div class="tbl-wrap">
+            <table class="t">
+              <thead><tr><th style="width:14ch">rule</th><th style="width:34ch">title</th><th style="width:11ch">severity</th><th class="wrap">written exception</th><th style="width:20ch">state</th></tr></thead>
+              <tbody>
+                <tr class="is-flagged">
+                  <td class="id b">POL-CONC-03</td>
+                  <td>Industry concentration ceiling</td>
+                  <td>high</td>
+                  <td class="wrap">Desk exposure to NAICS 3323 reaches 11.4% of the SMB book post-close against a 10.0% ceiling. Overage of $312,000 requires committee acceptance with a written mitigant. <button class="cite" type="button">[^POL-CONC-03:§4.2]</button></td>
+                  <td><span class="tag t-hot">OPEN · BLOCKS ADVANCE</span></td>
+                </tr>
+                <tr class="is-flagged">
+                  <td class="id b">POL-GUAR-04</td>
+                  <td>Guarantor liquidity minimum</td>
+                  <td>medium</td>
+                  <td class="wrap">Combined guarantor liquid assets equal 0.9x annual debt service against a 1.0x minimum. Mitigant proposed: 6-month interest reserve funded at close. <button class="cite" type="button">[^doc-023:p2]</button></td>
+                  <td><span class="tag t-hot">OPEN · MITIGANT PROPOSED</span></td>
+                </tr>
+                <tr>
+                  <td class="id">POL-LTV-02</td>
+                  <td>Maximum LTV, owner-occupied CRE</td>
+                  <td class="dim">—</td>
+                  <td class="wrap dim">58.4% against 75% cap — compliant, no exception raised.</td>
+                  <td><span class="tag t-ok">CLEARED</span></td>
+                </tr>
+                <tr>
+                  <td class="id">POL-IND-11</td>
+                  <td>Prohibited industries</td>
+                  <td class="dim">—</td>
+                  <td class="wrap dim">NAICS 332312 not listed. No exception raised.</td>
+                  <td><span class="tag t-ok">CLEARED</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="banner mt2">
+            <span class="b-t">[blocked]</span>
+            <span>2 open exceptions. Stage <b>06 policy → 07 approval</b> is gated until each exception is cleared or accepted in writing by a named decider at the committee tier.</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="sec">
+        <div class="sec-hd"><span class="sec-mark">§</span><h2>Decisions &amp; timeline</h2><span class="sec-rule"></span><span class="sec-meta">append-only · 24 entries</span></div>
+        <div class="sec-body">
+          <div class="grid-deal">
+            <ol class="tl">
+              <li><span class="ts">07-09 10:14</span><span class="mk">·</span><span class="bd">Deal opened <span class="who">— J. Marchetti (relationship_manager)</span></span></li>
+              <li><span class="ts">07-09 10:31</span><span class="mk">·</span><span class="bd">Triage draft <span class="tag t-ok">ACCEPTED</span> <span class="who">— R. Whitfield (credit_analyst)</span></span></li>
+              <li><span class="ts">07-10 11:24</span><span class="mk">·</span><span class="bd">Extraction complete, 9 documents <span class="who">— system</span></span></li>
+              <li><span class="ts">07-14 14:58</span><span class="mk">·</span><span class="bd">Spread <span class="tag t-box">ACCEPTED W/ EDITS</span> (L14, L11) <span class="who">— A. Vasquez (credit_analyst)</span></span></li>
+              <li><span class="ts">07-14 15:02</span><span class="mk">·</span><span class="bd">Metrics + grade 4B computed by calc-core 3.2.0 <span class="who">— deterministic</span></span></li>
+              <li><span class="ts">07-16 09:47</span><span class="mk">·</span><span class="bd">Memo rev 3 <span class="tag t-box">ACCEPTED W/ EDITS</span> <span class="who">— A. Vasquez (credit_analyst)</span></span></li>
+              <li><span class="ts">07-21 13:05</span><span class="mk">·</span><span class="bd">Policy review run, 2 exceptions raised <span class="who">— agent: policy-compliance</span></span></li>
+              <li><span class="ts">07-24 16:40</span><span class="mk">·</span><span class="bd">Returned to <b>05 memo</b>: "expand concentration mitigant" <span class="who">— D. Okonkwo (credit_officer)</span></span></li>
+              <li class="is-now"><span class="ts">07-27 08:20</span><span class="mk">▸</span><span class="bd">Awaiting committee acceptance of POL-CONC-03 <span class="who">— idle 3d</span></span></li>
+            </ol>
+            <div class="panel">
+              <div class="panel-hd"><span class="ph-t">recorded decisions</span><span class="ph-sp"></span></div>
+              <div class="panel-bd">
+                <dl class="kv">
+                  <dt>07-24 return</dt><dd>D. Okonkwo · credit_officer<div class="sub">reason: "Concentration mitigant is asserted, not evidenced. Cite the participation term sheet."</div></dd>
+                  <dt>approval tier</dt><dd>credit committee (&gt; $1M)</dd>
+                  <dt>quorum</dt><dd>3 of 5 members · 0 votes recorded</dd>
+                  <dt>next gate</dt><dd class="hot">exception acceptance</dd>
+                </dl>
+                <div class="btnbar mt2">
+                  <button type="button" class="btn b-ghost" data-goto="review">open review</button>
+                  <button type="button" class="btn b-ghost" data-goto="approvals">open approvals</button>
+                  <button type="button" class="btn b-ghost" data-goto="audit">audit trail</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================================================== REVIEW ========= -->
+    <section class="screen" id="screen-review" role="region" aria-label="Agent draft review">
+      <div class="echo">
+        <div class="echo-line"><span class="p">ucc&gt;</span> <span class="c">review</span> <span class="f">--deal=DL-1039 --artifact=memo --rev=2 --diff --evidence</span><span class="cur"></span></div>
+        <div class="echo-sub">Harbor Point Logistics Inc · $2,400,000 · agent draft side by side with the evidence it cites. <b>Nothing advances until a named human accepts.</b></div>
+      </div>
+
+      <div class="sec">
+        <div class="sec-hd"><span class="sec-mark">§</span><h2>Run record</h2><span class="sec-rule"></span><span class="sec-meta">immutable · logged to audit</span></div>
+        <div class="sec-body">
+          <div class="grid-3">
+            <dl class="kv">
+              <dt>artifact</dt><dd>credit memo · rev 2</dd>
+              <dt>agent</dt><dd>credit-memo</dd>
+              <dt>model_id</dt><dd>gpt-uw-4.2-2026-05</dd>
+            </dl>
+            <dl class="kv">
+              <dt>prompt_version</dt><dd>memo@v11</dd>
+              <dt>latency</dt><dd class="num">18.7s</dd>
+              <dt>tokens</dt><dd class="num">in 19,204 · out 5,206</dd>
+            </dl>
+            <dl class="kv">
+              <dt>token_cost</dt><dd class="num">$0.31</dd>
+              <dt>run_id</dt><dd class="id">run-2f81c9ae</dd>
+              <dt>state</dt><dd><span class="tag t-hot">PENDING</span></dd>
+            </dl>
+          </div>
+          <div class="btnbar mt2">
+            <span class="caps">state chips:</span>
+            <span class="tag t-hot">PENDING</span>
+            <span class="tag t-mute">ACCEPTED</span>
+            <span class="tag t-mute">EDITED</span>
+            <span class="tag t-mute">REJECTED</span>
+            <span class="sp"></span>
+            <span class="caps">current artifact is <span class="hot">pending</span> · workflow gate closed</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="sec">
+        <div class="sec-hd"><span class="sec-mark">§</span><h2>Draft vs. evidence</h2><span class="sec-rule"></span><span class="sec-meta">left: analyst edit diff · right: cited sources</span></div>
+        <div class="sec-body">
+          <div class="grid-deal">
+            <div class="diff">
+              <div class="diff-hd"><span>memo@v11 · rev1 → rev2</span><span class="sp" style="flex:1"></span><span>+4 −3</span></div>
+              <div class="dline"><span class="ln">§2.1</span><span class="gt"> </span><span class="tx">Harbor Point Logistics operates a 42-unit tractor fleet across three terminals.</span></div>
+              <div class="dline"><span class="ln">§2.2</span><span class="gt"> </span><span class="tx">TTM revenue of $12,480,000 <button class="cite" type="button">[^doc-031:p2]</button> with EBITDA of $1,690,000 <button class="cite" type="button">[^spread:L06]</button>.</span></div>
+              <div class="dline d-del"><span class="ln">§2.3</span><span class="gt">−</span><span class="tx">DSCR is comfortably above policy at roughly 1.3x, indicating solid capacity.</span></div>
+              <div class="dline d-add"><span class="ln">§2.3</span><span class="gt">+</span><span class="tx">DSCR computed at <b>1.18x</b> <button class="cite c-mute" type="button">[^calc:dscr]</button>, <b>below</b> the 1.20x floor <button class="cite" type="button">[^POL-DSCR-01]</button>. A policy exception is required.</span></div>
+              <div class="dline d-del"><span class="ln">§3.1</span><span class="gt">−</span><span class="tx">Fleet collateral is worth about $2.9M based on management's estimate.</span></div>
+              <div class="dline d-add"><span class="ln">§3.1</span><span class="gt">+</span><span class="tx">Fleet appraised at $2,655,000 by Kessler Equipment Advisors 2026-06-18 <button class="cite" type="button">[^doc-034:p1]</button>; advance rate 80% → $2,124,000 supported.</span></div>
+              <div class="dline"><span class="ln">§3.2</span><span class="gt"> </span><span class="tx">Rolling stock average age 4.1 years <button class="cite" type="button">[^doc-034:tab2]</button>.</span></div>
+              <div class="dline d-del"><span class="ln">§4.1</span><span class="gt">−</span><span class="tx">No material concentration concerns were identified.</span></div>
+              <div class="dline d-add"><span class="ln">§4.1</span><span class="gt">+</span><span class="tx">Top customer is 34% of TTM revenue <button class="cite" type="button">[^doc-036:row12]</button>, above the 25% single-payer guideline <button class="cite" type="button">[^POL-CONC-07]</button>.</span></div>
+              <div class="dline d-add"><span class="ln">§4.2</span><span class="gt">+</span><span class="tx">Contract with that customer runs to 2028-03 with a 90-day termination clause <button class="cite" type="button">[^doc-037:p6]</button>.</span></div>
+              <div class="dline"><span class="ln">§5.1</span><span class="gt"> </span><span class="tx">Analyst recommendation withheld pending exception disposition.</span></div>
+            </div>
+
+            <div class="panel">
+              <div class="panel-hd"><span class="ph-t">cited evidence</span><span class="ph-s">7 references</span><span class="ph-sp"></span></div>
+              <div class="panel-bd">
+                <ul class="ln-list">
+                  <li><span class="n">1</span><span class="b"><button class="cite" type="button">[^doc-031:p2]</button> Harbor-Point-FY2025-Financials.pdf · p2 <span class="dim">— "Total operating revenue … 12,480,214"</span></span></li>
+                  <li><span class="n">2</span><span class="b"><button class="cite c-mute" type="button">[^spread:L06]</button> Standard spread line 06 · EBITDA TTM $1,690,000 <span class="dim">— accepted 07-19</span></span></li>
+                  <li><span class="n">3</span><span class="b"><button class="cite c-mute" type="button">[^calc:dscr]</button> calc-core 3.2.0 · 1,690,000 ÷ 1,432,000 = <b>1.18</b> <span class="dim">— deterministic, not agent output</span></span></li>
+                  <li><span class="n">4</span><span class="b"><button class="cite" type="button">[^POL-DSCR-01]</button> Lending policy §6.1 · minimum DSCR 1.20x for term facilities</span></li>
+                  <li><span class="n">5</span><span class="b"><button class="cite" type="button">[^doc-034:p1]</button> Kessler-Fleet-Appraisal-2026-06.pdf · p1 <span class="dim">— orderly liquidation $2,655,000</span></span></li>
+                  <li><span class="n">6</span><span class="b"><button class="cite" type="button">[^doc-036:row12]</button> Customer-Revenue-Concentration-2026.csv · row 12 <span class="dim">— Northline Grocers 34.2%</span></span></li>
+                  <li><span class="n">7</span><span class="b"><button class="cite" type="button">[^doc-037:p6]</button> Master-Transport-Agreement-Northline.pdf · p6 <span class="dim">— term through 2028-03-31</span></span></li>
+                </ul>
+                <div class="callout mt2"><b>Uncited assertions:</b> 0. The reviewer's job is to confirm each claim traces to a source, not to re-read the whole file.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="sec">
+        <div class="sec-hd"><span class="sec-mark">§</span><h2>Disposition</h2><span class="sec-rule"></span><span class="sec-meta">rejection reason mandatory</span></div>
+        <div class="sec-body">
+          <div class="panel">
+            <div class="panel-bd">
+              <div class="form-grid">
+                <label for="r-name">reviewed_by<span class="req">*</span></label>
+                <div class="fld"><input id="r-name" class="inp" type="text" placeholder="full name — recorded as the named human decision"></div>
+                <label for="r-role">role</label>
+                <div class="fld"><input id="r-role" class="inp" type="text" value="credit_analyst" readonly></div>
+                <label for="r-reason">reason<span class="req">*</span></label>
+                <div class="fld">
+                  <textarea id="r-reason" class="ta" placeholder="required when rejecting or editing — free text, stored verbatim, immutable"></textarea>
+                  <div class="fld-hint">reject without a reason is refused by the API (422 reason_required)</div>
+                </div>
+              </div>
+              <div class="btnbar mt2">
+                <button type="button" class="btn b-primary">accept<span class="k">⌥A</span></button>
+                <button type="button" class="btn">accept with edits<span class="k">⌥E</span></button>
+                <button type="button" class="btn b-danger">reject &amp; rerun<span class="k">⌥R</span></button>
+                <span class="sp"></span>
+                <span class="caps">queue: 3 drafts pending · next DL-1047 spread</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- =============================================== APPROVALS ========= -->
+    <section class="screen" id="screen-approvals" role="region" aria-label="Approval queue">
+      <div class="echo">
+        <div class="echo-line"><span class="p">ucc&gt;</span> <span class="c">approvals</span> <span class="f">--queue --tier=auto --role=credit_officer</span><span class="cur"></span></div>
+        <div class="echo-sub">Tier is derived from exposure: <b>analyst ≤ $250,000</b> · <b>senior credit officer ≤ $1,000,000</b> · <b>credit committee &gt; $1,000,000</b>. Every decision records a named human.</div>
+      </div>
+
+      <div class="sec">
+        <div class="sec-hd"><span class="sec-mark">§</span><h2>Queue</h2><span class="sec-rule"></span><span class="sec-meta">4 awaiting decision</span></div>
+        <div class="sec-body">
+          <div class="tbl-wrap">
+            <table class="t">
+              <thead><tr><th style="width:11ch">deal</th><th style="width:30ch">borrower</th><th class="num" style="width:13ch">exposure</th><th style="width:26ch">tier</th><th style="width:8ch">grade</th><th style="width:8ch">dscr</th><th style="width:16ch">recommended by</th><th class="num" style="width:8ch">waiting</th><th style="width:20ch">gates</th></tr></thead>
+              <tbody>
+                <tr class="is-selected"><td class="id b">DL-1042</td><td>Ridgeline Fabrication LLC</td><td class="num">$1,850,000</td><td><span class="tag t-inv">COMMITTEE &gt; $1M</span></td><td>4B</td><td class="num">1.42</td><td class="dim">A. Vasquez</td><td class="num">3d</td><td><span class="tag t-hot">2 EXCEPTIONS</span></td></tr>
+                <tr><td class="id b">DL-1050</td><td>Meridian Physical Therapy PLLC</td><td class="num">$240,000</td><td><span class="tag t-box">ANALYST ≤ $250K</span></td><td>3B</td><td class="num">1.88</td><td class="dim">R. Whitfield</td><td class="num">2d</td><td><span class="tag t-ok">CLEAR</span></td></tr>
+                <tr><td class="id b">DL-1044</td><td>Alder Creek Millwork Inc</td><td class="num">$400,000</td><td><span class="tag t-box">SENIOR OFFICER ≤ $1M</span></td><td>4B</td><td class="num">1.35</td><td class="dim">A. Vasquez</td><td class="num">4d</td><td><span class="tag t-ok">CLEAR</span></td></tr>
+                <tr><td class="id b">DL-1039</td><td>Harbor Point Logistics Inc</td><td class="num">$2,400,000</td><td><span class="tag t-inv">COMMITTEE &gt; $1M</span></td><td>5A</td><td class="num">1.18</td><td class="dim">— withheld</td><td class="num">7d</td><td><span class="tag t-hot">MEMO PENDING</span></td></tr>
+              </tbody>
+              <tfoot><tr><td colspan="9">Your authority as <b>credit_officer</b>: approve up to $1,000,000 · above that you may only record a committee vote. Agents may never approve, decline, or advance.</td></tr></tfoot>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="sec">
+        <div class="sec-hd"><span class="sec-mark">§</span><h2>Decision · DL-1042 Ridgeline Fabrication LLC</h2><span class="sec-rule"></span><span class="sec-meta">tier: credit committee</span></div>
+        <div class="sec-body">
+          <div class="banner">
+            <span class="b-t">[gate]</span>
+            <span>Exposure $1,850,000 exceeds your $1,000,000 authority. You may record a <b>committee vote</b> and a <b>return</b>, but not a unilateral approval. 2 open policy exceptions must be dispositioned in the same action.</span>
+          </div>
+
+          <div class="grid-deal mt2">
+            <div class="panel">
+              <div class="panel-hd"><span class="ph-t">record decision</span><span class="ph-sp"></span><span class="ph-s">all fields immutable once submitted</span></div>
+              <div class="panel-bd">
+                <div class="form-grid">
+                  <label for="a-name">decided_by<span class="req">*</span></label>
+                  <div class="fld">
+                    <input id="a-name" class="inp" type="text" placeholder="full legal name — mandatory named decider">
+                    <div class="fld-hint">initials, "committee", or blank are rejected</div>
+                  </div>
+
+                  <label for="a-role">decider_role<span class="req">*</span></label>
+                  <div class="fld">
+                    <select id="a-role" class="sel">
+                      <option>credit_analyst — authority ≤ $250,000</option>
+                      <option>senior_credit_officer — authority ≤ $1,000,000</option>
+                      <option selected>credit_committee — authority unlimited</option>
+                    </select>
+                  </div>
+
+                  <label for="a-exc">exception_disposition<span class="req">*</span></label>
+                  <div class="fld">
+                    <select id="a-exc" class="sel">
+                      <option selected>Accept POL-CONC-03 and POL-GUAR-04 in writing</option>
+                      <option>Accept POL-GUAR-04 only, POL-CONC-03 unresolved</option>
+                      <option>Do not accept — return to policy stage</option>
+                    </select>
+                  </div>
+
+                  <label for="a-cond">conditions</label>
+                  <div class="fld"><textarea id="a-cond" class="ta">Fund 6-month interest reserve at close. Quarterly A/R aging with covenant test. Concentration reviewed at 2027 annual review.</textarea></div>
+
+                  <label for="a-adverse">adverse_action_reason<span class="req">*</span></label>
+                  <div class="fld">
+                    <select id="a-adverse" class="sel">
+                      <option selected>— select only when declining —</option>
+                      <option>AA-01 Insufficient cash flow to service debt (DSCR below policy)</option>
+                      <option>AA-04 Collateral value insufficient for requested amount</option>
+                      <option>AA-07 Length of credit history / operating history</option>
+                      <option>AA-11 Industry excluded by lending policy</option>
+                      <option>AA-14 Unable to verify information provided</option>
+                    </select>
+                    <div class="fld-hint">mandatory on decline · written to the adverse-action notice and the audit trail</div>
+                  </div>
+
+                  <label for="a-return">return_to_stage</label>
+                  <div class="fld">
+                    <select id="a-return" class="sel">
+                      <option selected>— select only when returning —</option>
+                      <option>02 extraction</option>
+                      <option>03 spreading</option>
+                      <option>04 grading</option>
+                      <option>05 memo drafting</option>
+                      <option>06 policy compliance</option>
+                    </select>
+                    <div class="fld-hint">return requires a reason below</div>
+                  </div>
+
+                  <label for="a-reason">reason<span class="req">*</span></label>
+                  <div class="fld"><textarea id="a-reason" class="ta" placeholder="required on decline and on return — stored verbatim, cannot be edited or deleted"></textarea></div>
+                </div>
+
+                <div class="btnbar mt2">
+                  <button type="button" class="btn b-primary">record committee approval<span class="k">⌥⏎</span></button>
+                  <button type="button" class="btn b-danger">decline<span class="k">⌥D</span></button>
+                  <button type="button" class="btn">return to stage<span class="k">⌥T</span></button>
+                  <button type="button" class="btn b-ghost" disabled>approve unilaterally · over authority</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="panel">
+              <div class="panel-hd"><span class="ph-t">decision context</span><span class="ph-sp"></span></div>
+              <div class="panel-bd">
+                <dl class="kv">
+                  <dt>exposure</dt><dd class="b">$1,850,000</dd>
+                  <dt>tier</dt><dd>credit committee (&gt; $1M)</dd>
+                  <dt>grade</dt><dd>4B · score 3.35 · RG-SMB-v4</dd>
+                  <dt>dscr / lev / cur</dt><dd class="num">1.42x / 2.61x / 1.62</dd>
+                  <dt>ltv</dt><dd>58.4% <span class="sub">(cap 75%)</span></dd>
+                  <dt>memo</dt><dd>rev 3 accepted w/ edits</dd>
+                  <dt>exceptions</dt><dd class="hot">POL-CONC-03 · POL-GUAR-04</dd>
+                  <dt>prior action</dt><dd>returned 07-24 by D. Okonkwo</dd>
+                </dl>
+                <div class="hairline mt2"></div>
+                <div class="caps mt1">committee votes recorded</div>
+                <ul class="ln-list">
+                  <li><span class="n">1</span><span class="b">— <span class="dim">no votes recorded yet · quorum 3 of 5</span></span></li>
+                </ul>
+                <p class="note mt2">A decision is only valid with a named human on it. The system records name, role, timestamp, IP and artifact hash, then writes an immutable audit entry.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================================================== SLA ========= -->
+    <section class="screen" id="screen-sla" role="region" aria-label="SLA dashboard">
+      <div class="echo">
+        <div class="echo-line"><span class="p">ucc&gt;</span> <span class="c">sla</span> <span class="f">--idle-gt=5bd --group=queue --sort=idle:desc</span><span class="cur"></span></div>
+        <div class="echo-sub">Threshold: <b>5 business days</b> without a recorded action. Business days exclude weekends and bank holidays.</div>
+      </div>
+
+      <div class="sec">
+        <div class="sec-hd"><span class="sec-mark">§</span><h2>Breaches</h2><span class="sec-rule"></span><span class="sec-meta">3 deals · $4,240,000 exposure at risk</span></div>
+        <div class="sec-body">
+          <div class="tbl-wrap">
+            <table class="t">
+              <thead><tr><th style="width:11ch">deal</th><th style="width:30ch">borrower</th><th style="width:14ch">stage</th><th style="width:20ch">owning queue</th><th style="width:16ch">last action</th><th class="num" style="width:9ch">idle bd</th><th style="width:22ch">over threshold</th><th style="width:22ch">blocking cause</th></tr></thead>
+              <tbody>
+                <tr class="is-flagged"><td class="id b">DL-1033</td><td>Bayou Steel Supply Inc</td><td>05 memo</td><td class="dim">senior / A. Vasquez</td><td class="dim">07-17 11:02</td><td class="num b">9</td><td><span class="hot">████████</span><span class="faint">░░</span> +4</td><td><span class="tag t-hot">DRAFT UNACCEPTED</span></td></tr>
+                <tr class="is-flagged"><td class="id b">DL-1039</td><td>Harbor Point Logistics Inc</td><td>05 memo</td><td class="dim">senior / M. Ellery</td><td class="dim">07-21 09:15</td><td class="num b">7</td><td><span class="hot">██████</span><span class="faint">░░░░</span> +2</td><td><span class="tag t-hot">MEMO PENDING REVIEW</span></td></tr>
+                <tr class="is-flagged"><td class="id b">DL-1053</td><td>Foundry Row Brewing Co</td><td>01 intake</td><td class="dim">rm / J. Marchetti</td><td class="dim">07-22 15:44</td><td class="num b">6</td><td><span class="hot">█████</span><span class="faint">░░░░░</span> +1</td><td><span class="tag t-hot">MISSING DOCS 3</span></td></tr>
+              </tbody>
+              <tfoot><tr><td colspan="8">Escalation: at <b>10 business days</b> the deal is auto-escalated to the desk head and a notice is written to the audit trail. No auto-advance ever occurs.</td></tr></tfoot>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="sec">
+        <div class="sec-hd"><span class="sec-mark">§</span><h2>Approaching threshold</h2><span class="sec-rule"></span><span class="sec-meta">4 – 5 business days idle</span></div>
+        <div class="sec-body">
+          <div class="tbl-wrap">
+            <table class="t">
+              <thead><tr><th style="width:11ch">deal</th><th style="width:30ch">borrower</th><th style="width:14ch">stage</th><th style="width:20ch">owning queue</th><th class="num" style="width:9ch">idle bd</th><th style="width:24ch">headroom</th></tr></thead>
+              <tbody>
+                <tr><td class="id b">DL-1044</td><td>Alder Creek Millwork Inc</td><td>07 approval</td><td class="dim">senior officer queue</td><td class="num">4</td><td><span class="faint">████</span><span class="dim">░</span> 1 day of headroom</td></tr>
+                <tr><td class="id b">DL-1042</td><td>Ridgeline Fabrication LLC</td><td>06 policy</td><td class="dim">committee queue</td><td class="num">3</td><td><span class="faint">███</span><span class="dim">░░</span> 2 days of headroom</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="sec">
+        <div class="sec-hd"><span class="sec-mark">§</span><h2>Queue load</h2><span class="sec-rule"></span><span class="sec-meta">open deals per owner</span></div>
+        <div class="sec-body">
+          <div class="ladder">
+            <div class="ladder-row"><span class="l-n">01</span><span class="l-name">R. Whitfield</span><span class="l-ct">4</span><span class="l-bar">████████</span><span class="l-amt">analyst</span></div>
+            <div class="ladder-row is-block"><span class="l-n">02</span><span class="l-name">A. Vasquez</span><span class="l-ct">5</span><span class="l-bar">██████████<span class="hot">▮ 2 breached</span></span><span class="l-amt">senior analyst</span></div>
+            <div class="ladder-row"><span class="l-n">03</span><span class="l-name">M. Ellery</span><span class="l-ct">2</span><span class="l-bar">████</span><span class="l-amt">senior analyst</span></div>
+            <div class="ladder-row"><span class="l-n">04</span><span class="l-name">committee</span><span class="l-ct">2</span><span class="l-bar">████</span><span class="l-amt">tier &gt; $1M</span></div>
+            <div class="ladder-row"><span class="l-n">05</span><span class="l-name">J. Marchetti</span><span class="l-ct">3</span><span class="l-bar">██████</span><span class="l-amt">relationship mgr</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- =================================================== AUDIT ========= -->
+    <section class="screen" id="screen-audit" role="region" aria-label="Audit trail">
+      <div class="echo">
+        <div class="echo-line"><span class="p">ucc&gt;</span> <span class="c">audit</span> <span class="f">--tail=200 --since=2026-07-24 --format=table</span><span class="cur"></span></div>
+        <div class="echo-sub">Append-only. Entries cannot be edited or deleted by any role, including administrators. Each entry is hash-chained to its predecessor.</div>
+      </div>
+
+      <div class="sec">
+        <div class="sec-hd"><span class="sec-mark">§</span><h2>Filter</h2><span class="sec-rule"></span><span class="sec-meta">read-only view</span></div>
+        <div class="sec-body">
+          <div class="panel is-locked">
+            <div class="panel-bd">
+              <div class="btnbar">
+                <span class="caps">where</span>
+                <select class="sel" style="width:22ch" aria-label="deal filter">
+                  <option>deal = *</option><option>deal = DL-1042</option><option>deal = DL-1039</option><option>deal = DL-1033</option>
+                </select>
+                <select class="sel" style="width:22ch" aria-label="actor filter">
+                  <option>actor = *</option><option>actor = D. Okonkwo</option><option>actor = A. Vasquez</option><option>actor = agent:*</option>
+                </select>
+                <select class="sel" style="width:22ch" aria-label="action filter">
+                  <option>action = *</option><option>action = approve|decline|return</option><option>action = accept_draft</option><option>action = compute</option>
+                </select>
+                <input class="inp" style="width:20ch" type="text" value="2026-07-24 .. now" aria-label="time range">
+                <button type="button" class="btn">apply</button>
+                <span class="sp"></span>
+                <button type="button" class="btn b-ghost">export csv</button>
+                <button type="button" class="btn b-ghost">export jsonl</button>
+                <span class="tag t-inv">READ-ONLY</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="banner b-neutral mt2">
+            <span class="b-t">[append-only]</span>
+            <span>No edit or delete affordance exists in this interface or in the API. Retention 7 years. Chain head <span class="num">#004192</span> · verified <span class="num">09:41:07</span>.</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="sec">
+        <div class="sec-hd"><span class="sec-mark">§</span><h2>Entries</h2><span class="sec-rule"></span><span class="sec-meta">18 shown of 4,192</span></div>
+        <div class="sec-body">
+          <div class="tbl-wrap">
+            <table class="t">
+              <thead><tr><th style="width:9ch">seq</th><th style="width:19ch">timestamp utc</th><th style="width:16ch">actor</th><th style="width:19ch">role</th><th style="width:20ch">action</th><th style="width:14ch">target</th><th class="wrap">detail</th><th style="width:12ch">hash</th></tr></thead>
+              <tbody>
+                <tr><td class="dim num">004192</td><td class="num">2026-07-30T14:41:07Z</td><td>D. Okonkwo</td><td class="dim">credit_officer</td><td>view.queue</td><td class="id">approvals</td><td class="wrap dim">Opened approval queue, 4 items</td><td class="dim id">9f31…c71</td></tr>
+                <tr><td class="dim num">004191</td><td class="num">2026-07-30T13:20:44Z</td><td class="dim">agent:policy-compliance</td><td class="dim">agent</td><td>agent.run</td><td class="id">DL-1047</td><td class="wrap dim">Policy review, 0 exceptions · memo@v11 · 11.2s · $0.18</td><td class="dim id">7c02…9ae</td></tr>
+                <tr class="is-flagged"><td class="dim num">004190</td><td class="num">2026-07-29T21:55:12Z</td><td>A. Vasquez</td><td class="dim">credit_analyst</td><td class="b">draft.reject</td><td class="id">DL-1033</td><td class="wrap">Memo rev 2 rejected — reason: "Cites a 2023 rent roll for a 2026 covenant test."</td><td class="dim id">1de4…30b</td></tr>
+                <tr><td class="dim num">004189</td><td class="num">2026-07-29T18:02:31Z</td><td class="dim">system</td><td class="dim">deterministic</td><td>metrics.compute</td><td class="id">DL-1054</td><td class="wrap dim">DSCR 1.74 · lev 1.92 · cur 2.11 · grade 4A · calc-core 3.2.0</td><td class="dim id">55af…812</td></tr>
+                <tr><td class="dim num">004188</td><td class="num">2026-07-29T16:05:09Z</td><td>J. Marchetti</td><td class="dim">relationship_manager</td><td>doc.upload</td><td class="id">DL-1055</td><td class="wrap dim">AR-Aging-2026-06.csv · 44 KB · sha 3b1f…</td><td class="dim id">a209…4c1</td></tr>
+                <tr><td class="dim num">004187</td><td class="num">2026-07-29T11:41:55Z</td><td>R. Whitfield</td><td class="dim">credit_analyst</td><td>draft.accept</td><td class="id">DL-1054</td><td class="wrap dim">Spread accepted, 0 edits · 38 cited figures</td><td class="dim id">e771…0f2</td></tr>
+                <tr class="is-flagged"><td class="dim num">004186</td><td class="num">2026-07-28T15:33:02Z</td><td>D. Okonkwo</td><td class="dim">credit_officer</td><td class="b">deal.decline</td><td class="id">DL-1021</td><td class="wrap">Declined — adverse action AA-01 insufficient cash flow (DSCR 0.94). Notice queued to borrower.</td><td class="dim id">c4b8…77d</td></tr>
+                <tr><td class="dim num">004185</td><td class="num">2026-07-28T10:12:47Z</td><td class="dim">agent:financial-spreading</td><td class="dim">agent</td><td>agent.run</td><td class="id">DL-1047</td><td class="wrap dim">Spread drafted · 40 figures · 40 cited · 2 abstentions · $0.24</td><td class="dim id">b013…5aa</td></tr>
+                <tr class="is-flagged"><td class="dim num">004184</td><td class="num">2026-07-24T21:40:18Z</td><td>D. Okonkwo</td><td class="dim">credit_officer</td><td class="b">deal.return</td><td class="id">DL-1042</td><td class="wrap">Returned to 05 memo — reason: "Concentration mitigant is asserted, not evidenced. Cite the participation term sheet."</td><td class="dim id">2f18…9c3</td></tr>
+                <tr><td class="dim num">004183</td><td class="num">2026-07-24T19:02:00Z</td><td>M. Ellery</td><td class="dim">credit_analyst</td><td>draft.edit</td><td class="id">DL-1039</td><td class="wrap dim">Memo §2.3 edited: DSCR restated 1.3x → 1.18x with calc citation</td><td class="dim id">88da…41e</td></tr>
+                <tr><td class="dim num">004182</td><td class="num">2026-07-24T17:26:33Z</td><td class="dim">agent:credit-memo</td><td class="dim">agent</td><td>agent.run</td><td class="id">DL-1039</td><td class="wrap dim">Memo rev 2 drafted · gpt-uw-4.2 · memo@v11 · 18.7s · 24,410 tok · $0.31</td><td class="dim id">2f81…c9a</td></tr>
+                <tr><td class="dim num">004181</td><td class="num">2026-07-24T14:10:21Z</td><td>K. Reyes</td><td class="dim">senior_credit_officer</td><td class="b">deal.approve</td><td class="id">DL-1029</td><td class="wrap">Approved $425,000 equipment term at grade 3A. Conditions: UCC-1 perfected prior to funding.</td><td class="dim id">6ac9…d54</td></tr>
+                <tr><td class="dim num">004180</td><td class="num">2026-07-24T09:55:04Z</td><td class="dim">system</td><td class="dim">deterministic</td><td>sla.flag</td><td class="id">DL-1033</td><td class="wrap dim">Idle 5 business days — surfaced on SLA dashboard, owner notified</td><td class="dim id">f402…118</td></tr>
+                <tr><td class="dim num">004179</td><td class="num">2026-07-24T08:30:52Z</td><td class="dim">agent:portfolio-qa</td><td class="dim">agent</td><td>agent.answer</td><td class="id">portfolio</td><td class="wrap dim">Question answered with 3 citations · rbac scope credit_officer · 4.1s · $0.04</td><td class="dim id">30cc…b96</td></tr>
+                <tr><td class="dim num">004178</td><td class="num">2026-07-24T08:29:40Z</td><td class="dim">agent:portfolio-qa</td><td class="dim">agent</td><td>agent.abstain</td><td class="id">portfolio</td><td class="wrap dim">Abstained — "not supported by the record" · no covenant data for DL-1046</td><td class="dim id">17e5…6d0</td></tr>
+                <tr><td class="dim num">004177</td><td class="num">2026-07-23T22:14:09Z</td><td>R. Whitfield</td><td class="dim">credit_analyst</td><td>draft.accept</td><td class="id">DL-1051</td><td class="wrap dim">Triage draft accepted, queue set to analyst / midwest-smb</td><td class="dim id">9b60…22f</td></tr>
+                <tr><td class="dim num">004176</td><td class="num">2026-07-23T16:48:37Z</td><td>J. Marchetti</td><td class="dim">relationship_manager</td><td>deal.create</td><td class="id">DL-1053</td><td class="wrap dim">Foundry Row Brewing Co · $640,000 · equipment + LOC</td><td class="dim id">4471…83c</td></tr>
+                <tr><td class="dim num">004175</td><td class="num">2026-07-23T15:02:11Z</td><td class="dim">system</td><td class="dim">deterministic</td><td>rbac.deny</td><td class="id">DL-1042</td><td class="wrap dim">relationship_manager J. Marchetti denied read on non-owned deal</td><td class="dim id">0e93…7b5</td></tr>
+              </tbody>
+              <tfoot><tr><td colspan="8">18 entries shown · chain verified from #004175 to #004192 · export includes hash column and signing key id</td></tr></tfoot>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================================================== CHAT ========= -->
+    <div class="screen" id="screen-chat" role="region" aria-label="Portfolio Q&amp;A">
+      <div class="echo">
+        <div class="echo-line"><span class="p">ucc&gt;</span> <span class="c">chat</span> <span class="f">--agent=portfolio-qa --scope=rbac:credit_officer --grounding=strict</span><span class="cur"></span></div>
+        <div class="echo-sub">Answers are drawn only from stored deal data inside your RBAC scope. When the record does not support an answer, the agent <b>abstains</b> rather than guessing.</div>
+      </div>
+
+      <div class="chat-wrap">
+        <div class="chat-main">
+          <ul id="messages">
+            <li class="m-agent">
+              <div class="msg-hd"><span class="who">portfolio-qa</span><span>session opened</span><span class="sp"></span><span>09:22:04</span></div>
+              <div class="msg-body">
+                <p>Grounded on 12 active deals in scope <span class="dim">desk:midwest-smb</span>. I answer from stored spreads, computed metrics, memos, policy exceptions and audit entries. I do not approve, decline, or advance anything.</p>
+              </div>
+            </li>
+
+            <li class="m-user">
+              <div class="msg-hd"><span class="who">D. Okonkwo</span><span>credit_officer</span><span class="sp"></span><span>09:23:11</span></div>
+              <div class="msg-body">which active deals have a DSCR below the 1.20x policy floor?</div>
+            </li>
+
+            <li class="m-agent">
+              <div class="msg-hd"><span class="who">portfolio-qa</span><span>4.1s · 2,204 tok · $0.04</span><span class="sp"></span><span>09:23:15</span></div>
+              <div class="msg-body">
+                <p>Two deals in scope are below the 1.20x floor:</p>
+                <p>— <b>DL-1039 Harbor Point Logistics Inc</b>, DSCR <b>1.18x</b>, exposure $2,400,000, stage 05 memo. Computed by calc-core from EBITDA $1,690,000 ÷ debt service $1,432,000.<br>
+                   — <b>DL-1033 Bayou Steel Supply Inc</b>, DSCR <b>1.09x</b>, exposure $1,200,000, stage 05 memo. Both would require a written exception under POL-DSCR-01.</p>
+                <div class="cites">
+                  <button class="cite" type="button">[^DL-1039/calc:dscr]</button>
+                  <button class="cite" type="button">[^DL-1039/spread:L14]</button>
+                  <button class="cite" type="button">[^DL-1033/calc:dscr]</button>
+                  <button class="cite" type="button">[^POL-DSCR-01:§6.1]</button>
+                </div>
+              </div>
+            </li>
+
+            <li class="m-user">
+              <div class="msg-hd"><span class="who">D. Okonkwo</span><span>credit_officer</span><span class="sp"></span><span>09:26:40</span></div>
+              <div class="msg-body">what is our total exposure to NAICS 3323 after Ridgeline closes?</div>
+            </li>
+
+            <li class="m-agent">
+              <div class="msg-hd"><span class="who">portfolio-qa</span><span>3.4s · 1,880 tok · $0.03</span><span class="sp"></span><span>09:26:44</span></div>
+              <div class="msg-body">
+                <p>Post-close exposure to NAICS 3323 (fabricated structural metal) is <b>$4,186,000</b>, equal to <b>11.4%</b> of the $36,720,000 SMB book. The POL-CONC-03 ceiling is 10.0%, so the overage is <b>$312,000</b>. Policy compliance raised this as an open exception on DL-1042 on 2026-07-21.</p>
+                <div class="cites">
+                  <button class="cite" type="button">[^portfolio:concentration-2026-07]</button>
+                  <button class="cite" type="button">[^DL-1042/exception:POL-CONC-03]</button>
+                  <button class="cite" type="button">[^POL-CONC-03:§4.2]</button>
+                </div>
+              </div>
+            </li>
+
+            <li class="m-user">
+              <div class="msg-hd"><span class="who">D. Okonkwo</span><span>credit_officer</span><span class="sp"></span><span>09:29:02</span></div>
+              <div class="msg-body">will Trailhead Veterinary breach its fixed charge covenant next quarter?</div>
+            </li>
+
+            <li class="m-agent m-abstain">
+              <div class="msg-hd"><span class="who">portfolio-qa</span><span class="hot">abstained</span><span class="sp"></span><span>09:29:05</span></div>
+              <div class="msg-body">
+                <p><span class="tag t-hot">NOT SUPPORTED BY THE RECORD</span></p>
+                <p>DL-1046 Trailhead Veterinary Group is at stage 03 spreading. There is no accepted spread, no computed fixed-charge coverage figure, and no covenant schedule stored on the deal. A forward-looking breach prediction would not be grounded in stored data, so I am not answering.</p>
+                <p class="dim">What would let me answer: an accepted spread with line L14 debt service, plus the covenant schedule from the commitment letter.</p>
+                <div class="cites">
+                  <button class="cite c-mute" type="button">[^DL-1046/stage:03]</button>
+                  <button class="cite c-mute" type="button">[^DL-1046/spread:none]</button>
+                </div>
+              </div>
+            </li>
+
+            <li class="m-user">
+              <div class="msg-hd"><span class="who">D. Okonkwo</span><span>credit_officer</span><span class="sp"></span><span>09:31:18</span></div>
+              <div class="msg-body">show me every deal J. Marchetti submitted this month</div>
+            </li>
+
+            <li class="m-agent">
+              <div class="msg-hd"><span class="who">portfolio-qa</span><span>2.2s · 1,140 tok · $0.02</span><span class="sp"></span><span>09:31:20</span></div>
+              <div class="msg-body">
+                <p>Three deals submitted by J. Marchetti (relationship_manager) since 2026-07-01: <b>DL-1053</b> Foundry Row Brewing Co $640,000 (stage 01, 3 docs missing), <b>DL-1055</b> Vela Coffee Roasters LLC $185,000 (stage 01, triage draft pending), <b>DL-1042</b> Ridgeline Fabrication LLC $1,850,000 (stage 06, 2 exceptions).</p>
+                <p class="dim">Note: you can see all three because your role is credit_officer. J. Marchetti's own view is restricted to deals he owns.</p>
+                <div class="cites">
+                  <button class="cite" type="button">[^audit:004176]</button>
+                  <button class="cite" type="button">[^DL-1055/intake]</button>
+                  <button class="cite" type="button">[^DL-1042/header]</button>
+                </div>
+              </div>
+            </li>
+          </ul>
+
+          <form id="composer" autocomplete="off">
+            <span class="cx-prompt">qa&gt;</span>
+            <label class="sr" for="input">Ask the portfolio Q&amp;A agent</label>
+            <input id="input" type="text" placeholder="ask about deals in your scope — the agent cites or abstains">
+            <button type="submit" class="btn b-primary">send<span class="k">⏎</span></button>
+          </form>
+        </div>
+
+        <aside class="chat-side">
+          <div class="cs-sec">
+            <div class="cs-t">active agent</div>
+            <div><span class="tag t-inv" id="chat-agent-tag">PORTFOLIO-QA</span></div>
+            <p class="note mt1">Switch agents with <b>--agent</b> in the header. Only <span class="hot">qa</span> is conversational; the other four run inside workflow stages and produce drafts for review.</p>
+          </div>
+          <div class="cs-sec">
+            <div class="cs-t">grounding</div>
+            <dl class="kv" style="grid-template-columns:13ch minmax(0,1fr)">
+              <dt>corpus</dt><dd>12 active deals</dd>
+              <dt>documents</dt><dd class="num">94 extracted</dd>
+              <dt>policy</dt><dd>LP-2026.2</dd>
+              <dt>scope</dt><dd>credit_officer</dd>
+              <dt>abstention</dt><dd class="hot">strict</dd>
+            </dl>
+          </div>
+          <div class="cs-sec">
+            <div class="cs-t">rbac exclusions</div>
+            <ul class="ln-list">
+              <li><span class="n">1</span><span class="b">3 deals outside desk:midwest-smb</span></li>
+              <li><span class="n">2</span><span class="b">Employee-related credits (ethics wall)</span></li>
+              <li><span class="n">3</span><span class="b">Closed deals &gt; 24 months</span></li>
+            </ul>
+          </div>
+          <div class="cs-sec">
+            <div class="cs-t">suggested</div>
+            <div class="btnbar">
+              <button type="button" class="btn b-ghost" data-ask="which deals have open policy exceptions?">open exceptions</button>
+              <button type="button" class="btn b-ghost" data-ask="list deals idle more than 5 business days">idle &gt; 5bd</button>
+              <button type="button" class="btn b-ghost" data-ask="what is the committee queue exposure?">committee exposure</button>
+            </div>
+          </div>
+        </aside>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- ================================================= STATUS BAR ======== -->
+  <div class="status" role="status">
+    <span class="st st-inv" id="st-screen">PIPELINE</span>
+    <span class="st">agent <b id="st-agent">triage</b></span>
+    <span class="st">role <b>credit_officer</b></span>
+    <span class="st">deals <b>12</b></span>
+    <span class="st">exposure <b>$9,145,000</b></span>
+    <span class="st st-hot">2 blocked · 3 sla · 4 pending drafts</span>
+    <span class="sp"></span>
+    <span class="st">api <b>ok</b> 41ms</span>
+    <span class="st">audit head <b class="num">#004192</b></span>
+    <span class="st">LP-2026.2 · calc-core 3.2.0</span>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  var SCREENS = ["pipeline", "intake", "deal", "review", "approvals", "sla", "audit", "chat"];
+  var AGENTS = {
+    triage: "intake-triage",
+    spread: "financial-spreading",
+    memo:   "credit-memo",
+    policy: "policy-compliance",
+    qa:     "portfolio-qa"
+  };
+
+  var tabs = Array.prototype.slice.call(document.querySelectorAll(".tab"));
+  var cmd = document.getElementById("cmd");
+  var stScreen = document.getElementById("st-screen");
+  var stAgent = document.getElementById("st-agent");
+  var agentCurrent = document.getElementById("agent-current");
+  var chatAgentTag = document.getElementById("chat-agent-tag");
+
+  /* ---------------------------------------------------- screen routing --- */
+  function show(name) {
+    if (SCREENS.indexOf(name) === -1) return false;
+    SCREENS.forEach(function (s) {
+      var el = document.getElementById("screen-" + s);
+      if (el) el.classList.toggle("active", s === name);
+    });
+    tabs.forEach(function (t) {
+      t.setAttribute("aria-selected", String(t.dataset.screen === name));
+    });
+    stScreen.textContent = name.toUpperCase();
+    if (history.replaceState) history.replaceState(null, "", "#" + name);
+    window.scrollTo(0, 0);
+    return true;
+  }
+
+  tabs.forEach(function (t) {
+    t.addEventListener("click", function () { show(t.dataset.screen); });
+  });
+
+  document.addEventListener("click", function (e) {
+    var g = e.target.closest("[data-goto]");
+    if (g) show(g.getAttribute("data-goto"));
+  });
+
+  /* --------------------------------------------------- agent switching --- */
+  function setAgent(key) {
+    if (!AGENTS[key]) return;
+    document.querySelectorAll("#agent-mode .am-opt").forEach(function (b) {
+      b.setAttribute("aria-pressed", String(b.dataset.agent === key));
+    });
+    agentCurrent.textContent = key;
+    stAgent.textContent = key;
+    if (chatAgentTag) chatAgentTag.textContent = AGENTS[key].toUpperCase();
+    document.body.setAttribute("data-agent", key);
+  }
+
+  document.querySelectorAll("#agent-mode .am-opt").forEach(function (b) {
+    b.addEventListener("click", function () { setAgent(b.dataset.agent); });
+  });
+
+  /* --------------------------------------- command palette + completion -- */
+  function firstMatch(v) {
+    v = v.trim().toLowerCase().split(/\s+/)[0];
+    if (!v) return null;
+    for (var i = 0; i < SCREENS.length; i++) {
+      if (SCREENS[i].indexOf(v) === 0) return SCREENS[i];
+    }
+    return null;
+  }
+
+  cmd.addEventListener("keydown", function (e) {
+    if (e.key === "Tab") {
+      var m = firstMatch(cmd.value);
+      if (m) { e.preventDefault(); cmd.value = m; }
+    } else if (e.key === "Enter") {
+      e.preventDefault();
+      var target = firstMatch(cmd.value);
+      if (target && show(target)) cmd.value = "";
+      else { cmd.value = ""; cmd.placeholder = "unknown command — try: " + SCREENS.join(" · "); }
+    } else if (e.key === "Escape") {
+      cmd.value = "";
+      cmd.blur();
+    }
+  });
+
+  cmd.addEventListener("input", function () {
+    var m = firstMatch(cmd.value);
+    tabs.forEach(function (t) {
+      t.classList.toggle("is-ghost", !!(cmd.value.trim() && t.dataset.screen !== m));
+    });
+    if (!cmd.value.trim()) tabs.forEach(function (t) { t.classList.remove("is-ghost"); });
+  });
+
+  /* -------------------------------------------------- keyboard: g <key> -- */
+  var GOTO = { p: "pipeline", i: "intake", d: "deal", r: "review", a: "approvals", s: "sla", u: "audit", c: "chat" };
+  var pendingG = false;
+
+  document.addEventListener("keydown", function (e) {
+    var typing = /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName);
+    if (typing) return;
+    if (e.key === "g") { pendingG = true; return; }
+    if (pendingG) {
+      pendingG = false;
+      if (GOTO[e.key]) { e.preventDefault(); show(GOTO[e.key]); return; }
+    }
+    var keys = ["1", "2", "3", "4", "5"];
+    var idx = keys.indexOf(e.key);
+    if (idx > -1) setAgent(Object.keys(AGENTS)[idx]);
+    if (e.key === ":" || e.key === "/") { e.preventDefault(); cmd.focus(); }
+  });
+
+  /* -------------------------------------------------------- chat submit -- */
+  var composer = document.getElementById("composer");
+  var input = document.getElementById("input");
+  var messages = document.getElementById("messages");
+
+  function stamp() {
+    var d = new Date();
+    return String(d.getHours()).padStart(2, "0") + ":" +
+           String(d.getMinutes()).padStart(2, "0") + ":" +
+           String(d.getSeconds()).padStart(2, "0");
+  }
+
+  function addMessage(kind, who, meta, bodyHTML, extraClass) {
+    var li = document.createElement("li");
+    li.className = "m-" + kind + (extraClass ? " " + extraClass : "");
+    li.innerHTML =
+      '<div class="msg-hd"><span class="who">' + who + '</span><span>' + meta +
+      '</span><span class="sp"></span><span>' + stamp() + '</span></div>' +
+      '<div class="msg-body">' + bodyHTML + '</div>';
+    messages.appendChild(li);
+    messages.scrollTop = messages.scrollHeight;
+    li.scrollIntoView({ block: "nearest" });
+    return li;
+  }
+
+  composer.addEventListener("submit", function (e) {
+    e.preventDefault();
+    var q = input.value.trim();
+    if (!q) return;
+    addMessage("user", "D. Okonkwo", "credit_officer", q.replace(/</g, "&lt;"));
+    input.value = "";
+    // Placeholder response. Wire this to POST /agents/portfolio-qa/messages.
+    window.setTimeout(function () {
+      addMessage(
+        "agent",
+        "portfolio-qa",
+        "pending backend",
+        '<p><span class="tag t-hot">NOT SUPPORTED BY THE RECORD</span></p>' +
+        '<p>No grounded answer is available in this shell — the portfolio Q&amp;A endpoint is not wired yet. ' +
+        'When connected, every answer arrives with citation tokens or an explicit abstention.</p>' +
+        '<div class="cites"><button class="cite c-mute" type="button">[^shell:no-backend]</button></div>'
+      );
+    }, 260);
+  });
+
+  document.querySelectorAll("[data-ask]").forEach(function (b) {
+    b.addEventListener("click", function () {
+      input.value = b.getAttribute("data-ask");
+      input.focus();
+    });
+  });
+
+  /* ---------------------------------------------------------- citations -- */
+  document.addEventListener("click", function (e) {
+    var c = e.target.closest(".cite");
+    if (!c) return;
+    // Wire to GET /sources/<ref> and open the source viewer at the cited locus.
+    c.style.background = "var(--accent-wash-2)";
+    window.setTimeout(function () { c.style.background = ""; }, 320);
+  });
+
+  /* --------------------------------------------------------- deep link --- */
+  var initial = (location.hash || "").replace("#", "");
+  if (SCREENS.indexOf(initial) > -1) show(initial); else show("pipeline");
+  setAgent("triage");
+})();
+</script>
+</body>
+</html>

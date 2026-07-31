@@ -18,7 +18,7 @@ cost:
   # observed p95 so legitimate heavy work never stalls a build. The envelope
   # is the real spend control; finished work always commits (never shredded);
   # budgets only block STARTING further attempts.
-  run_budget_usd: 100.00
+  run_budget_usd: 250.00
   nodes:
     ingest: { budget_usd: 6.00 }
     requirements-synthesis: { budget_usd: 9.00 }
@@ -29,12 +29,12 @@ cost:
     agent-design: { budget_usd: 5.00 }
     workflow-design: { budget_usd: 6.00 }
     slice-plan: { budget_usd: 9.00 }
-    slice-1: { budget_usd: 15.00 }
-    slice-2: { budget_usd: 15.00 }
-    slice-3: { budget_usd: 15.00 }
-    slice-4: { budget_usd: 15.00 }
-    slice-5: { budget_usd: 15.00 }
-    slice-6: { budget_usd: 15.00 }
+    slice-1: { budget_usd: 60.00 }
+    slice-2: { budget_usd: 60.00 }
+    slice-3: { budget_usd: 60.00 }
+    slice-4: { budget_usd: 60.00 }
+    slice-5: { budget_usd: 60.00 }
+    slice-6: { budget_usd: 60.00 }
 
 interaction:
   max_questions_per_gate: 6

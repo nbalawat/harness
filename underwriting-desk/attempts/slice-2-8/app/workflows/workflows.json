@@ -1,0 +1,424 @@
+{
+  "workflows": [
+    {
+      "name": "deal-underwriting",
+      "description": "Analyst-side underwriting run: a submitted deal is triaged by an agent, routed to an analyst queue, its documents extracted, its financials spread by an agent under human acceptance, then ratios and the risk grade are computed by deterministic code and the deal is advanced to memo drafting.",
+      "addresses": [
+        "REQ-001",
+        "REQ-002",
+        "REQ-004",
+        "REQ-005",
+        "REQ-009",
+        "REQ-010",
+        "REQ-016",
+        "REQ-018",
+        "REQ-020",
+        "REQ-027",
+        "REQ-028",
+        "REQ-029",
+        "REQ-030",
+        "REQ-031",
+        "REQ-032",
+        "REQ-033",
+        "REQ-037",
+        "REQ-038",
+        "REQ-039",
+        "REQ-044",
+        "REQ-045",
+        "REQ-046",
+        "REQ-052",
+        "REQ-056"
+      ],
+      "nodes": [
+        {
+          "id": "register_deal",
+          "kind": "deterministic",
+          "handler": "create_deal_at_intake",
+          "output_schema": {
+            "required": [
+              "deal_id",
+              "borrower_name",
+              "borrower_industry",
+              "facility_type",
+              "requested_amount",
+              "exposure_amount",
+              "submitted_by_user_id",
+              "current_stage",
+              "last_activity_at"
+            ]
+          }
+        },
+        {
+          "id": "store_documents",
+          "kind": "deterministic",
+          "handler": "store_borrower_documents",
+          "output_schema": {
+            "required": [
+              "document_ids",
+              "document_types",
+              "document_count",
+              "audit_log_id"
+            ]
+          }
+        },
+        {
+          "id": "extract_documents",
+          "kind": "deterministic",
+          "handler": "extract_document_locations",
+          "output_schema": {
+            "required": [
+              "document_location_ids",
+              "extracted_page_count",
+              "unextractable_document_ids"
+            ]
+          }
+        },
+        {
+          "id": "triage",
+          "kind": "agent",
+          "prompt": "You are the intake triage agent. Using only the stored deal record and its extracted documents, classify loan request ${register_deal_deal_id} for borrower ${register_deal_borrower_name} (industry ${register_deal_borrower_industry}, facility ${register_deal_facility_type}, requested ${register_deal_requested_amount}). Documents on file: ${store_documents_document_types} across ${store_documents_document_count} files with extracted locations ${extract_documents_document_location_ids}. Return (a) the request classification, (b) every document required for this request type that is missing or unextractable, and (c) a proposed analyst queue with your reasoning. Do not compute ratios, assign a grade, or make any approval judgement. If the record does not support a conclusion, say 'not supported by the record' rather than speculating."
+        },
+        {
+          "id": "triage_review",
+          "kind": "human",
+          "question": "Review the intake triage draft for deal ${register_deal_deal_id} beside its cited documents. Classification: ${triage_classification}. Missing documents flagged: ${triage_missing_documents}. Proposed analyst queue: ${triage_proposed_queue}. Accept, edit, or reject this draft — a rejection requires a reason and returns the deal for further document collection."
+        },
+        {
+          "id": "triage_accepted",
+          "kind": "condition",
+          "path": "triage_review.action",
+          "equals": "accepted",
+          "on_false": "store_documents"
+        },
+        {
+          "id": "route_to_queue",
+          "kind": "deterministic",
+          "handler": "assign_deal_to_analyst_queue",
+          "output_schema": {
+            "required": [
+              "deal_id",
+              "assigned_analyst_id",
+              "analyst_queue_id",
+              "to_stage",
+              "stage_transition_id",
+              "audit_log_id"
+            ]
+          }
+        },
+        {
+          "id": "spread_financials",
+          "kind": "agent",
+          "prompt": "You are the financial spreading agent. Extract figures from the borrower financial statements for deal ${register_deal_deal_id} into the standard spread template. Source content is limited to document locations ${extract_documents_document_location_ids}. For EVERY extracted number, attach a citation naming the document id and document location id it came from — an uncited figure is invalid output. Emit line items keyed to the standard template only; do not invent line items, do not compute DSCR, leverage, or current ratio, and return 'not supported by the record' for any template line the documents do not support."
+        },
+        {
+          "id": "spread_review",
+          "kind": "human",
+          "question": "Review the financial spread drafted for deal ${register_deal_deal_id} side-by-side with each figure's cited document location. Accept, edit, or reject the spread — a rejection requires a reason and sends it back for re-drafting. The spread cannot become deal-of-record data until you accept or edit it."
+        },
+        {
+          "id": "spread_accepted",
+          "kind": "condition",
+          "path": "spread_review.action",
+          "equals": "accepted",
+          "on_false": "spread_financials"
+        },
+        {
+          "id": "persist_spread",
+          "kind": "deterministic",
+          "handler": "persist_spread_line_items",
+          "output_schema": {
+            "required": [
+              "deal_id",
+              "spread_line_item_ids",
+              "citation_ids",
+              "reviewed_by_user_id",
+              "audit_log_id"
+            ]
+          }
+        },
+        {
+          "id": "compute_ratios",
+          "kind": "deterministic",
+          "handler": "compute_financial_ratios",
+          "output_schema": {
+            "required": [
+              "deal_id",
+              "ratio_ids",
+              "dscr",
+              "leverage",
+              "current_ratio",
+              "computed_by_version",
+              "audit_log_id"
+            ]
+          }
+        },
+        {
+          "id": "assign_risk_grade",
+          "kind": "deterministic",
+          "handler": "assign_risk_grade_from_rubric",
+          "output_schema": {
+            "required": [
+              "deal_id",
+              "risk_grade_id",
+              "grade",
+              "rubric_inputs",
+              "computed_by_version",
+              "audit_log_id"
+            ]
+          }
+        },
+        {
+          "id": "advance_to_memo_stage",
+          "kind": "deterministic",
+          "handler": "record_stage_transition",
+          "output_schema": {
+            "required": [
+              "deal_id",
+              "from_stage",
+              "to_stage",
+              "stage_transition_id",
+              "last_activity_at",
+              "audit_log_id"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "credit-approval",
+      "description": "Officer-side decision run: an agent drafts the credit memo with citations, a human accepts it, a compliance agent raises written policy exceptions that a human dispositions, the approval tier is derived from exposure, and a named human approve/decline/return decision is recorded deterministically before closing.",
+      "addresses": [
+        "REQ-001",
+        "REQ-006",
+        "REQ-007",
+        "REQ-011",
+        "REQ-012",
+        "REQ-013",
+        "REQ-014",
+        "REQ-015",
+        "REQ-016",
+        "REQ-017",
+        "REQ-018",
+        "REQ-021",
+        "REQ-032",
+        "REQ-034",
+        "REQ-035",
+        "REQ-036",
+        "REQ-037",
+        "REQ-038",
+        "REQ-039",
+        "REQ-043",
+        "REQ-045",
+        "REQ-046",
+        "REQ-047",
+        "REQ-048",
+        "REQ-053",
+        "REQ-054",
+        "REQ-055"
+      ],
+      "nodes": [
+        {
+          "id": "load_deal_record",
+          "kind": "deterministic",
+          "handler": "load_deal_underwriting_context",
+          "output_schema": {
+            "required": [
+              "deal_id",
+              "borrower_name",
+              "borrower_industry",
+              "facility_type",
+              "exposure_amount",
+              "spread_line_item_ids",
+              "ratio_values",
+              "grade",
+              "rubric_inputs",
+              "active_policy_rule_ids"
+            ]
+          }
+        },
+        {
+          "id": "draft_memo",
+          "kind": "agent",
+          "prompt": "You are the credit memo agent. Draft the underwriting memo for deal ${load_deal_record_deal_id} — borrower ${load_deal_record_borrower_name}, industry ${load_deal_record_borrower_industry}, facility ${load_deal_record_facility_type}, exposure ${load_deal_record_exposure_amount}. Ground every assertion in the deal record: computed ratios ${load_deal_record_ratio_values}, risk grade ${load_deal_record_grade} produced from rubric inputs ${load_deal_record_rubric_inputs}, spread line items ${load_deal_record_spread_line_item_ids}, and active policy rules ${load_deal_record_active_policy_rule_ids}. Every assertion must carry a citation to the specific ratio, spread line item, or policy rule id it relied on. Do not recompute or restate a ratio or grade differently from the values given, do not recommend approval or decline, and write 'not supported by the record' where evidence is absent."
+        },
+        {
+          "id": "memo_review",
+          "kind": "human",
+          "question": "Review the credit memo drafted for deal ${load_deal_record_deal_id} side-by-side with each assertion's cited ratio, spread line, or policy rule. Accept, edit, or reject the draft — a rejection requires a reason and sends the memo back for re-drafting."
+        },
+        {
+          "id": "memo_accepted",
+          "kind": "condition",
+          "path": "memo_review.action",
+          "equals": "accepted",
+          "on_false": "draft_memo"
+        },
+        {
+          "id": "persist_memo",
+          "kind": "deterministic",
+          "handler": "persist_memo_with_citations",
+          "output_schema": {
+            "required": [
+              "deal_id",
+              "memo_id",
+              "citation_ids",
+              "reviewed_by_user_id",
+              "audit_log_id"
+            ]
+          }
+        },
+        {
+          "id": "check_policy_compliance",
+          "kind": "agent",
+          "prompt": "You are the policy compliance agent. Review memo ${persist_memo_memo_id} for deal ${load_deal_record_deal_id} against every active lending policy rule in ${load_deal_record_active_policy_rule_ids}, including concentration limits, prohibited industries, and LTV caps. Deal facts: industry ${load_deal_record_borrower_industry}, facility ${load_deal_record_facility_type}, exposure ${load_deal_record_exposure_amount}, ratios ${load_deal_record_ratio_values}, grade ${load_deal_record_grade}. For each rule breached, raise a written exception naming the policy rule id, the breached value, the rule threshold, and your rationale. Evaluate rules only as stored — never from memory — and report 'not supported by the record' where the deal data cannot establish compliance either way. You may not approve, decline, or clear a deal."
+        },
+        {
+          "id": "exception_disposition",
+          "kind": "human",
+          "question": "Disposition every policy exception raised on deal ${load_deal_record_deal_id}: ${check_policy_compliance_exceptions}. For each, record accepted, waived-with-justification (justification required), or blocking. A blocking exception returns the deal to the analyst for rework instead of advancing to approval."
+        },
+        {
+          "id": "record_exception_dispositions",
+          "kind": "deterministic",
+          "handler": "record_exception_dispositions",
+          "output_schema": {
+            "required": [
+              "deal_id",
+              "policy_exception_ids",
+              "blocking_exception_count",
+              "compliance_cleared",
+              "disposition_by_user_id",
+              "return_transition_id",
+              "audit_log_id"
+            ]
+          }
+        },
+        {
+          "id": "compliance_is_cleared",
+          "kind": "condition",
+          "path": "record_exception_dispositions.compliance_cleared",
+          "equals": true,
+          "on_false": "end"
+        },
+        {
+          "id": "derive_approval_tier",
+          "kind": "deterministic",
+          "handler": "derive_approval_tier_from_exposure",
+          "output_schema": {
+            "required": [
+              "deal_id",
+              "exposure_amount",
+              "approval_tier",
+              "required_role",
+              "tier_rule_version",
+              "audit_log_id"
+            ]
+          }
+        },
+        {
+          "id": "approval_decision",
+          "kind": "human",
+          "question": "Deal ${load_deal_record_deal_id} carries exposure ${derive_approval_tier_exposure_amount} and requires ${derive_approval_tier_approval_tier} authority (${derive_approval_tier_required_role}). Review the accepted memo, the risk grade ${load_deal_record_grade} with its rubric trace, and the dispositioned exceptions, then record your named decision: approve, decline (a documented adverse-action reason is mandatory), or return to an earlier stage (a reason is mandatory). No agent may make or advance this decision."
+        },
+        {
+          "id": "record_credit_decision",
+          "kind": "deterministic",
+          "handler": "record_credit_decision",
+          "output_schema": {
+            "required": [
+              "deal_id",
+              "decision",
+              "decided_by_user_id",
+              "approval_tier",
+              "tier_authorized",
+              "reason",
+              "decision_record_id",
+              "stage_transition_id",
+              "audit_log_id"
+            ]
+          }
+        },
+        {
+          "id": "decision_is_approve",
+          "kind": "condition",
+          "path": "record_credit_decision.decision",
+          "equals": "approve",
+          "on_false": "end"
+        },
+        {
+          "id": "close_deal",
+          "kind": "deterministic",
+          "handler": "record_final_terms_and_close",
+          "output_schema": {
+            "required": [
+              "deal_id",
+              "final_terms",
+              "closed_at",
+              "is_closed",
+              "stage_transition_id",
+              "audit_log_id"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "portfolio-inquiry",
+      "description": "A credit officer asks a question spanning active deals; retrieval is scoped to what their role entitles them to see, the Q&A agent answers strictly from stored deal data or abstains, and the interaction is recorded to the audit trail.",
+      "addresses": [
+        "REQ-003",
+        "REQ-008",
+        "REQ-018",
+        "REQ-019",
+        "REQ-038",
+        "REQ-039",
+        "REQ-040",
+        "REQ-042",
+        "REQ-049"
+      ],
+      "nodes": [
+        {
+          "id": "scope_retrieval",
+          "kind": "deterministic",
+          "handler": "build_rbac_scoped_deal_context",
+          "output_schema": {
+            "required": [
+              "asking_user_id",
+              "user_role",
+              "question_text",
+              "visible_deal_ids",
+              "has_visible_deals",
+              "retrieved_facts"
+            ]
+          }
+        },
+        {
+          "id": "caller_has_scope",
+          "kind": "condition",
+          "path": "scope_retrieval.has_visible_deals",
+          "equals": true,
+          "on_false": "end"
+        },
+        {
+          "id": "answer_question",
+          "kind": "agent",
+          "prompt": "You are the portfolio Q&A agent. Answer the credit officer's question: ${scope_retrieval_question_text}. Your only permitted evidence is ${scope_retrieval_retrieved_facts}, drawn from deals ${scope_retrieval_visible_deal_ids} — the scope user ${scope_retrieval_asking_user_id} (role ${scope_retrieval_user_role}) is entitled to see. Cite the deal id behind each fact you state. Never infer beyond this evidence and never reference a deal outside the listed ids; if the record does not answer the question, reply exactly 'not supported by the record'. You may not change any deal state."
+        },
+        {
+          "id": "record_qa_interaction",
+          "kind": "deterministic",
+          "handler": "record_qa_interaction",
+          "output_schema": {
+            "required": [
+              "agent_run_id",
+              "asking_user_id",
+              "answer_status",
+              "cited_deal_ids",
+              "audit_log_id"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

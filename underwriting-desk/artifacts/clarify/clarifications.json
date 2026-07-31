@@ -1,0 +1,7 @@
+{
+  "GAP-052": "5-point numeric scale (1–5, where 1=lowest risk/best credit, 5=highest risk/reject) with DSCR ≥1.50 = grade 1, 1.25–1.49 = grade 2, 1.00–1.24 = grade 3, 0.85–0.99 = grade 4, <0.85 = grade 5; leverage ≤2.0x = -1 grade, 2.0–3.0x = base, >3.0x = +1 grade; current ratio ≥2.0 = -0.5 grade, 1.0–1.99 = base, <1.0 = +0.5 grade (clamped 1–5). — and the SLA dashboard must highlight deals aging past 5 business days in red with an escalation owner.",
+  "GAP-053": "Prohibited industries: liquor/gaming, adult entertainment, cannabis, firearms. Concentration: max 15% of portfolio by industry, max 10% by geography (state), max 5% to a single borrower. LTV caps: term loans ≤80%, lines of credit ≤70%, real-estate secured ≤75%.",
+  "GAP-054": "Exposure = requested facility amount alone (this deal only). Approval tiers: up to $250k = analyst, $250k–$1M = officer, >$1M = committee.",
+  "GAP-055": "Single recorded decision: committee chair (or designee) enters the committee's decision as one approval transaction; the specific member votes are not modeled.",
+  "GAP-056": "Borrower documents arrive as native-text PDFs (PDF with selectable/extractable text, no OCR required). The system uses text extraction and Claude's document API to ground the financial spreading agent (REQ-005) in the uploaded file content."
+}

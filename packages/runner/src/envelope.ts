@@ -77,10 +77,27 @@ export async function executeNode(
 
     // Budgets gate the START of work — money already spent is never recovered
     // by discarding finished artifacts, so enforcement happens here, not after
-    // a completed attempt.
+    // a completed attempt. Retries are additionally gated on PROJECTED spend:
+    // an attempt costs roughly what the last one did, so a retry that would
+    // sail past the cap fails fast instead of starting.
     const budget = ctx.def.cost?.nodes?.[node.id]?.budget_usd;
     if (budget !== undefined) {
       const spent = cumulativeNodeCost(ctx, node.id);
+      const lastCost = seq > 1 || priorAttempts > 0 ? lastAttemptCost(ctx, node.id) : 0;
+      if (seq > 1 && lastCost > 0 && spent + 0.6 * lastCost > budget) {
+        ctx.journal.append({
+          type: "budget.exceeded",
+          scope: "node",
+          nodeId: node.id,
+          budgetUsd: budget,
+          spentUsd: spent,
+          projectedUsd: Number((spent + lastCost).toFixed(2)),
+          blockedAttempt: attempt,
+          reason: "retry blocked: projected to exceed the node budget — revise or raise the cap instead of burning another attempt",
+        });
+        ctx.journal.append({ type: "node.failed", nodeId: node.id });
+        return "failed";
+      }
       if (spent >= budget) {
         ctx.journal.append({
           type: "budget.exceeded",
@@ -173,7 +190,16 @@ export async function executeNode(
     }
 
     ctx.journal.append({ type: "node.attempt_failed", nodeId: node.id, attempt, error });
-    feedback = `Attempt ${attempt} failed validation. Fix the following and try again:\n\n${error}`;
+    if (/maximum number of turns/i.test(error)) {
+      // Turn exhaustion is scope starvation, not a defect: the retry gets more
+      // turns (see runAgent) and must FINISH, not re-tread.
+      feedback =
+        `Attempt ${attempt} ran out of turns before finishing. The working tree contains ALL prior progress — it is not broken. ` +
+        `Do NOT re-explore, re-read broadly, or re-verify what already passes. Diff the acceptance criteria against the tree, ` +
+        `finish ONLY the missing pieces, run the final checks once, and stop.`;
+    } else {
+      feedback = `Attempt ${attempt} failed validation. Fix the following and try again:\n\n${error}`;
+    }
   }
 
   ctx.journal.append({ type: "node.failed", nodeId: node.id });
@@ -533,7 +559,9 @@ async function runAgent(
     options: {
       cwd: attemptDir,
       model,
-      maxTurns: node.maxTurns ?? 30,
+      // Retries escalate the turn budget: an attempt that died of turn
+      // exhaustion must be able to FINISH, or it will die the same death.
+      maxTurns: Math.min(Math.round((node.maxTurns ?? 30) * (1 + 0.5 * (attempt - 1))), (node.maxTurns ?? 30) * 2),
       allowedTools: node.allowedTools ?? ["Read", "Write", "Edit", "Bash", "Glob", "Grep"],
       ...(node.agents ? { agents: node.agents } : {}),
       ...(Object.keys(mcpServers).length > 0 ? { mcpServers } : {}),
@@ -744,6 +772,15 @@ function recordCost(
     wallClockMs,
   };
   ctx.journal.append({ type: "cost.recorded", nodeId: node.id, attempt, cost });
+}
+
+/** Cost of the node's most recent attempt (the best predictor of the next one). */
+function lastAttemptCost(ctx: RunContext, nodeId: string): number {
+  const costs = ctx.journal
+    .read()
+    .filter((e) => e.type === "cost.recorded" && e.nodeId === nodeId)
+    .map((e) => (e.cost as CostRecord | undefined)?.costUsd ?? 0);
+  return costs.at(-1) ?? 0;
 }
 
 function cumulativeNodeCost(ctx: RunContext, nodeId: string): number {

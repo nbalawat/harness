@@ -1,0 +1,3322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Underwriting Command Center — Deal Board</title>
+<link rel="stylesheet" href="tokens.css">
+<style>
+/* ==========================================================================
+   OPTION 3 — "DEAL BOARD"
+   Bright, spatial, card-and-column workspace. The deal is a physical object
+   that moves left to right through eight stages. Columns are the organizing
+   metaphor on every screen.
+   ========================================================================== */
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family: var(--font);
+  font-size: var(--text-base);
+  font-weight: var(--weight-normal);
+  line-height: var(--leading-body);
+  color: var(--fg);
+  background: var(--bg);
+  background-image:
+    radial-gradient(1100px 620px at 8% -12%, #ffffff 0%, rgba(255,255,255,0) 62%),
+    radial-gradient(900px 520px at 96% 0%, var(--canvas-tint) 0%, rgba(232,238,251,0) 58%);
+  background-attachment: fixed;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+h1, h2, h3, h4, h5 { margin: 0; line-height: var(--leading-tight); font-weight: var(--weight-bold); }
+p { margin: 0; }
+ul, ol { margin: 0; padding: 0; list-style: none; }
+button, input, select, textarea { font: inherit; color: inherit; }
+a { color: var(--primary-deep); text-decoration: none; }
+
+/* ---------- App frame ------------------------------------------------- */
+
+.app {
+  display: grid;
+  grid-template-columns: var(--rail-w) 1fr;
+  grid-template-rows: var(--header-h) 1fr;
+  grid-template-areas:
+    "brandbar topbar"
+    "rail     main";
+  height: 100vh;
+}
+
+/* ---------- Brand corner + top bar ------------------------------------ */
+
+.brandbar {
+  grid-area: brandbar;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: 0 var(--space-4) 0 var(--space-5);
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+
+.brand-mark {
+  width: 38px; height: 38px;
+  flex: none;
+  border-radius: var(--radius-md);
+  background: linear-gradient(150deg, var(--primary) 0%, var(--primary-deep) 100%);
+  color: var(--on-primary);
+  display: grid; place-items: center;
+  font-weight: var(--weight-black);
+  font-size: var(--text-md);
+  letter-spacing: -0.02em;
+  box-shadow: var(--shadow-card);
+}
+
+.brand-name {
+  font-size: var(--text-md);
+  font-weight: var(--weight-black);
+  letter-spacing: -0.015em;
+  line-height: 1.15;
+}
+.brand-sub {
+  font-size: var(--text-xs);
+  color: var(--fg-faint);
+  font-weight: var(--weight-medium);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+}
+
+.topbar {
+  grid-area: topbar;
+  display: flex;
+  align-items: center;
+  gap: var(--space-5);
+  padding: 0 var(--space-6) 0 var(--space-6);
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+
+.topbar-title {
+  font-size: var(--text-lg);
+  font-weight: var(--weight-black);
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+}
+
+.topbar-spacer { flex: 1 1 auto; }
+
+/* ---------- Agent mode switcher (mandatory #agent-mode) --------------- */
+
+.agent-mode {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 5px;
+  background: var(--surface-sunken);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  box-shadow: var(--shadow-inset);
+}
+
+.agent-mode-label {
+  font-size: var(--text-xs);
+  font-weight: var(--weight-bold);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  color: var(--fg-faint);
+  padding: 0 var(--space-2) 0 var(--space-3);
+  white-space: nowrap;
+}
+
+.agent-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  height: var(--control-h-sm);
+  padding: 0 var(--space-4);
+  border: 1px solid transparent;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--fg-muted);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: var(--transition);
+}
+.agent-chip:hover { background: var(--surface); color: var(--fg); }
+.agent-chip .dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: currentColor; opacity: 0.45; flex: none;
+}
+.agent-chip[aria-pressed="true"] {
+  background: var(--surface);
+  color: var(--primary-ink);
+  border-color: var(--border-strong);
+  box-shadow: var(--shadow-card);
+}
+.agent-chip[aria-pressed="true"] .dot { opacity: 1; background: var(--primary); }
+.agent-chip:focus-visible { outline: none; box-shadow: var(--ring-focus); }
+
+/* ---------- Identity / role ------------------------------------------ */
+
+.who {
+  display: flex; align-items: center; gap: var(--space-3);
+  padding-left: var(--space-5);
+  border-left: 1px solid var(--border);
+}
+.avatar {
+  width: 36px; height: 36px; border-radius: var(--radius-pill);
+  background: var(--primary-soft); color: var(--primary-ink);
+  display: grid; place-items: center;
+  font-weight: var(--weight-black); font-size: var(--text-sm);
+}
+.who-name { font-size: var(--text-sm); font-weight: var(--weight-bold); line-height: 1.2; }
+.who-role { font-size: var(--text-xs); color: var(--fg-faint); font-weight: var(--weight-medium); }
+
+/* ---------- Left rail nav -------------------------------------------- */
+
+.rail {
+  grid-area: rail;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  padding: var(--space-5) var(--space-3) var(--space-5);
+  overflow-y: auto;
+  display: flex; flex-direction: column; gap: var(--space-1);
+}
+
+.rail-group {
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-caps);
+  font-weight: var(--weight-bold);
+  color: var(--fg-faint);
+  padding: var(--space-4) var(--space-3) var(--space-2);
+}
+
+.rail-item {
+  display: flex; align-items: center; gap: var(--space-3);
+  width: 100%;
+  min-height: var(--control-h);
+  padding: 0 var(--space-3);
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--fg-muted);
+  font-size: var(--text-base);
+  font-weight: var(--weight-bold);
+  text-align: left;
+  cursor: pointer;
+  transition: var(--transition);
+}
+.rail-item:hover { background: var(--surface-sunken); color: var(--fg); }
+.rail-item:focus-visible { outline: none; box-shadow: var(--ring-focus); }
+.rail-item.active {
+  background: var(--primary-soft);
+  color: var(--primary-ink);
+  border-color: #cddcff;
+  box-shadow: var(--shadow-flat);
+}
+.rail-ico {
+  width: 26px; height: 26px; flex: none;
+  border-radius: var(--radius-xs);
+  display: grid; place-items: center;
+  background: var(--surface-sunken);
+  font-size: var(--text-sm);
+}
+.rail-item.active .rail-ico { background: var(--surface); }
+.rail-count {
+  margin-left: auto;
+  min-width: 26px; height: 22px; padding: 0 7px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-sunken);
+  color: var(--fg-muted);
+  font-size: var(--text-xs); font-weight: var(--weight-black);
+  display: grid; place-items: center;
+}
+.rail-item.active .rail-count { background: var(--primary); color: var(--on-primary); }
+.rail-count.alert { background: var(--danger-soft); color: var(--danger-ink); }
+
+.rail-foot {
+  margin-top: auto;
+  padding: var(--space-4) var(--space-3) 0;
+  border-top: 1px solid var(--border);
+  font-size: var(--text-xs);
+  color: var(--fg-faint);
+  line-height: 1.5;
+}
+
+/* ---------- Main / screens ------------------------------------------- */
+
+.main {
+  grid-area: main;
+  overflow: auto;
+  padding: var(--space-6) var(--space-6) var(--space-8);
+}
+
+.screen { display: none; animation: rise 200ms ease both; }
+.screen.active { display: block; }
+@keyframes rise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+.screen-head {
+  display: flex; align-items: flex-end; gap: var(--space-5);
+  flex-wrap: wrap;
+  margin-bottom: var(--space-5);
+}
+.screen-title { font-size: var(--text-2xl); letter-spacing: -0.03em; font-weight: var(--weight-black); }
+.screen-sub { font-size: var(--text-md); color: var(--fg-muted); margin-top: 4px; max-width: 74ch; }
+.screen-head-actions { margin-left: auto; display: flex; gap: var(--space-3); align-items: center; }
+
+.eyebrow {
+  font-size: var(--text-xs); text-transform: uppercase;
+  letter-spacing: var(--tracking-caps); font-weight: var(--weight-bold);
+  color: var(--fg-faint);
+}
+
+/* ---------- Buttons --------------------------------------------------- */
+
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2);
+  height: var(--control-h);
+  padding: 0 var(--space-5);
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+  color: var(--fg);
+  font-size: var(--text-base); font-weight: var(--weight-bold);
+  cursor: pointer;
+  white-space: nowrap;
+  box-shadow: var(--shadow-flat);
+  transition: var(--transition);
+}
+.btn:hover { box-shadow: var(--shadow-card); transform: translateY(-1px); }
+.btn:active { transform: none; }
+.btn:focus-visible { outline: none; box-shadow: var(--ring-focus); }
+.btn-primary {
+  background: linear-gradient(150deg, var(--primary) 0%, var(--primary-deep) 100%);
+  border-color: var(--primary-deep);
+  color: var(--on-primary);
+}
+.btn-ok { background: var(--ok); border-color: var(--ok-ink); color: #fff; }
+.btn-danger { background: var(--danger); border-color: var(--danger-ink); color: #fff; }
+.btn-warn { background: var(--warn-soft); border-color: #ecd39a; color: var(--warn-ink); }
+.btn-ghost { background: transparent; border-color: transparent; color: var(--fg-muted); box-shadow: none; }
+.btn-ghost:hover { background: var(--surface-sunken); box-shadow: none; }
+.btn-sm { height: var(--control-h-sm); padding: 0 var(--space-4); font-size: var(--text-sm); }
+.btn-lg { height: var(--control-h-lg); padding: 0 var(--space-6); font-size: var(--text-md); }
+.btn[disabled] { opacity: 0.45; cursor: not-allowed; transform: none; box-shadow: none; }
+
+/* ---------- Chips ----------------------------------------------------- */
+
+.chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  height: 26px; padding: 0 var(--space-3);
+  border-radius: var(--radius-pill);
+  background: var(--neutral-soft);
+  color: var(--neutral-ink);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-black);
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  border: 1px solid transparent;
+}
+.chip-lg { height: 32px; padding: 0 var(--space-4); font-size: var(--text-sm); }
+.chip-ok { background: var(--ok-soft); color: var(--ok-ink); }
+.chip-warn { background: var(--warn-soft); color: var(--warn-ink); }
+.chip-danger { background: var(--danger-soft); color: var(--danger-ink); }
+.chip-info { background: var(--info-soft); color: var(--info-ink); }
+.chip-outline { background: var(--surface); border-color: var(--border-strong); color: var(--fg-muted); }
+
+/* grade chips — bold, color-coded */
+.grade {
+  display: inline-grid; place-items: center;
+  min-width: 42px; height: 28px; padding: 0 var(--space-2);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm); font-weight: var(--weight-black);
+  color: #fff; letter-spacing: 0.02em;
+}
+.grade-a { background: var(--grade-a); }
+.grade-b { background: var(--grade-b); }
+.grade-c { background: var(--grade-c); }
+.grade-d { background: var(--grade-d); }
+.grade-e { background: var(--grade-e); }
+.grade-none { background: var(--surface-sunken); color: var(--fg-faint); border: 1px dashed var(--border-strong); }
+
+/* draft state chips */
+.state {
+  display: inline-flex; align-items: center; gap: 6px;
+  height: 26px; padding: 0 var(--space-3);
+  border-radius: var(--radius-pill);
+  font-size: var(--text-xs); font-weight: var(--weight-black);
+  text-transform: uppercase; letter-spacing: 0.06em;
+  border: 1px solid transparent;
+}
+.state::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.state-pending  { background: var(--warn-soft);   color: var(--warn-ink); }
+.state-accepted { background: var(--ok-soft);     color: var(--ok-ink); }
+.state-edited   { background: var(--info-soft);   color: var(--info-ink); }
+.state-rejected { background: var(--danger-soft); color: var(--danger-ink); }
+
+/* idle-days dot */
+.idle {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: var(--text-xs); font-weight: var(--weight-bold);
+  color: var(--fg-faint);
+}
+.idle .pip { width: 9px; height: 9px; border-radius: 50%; background: var(--ok); flex: none; }
+.idle.warn .pip { background: var(--warn); }
+.idle.warn { color: var(--warn-ink); }
+.idle.bad .pip { background: var(--danger); box-shadow: 0 0 0 3px var(--danger-soft); }
+.idle.bad { color: var(--danger-ink); }
+
+/* ---------- Panels / cards ------------------------------------------- */
+
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  overflow: hidden;
+}
+.panel + .panel { margin-top: var(--space-5); }
+.panel-head {
+  display: flex; align-items: center; gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+  border-bottom: 1px solid var(--border);
+  background: linear-gradient(180deg, #fff 0%, #fbfcff 100%);
+}
+.panel-title { font-size: var(--text-md); font-weight: var(--weight-black); letter-spacing: -0.01em; }
+.panel-note { font-size: var(--text-sm); color: var(--fg-faint); font-weight: var(--weight-medium); }
+.panel-head .spacer { flex: 1 1 auto; }
+.panel-body { padding: var(--space-5); }
+.panel-body.tight { padding: var(--space-4); }
+.panel-foot {
+  padding: var(--space-4) var(--space-5);
+  border-top: 1px solid var(--border);
+  background: var(--surface-sunken);
+  display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap;
+}
+
+/* ---------- At-a-glance stat strip ----------------------------------- */
+
+.statbar {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(178px, 1fr));
+  gap: var(--space-4);
+  margin-bottom: var(--space-5);
+}
+.stat {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4) var(--space-5);
+  box-shadow: var(--shadow-card);
+  position: relative;
+  overflow: hidden;
+}
+.stat::after {
+  content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 5px;
+  background: var(--accent, var(--primary));
+}
+.stat-label {
+  font-size: var(--text-xs); text-transform: uppercase;
+  letter-spacing: var(--tracking-caps); font-weight: var(--weight-bold);
+  color: var(--fg-faint);
+}
+.stat-value {
+  font-size: var(--text-3xl); font-weight: var(--weight-black);
+  letter-spacing: -0.035em; line-height: 1.1; margin-top: 2px;
+}
+.stat-value.sm { font-size: var(--text-xl); }
+.stat-foot { font-size: var(--text-sm); color: var(--fg-muted); font-weight: var(--weight-medium); }
+
+/* ---------- Toolbar --------------------------------------------------- */
+
+.toolbar {
+  display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap;
+  padding: var(--space-3) var(--space-4);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  box-shadow: var(--shadow-flat);
+  margin-bottom: var(--space-5);
+}
+.toolbar .spacer { flex: 1 1 auto; }
+
+.field-inline {
+  display: inline-flex; align-items: center; gap: var(--space-2);
+  font-size: var(--text-sm); font-weight: var(--weight-bold); color: var(--fg-muted);
+}
+
+.control {
+  height: var(--control-h-sm);
+  padding: 0 var(--space-3);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
+  cursor: pointer;
+}
+.control:focus-visible { outline: none; box-shadow: var(--ring-focus); }
+
+/* ---------- THE BOARD: colored stage columns ------------------------- */
+
+.board {
+  display: flex;
+  gap: var(--space-4);
+  overflow-x: auto;
+  padding-bottom: var(--space-5);
+  scroll-snap-type: x proximity;
+}
+.board::-webkit-scrollbar { height: 12px; }
+.board::-webkit-scrollbar-track { background: transparent; }
+.board::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: var(--radius-pill); border: 3px solid var(--bg); }
+
+.col {
+  flex: 0 0 var(--column-w);
+  width: var(--column-w);
+  scroll-snap-align: start;
+  display: flex; flex-direction: column;
+  background: color-mix(in srgb, var(--accent) 7%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--accent) 24%, var(--border));
+  border-radius: var(--radius-lg);
+  min-height: 260px;
+}
+
+.col-head {
+  padding: var(--space-4) var(--space-4) var(--space-3);
+  border-bottom: 1px dashed color-mix(in srgb, var(--accent) 32%, var(--border));
+  position: sticky; top: 0; z-index: 2;
+  background: color-mix(in srgb, var(--accent) 9%, var(--surface));
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  backdrop-filter: blur(4px);
+}
+.col-head-top { display: flex; align-items: center; gap: var(--space-2); }
+.col-index {
+  width: 22px; height: 22px; flex: none;
+  border-radius: var(--radius-xs);
+  background: var(--accent); color: #fff;
+  display: grid; place-items: center;
+  font-size: var(--text-xs); font-weight: var(--weight-black);
+}
+.col-name {
+  font-size: var(--text-base); font-weight: var(--weight-black);
+  letter-spacing: -0.01em; color: var(--fg);
+}
+.col-count {
+  margin-left: auto;
+  min-width: 28px; height: 24px; padding: 0 var(--space-2);
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  border: 1px solid color-mix(in srgb, var(--accent) 40%, var(--border));
+  color: var(--fg);
+  font-size: var(--text-sm); font-weight: var(--weight-black);
+  display: grid; place-items: center;
+}
+.col-wip {
+  display: flex; align-items: baseline; gap: 6px;
+  margin-top: var(--space-2);
+  font-size: var(--text-xs); color: var(--fg-muted); font-weight: var(--weight-bold);
+}
+.col-wip strong { font-size: var(--text-base); color: var(--fg); letter-spacing: -0.02em; }
+.col-meter {
+  height: 5px; margin-top: var(--space-2);
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--accent) 18%, #fff);
+  overflow: hidden;
+}
+.col-meter > i { display: block; height: 100%; background: var(--accent); border-radius: inherit; }
+
+.col-body {
+  padding: var(--space-3);
+  display: flex; flex-direction: column; gap: var(--space-3);
+  flex: 1 1 auto;
+}
+
+/* deal card — the physical object */
+.deal-card {
+  position: relative;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--space-4) var(--space-4) var(--space-3) var(--space-5);
+  box-shadow: var(--shadow-card);
+  cursor: grab;
+  text-align: left;
+  width: 100%;
+  display: block;
+  transition: var(--transition);
+}
+.deal-card::before {
+  content: ""; position: absolute; left: 0; top: 10px; bottom: 10px; width: 4px;
+  border-radius: var(--radius-pill);
+  background: var(--accent);
+  opacity: 0.85;
+}
+.deal-card:hover { box-shadow: var(--shadow-lift); transform: translateY(-2px) rotate(-0.25deg); }
+.deal-card:active { cursor: grabbing; transform: scale(0.995); }
+.deal-card:focus-visible { outline: none; box-shadow: var(--ring-focus), var(--shadow-lift); }
+
+/* drag-affordance grip dots */
+.grip {
+  position: absolute; top: var(--space-3); right: var(--space-3);
+  width: 14px; height: 14px;
+  background-image: radial-gradient(var(--border-strong) 1.4px, transparent 1.5px);
+  background-size: 5px 5px;
+  opacity: 0.9;
+}
+
+.dc-top { display: flex; align-items: flex-start; gap: var(--space-2); padding-right: 18px; }
+.dc-name {
+  font-size: var(--text-md); font-weight: var(--weight-black);
+  letter-spacing: -0.015em; line-height: 1.25;
+}
+.dc-id {
+  font-family: var(--font-mono); font-size: var(--text-xs);
+  color: var(--fg-faint); font-weight: 600; letter-spacing: 0;
+}
+.dc-exposure {
+  font-size: var(--text-xl); font-weight: var(--weight-black);
+  letter-spacing: -0.035em; margin-top: var(--space-2);
+}
+.dc-facility { font-size: var(--text-xs); color: var(--fg-muted); font-weight: var(--weight-bold); }
+.dc-chips { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: var(--space-3); }
+.dc-foot {
+  display: flex; align-items: center; gap: var(--space-3);
+  margin-top: var(--space-3); padding-top: var(--space-3);
+  border-top: 1px dashed var(--border);
+  font-size: var(--text-xs); color: var(--fg-faint); font-weight: var(--weight-bold);
+}
+.dc-foot .spacer { flex: 1 1 auto; }
+.owner {
+  display: inline-flex; align-items: center; gap: 5px;
+}
+.owner .av {
+  width: 20px; height: 20px; border-radius: 50%;
+  background: var(--primary-soft); color: var(--primary-ink);
+  display: grid; place-items: center; font-size: 9.5px; font-weight: var(--weight-black);
+}
+
+.drop-hint {
+  border: 2px dashed var(--border-dashed);
+  border-radius: var(--radius-md);
+  padding: var(--space-5) var(--space-3);
+  text-align: center;
+  font-size: var(--text-xs); font-weight: var(--weight-bold);
+  color: var(--fg-faint);
+  background: rgba(255,255,255,0.5);
+}
+
+/* ---------- Generic column grids ------------------------------------- */
+
+.cols-2 { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-5); align-items: start; }
+.cols-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-5); align-items: start; }
+.cols-2-1 { display: grid; grid-template-columns: 2fr 1fr; gap: var(--space-5); align-items: start; }
+.cols-1-2 { display: grid; grid-template-columns: 1fr 2fr; gap: var(--space-5); align-items: start; }
+@media (max-width: 1180px) {
+  .cols-2, .cols-3, .cols-2-1, .cols-1-2 { grid-template-columns: 1fr; }
+}
+
+/* ---------- Forms ----------------------------------------------------- */
+
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4) var(--space-5); }
+.form-grid .span-2 { grid-column: 1 / -1; }
+@media (max-width: 760px) { .form-grid { grid-template-columns: 1fr; } }
+
+.field { display: flex; flex-direction: column; gap: 6px; }
+.label {
+  font-size: var(--text-sm); font-weight: var(--weight-bold); color: var(--fg-muted);
+}
+.label .req { color: var(--danger); margin-left: 2px; }
+.input, .select, .textarea {
+  width: 100%;
+  min-height: var(--control-h);
+  padding: 10px var(--space-4);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  font-size: var(--text-base);
+  font-weight: var(--weight-medium);
+  transition: var(--transition);
+}
+.textarea { min-height: 96px; resize: vertical; line-height: var(--leading-body); }
+.input:focus, .select:focus, .textarea:focus {
+  outline: none; border-color: var(--primary); box-shadow: var(--ring-focus);
+}
+.hint { font-size: var(--text-xs); color: var(--fg-faint); font-weight: var(--weight-medium); }
+
+.dropzone {
+  border: 2px dashed var(--border-dashed);
+  border-radius: var(--radius-lg);
+  background: var(--surface-sunken);
+  padding: var(--space-6);
+  text-align: center;
+}
+.dropzone strong { display: block; font-size: var(--text-md); }
+
+.filelist { display: flex; flex-direction: column; gap: var(--space-2); margin-top: var(--space-4); }
+.file {
+  display: flex; align-items: center; gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm); font-weight: var(--weight-bold);
+}
+.file .doc-ico {
+  width: 30px; height: 30px; flex: none; border-radius: var(--radius-xs);
+  background: var(--primary-soft); color: var(--primary-ink);
+  display: grid; place-items: center; font-size: 9.5px; font-weight: var(--weight-black);
+}
+.file .meta { font-size: var(--text-xs); color: var(--fg-faint); font-weight: var(--weight-medium); }
+.file .spacer { flex: 1 1 auto; }
+.file.missing { border-style: dashed; background: var(--warn-soft); border-color: #ecd39a; }
+.file.missing .doc-ico { background: #f6e2b6; color: var(--warn-ink); }
+
+/* ---------- Agent draft blocks --------------------------------------- */
+
+.agent-draft {
+  border: 1px solid #cddcff;
+  border-radius: var(--radius-lg);
+  background: linear-gradient(180deg, #f7faff 0%, #ffffff 60%);
+  overflow: hidden;
+}
+.agent-draft-head {
+  display: flex; align-items: center; gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+  border-bottom: 1px solid #e2ebff;
+}
+.agent-avatar {
+  width: 34px; height: 34px; flex: none; border-radius: var(--radius-md);
+  background: linear-gradient(150deg, var(--primary) 0%, var(--primary-deep) 100%);
+  color: #fff; display: grid; place-items: center;
+  font-size: var(--text-xs); font-weight: var(--weight-black);
+  box-shadow: var(--shadow-flat);
+}
+.agent-name { font-size: var(--text-base); font-weight: var(--weight-black); }
+.agent-meta { font-size: var(--text-xs); color: var(--fg-faint); font-weight: var(--weight-medium); }
+.agent-draft-head .spacer { flex: 1 1 auto; }
+.agent-draft-body { padding: var(--space-5); }
+
+.blocking-note {
+  display: flex; align-items: center; gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--warn-soft);
+  color: var(--warn-ink);
+  font-size: var(--text-sm); font-weight: var(--weight-bold);
+  border: 1px solid #ecd39a;
+}
+
+/* run telemetry strip */
+.runbar {
+  display: flex; flex-wrap: wrap; gap: var(--space-2);
+  padding: var(--space-3) var(--space-5);
+  background: var(--surface-sunken);
+  border-top: 1px solid var(--border);
+}
+.runbit {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 4px var(--space-3);
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  font-size: var(--text-xs); font-weight: var(--weight-bold);
+  color: var(--fg-muted);
+}
+.runbit b { color: var(--fg); font-family: var(--font-mono); font-size: 11px; font-weight: 700; }
+
+/* ---------- Citations ------------------------------------------------- */
+
+.cite {
+  display: inline-flex; align-items: center; gap: 4px;
+  height: 21px; padding: 0 8px;
+  border-radius: var(--radius-pill);
+  background: var(--primary-soft);
+  color: var(--primary-ink);
+  border: 1px solid #cddcff;
+  font-size: 10.5px; font-weight: var(--weight-black);
+  font-family: var(--font-mono);
+  cursor: pointer; vertical-align: middle;
+  white-space: nowrap;
+  transition: var(--transition);
+}
+.cite:hover { background: #d6e3ff; }
+.cite:focus-visible { outline: none; box-shadow: var(--ring-focus); }
+.cite::before { content: "\2197"; font-size: 9px; opacity: 0.75; }
+
+/* ---------- Tables (spread) ------------------------------------------ */
+
+.table-wrap { overflow-x: auto; }
+table.data { width: 100%; border-collapse: collapse; font-size: var(--text-sm); }
+table.data th {
+  text-align: left;
+  padding: var(--space-3) var(--space-4);
+  font-size: var(--text-xs); text-transform: uppercase;
+  letter-spacing: var(--tracking-caps); font-weight: var(--weight-bold);
+  color: var(--fg-faint);
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+  background: var(--surface-sunken);
+}
+table.data td {
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+  font-weight: var(--weight-medium);
+}
+table.data tbody tr:hover { background: #fafcff; }
+table.data .num {
+  text-align: right; font-family: var(--font-mono);
+  font-size: 12.5px; font-weight: 700; white-space: nowrap;
+}
+table.data .rowlabel { font-weight: var(--weight-bold); }
+table.data tr.subtotal td { background: var(--surface-sunken); font-weight: var(--weight-black); }
+table.data tr.subtotal .num { font-weight: 800; }
+.cell-cite { display: flex; align-items: center; justify-content: flex-end; gap: var(--space-2); }
+
+/* ---------- Computed-by-code metric cards ---------------------------- */
+
+.code-banner {
+  display: flex; align-items: center; gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--ok-soft);
+  border: 1px solid #b8e6d3;
+  color: var(--ok-ink);
+  font-size: var(--text-sm); font-weight: var(--weight-bold);
+  margin-bottom: var(--space-4);
+}
+.code-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 3px 10px; border-radius: var(--radius-pill);
+  background: var(--ok); color: #fff;
+  font-size: 10px; font-weight: var(--weight-black);
+  text-transform: uppercase; letter-spacing: 0.06em;
+}
+
+.metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: var(--space-4); }
+.metric {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  background: var(--surface);
+  box-shadow: var(--shadow-flat);
+}
+.metric-name { font-size: var(--text-xs); text-transform: uppercase; letter-spacing: var(--tracking-caps); font-weight: var(--weight-bold); color: var(--fg-faint); }
+.metric-val { font-size: var(--text-2xl); font-weight: var(--weight-black); letter-spacing: -0.035em; line-height: 1.15; }
+.metric-formula {
+  font-family: var(--font-mono); font-size: 11px; color: var(--fg-muted);
+  background: var(--surface-sunken); border-radius: var(--radius-xs);
+  padding: 6px var(--space-2); margin-top: var(--space-2);
+  line-height: 1.45; word-break: break-word;
+}
+.metric-test { margin-top: var(--space-2); font-size: var(--text-xs); font-weight: var(--weight-bold); }
+
+/* ---------- Rubric trace ---------------------------------------------- */
+
+.rubric { display: flex; flex-direction: column; gap: var(--space-2); }
+.rubric-row {
+  display: grid; grid-template-columns: 1.6fr 1fr auto;
+  gap: var(--space-3); align-items: center;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  font-size: var(--text-sm);
+}
+.rubric-row .rk { font-weight: var(--weight-bold); }
+.rubric-row .rv { font-family: var(--font-mono); font-size: 12px; font-weight: 700; color: var(--fg-muted); }
+.rubric-row .rp {
+  min-width: 46px; text-align: center;
+  border-radius: var(--radius-pill); padding: 3px var(--space-2);
+  background: var(--primary-soft); color: var(--primary-ink);
+  font-weight: var(--weight-black); font-size: var(--text-xs);
+}
+.rubric-total {
+  display: flex; align-items: center; gap: var(--space-3);
+  margin-top: var(--space-2); padding: var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--surface-sunken);
+  border: 1px dashed var(--border-strong);
+  font-weight: var(--weight-bold);
+}
+
+/* ---------- Memo ------------------------------------------------------ */
+
+.memo { font-size: var(--text-md); line-height: 1.75; max-width: 76ch; }
+.memo h4 {
+  font-size: var(--text-xs); text-transform: uppercase; letter-spacing: var(--tracking-caps);
+  color: var(--fg-faint); margin: var(--space-5) 0 var(--space-2);
+}
+.memo h4:first-child { margin-top: 0; }
+.memo p + p { margin-top: var(--space-3); }
+
+/* ---------- Exceptions ------------------------------------------------ */
+
+.exception {
+  display: grid; grid-template-columns: auto 1fr auto;
+  gap: var(--space-3) var(--space-4); align-items: start;
+  padding: var(--space-4);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  box-shadow: var(--shadow-flat);
+}
+.exception + .exception { margin-top: var(--space-3); }
+.exception.sev-high { border-color: #f0c0b8; background: #fffaf9; }
+.exception.sev-med { border-color: #ecd39a; background: #fffdf7; }
+.pol-id {
+  font-family: var(--font-mono); font-size: 11px; font-weight: 800;
+  padding: 5px 9px; border-radius: var(--radius-xs);
+  background: var(--fg); color: #fff; white-space: nowrap;
+}
+.exception .etitle { font-weight: var(--weight-black); font-size: var(--text-base); }
+.exception .etext { font-size: var(--text-sm); color: var(--fg-muted); margin-top: 3px; }
+
+/* ---------- Timeline spine (audit + deal) ---------------------------- */
+
+.spine { position: relative; padding-left: 46px; }
+.spine::before {
+  content: ""; position: absolute; left: 17px; top: 6px; bottom: 6px;
+  width: 3px; border-radius: var(--radius-pill);
+  background: linear-gradient(180deg, var(--primary-soft), var(--border), var(--primary-soft));
+}
+.tl-item { position: relative; margin-bottom: var(--space-4); }
+.tl-item:last-child { margin-bottom: 0; }
+.tl-node {
+  position: absolute; left: -46px; top: 14px;
+  width: 36px; height: 36px; border-radius: 50%;
+  background: var(--surface);
+  border: 3px solid var(--border-strong);
+  display: grid; place-items: center;
+  font-size: 13px;
+  box-shadow: var(--shadow-flat);
+}
+.tl-node.ok { border-color: var(--ok); color: var(--ok); }
+.tl-node.warn { border-color: var(--warn); color: var(--warn); }
+.tl-node.bad { border-color: var(--danger); color: var(--danger); }
+.tl-node.info { border-color: var(--primary); color: var(--primary); }
+.tl-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--space-4) var(--space-5);
+  box-shadow: var(--shadow-card);
+}
+.tl-head { display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; }
+.tl-action { font-weight: var(--weight-black); font-size: var(--text-base); }
+.tl-time {
+  margin-left: auto; font-family: var(--font-mono);
+  font-size: 11px; color: var(--fg-faint); font-weight: 700; white-space: nowrap;
+}
+.tl-actor { font-size: var(--text-sm); color: var(--fg-muted); margin-top: 4px; }
+.tl-actor b { color: var(--fg); }
+.tl-detail {
+  margin-top: var(--space-3); padding: var(--space-3) var(--space-4);
+  background: var(--surface-sunken); border-radius: var(--radius-sm);
+  font-family: var(--font-mono); font-size: 11.5px; color: var(--fg-muted);
+  line-height: 1.6; word-break: break-word;
+}
+.hash { font-family: var(--font-mono); font-size: 10.5px; color: var(--fg-faint); }
+
+/* read-only banner */
+.readonly-banner {
+  display: flex; align-items: center; gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+  border-radius: var(--radius-lg);
+  background: repeating-linear-gradient(135deg, #f7f9fe 0 12px, #f2f5fb 12px 24px);
+  border: 1px solid var(--border-strong);
+  margin-bottom: var(--space-5);
+  font-size: var(--text-sm); font-weight: var(--weight-bold); color: var(--fg-muted);
+}
+.lock {
+  width: 34px; height: 34px; border-radius: var(--radius-md);
+  background: var(--fg); color: #fff; display: grid; place-items: center; flex: none;
+}
+
+/* ---------- Approvals tier columns ----------------------------------- */
+
+.tier-col {
+  display: flex; flex-direction: column;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface-sunken);
+  overflow: hidden;
+}
+.tier-head {
+  padding: var(--space-5);
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+.tier-badge {
+  display: inline-flex; align-items: center; gap: var(--space-2);
+  padding: 5px var(--space-3);
+  border-radius: var(--radius-pill);
+  font-size: var(--text-xs); font-weight: var(--weight-black);
+  text-transform: uppercase; letter-spacing: 0.06em;
+  color: #fff;
+}
+.tier-1 { background: var(--stage-3); }
+.tier-2 { background: var(--stage-6); }
+.tier-3 { background: var(--stage-8); }
+.tier-name { font-size: var(--text-lg); font-weight: var(--weight-black); letter-spacing: -0.02em; margin-top: var(--space-3); }
+.tier-range { font-size: var(--text-sm); color: var(--fg-muted); font-weight: var(--weight-bold); }
+.tier-stats { display: flex; gap: var(--space-5); margin-top: var(--space-4); }
+.tier-stat .n { font-size: var(--text-xl); font-weight: var(--weight-black); letter-spacing: -0.03em; }
+.tier-stat .l { font-size: var(--text-xs); color: var(--fg-faint); font-weight: var(--weight-bold); text-transform: uppercase; letter-spacing: 0.06em; }
+.tier-body { padding: var(--space-4); display: flex; flex-direction: column; gap: var(--space-4); }
+
+.approval-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
+  overflow: hidden;
+}
+.approval-top { padding: var(--space-4); }
+.approval-actions {
+  display: flex; flex-wrap: wrap; gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  background: var(--surface-sunken);
+  border-top: 1px solid var(--border);
+}
+.decider {
+  display: flex; flex-direction: column; gap: 6px;
+  padding: var(--space-3) var(--space-4);
+  border-top: 1px dashed var(--border);
+  background: #fbfcff;
+}
+
+/* key/value rows */
+.kv { display: grid; grid-template-columns: auto 1fr; gap: 6px var(--space-4); font-size: var(--text-sm); }
+.kv dt { color: var(--fg-faint); font-weight: var(--weight-bold); white-space: nowrap; }
+.kv dd { margin: 0; font-weight: var(--weight-bold); text-align: right; }
+
+/* ---------- Deal header ----------------------------------------------- */
+
+.deal-hero {
+  display: flex; align-items: center; gap: var(--space-5); flex-wrap: wrap;
+  padding: var(--space-5) var(--space-6);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-card);
+  margin-bottom: var(--space-5);
+}
+.hero-mark {
+  width: 60px; height: 60px; border-radius: var(--radius-lg); flex: none;
+  background: linear-gradient(150deg, var(--stage-3), var(--stage-4));
+  color: #fff; display: grid; place-items: center;
+  font-size: var(--text-xl); font-weight: var(--weight-black);
+  box-shadow: var(--shadow-card);
+}
+.hero-name { font-size: var(--text-xl); font-weight: var(--weight-black); letter-spacing: -0.03em; }
+.hero-sub { font-size: var(--text-sm); color: var(--fg-muted); font-weight: var(--weight-bold); }
+.hero-stats { margin-left: auto; display: flex; gap: var(--space-6); flex-wrap: wrap; }
+.hero-stat .l { font-size: var(--text-xs); text-transform: uppercase; letter-spacing: var(--tracking-caps); color: var(--fg-faint); font-weight: var(--weight-bold); }
+.hero-stat .v { font-size: var(--text-lg); font-weight: var(--weight-black); letter-spacing: -0.025em; }
+
+/* stage progress ribbon */
+.ribbon { display: flex; gap: 5px; margin-bottom: var(--space-5); flex-wrap: wrap; }
+.ribbon-step {
+  flex: 1 1 110px;
+  padding: var(--space-3) var(--space-3);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  font-size: var(--text-xs); font-weight: var(--weight-bold);
+  color: var(--fg-faint);
+  text-align: center;
+  position: relative;
+}
+.ribbon-step .n { display: block; font-size: 10px; opacity: 0.8; }
+.ribbon-step.done { background: var(--ok-soft); border-color: #b8e6d3; color: var(--ok-ink); }
+.ribbon-step.current {
+  background: linear-gradient(150deg, var(--primary), var(--primary-deep));
+  border-color: var(--primary-deep); color: #fff;
+  box-shadow: var(--shadow-card);
+}
+
+/* ---------- Review: two-column evidence/draft pair ------------------- */
+
+.pair { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-5); align-items: start; }
+@media (max-width: 1180px) { .pair { grid-template-columns: 1fr; } }
+.pair-col { display: flex; flex-direction: column; }
+.pair-label {
+  display: flex; align-items: center; gap: var(--space-2);
+  font-size: var(--text-xs); text-transform: uppercase;
+  letter-spacing: var(--tracking-caps); font-weight: var(--weight-bold);
+  color: var(--fg-faint); margin-bottom: var(--space-3);
+}
+.pair-label .num {
+  width: 20px; height: 20px; border-radius: var(--radius-xs);
+  background: var(--fg); color: #fff; display: grid; place-items: center; font-size: 10px;
+}
+.evidence-item {
+  border: 1px solid var(--border); border-radius: var(--radius-md);
+  padding: var(--space-4); background: var(--surface); margin-bottom: var(--space-3);
+}
+.evidence-item.linked { border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-soft); }
+.evidence-src { font-family: var(--font-mono); font-size: 11px; color: var(--primary-ink); font-weight: 800; }
+.evidence-quote {
+  margin-top: var(--space-2); padding-left: var(--space-4);
+  border-left: 3px solid var(--primary-soft);
+  font-size: var(--text-sm); color: var(--fg-muted); line-height: 1.6;
+}
+
+.reject-box {
+  margin-top: var(--space-4); padding: var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--danger-soft); border: 1px solid #f3c8c1;
+}
+
+/* ---------- SLA severity columns ------------------------------------- */
+
+.sev-col { border-radius: var(--radius-lg); border: 1px solid var(--border); overflow: hidden; background: var(--surface-sunken); }
+.sev-head { padding: var(--space-5); color: #fff; }
+.sev-head.watch { background: linear-gradient(150deg, #e0aa2a, #c07a05); }
+.sev-head.breach { background: linear-gradient(150deg, #e9843b, #cc5c17); }
+.sev-head.critical { background: linear-gradient(150deg, #e0533f, #a52a1b); }
+.sev-n { font-size: var(--text-3xl); font-weight: var(--weight-black); letter-spacing: -0.04em; line-height: 1; }
+.sev-l { font-size: var(--text-md); font-weight: var(--weight-black); }
+.sev-r { font-size: var(--text-sm); opacity: 0.9; font-weight: var(--weight-bold); }
+.sev-body { padding: var(--space-4); display: flex; flex-direction: column; gap: var(--space-3); }
+
+.sla-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius-md); padding: var(--space-4);
+  box-shadow: var(--shadow-flat);
+}
+.sla-days {
+  display: inline-grid; place-items: center;
+  min-width: 52px; height: 46px; border-radius: var(--radius-md);
+  background: var(--surface-sunken);
+  font-size: var(--text-xl); font-weight: var(--weight-black); letter-spacing: -0.03em;
+  line-height: 1;
+}
+.sla-days small { display: block; font-size: 9px; font-weight: var(--weight-bold); color: var(--fg-faint); text-transform: uppercase; letter-spacing: 0.06em; }
+.sla-days.warn { background: var(--warn-soft); color: var(--warn-ink); }
+.sla-days.bad { background: var(--danger-soft); color: var(--danger-ink); }
+
+/* ---------- Chat ------------------------------------------------------ */
+
+.chat-wrap { display: grid; grid-template-columns: 1fr 320px; gap: var(--space-5); align-items: start; }
+@media (max-width: 1180px) { .chat-wrap { grid-template-columns: 1fr; } }
+
+.chat-panel {
+  display: flex; flex-direction: column;
+  height: calc(100vh - var(--header-h) - 190px);
+  min-height: 460px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-card);
+  overflow: hidden;
+}
+.chat-head {
+  display: flex; align-items: center; gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+  border-bottom: 1px solid var(--border);
+  background: linear-gradient(180deg, #fff, #fbfcff);
+}
+.scope-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 5px var(--space-3); border-radius: var(--radius-pill);
+  background: var(--ok-soft); color: var(--ok-ink);
+  font-size: var(--text-xs); font-weight: var(--weight-black);
+}
+
+#messages {
+  flex: 1 1 auto; overflow-y: auto;
+  padding: var(--space-5);
+  display: flex; flex-direction: column; gap: var(--space-4);
+  background:
+    radial-gradient(circle at 1px 1px, #e7ecf7 1px, transparent 0) 0 0 / 22px 22px;
+}
+.msg { display: flex; gap: var(--space-3); max-width: 88%; }
+.msg.user { align-self: flex-end; flex-direction: row-reverse; }
+.msg-av {
+  width: 34px; height: 34px; flex: none; border-radius: var(--radius-md);
+  display: grid; place-items: center;
+  font-size: 11px; font-weight: var(--weight-black);
+  background: var(--surface-sunken); color: var(--fg-muted);
+  border: 1px solid var(--border);
+}
+.msg.agent .msg-av {
+  background: linear-gradient(150deg, var(--primary), var(--primary-deep));
+  color: #fff; border-color: var(--primary-deep);
+}
+.bubble {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4) var(--space-5);
+  box-shadow: var(--shadow-card);
+  font-size: var(--text-base);
+  line-height: var(--leading-body);
+}
+.msg.user .bubble {
+  background: linear-gradient(150deg, var(--primary), var(--primary-deep));
+  color: var(--on-primary); border-color: var(--primary-deep);
+}
+.bubble.abstain { background: var(--warn-soft); border-color: #ecd39a; color: var(--warn-ink); }
+.msg-cites { display: flex; flex-wrap: wrap; gap: 6px; margin-top: var(--space-3); }
+.msg-who {
+  font-size: var(--text-xs); font-weight: var(--weight-bold);
+  color: var(--fg-faint); margin-bottom: 5px;
+}
+
+#composer {
+  display: flex; align-items: center; gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+}
+#input {
+  flex: 1 1 auto;
+  height: var(--control-h-lg);
+  padding: 0 var(--space-5);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-pill);
+  background: var(--surface-sunken);
+  font-size: var(--text-md);
+  font-weight: var(--weight-medium);
+}
+#input:focus { outline: none; border-color: var(--primary); background: var(--surface); box-shadow: var(--ring-focus); }
+
+.suggestions { display: flex; flex-wrap: wrap; gap: var(--space-2); padding: 0 var(--space-5) var(--space-4); }
+.suggestion {
+  padding: 7px var(--space-4); border-radius: var(--radius-pill);
+  border: 1px dashed var(--border-strong); background: var(--surface);
+  font-size: var(--text-sm); font-weight: var(--weight-bold); color: var(--fg-muted);
+  cursor: pointer;
+}
+.suggestion:hover { border-style: solid; color: var(--primary-ink); background: var(--primary-soft); }
+
+/* ---------- Misc ------------------------------------------------------ */
+
+.stack { display: flex; flex-direction: column; gap: var(--space-3); }
+.row { display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; }
+.row.tight { gap: var(--space-2); }
+.muted { color: var(--fg-muted); }
+.faint { color: var(--fg-faint); }
+.small { font-size: var(--text-sm); }
+.xsmall { font-size: var(--text-xs); }
+.mono { font-family: var(--font-mono); }
+.mt-3 { margin-top: var(--space-3); }
+.mt-4 { margin-top: var(--space-4); }
+.mt-5 { margin-top: var(--space-5); }
+.mb-3 { margin-bottom: var(--space-3); }
+.mb-4 { margin-bottom: var(--space-4); }
+.right { margin-left: auto; }
+.sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <!-- ============ BRAND CORNER ============ -->
+  <div class="brandbar">
+    <div class="brand-mark" aria-hidden="true">UC</div>
+    <div>
+      <div class="brand-name">Underwriting</div>
+      <div class="brand-sub">Deal Board</div>
+    </div>
+  </div>
+
+  <!-- ============ TOP BAR ============ -->
+  <header class="topbar">
+    <h1 class="topbar-title">Underwriting Command Center</h1>
+
+    <!-- MANDATORY: agent mode switcher -->
+    <div id="agent-mode" class="agent-mode" role="group" aria-label="Active AI agent">
+      <span class="agent-mode-label">Agent</span>
+      <button type="button" class="agent-chip" data-agent="triage" aria-pressed="false">
+        <span class="dot"></span>Intake Triage
+      </button>
+      <button type="button" class="agent-chip" data-agent="spreading" aria-pressed="false">
+        <span class="dot"></span>Financial Spreading
+      </button>
+      <button type="button" class="agent-chip" data-agent="memo" aria-pressed="false">
+        <span class="dot"></span>Credit Memo
+      </button>
+      <button type="button" class="agent-chip" data-agent="policy" aria-pressed="false">
+        <span class="dot"></span>Policy Compliance
+      </button>
+      <button type="button" class="agent-chip" data-agent="qa" aria-pressed="true">
+        <span class="dot"></span>Portfolio Q&amp;A
+      </button>
+    </div>
+
+    <div class="topbar-spacer"></div>
+
+    <div class="who">
+      <div class="avatar" aria-hidden="true">DR</div>
+      <div>
+        <div class="who-name">Dana Ruiz</div>
+        <div class="who-role">Senior Credit Officer &middot; approve &le; $1M</div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ============ LEFT RAIL ============ -->
+  <nav class="rail" aria-label="Primary">
+    <div class="rail-group">Workflow</div>
+    <button type="button" class="rail-item active" data-screen="pipeline">
+      <span class="rail-ico" aria-hidden="true">&#9638;</span> Pipeline <span class="rail-count">12</span>
+    </button>
+    <button type="button" class="rail-item" data-screen="intake">
+      <span class="rail-ico" aria-hidden="true">&#43;</span> Intake <span class="rail-count">3</span>
+    </button>
+    <button type="button" class="rail-item" data-screen="deal">
+      <span class="rail-ico" aria-hidden="true">&#9634;</span> Deal Workspace
+    </button>
+
+    <div class="rail-group">Human Control</div>
+    <button type="button" class="rail-item" data-screen="review">
+      <span class="rail-ico" aria-hidden="true">&#9998;</span> Review Queue <span class="rail-count">7</span>
+    </button>
+    <button type="button" class="rail-item" data-screen="approvals">
+      <span class="rail-ico" aria-hidden="true">&#10003;</span> Approvals <span class="rail-count">5</span>
+    </button>
+
+    <div class="rail-group">Oversight</div>
+    <button type="button" class="rail-item" data-screen="sla">
+      <span class="rail-ico" aria-hidden="true">&#9201;</span> SLA Watch <span class="rail-count alert">4</span>
+    </button>
+    <button type="button" class="rail-item" data-screen="audit">
+      <span class="rail-ico" aria-hidden="true">&#9776;</span> Audit Trail
+    </button>
+    <button type="button" class="rail-item" data-screen="chat">
+      <span class="rail-ico" aria-hidden="true">&#9993;</span> Portfolio Q&amp;A
+    </button>
+
+    <div class="rail-foot">
+      Deterministic engine v4.2<br>
+      Policy set FY26-Q3 &middot; 41 rules<br>
+      <span class="mono">RBAC: credit_officer</span>
+    </div>
+  </nav>
+
+  <!-- ============ MAIN ============ -->
+  <main class="main">
+
+    <!-- ================= PIPELINE ================= -->
+    <section id="screen-pipeline" class="screen active" aria-label="Pipeline board">
+      <div class="screen-head">
+        <div>
+          <div class="eyebrow">REQ-001 &middot; REQ-002</div>
+          <h2 class="screen-title">Pipeline Board</h2>
+          <p class="screen-sub">Every active deal and the workflow stage it occupies. Drag a card to move it &mdash; stages past Policy Check require a named human approval.</p>
+        </div>
+        <div class="screen-head-actions">
+          <button type="button" class="btn btn-sm">Filters</button>
+          <button type="button" class="btn btn-primary" data-goto="intake">New Deal</button>
+        </div>
+      </div>
+
+      <div class="statbar">
+        <div class="stat" style="--accent: var(--primary)">
+          <div class="stat-label">Active deals</div>
+          <div class="stat-value">12</div>
+          <div class="stat-foot">across 8 stages</div>
+        </div>
+        <div class="stat" style="--accent: var(--stage-4)">
+          <div class="stat-label">Total exposure</div>
+          <div class="stat-value sm">$8.94M</div>
+          <div class="stat-foot">committed + requested</div>
+        </div>
+        <div class="stat" style="--accent: var(--warn)">
+          <div class="stat-label">Drafts awaiting human</div>
+          <div class="stat-value">7</div>
+          <div class="stat-foot">blocking stage advance</div>
+        </div>
+        <div class="stat" style="--accent: var(--danger)">
+          <div class="stat-label">SLA breaches</div>
+          <div class="stat-value">4</div>
+          <div class="stat-foot">idle &gt; 5 business days</div>
+        </div>
+        <div class="stat" style="--accent: var(--stage-8)">
+          <div class="stat-label">Committee queue</div>
+          <div class="stat-value">2</div>
+          <div class="stat-foot">exposure &gt; $1M</div>
+        </div>
+      </div>
+
+      <div class="toolbar">
+        <span class="field-inline">Portfolio
+          <select class="control" aria-label="Portfolio filter">
+            <option>All SMB &mdash; Northeast</option>
+            <option>Owner-occupied CRE</option>
+            <option>Equipment finance</option>
+          </select>
+        </span>
+        <span class="field-inline">Owner
+          <select class="control" aria-label="Owner filter">
+            <option>Everyone</option>
+            <option>My deals</option>
+            <option>Unassigned</option>
+          </select>
+        </span>
+        <span class="field-inline">Grade
+          <select class="control" aria-label="Grade filter">
+            <option>Any grade</option>
+            <option>Pass (1&ndash;4)</option>
+            <option>Watch (5&ndash;6)</option>
+          </select>
+        </span>
+        <div class="spacer"></div>
+        <span class="chip chip-outline">WIP limits on</span>
+        <button type="button" class="btn btn-sm btn-ghost">Save view</button>
+      </div>
+
+      <div class="board">
+
+        <!-- 1 INTAKE -->
+        <div class="col" style="--accent: var(--stage-1)">
+          <div class="col-head">
+            <div class="col-head-top">
+              <span class="col-index">1</span>
+              <span class="col-name">Intake</span>
+              <span class="col-count">2</span>
+            </div>
+            <div class="col-wip"><strong>$465K</strong> in stage &middot; WIP 2/6</div>
+            <div class="col-meter"><i style="width:33%"></i></div>
+          </div>
+          <div class="col-body">
+            <div role="button" tabindex="0" class="deal-card" data-goto="deal" style="--accent: var(--stage-1)">
+              <span class="grip" aria-hidden="true"></span>
+              <div class="dc-top">
+                <div>
+                  <div class="dc-name">Kestrel Coffee Roasters</div>
+                  <div class="dc-id">DL-2026-0412</div>
+                </div>
+              </div>
+              <div class="dc-exposure">$95,000</div>
+              <div class="dc-facility">Equipment term loan &middot; 60 mo</div>
+              <div class="dc-chips">
+                <span class="grade grade-none">&mdash;</span>
+                <span class="chip chip-warn">Triage draft pending</span>
+              </div>
+              <div class="dc-foot">
+                <span class="owner"><span class="av">MT</span> M. Tran</span>
+                <span class="spacer"></span>
+                <span class="idle"><span class="pip"></span>1d idle</span>
+              </div>
+            </div>
+
+            <div role="button" tabindex="0" class="deal-card" data-goto="deal" style="--accent: var(--stage-1)">
+              <span class="grip" aria-hidden="true"></span>
+              <div class="dc-top">
+                <div>
+                  <div class="dc-name">Palmetto Landscaping Co.</div>
+                  <div class="dc-id">DL-2026-0411</div>
+                </div>
+              </div>
+              <div class="dc-exposure">$370,000</div>
+              <div class="dc-facility">Revolving line of credit</div>
+              <div class="dc-chips">
+                <span class="grade grade-none">&mdash;</span>
+                <span class="chip chip-danger">2 docs missing</span>
+              </div>
+              <div class="dc-foot">
+                <span class="owner"><span class="av">MT</span> M. Tran</span>
+                <span class="spacer"></span>
+                <span class="idle warn"><span class="pip"></span>4d idle</span>
+              </div>
+            </div>
+            <div class="drop-hint">Drop here to move to Intake</div>
+          </div>
+        </div>
+
+        <!-- 2 DOC EXTRACTION -->
+        <div class="col" style="--accent: var(--stage-2)">
+          <div class="col-head">
+            <div class="col-head-top">
+              <span class="col-index">2</span>
+              <span class="col-name">Doc Extraction</span>
+              <span class="col-count">1</span>
+            </div>
+            <div class="col-wip"><strong>$220K</strong> in stage &middot; WIP 1/6</div>
+            <div class="col-meter"><i style="width:17%"></i></div>
+          </div>
+          <div class="col-body">
+            <div role="button" tabindex="0" class="deal-card" data-goto="deal" style="--accent: var(--stage-2)">
+              <span class="grip" aria-hidden="true"></span>
+              <div class="dc-top">
+                <div>
+                  <div class="dc-name">Blue Otter Logistics LLC</div>
+                  <div class="dc-id">DL-2026-0408</div>
+                </div>
+              </div>
+              <div class="dc-exposure">$220,000</div>
+              <div class="dc-facility">Working capital line</div>
+              <div class="dc-chips">
+                <span class="grade grade-none">&mdash;</span>
+                <span class="chip chip-info">6 of 7 docs parsed</span>
+              </div>
+              <div class="dc-foot">
+                <span class="owner"><span class="av">JP</span> J. Park</span>
+                <span class="spacer"></span>
+                <span class="idle"><span class="pip"></span>2d idle</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 3 SPREADING -->
+        <div class="col" style="--accent: var(--stage-3)">
+          <div class="col-head">
+            <div class="col-head-top">
+              <span class="col-index">3</span>
+              <span class="col-name">Financial Spreading</span>
+              <span class="col-count">2</span>
+            </div>
+            <div class="col-wip"><strong>$1.22M</strong> in stage &middot; WIP 2/5</div>
+            <div class="col-meter"><i style="width:40%"></i></div>
+          </div>
+          <div class="col-body">
+            <div role="button" tabindex="0" class="deal-card" data-goto="deal" style="--accent: var(--stage-3)">
+              <span class="grip" aria-hidden="true"></span>
+              <div class="dc-top">
+                <div>
+                  <div class="dc-name">Harborview Dental Group</div>
+                  <div class="dc-id">DL-2026-0402</div>
+                </div>
+              </div>
+              <div class="dc-exposure">$340,000</div>
+              <div class="dc-facility">Practice acquisition term</div>
+              <div class="dc-chips">
+                <span class="grade grade-none">&mdash;</span>
+                <span class="chip chip-warn">Spread draft pending</span>
+              </div>
+              <div class="dc-foot">
+                <span class="owner"><span class="av">AK</span> A. Kaur</span>
+                <span class="spacer"></span>
+                <span class="idle"><span class="pip"></span>1d idle</span>
+              </div>
+            </div>
+
+            <div role="button" tabindex="0" class="deal-card" data-goto="deal" style="--accent: var(--stage-3)">
+              <span class="grip" aria-hidden="true"></span>
+              <div class="dc-top">
+                <div>
+                  <div class="dc-name">Sunbelt HVAC Services</div>
+                  <div class="dc-id">DL-2026-0399</div>
+                </div>
+              </div>
+              <div class="dc-exposure">$880,000</div>
+              <div class="dc-facility">Equipment + working capital</div>
+              <div class="dc-chips">
+                <span class="grade grade-none">&mdash;</span>
+                <span class="chip chip-warn">Spread draft pending</span>
+              </div>
+              <div class="dc-foot">
+                <span class="owner"><span class="av">AK</span> A. Kaur</span>
+                <span class="spacer"></span>
+                <span class="idle bad"><span class="pip"></span>9d idle</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 4 RISK GRADING -->
+        <div class="col" style="--accent: var(--stage-4)">
+          <div class="col-head">
+            <div class="col-head-top">
+              <span class="col-index">4</span>
+              <span class="col-name">Risk Grading</span>
+              <span class="col-count">2</span>
+            </div>
+            <div class="col-wip"><strong>$1.03M</strong> in stage &middot; WIP 2/5</div>
+            <div class="col-meter"><i style="width:40%"></i></div>
+          </div>
+          <div class="col-body">
+            <div role="button" tabindex="0" class="deal-card" data-goto="deal" style="--accent: var(--stage-4)">
+              <span class="grip" aria-hidden="true"></span>
+              <div class="dc-top">
+                <div>
+                  <div class="dc-name">Ridgeline Precision Machining</div>
+                  <div class="dc-id">DL-2026-0395</div>
+                </div>
+              </div>
+              <div class="dc-exposure">$875,000</div>
+              <div class="dc-facility">Owner-occupied CRE</div>
+              <div class="dc-chips">
+                <span class="grade grade-b">4B</span>
+                <span class="chip chip-ok">DSCR 1.42x</span>
+                <span class="chip chip-outline">Code-computed</span>
+              </div>
+              <div class="dc-foot">
+                <span class="owner"><span class="av">AK</span> A. Kaur</span>
+                <span class="spacer"></span>
+                <span class="idle"><span class="pip"></span>0d idle</span>
+              </div>
+            </div>
+
+            <div role="button" tabindex="0" class="deal-card" data-goto="deal" style="--accent: var(--stage-4)">
+              <span class="grip" aria-hidden="true"></span>
+              <div class="dc-top">
+                <div>
+                  <div class="dc-name">Lakeshore Physical Therapy</div>
+                  <div class="dc-id">DL-2026-0390</div>
+                </div>
+              </div>
+              <div class="dc-exposure">$150,000</div>
+              <div class="dc-facility">Working capital line</div>
+              <div class="dc-chips">
+                <span class="grade grade-c">5C</span>
+                <span class="chip chip-warn">DSCR 1.11x</span>
+              </div>
+              <div class="dc-foot">
+                <span class="owner"><span class="av">JP</span> J. Park</span>
+                <span class="spacer"></span>
+                <span class="idle warn"><span class="pip"></span>5d idle</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 5 MEMO DRAFT -->
+        <div class="col" style="--accent: var(--stage-5)">
+          <div class="col-head">
+            <div class="col-head-top">
+              <span class="col-index">5</span>
+              <span class="col-name">Memo Drafting</span>
+              <span class="col-count">2</span>
+            </div>
+            <div class="col-wip"><strong>$1.90M</strong> in stage &middot; WIP 2/4</div>
+            <div class="col-meter"><i style="width:50%"></i></div>
+          </div>
+          <div class="col-body">
+            <div role="button" tabindex="0" class="deal-card" data-goto="review" style="--accent: var(--stage-5)">
+              <span class="grip" aria-hidden="true"></span>
+              <div class="dc-top">
+                <div>
+                  <div class="dc-name">Cedar &amp; Vine Restaurant Group</div>
+                  <div class="dc-id">DL-2026-0388</div>
+                </div>
+              </div>
+              <div class="dc-exposure">$1,450,000</div>
+              <div class="dc-facility">CRE refinance &middot; 2 properties</div>
+              <div class="dc-chips">
+                <span class="grade grade-c">5C</span>
+                <span class="chip chip-warn">Memo draft pending</span>
+              </div>
+              <div class="dc-foot">
+                <span class="owner"><span class="av">AK</span> A. Kaur</span>
+                <span class="spacer"></span>
+                <span class="idle warn"><span class="pip"></span>6d idle</span>
+              </div>
+            </div>
+
+            <div role="button" tabindex="0" class="deal-card" data-goto="deal" style="--accent: var(--stage-5)">
+              <span class="grip" aria-hidden="true"></span>
+              <div class="dc-top">
+                <div>
+                  <div class="dc-name">Northgate Veterinary Partners</div>
+                  <div class="dc-id">DL-2026-0384</div>
+                </div>
+              </div>
+              <div class="dc-exposure">$450,000</div>
+              <div class="dc-facility">Practice expansion term</div>
+              <div class="dc-chips">
+                <span class="grade grade-b">3B</span>
+                <span class="chip chip-info">Memo edited by analyst</span>
+              </div>
+              <div class="dc-foot">
+                <span class="owner"><span class="av">JP</span> J. Park</span>
+                <span class="spacer"></span>
+                <span class="idle"><span class="pip"></span>1d idle</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 6 POLICY CHECK -->
+        <div class="col" style="--accent: var(--stage-6)">
+          <div class="col-head">
+            <div class="col-head-top">
+              <span class="col-index">6</span>
+              <span class="col-name">Policy Check</span>
+              <span class="col-count">1</span>
+            </div>
+            <div class="col-wip"><strong>$185K</strong> in stage &middot; WIP 1/4</div>
+            <div class="col-meter"><i style="width:25%"></i></div>
+          </div>
+          <div class="col-body">
+            <div role="button" tabindex="0" class="deal-card" data-goto="deal" style="--accent: var(--stage-6)">
+              <span class="grip" aria-hidden="true"></span>
+              <div class="dc-top">
+                <div>
+                  <div class="dc-name">Meridian Print Works</div>
+                  <div class="dc-id">DL-2026-0379</div>
+                </div>
+              </div>
+              <div class="dc-exposure">$185,000</div>
+              <div class="dc-facility">Equipment term loan</div>
+              <div class="dc-chips">
+                <span class="grade grade-b">4B</span>
+                <span class="chip chip-danger">2 exceptions raised</span>
+              </div>
+              <div class="dc-foot">
+                <span class="owner"><span class="av">AK</span> A. Kaur</span>
+                <span class="spacer"></span>
+                <span class="idle warn"><span class="pip"></span>3d idle</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 7 APPROVAL -->
+        <div class="col" style="--accent: var(--stage-7)">
+          <div class="col-head">
+            <div class="col-head-top">
+              <span class="col-index">7</span>
+              <span class="col-name">Approval</span>
+              <span class="col-count">3</span>
+            </div>
+            <div class="col-wip"><strong>$4.57M</strong> in stage &middot; WIP 3/8</div>
+            <div class="col-meter"><i style="width:38%"></i></div>
+          </div>
+          <div class="col-body">
+            <div role="button" tabindex="0" class="deal-card" data-goto="approvals" style="--accent: var(--stage-7)">
+              <span class="grip" aria-hidden="true"></span>
+              <div class="dc-top">
+                <div>
+                  <div class="dc-name">Ironwood Craft Brewing</div>
+                  <div class="dc-id">DL-2026-0371</div>
+                </div>
+              </div>
+              <div class="dc-exposure">$2,400,000</div>
+              <div class="dc-facility">CRE + equipment package</div>
+              <div class="dc-chips">
+                <span class="grade grade-c">5C</span>
+                <span class="chip chip-info">Committee tier</span>
+              </div>
+              <div class="dc-foot">
+                <span class="owner"><span class="av">DR</span> D. Ruiz</span>
+                <span class="spacer"></span>
+                <span class="idle bad"><span class="pip"></span>11d idle</span>
+              </div>
+            </div>
+
+            <div role="button" tabindex="0" class="deal-card" data-goto="approvals" style="--accent: var(--stage-7)">
+              <span class="grip" aria-hidden="true"></span>
+              <div class="dc-top">
+                <div>
+                  <div class="dc-name">Fairmont Auto Body</div>
+                  <div class="dc-id">DL-2026-0368</div>
+                </div>
+              </div>
+              <div class="dc-exposure">$1,900,000</div>
+              <div class="dc-facility">CRE acquisition</div>
+              <div class="dc-chips">
+                <span class="grade grade-d">6D</span>
+                <span class="chip chip-danger">POL-LTV-02 exception</span>
+              </div>
+              <div class="dc-foot">
+                <span class="owner"><span class="av">DR</span> D. Ruiz</span>
+                <span class="spacer"></span>
+                <span class="idle warn"><span class="pip"></span>4d idle</span>
+              </div>
+            </div>
+
+            <div role="button" tabindex="0" class="deal-card" data-goto="approvals" style="--accent: var(--stage-7)">
+              <span class="grip" aria-hidden="true"></span>
+              <div class="dc-top">
+                <div>
+                  <div class="dc-name">Granite Ridge Plumbing</div>
+                  <div class="dc-id">DL-2026-0366</div>
+                </div>
+              </div>
+              <div class="dc-exposure">$275,000</div>
+              <div class="dc-facility">Working capital line</div>
+              <div class="dc-chips">
+                <span class="grade grade-a">2A</span>
+                <span class="chip chip-ok">Clean policy check</span>
+              </div>
+              <div class="dc-foot">
+                <span class="owner"><span class="av">DR</span> D. Ruiz</span>
+                <span class="spacer"></span>
+                <span class="idle"><span class="pip"></span>1d idle</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 8 CLOSING -->
+        <div class="col" style="--accent: var(--stage-8)">
+          <div class="col-head">
+            <div class="col-head-top">
+              <span class="col-index">8</span>
+              <span class="col-name">Closing</span>
+              <span class="col-count">1</span>
+            </div>
+            <div class="col-wip"><strong>$610K</strong> in stage &middot; WIP 1/6</div>
+            <div class="col-meter"><i style="width:17%"></i></div>
+          </div>
+          <div class="col-body">
+            <div role="button" tabindex="0" class="deal-card" data-goto="deal" style="--accent: var(--stage-8)">
+              <span class="grip" aria-hidden="true"></span>
+              <div class="dc-top">
+                <div>
+                  <div class="dc-name">Terrace Hill Assisted Living</div>
+                  <div class="dc-id">DL-2026-0361</div>
+                </div>
+              </div>
+              <div class="dc-exposure">$610,000</div>
+              <div class="dc-facility">Owner-occupied CRE</div>
+              <div class="dc-chips">
+                <span class="grade grade-b">3B</span>
+                <span class="chip chip-ok">Approved 24 Jul</span>
+              </div>
+              <div class="dc-foot">
+                <span class="owner"><span class="av">LC</span> L. Chen</span>
+                <span class="spacer"></span>
+                <span class="idle"><span class="pip"></span>2d idle</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ================= INTAKE ================= -->
+    <section id="screen-intake" class="screen" aria-label="New deal intake">
+      <div class="screen-head">
+        <div>
+          <div class="eyebrow">REQ-028 &middot; REQ-029 &middot; REQ-004 &middot; REQ-033</div>
+          <h2 class="screen-title">New Deal Intake</h2>
+          <p class="screen-sub">Relationship manager submission. The intake triage agent proposes a classification and analyst queue &mdash; its output is a <strong>pending draft</strong> and cannot advance the deal on its own.</p>
+        </div>
+        <div class="screen-head-actions">
+          <span class="chip chip-outline">Role: relationship manager</span>
+        </div>
+      </div>
+
+      <div class="cols-2-1">
+        <div>
+          <form class="panel" onsubmit="return false;">
+            <div class="panel-head">
+              <span class="panel-title">Borrower &amp; Facility</span>
+              <span class="spacer"></span>
+              <span class="panel-note">Draft saved 2 min ago</span>
+            </div>
+            <div class="panel-body">
+              <div class="form-grid">
+                <div class="field span-2">
+                  <label class="label" for="in-borrower">Legal borrower name<span class="req">*</span></label>
+                  <input class="input" id="in-borrower" type="text" value="Kestrel Coffee Roasters LLC">
+                </div>
+                <div class="field">
+                  <label class="label" for="in-tin">Tax ID (EIN)<span class="req">*</span></label>
+                  <input class="input" id="in-tin" type="text" value="84-3910277">
+                </div>
+                <div class="field">
+                  <label class="label" for="in-naics">NAICS / industry<span class="req">*</span></label>
+                  <input class="input" id="in-naics" type="text" value="311920 — Coffee &amp; Tea Manufacturing">
+                </div>
+                <div class="field">
+                  <label class="label" for="in-entity">Entity type</label>
+                  <select class="select" id="in-entity">
+                    <option>LLC</option><option>S-Corporation</option>
+                    <option>C-Corporation</option><option>Sole Proprietorship</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <label class="label" for="in-years">Years in business</label>
+                  <input class="input" id="in-years" type="number" value="7">
+                </div>
+                <div class="field">
+                  <label class="label" for="in-facility">Requested facility<span class="req">*</span></label>
+                  <select class="select" id="in-facility">
+                    <option>Equipment term loan</option>
+                    <option>Working capital line of credit</option>
+                    <option>Owner-occupied CRE</option>
+                    <option>SBA 7(a)</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <label class="label" for="in-amount">Exposure amount (USD)<span class="req">*</span></label>
+                  <input class="input" id="in-amount" type="text" value="95,000">
+                  <span class="hint">Drives the approval tier: &le;$250k analyst &middot; &le;$1M senior officer &middot; &gt;$1M committee</span>
+                </div>
+                <div class="field">
+                  <label class="label" for="in-term">Term (months)</label>
+                  <input class="input" id="in-term" type="number" value="60">
+                </div>
+                <div class="field">
+                  <label class="label" for="in-collateral">Primary collateral</label>
+                  <input class="input" id="in-collateral" type="text" value="Probat roasting equipment, blanket UCC-1">
+                </div>
+                <div class="field span-2">
+                  <label class="label" for="in-purpose">Use of proceeds<span class="req">*</span></label>
+                  <textarea class="textarea" id="in-purpose">Purchase of a second 25kg production roaster and packaging line to serve three new wholesale grocery accounts signed in Q2 2026.</textarea>
+                </div>
+              </div>
+            </div>
+
+            <div class="panel-head" style="border-top:1px solid var(--border)">
+              <span class="panel-title">Documents</span>
+              <span class="spacer"></span>
+              <span class="panel-note">5 uploaded &middot; 2 flagged missing</span>
+            </div>
+            <div class="panel-body">
+              <div class="dropzone">
+                <strong>Drop documents here</strong>
+                <span class="hint">PDF, XLSX, CSV &middot; up to 50&nbsp;MB each &middot; encrypted at rest</span>
+                <div class="mt-4"><button type="button" class="btn btn-sm">Browse files</button></div>
+              </div>
+              <div class="filelist">
+                <div class="file">
+                  <span class="doc-ico">PDF</span>
+                  <div><div>2025-Federal-Return-1120S.pdf</div><div class="meta">3.2 MB &middot; uploaded 30 Jul 09:12 &middot; parsed</div></div>
+                  <span class="spacer"></span><span class="chip chip-ok">Parsed</span>
+                </div>
+                <div class="file">
+                  <span class="doc-ico">PDF</span>
+                  <div><div>YE2025-Financial-Statements.pdf</div><div class="meta">1.8 MB &middot; uploaded 30 Jul 09:12 &middot; parsed</div></div>
+                  <span class="spacer"></span><span class="chip chip-ok">Parsed</span>
+                </div>
+                <div class="file">
+                  <span class="doc-ico">XLS</span>
+                  <div><div>Business-Debt-Schedule.xlsx</div><div class="meta">42 KB &middot; uploaded 30 Jul 09:13</div></div>
+                  <span class="spacer"></span><span class="chip chip-ok">Parsed</span>
+                </div>
+                <div class="file">
+                  <span class="doc-ico">PDF</span>
+                  <div><div>Personal-Financial-Statement-Okonkwo.pdf</div><div class="meta">640 KB &middot; uploaded 30 Jul 09:15</div></div>
+                  <span class="spacer"></span><span class="chip chip-ok">Parsed</span>
+                </div>
+                <div class="file">
+                  <span class="doc-ico">PDF</span>
+                  <div><div>Equipment-Quote-Probat-P25.pdf</div><div class="meta">210 KB &middot; uploaded 30 Jul 09:16</div></div>
+                  <span class="spacer"></span><span class="chip chip-ok">Parsed</span>
+                </div>
+                <div class="file missing">
+                  <span class="doc-ico">&mdash;</span>
+                  <div><div>Interim financials through 06/2026</div><div class="meta">Required by POL-DOC-07 for term &gt; 36 months</div></div>
+                  <span class="spacer"></span><span class="chip chip-warn">Missing</span>
+                </div>
+                <div class="file missing">
+                  <span class="doc-ico">&mdash;</span>
+                  <div><div>A/R &amp; A/P aging (most recent month)</div><div class="meta">Required by POL-DOC-07 for wholesale concentration</div></div>
+                  <span class="spacer"></span><span class="chip chip-warn">Missing</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="panel-foot">
+              <button type="button" class="btn btn-lg btn-primary">Submit to Pipeline</button>
+              <button type="button" class="btn btn-lg">Save Draft</button>
+              <span class="right small faint">Submission is recorded in the audit trail as <span class="mono">deal.submitted</span></span>
+            </div>
+          </form>
+        </div>
+
+        <!-- triage agent pending draft -->
+        <div>
+          <div class="agent-draft">
+            <div class="agent-draft-head">
+              <span class="agent-avatar">TRI</span>
+              <div>
+                <div class="agent-name">Intake Triage Agent</div>
+                <div class="agent-meta">Run 30 Jul 09:17 &middot; proposal only</div>
+              </div>
+              <span class="spacer"></span>
+              <span class="state state-pending">Pending</span>
+            </div>
+            <div class="agent-draft-body">
+              <div class="blocking-note mb-4">
+                <span>&#9888;</span>
+                <span>This draft blocks stage advance until a human accepts, edits, or rejects it.</span>
+              </div>
+
+              <div class="eyebrow mb-3">Proposed classification</div>
+              <dl class="kv mb-4">
+                <dt>Request type</dt><dd>Equipment term loan</dd>
+                <dt>Segment</dt><dd>SMB &mdash; Food &amp; Beverage Mfg</dd>
+                <dt>Exposure tier</dt><dd><span class="chip chip-info">Analyst &le; $250k</span></dd>
+                <dt>Complexity</dt><dd>Standard</dd>
+                <dt>Confidence</dt><dd>0.86</dd>
+              </dl>
+
+              <div class="eyebrow mb-3">Missing-document flags</div>
+              <div class="stack mb-4">
+                <div class="row tight"><span class="pol-id">POL-DOC-07</span><span class="small">Interim financials through 06/2026</span></div>
+                <div class="row tight"><span class="pol-id">POL-DOC-07</span><span class="small">A/R &amp; A/P aging, current month</span></div>
+              </div>
+
+              <div class="eyebrow mb-3">Proposed analyst queue</div>
+              <div class="file">
+                <span class="doc-ico">AK</span>
+                <div><div>Amrita Kaur &mdash; Credit Analyst II</div><div class="meta">F&amp;B specialty &middot; 4 open deals &middot; avg 3.1d cycle</div></div>
+              </div>
+
+              <div class="mt-4 small faint">
+                Rationale: NAICS 311920 maps to Food &amp; Beverage Manufacturing; requested amount and single-collateral structure match the standard equipment template. No prohibited-industry match under POL-IND-11.
+              </div>
+            </div>
+            <div class="runbar">
+              <span class="runbit">model <b>uw-triage-3.5</b></span>
+              <span class="runbit">prompt <b>v2.4.1</b></span>
+              <span class="runbit">latency <b>3.1s</b></span>
+              <span class="runbit">cost <b>4,180 tok / $0.021</b></span>
+            </div>
+            <div class="panel-foot">
+              <button type="button" class="btn btn-ok btn-sm">Accept</button>
+              <button type="button" class="btn btn-sm">Edit</button>
+              <button type="button" class="btn btn-danger btn-sm">Reject</button>
+              <button type="button" class="btn btn-ghost btn-sm right" data-goto="review">Open in Review</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= DEAL ================= -->
+    <section id="screen-deal" class="screen" aria-label="Deal workspace">
+      <div class="screen-head">
+        <div>
+          <div class="eyebrow">REQ-027 &middot; REQ-005 &middot; REQ-009 &middot; REQ-010 &middot; REQ-032 &middot; REQ-045</div>
+          <h2 class="screen-title">Deal Workspace</h2>
+        </div>
+        <div class="screen-head-actions">
+          <button type="button" class="btn btn-sm" data-goto="pipeline">Back to board</button>
+          <button type="button" class="btn btn-sm btn-primary" data-goto="review">Review pending drafts (1)</button>
+        </div>
+      </div>
+
+      <div class="deal-hero">
+        <div class="hero-mark">RP</div>
+        <div>
+          <div class="hero-name">Ridgeline Precision Machining, Inc.</div>
+          <div class="hero-sub">DL-2026-0395 &middot; NAICS 332710 Machine Shops &middot; S-Corp &middot; 14 years in business &middot; Worcester, MA</div>
+        </div>
+        <div class="hero-stats">
+          <div class="hero-stat"><div class="l">Exposure</div><div class="v">$875,000</div></div>
+          <div class="hero-stat"><div class="l">Facility</div><div class="v">OO CRE</div></div>
+          <div class="hero-stat"><div class="l">Risk grade</div><div class="v"><span class="grade grade-b">4B</span></div></div>
+          <div class="hero-stat"><div class="l">Tier</div><div class="v">Senior Officer</div></div>
+          <div class="hero-stat"><div class="l">Owner</div><div class="v">A. Kaur</div></div>
+        </div>
+      </div>
+
+      <div class="ribbon">
+        <div class="ribbon-step done"><span class="n">1</span>Intake</div>
+        <div class="ribbon-step done"><span class="n">2</span>Doc Extraction</div>
+        <div class="ribbon-step done"><span class="n">3</span>Spreading</div>
+        <div class="ribbon-step current"><span class="n">4</span>Risk Grading</div>
+        <div class="ribbon-step"><span class="n">5</span>Memo Draft</div>
+        <div class="ribbon-step"><span class="n">6</span>Policy Check</div>
+        <div class="ribbon-step"><span class="n">7</span>Approval</div>
+        <div class="ribbon-step"><span class="n">8</span>Closing</div>
+      </div>
+
+      <div class="cols-2-1">
+        <!-- LEFT COLUMN -->
+        <div>
+          <!-- SPREAD -->
+          <div class="panel">
+            <div class="panel-head">
+              <span class="panel-title">Standard Spread &mdash; FY2023 / FY2024 / FY2025</span>
+              <span class="spacer"></span>
+              <span class="state state-accepted">Accepted by A. Kaur</span>
+            </div>
+            <div class="panel-body tight">
+              <div class="small faint mb-3" style="padding:0 var(--space-2)">
+                Every figure carries a clickable source citation. Click a chip to open the source document at the cited page and line.
+              </div>
+              <div class="table-wrap">
+                <table class="data">
+                  <thead>
+                    <tr>
+                      <th>Line item</th>
+                      <th style="text-align:right">FY2023</th>
+                      <th style="text-align:right">FY2024</th>
+                      <th style="text-align:right">FY2025</th>
+                      <th style="text-align:right">Source</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td class="rowlabel">Gross revenue</td>
+                      <td class="num">4,180,220</td>
+                      <td class="num">4,655,900</td>
+                      <td class="num">5,102,430</td>
+                      <td class="num"><span class="cell-cite"><button type="button" class="cite">1120S p.1 L1c</button></span></td>
+                    </tr>
+                    <tr>
+                      <td class="rowlabel">Cost of goods sold</td>
+                      <td class="num">2,760,140</td>
+                      <td class="num">3,001,820</td>
+                      <td class="num">3,268,550</td>
+                      <td class="num"><span class="cell-cite"><button type="button" class="cite">1120S p.1 L2</button></span></td>
+                    </tr>
+                    <tr class="subtotal">
+                      <td class="rowlabel">Gross profit</td>
+                      <td class="num">1,420,080</td>
+                      <td class="num">1,654,080</td>
+                      <td class="num">1,833,880</td>
+                      <td class="num"><span class="cell-cite"><button type="button" class="cite">computed</button></span></td>
+                    </tr>
+                    <tr>
+                      <td class="rowlabel">Officer compensation</td>
+                      <td class="num">310,000</td>
+                      <td class="num">325,000</td>
+                      <td class="num">340,000</td>
+                      <td class="num"><span class="cell-cite"><button type="button" class="cite">1120S p.1 L7</button></span></td>
+                    </tr>
+                    <tr>
+                      <td class="rowlabel">Operating expenses</td>
+                      <td class="num">861,400</td>
+                      <td class="num">944,210</td>
+                      <td class="num">1,010,760</td>
+                      <td class="num"><span class="cell-cite"><button type="button" class="cite">FS p.4</button></span></td>
+                    </tr>
+                    <tr>
+                      <td class="rowlabel">Depreciation &amp; amortization</td>
+                      <td class="num">148,900</td>
+                      <td class="num">162,300</td>
+                      <td class="num">171,450</td>
+                      <td class="num"><span class="cell-cite"><button type="button" class="cite">1120S p.1 L14</button></span></td>
+                    </tr>
+                    <tr>
+                      <td class="rowlabel">Interest expense</td>
+                      <td class="num">52,600</td>
+                      <td class="num">61,880</td>
+                      <td class="num">58,210</td>
+                      <td class="num"><span class="cell-cite"><button type="button" class="cite">1120S p.1 L13</button></span></td>
+                    </tr>
+                    <tr class="subtotal">
+                      <td class="rowlabel">EBITDA</td>
+                      <td class="num">397,580</td>
+                      <td class="num">546,170</td>
+                      <td class="num">654,570</td>
+                      <td class="num"><span class="cell-cite"><button type="button" class="cite">computed</button></span></td>
+                    </tr>
+                    <tr>
+                      <td class="rowlabel">Current assets</td>
+                      <td class="num">1,102,300</td>
+                      <td class="num">1,241,880</td>
+                      <td class="num">1,388,640</td>
+                      <td class="num"><span class="cell-cite"><button type="button" class="cite">FS p.2</button></span></td>
+                    </tr>
+                    <tr>
+                      <td class="rowlabel">Current liabilities</td>
+                      <td class="num">742,110</td>
+                      <td class="num">801,440</td>
+                      <td class="num">841,600</td>
+                      <td class="num"><span class="cell-cite"><button type="button" class="cite">FS p.2</button></span></td>
+                    </tr>
+                    <tr>
+                      <td class="rowlabel">Total funded debt</td>
+                      <td class="num">1,620,000</td>
+                      <td class="num">1,742,500</td>
+                      <td class="num">1,833,000</td>
+                      <td class="num"><span class="cell-cite"><button type="button" class="cite">Debt sched. r.1&ndash;6</button></span></td>
+                    </tr>
+                    <tr>
+                      <td class="rowlabel">Annual debt service (existing + proposed)</td>
+                      <td class="num">&mdash;</td>
+                      <td class="num">&mdash;</td>
+                      <td class="num">460,960</td>
+                      <td class="num"><span class="cell-cite"><button type="button" class="cite">Debt sched. r.7</button></span></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            <div class="runbar">
+              <span class="runbit">agent <b>uw-spread-4.1</b></span>
+              <span class="runbit">prompt <b>v5.0.2</b></span>
+              <span class="runbit">latency <b>18.4s</b></span>
+              <span class="runbit">cost <b>31,940 tok / $0.164</b></span>
+              <span class="runbit">citations <b>12 / 12 figures</b></span>
+            </div>
+          </div>
+
+          <!-- COMPUTED METRICS -->
+          <div class="panel">
+            <div class="panel-head">
+              <span class="panel-title">Credit Metrics</span>
+              <span class="spacer"></span>
+              <span class="code-badge">Computed by code, not by agent</span>
+            </div>
+            <div class="panel-body">
+              <div class="code-banner">
+                <span>&#9881;</span>
+                <span>DSCR, leverage, and current ratio are produced by deterministic engine <span class="mono">v4.2</span> from accepted spread values. No language model participates in these calculations. Inputs and formulas are shown in full.</span>
+              </div>
+              <div class="metrics">
+                <div class="metric">
+                  <div class="metric-name">DSCR</div>
+                  <div class="metric-val">1.42x</div>
+                  <div class="metric-formula">EBITDA 654,570 &divide; ADS 460,960<br>= 1.4201</div>
+                  <div class="metric-test"><span class="chip chip-ok">Passes POL-DSCR-01 min 1.25x</span></div>
+                </div>
+                <div class="metric">
+                  <div class="metric-name">Leverage (Debt / EBITDA)</div>
+                  <div class="metric-val">2.80x</div>
+                  <div class="metric-formula">Funded debt 1,833,000 &divide; EBITDA 654,570<br>= 2.8003</div>
+                  <div class="metric-test"><span class="chip chip-ok">Within 3.50x guideline</span></div>
+                </div>
+                <div class="metric">
+                  <div class="metric-name">Current ratio</div>
+                  <div class="metric-val">1.65x</div>
+                  <div class="metric-formula">CA 1,388,640 &divide; CL 841,600<br>= 1.6500</div>
+                  <div class="metric-test"><span class="chip chip-ok">Within 1.20x floor</span></div>
+                </div>
+                <div class="metric">
+                  <div class="metric-name">LTV (appraised)</div>
+                  <div class="metric-val">71.4%</div>
+                  <div class="metric-formula">Loan 875,000 &divide; appraisal 1,225,000<br>= 0.7143</div>
+                  <div class="metric-test"><span class="chip chip-ok">Under POL-LTV-02 cap 80%</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- MEMO -->
+          <div class="panel">
+            <div class="panel-head">
+              <span class="panel-title">Credit Memo &mdash; Draft</span>
+              <span class="spacer"></span>
+              <span class="state state-pending">Pending human acceptance</span>
+              <button type="button" class="btn btn-sm btn-primary" data-goto="review">Review side-by-side</button>
+            </div>
+            <div class="panel-body">
+              <div class="memo">
+                <h4>Recommendation</h4>
+                <p>Approve a $875,000 owner-occupied CRE term facility to Ridgeline Precision Machining, Inc. at a risk grade of <strong>4B</strong> <button type="button" class="cite">rubric trace</button>, subject to the conditions listed below.</p>
+
+                <h4>Repayment capacity</h4>
+                <p>FY2025 EBITDA of $654,570 <button type="button" class="cite">spread L8</button> against pro-forma annual debt service of $460,960 <button type="button" class="cite">debt sched. r.7</button> yields a DSCR of 1.42x <button type="button" class="cite">engine v4.2</button>, comfortably above the 1.25x floor in <button type="button" class="cite">POL-DSCR-01</button>. Revenue has grown at a 10.5% CAGR across the three-year spread window <button type="button" class="cite">spread L1</button> and gross margin has held between 34.0% and 35.9%.</p>
+
+                <h4>Balance sheet</h4>
+                <p>Funded debt of $1,833,000 <button type="button" class="cite">debt sched. r.1&ndash;6</button> represents 2.80x leverage <button type="button" class="cite">engine v4.2</button>. Working capital is adequate at a 1.65x current ratio <button type="button" class="cite">engine v4.2</button>, with A/R turning at 41 days per the 06/2026 aging <button type="button" class="cite">AR-Aging p.1</button>.</p>
+
+                <h4>Collateral</h4>
+                <p>First mortgage on 1420 Halsey Street, Worcester MA, appraised at $1,225,000 as of 12 Jun 2026 <button type="button" class="cite">Appraisal p.3</button>, giving 71.4% LTV against the 80% cap in <button type="button" class="cite">POL-LTV-02</button>. Supported by a blanket UCC-1 on machinery and unlimited personal guaranty of D. Okafor.</p>
+
+                <h4>Conditions</h4>
+                <p>(1) Annual DSCR covenant tested at 1.20x. (2) Distribution limitation while leverage exceeds 3.00x. (3) Satisfactory environmental Phase I prior to closing.</p>
+              </div>
+            </div>
+            <div class="runbar">
+              <span class="runbit">agent <b>uw-memo-2.9</b></span>
+              <span class="runbit">prompt <b>v3.7.0</b></span>
+              <span class="runbit">latency <b>26.8s</b></span>
+              <span class="runbit">cost <b>48,220 tok / $0.291</b></span>
+              <span class="runbit">citations <b>13</b></span>
+            </div>
+          </div>
+
+          <!-- POLICY EXCEPTIONS -->
+          <div class="panel">
+            <div class="panel-head">
+              <span class="panel-title">Policy Exceptions</span>
+              <span class="spacer"></span>
+              <span class="chip chip-warn">1 open &middot; 1 waived</span>
+            </div>
+            <div class="panel-body">
+              <div class="exception sev-med">
+                <span class="pol-id">POL-CONC-03</span>
+                <div>
+                  <div class="etitle">Industry concentration approaching limit</div>
+                  <div class="etext">Booking this facility brings NAICS 332xxx (machine shops) exposure to 23.4% of the SMB portfolio against a 25.0% concentration ceiling. Written exception required from the approving officer, with a portfolio-level monitoring condition.</div>
+                  <div class="row tight mt-3">
+                    <button type="button" class="cite">portfolio calc</button>
+                    <button type="button" class="cite">POL-CONC-03 text</button>
+                  </div>
+                </div>
+                <span class="chip chip-warn">Open</span>
+              </div>
+              <div class="exception">
+                <span class="pol-id">POL-DOC-07</span>
+                <div>
+                  <div class="etitle">Interim financials older than 90 days at submission</div>
+                  <div class="etext">Waived 22 Jul 2026 by Dana Ruiz (Senior Credit Officer) &mdash; updated 06/2026 interims received and spread before grading.</div>
+                </div>
+                <span class="chip chip-ok">Waived</span>
+              </div>
+            </div>
+            <div class="runbar">
+              <span class="runbit">agent <b>uw-policy-1.8</b></span>
+              <span class="runbit">prompt <b>v4.1.3</b></span>
+              <span class="runbit">rules evaluated <b>41</b></span>
+              <span class="runbit">latency <b>9.7s</b></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- RIGHT COLUMN -->
+        <div>
+          <div class="panel">
+            <div class="panel-head"><span class="panel-title">Risk Grade</span><span class="spacer"></span><span class="code-badge">Rubric, not agent</span></div>
+            <div class="panel-body">
+              <div class="row mb-4">
+                <span class="grade grade-b" style="min-width:64px;height:44px;font-size:var(--text-lg)">4B</span>
+                <div>
+                  <div style="font-weight:800">Pass &mdash; Acceptable</div>
+                  <div class="small faint">Rubric FY26-Q3 &middot; engine v4.2 &middot; 21 Jul 2026</div>
+                </div>
+              </div>
+              <div class="eyebrow mb-3">Rubric input trace</div>
+              <div class="rubric">
+                <div class="rubric-row"><span class="rk">DSCR band</span><span class="rv">1.42x &rarr; 1.25&ndash;1.50</span><span class="rp">+18</span></div>
+                <div class="rubric-row"><span class="rk">Leverage band</span><span class="rv">2.80x &rarr; 2.50&ndash;3.00</span><span class="rp">+14</span></div>
+                <div class="rubric-row"><span class="rk">Current ratio</span><span class="rv">1.65x &rarr; &gt;1.50</span><span class="rp">+12</span></div>
+                <div class="rubric-row"><span class="rk">Years in business</span><span class="rv">14 &rarr; &gt;10</span><span class="rp">+10</span></div>
+                <div class="rubric-row"><span class="rk">Revenue trend</span><span class="rv">+10.5% CAGR &rarr; positive</span><span class="rp">+9</span></div>
+                <div class="rubric-row"><span class="rk">Collateral LTV</span><span class="rv">71.4% &rarr; 70&ndash;80%</span><span class="rp">+6</span></div>
+                <div class="rubric-row"><span class="rk">Industry cyclicality</span><span class="rv">332710 &rarr; moderate</span><span class="rp">&minus;4</span></div>
+                <div class="rubric-row"><span class="rk">Customer concentration</span><span class="rv">Top-1 = 22% &rarr; elevated</span><span class="rp">&minus;5</span></div>
+              </div>
+              <div class="rubric-total">
+                <span>Total score</span><strong class="mono">60</strong>
+                <span class="right small faint">Band 56&ndash;65 &rarr; grade 4B</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-head"><span class="panel-title">Documents</span><span class="spacer"></span><span class="panel-note">7 files</span></div>
+            <div class="panel-body">
+              <div class="filelist" style="margin-top:0">
+                <div class="file"><span class="doc-ico">PDF</span><div><div>2025-Federal-Return-1120S.pdf</div><div class="meta">14 pages &middot; 8 citations</div></div></div>
+                <div class="file"><span class="doc-ico">PDF</span><div><div>YE2025-Financial-Statements.pdf</div><div class="meta">22 pages &middot; 6 citations</div></div></div>
+                <div class="file"><span class="doc-ico">XLS</span><div><div>Business-Debt-Schedule.xlsx</div><div class="meta">1 sheet &middot; 7 rows &middot; 3 citations</div></div></div>
+                <div class="file"><span class="doc-ico">XLS</span><div><div>AR-Aging-2026-06.xlsx</div><div class="meta">1 sheet &middot; 2 citations</div></div></div>
+                <div class="file"><span class="doc-ico">PDF</span><div><div>Appraisal-1420-Halsey-St.pdf</div><div class="meta">48 pages &middot; 2 citations</div></div></div>
+                <div class="file"><span class="doc-ico">PDF</span><div><div>Personal-Financial-Statement-Okafor.pdf</div><div class="meta">4 pages</div></div></div>
+                <div class="file"><span class="doc-ico">PDF</span><div><div>Environmental-Phase-I-Draft.pdf</div><div class="meta">31 pages &middot; pending final</div></div></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-head"><span class="panel-title">Decisions</span></div>
+            <div class="panel-body">
+              <div class="stack">
+                <div class="file">
+                  <span class="doc-ico">DR</span>
+                  <div><div>Waiver &mdash; POL-DOC-07</div><div class="meta">Dana Ruiz &middot; Senior Credit Officer &middot; 22 Jul 2026 14:02</div></div>
+                  <span class="spacer"></span><span class="chip chip-ok">Recorded</span>
+                </div>
+                <div class="file">
+                  <span class="doc-ico">AK</span>
+                  <div><div>Spread accepted</div><div class="meta">Amrita Kaur &middot; Credit Analyst II &middot; 21 Jul 2026 16:41</div></div>
+                  <span class="spacer"></span><span class="chip chip-ok">Recorded</span>
+                </div>
+                <div class="file missing">
+                  <span class="doc-ico">&mdash;</span>
+                  <div><div>Credit decision</div><div class="meta">Awaiting Senior Credit Officer &middot; tier &le; $1M</div></div>
+                  <span class="spacer"></span><span class="chip chip-warn">Not yet made</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-head"><span class="panel-title">Timeline</span><span class="spacer"></span><a href="#" data-goto="audit" class="small">Full audit &rarr;</a></div>
+            <div class="panel-body">
+              <div class="spine">
+                <div class="tl-item">
+                  <div class="tl-node info">&#9679;</div>
+                  <div class="tl-card">
+                    <div class="tl-head"><span class="tl-action">Grade computed &mdash; 4B</span><span class="tl-time">21 Jul 16:44</span></div>
+                    <div class="tl-actor">Deterministic engine <b>v4.2</b> &middot; rubric FY26-Q3</div>
+                  </div>
+                </div>
+                <div class="tl-item">
+                  <div class="tl-node ok">&#10003;</div>
+                  <div class="tl-card">
+                    <div class="tl-head"><span class="tl-action">Spread accepted</span><span class="tl-time">21 Jul 16:41</span></div>
+                    <div class="tl-actor"><b>Amrita Kaur</b> &middot; credit_analyst</div>
+                  </div>
+                </div>
+                <div class="tl-item">
+                  <div class="tl-node info">&#9679;</div>
+                  <div class="tl-card">
+                    <div class="tl-head"><span class="tl-action">Spread drafted</span><span class="tl-time">21 Jul 15:58</span></div>
+                    <div class="tl-actor">Agent <b>uw-spread-4.1</b> &middot; 12 figures, 12 citations</div>
+                  </div>
+                </div>
+                <div class="tl-item">
+                  <div class="tl-node ok">&#10003;</div>
+                  <div class="tl-card">
+                    <div class="tl-head"><span class="tl-action">Triage accepted</span><span class="tl-time">18 Jul 09:30</span></div>
+                    <div class="tl-actor"><b>Marcus Tran</b> &middot; relationship_manager</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= REVIEW ================= -->
+    <section id="screen-review" class="screen" aria-label="Agent draft review">
+      <div class="screen-head">
+        <div>
+          <div class="eyebrow">REQ-016 &middot; REQ-037 &middot; REQ-038 &middot; REQ-046</div>
+          <h2 class="screen-title">Review &mdash; Credit Memo Draft</h2>
+          <p class="screen-sub">Cedar &amp; Vine Restaurant Group &middot; DL-2026-0388 &middot; $1,450,000. The draft sits beside the exact evidence it cites. Nothing advances until a human accepts, edits, or rejects.</p>
+        </div>
+        <div class="screen-head-actions">
+          <span class="state state-pending">Pending</span>
+          <button type="button" class="btn btn-sm">Queue: 7 drafts</button>
+        </div>
+      </div>
+
+      <div class="panel mb-4">
+        <div class="panel-head">
+          <span class="agent-avatar">MEM</span>
+          <div>
+            <div class="panel-title">Credit Memo Agent</div>
+            <div class="panel-note">Run 28 Jul 2026 11:04:22 UTC &middot; run id <span class="mono">run_9f3ac21b</span></div>
+          </div>
+          <span class="spacer"></span>
+          <div class="row tight">
+            <span class="runbit">model <b>uw-memo-2.9</b></span>
+            <span class="runbit">prompt <b>v3.7.0</b></span>
+            <span class="runbit">latency <b>26.8s</b></span>
+            <span class="runbit">tokens <b>48,220</b></span>
+            <span class="runbit">cost <b>$0.291</b></span>
+          </div>
+        </div>
+        <div class="panel-body" style="padding-top:var(--space-4);padding-bottom:var(--space-4)">
+          <div class="blocking-note">
+            <span>&#9888;</span>
+            <span>Unaccepted draft &mdash; deal DL-2026-0388 cannot advance from <strong>Memo Drafting</strong> to <strong>Policy Check</strong> while this review is outstanding. Idle 6 business days.</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="pair">
+        <!-- EVIDENCE COLUMN -->
+        <div class="pair-col">
+          <div class="pair-label"><span class="num">1</span> Cited evidence</div>
+          <div class="panel">
+            <div class="panel-head"><span class="panel-title">Sources referenced by this draft</span><span class="spacer"></span><span class="panel-note">9 citations</span></div>
+            <div class="panel-body">
+              <div class="evidence-item linked">
+                <div class="evidence-src">YE2025-Financial-Statements.pdf &middot; p.6 &middot; "Consolidated EBITDA"</div>
+                <div class="evidence-quote">Adjusted EBITDA for the year ended December 31, 2025 was $1,010,400, after add-back of $88,000 in one-time restaurant build-out costs and $146,200 depreciation.</div>
+                <div class="row tight mt-3"><span class="chip chip-info">Used in &sect;Repayment capacity</span></div>
+              </div>
+              <div class="evidence-item">
+                <div class="evidence-src">Business-Debt-Schedule.xlsx &middot; row 9 &middot; "Total annual debt service"</div>
+                <div class="evidence-quote">Existing service $612,300 + proposed facility $283,900 = $896,200 pro-forma annual debt service.</div>
+                <div class="row tight mt-3"><span class="chip chip-info">Used in &sect;Repayment capacity</span></div>
+              </div>
+              <div class="evidence-item">
+                <div class="evidence-src">Deterministic engine v4.2 &middot; metric record <span class="mono">m_44812</span></div>
+                <div class="evidence-quote">DSCR = 1,010,400 &divide; 896,200 = 1.1275 &rarr; 1.13x. Below POL-DSCR-01 floor of 1.25x. Computed by code, not by agent.</div>
+                <div class="row tight mt-3"><span class="chip chip-danger">Contradicts draft &sect;Recommendation</span></div>
+              </div>
+              <div class="evidence-item">
+                <div class="evidence-src">Appraisal-88-Fulton-Ave.pdf &middot; p.3</div>
+                <div class="evidence-quote">As-is market value concluded at $1,780,000 with an effective date of 3 May 2026.</div>
+                <div class="row tight mt-3"><span class="chip chip-info">Used in &sect;Collateral</span></div>
+              </div>
+              <div class="evidence-item">
+                <div class="evidence-src">Lending Policy FY26-Q3 &middot; POL-CONC-03</div>
+                <div class="evidence-quote">Aggregate exposure to NAICS 722xxx (Food Services) shall not exceed 20.0% of total SMB commitments without written committee exception.</div>
+                <div class="row tight mt-3"><span class="chip chip-warn">Used in &sect;Policy considerations</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- DRAFT COLUMN -->
+        <div class="pair-col">
+          <div class="pair-label"><span class="num">2</span> Agent draft</div>
+          <div class="panel">
+            <div class="panel-head">
+              <span class="panel-title">Underwriting Memo &mdash; draft v1</span>
+              <span class="spacer"></span>
+              <span class="state state-pending">Pending</span>
+            </div>
+            <div class="panel-body">
+              <div class="memo">
+                <h4>Recommendation</h4>
+                <p>Recommend approval of a $1,450,000 CRE refinance for Cedar &amp; Vine Restaurant Group at grade <strong>5C</strong>, subject to a committee-level concentration exception.</p>
+                <h4>Repayment capacity</h4>
+                <p>FY2025 adjusted EBITDA of $1,010,400 <button type="button" class="cite">FS p.6</button> against pro-forma annual debt service of $896,200 <button type="button" class="cite">debt sched. r.9</button> produces a DSCR of 1.13x <button type="button" class="cite">engine m_44812</button>, which is <strong>below</strong> the 1.25x floor set by <button type="button" class="cite">POL-DSCR-01</button>. Mitigants include a 14-month trailing revenue recovery and a $250,000 pledged deposit.</p>
+                <h4>Collateral</h4>
+                <p>First mortgage on 88 Fulton Avenue appraised at $1,780,000 <button type="button" class="cite">Appraisal p.3</button>, giving 81.5% LTV &mdash; above the 80% cap in <button type="button" class="cite">POL-LTV-02</button>.</p>
+                <h4>Policy considerations</h4>
+                <p>Food Services exposure would reach 21.8% of SMB commitments, exceeding the 20.0% ceiling in <button type="button" class="cite">POL-CONC-03</button>.</p>
+              </div>
+
+              <div class="reject-box">
+                <div class="row mb-3">
+                  <strong>Rejection reason</strong>
+                  <span class="chip chip-danger">Required</span>
+                </div>
+                <label class="label" for="rev-reason">A rejection cannot be recorded without a written reason.</label>
+                <textarea class="textarea" id="rev-reason" placeholder="e.g. Draft recommends approval while the code-computed DSCR of 1.13x fails POL-DSCR-01; recommendation section is not supported by the cited evidence.">Draft recommends approval while the code-computed DSCR of 1.13x fails POL-DSCR-01. The recommendation contradicts cited evidence m_44812. Return to memo drafting with instruction to present a decline-or-restructure recommendation.</textarea>
+              </div>
+            </div>
+            <div class="panel-foot">
+              <button type="button" class="btn btn-ok">Accept as-is</button>
+              <button type="button" class="btn">Edit &amp; accept</button>
+              <button type="button" class="btn btn-danger">Reject with reason</button>
+              <span class="right small faint">Decision recorded as <span class="mono">draft.reviewed</span> with your name</span>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-head"><span class="panel-title">Review history for this deal</span></div>
+            <div class="panel-body">
+              <div class="stack">
+                <div class="row"><span class="state state-accepted">Accepted</span><span class="small">Triage classification &mdash; M. Tran &middot; 12 Jul 08:40</span></div>
+                <div class="row"><span class="state state-edited">Edited</span><span class="small">Financial spread, 3 figures corrected &mdash; A. Kaur &middot; 19 Jul 13:22</span></div>
+                <div class="row"><span class="state state-rejected">Rejected</span><span class="small">Memo draft v0 &mdash; "cited wrong appraisal date" &middot; A. Kaur &middot; 24 Jul 10:05</span></div>
+                <div class="row"><span class="state state-pending">Pending</span><span class="small">Memo draft v1 &mdash; awaiting you</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= APPROVALS ================= -->
+    <section id="screen-approvals" class="screen" aria-label="Approval queue">
+      <div class="screen-head">
+        <div>
+          <div class="eyebrow">REQ-011 &middot; REQ-012 &middot; REQ-013 &middot; REQ-015 &middot; REQ-017 &middot; REQ-036 &middot; REQ-043 &middot; REQ-048</div>
+          <h2 class="screen-title">Approval Queue</h2>
+          <p class="screen-sub">Authority is derived from exposure, not from role preference. No agent may approve, decline, or advance a deal &mdash; every decision below records a named human.</p>
+        </div>
+        <div class="screen-head-actions">
+          <span class="chip chip-outline">You are Dana Ruiz &middot; senior officer authority</span>
+        </div>
+      </div>
+
+      <div class="cols-3">
+
+        <!-- TIER 1 -->
+        <div class="tier-col">
+          <div class="tier-head">
+            <span class="tier-badge tier-1">Tier 1</span>
+            <div class="tier-name">Credit Analyst</div>
+            <div class="tier-range">Exposure up to $250,000</div>
+            <div class="tier-stats">
+              <div class="tier-stat"><div class="n">2</div><div class="l">Waiting</div></div>
+              <div class="tier-stat"><div class="n">$335K</div><div class="l">Exposure</div></div>
+              <div class="tier-stat"><div class="n">1.4d</div><div class="l">Avg wait</div></div>
+            </div>
+          </div>
+          <div class="tier-body">
+            <div class="approval-card">
+              <div class="approval-top">
+                <div class="row"><strong>Meridian Print Works</strong><span class="grade grade-b right">4B</span></div>
+                <div class="small faint">DL-2026-0379 &middot; Equipment term loan</div>
+                <div class="dc-exposure">$185,000</div>
+                <div class="dc-chips">
+                  <span class="chip chip-ok">Memo accepted</span>
+                  <span class="chip chip-danger">2 exceptions</span>
+                </div>
+              </div>
+              <div class="decider">
+                <label class="label" for="ap-1">Deciding officer (named, required)</label>
+                <input class="input" id="ap-1" type="text" value="Jae Park — Credit Analyst II" readonly>
+                <span class="hint">Captured from your session; recorded immutably with the decision.</span>
+              </div>
+              <div class="approval-actions">
+                <button type="button" class="btn btn-sm btn-ok" disabled>Approve</button>
+                <button type="button" class="btn btn-sm btn-danger" disabled>Decline</button>
+                <button type="button" class="btn btn-sm" disabled>Return to stage</button>
+                <span class="xsmall faint">Not your tier</span>
+              </div>
+            </div>
+
+            <div class="approval-card">
+              <div class="approval-top">
+                <div class="row"><strong>Lakeshore Physical Therapy</strong><span class="grade grade-c right">5C</span></div>
+                <div class="small faint">DL-2026-0390 &middot; Working capital line</div>
+                <div class="dc-exposure">$150,000</div>
+                <div class="dc-chips"><span class="chip chip-warn">DSCR 1.11x below floor</span></div>
+              </div>
+              <div class="approval-actions">
+                <button type="button" class="btn btn-sm btn-ok" disabled>Approve</button>
+                <button type="button" class="btn btn-sm btn-danger" disabled>Decline</button>
+                <span class="xsmall faint">Not your tier</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- TIER 2 -->
+        <div class="tier-col">
+          <div class="tier-head">
+            <span class="tier-badge tier-2">Tier 2 &middot; yours</span>
+            <div class="tier-name">Senior Credit Officer</div>
+            <div class="tier-range">Exposure $250,001 &ndash; $1,000,000</div>
+            <div class="tier-stats">
+              <div class="tier-stat"><div class="n">1</div><div class="l">Waiting</div></div>
+              <div class="tier-stat"><div class="n">$275K</div><div class="l">Exposure</div></div>
+              <div class="tier-stat"><div class="n">0.9d</div><div class="l">Avg wait</div></div>
+            </div>
+          </div>
+          <div class="tier-body">
+            <div class="approval-card">
+              <div class="approval-top">
+                <div class="row"><strong>Granite Ridge Plumbing</strong><span class="grade grade-a right">2A</span></div>
+                <div class="small faint">DL-2026-0366 &middot; Working capital line</div>
+                <div class="dc-exposure">$275,000</div>
+                <div class="dc-chips">
+                  <span class="chip chip-ok">Clean policy check</span>
+                  <span class="chip chip-ok">DSCR 2.04x</span>
+                  <span class="chip chip-info">Memo accepted by A. Kaur</span>
+                </div>
+                <dl class="kv mt-4">
+                  <dt>Tier basis</dt><dd>$275,000 &rarr; senior officer</dd>
+                  <dt>Grade</dt><dd>2A (rubric score 78)</dd>
+                  <dt>Open exceptions</dt><dd>None</dd>
+                  <dt>Idle</dt><dd>1 business day</dd>
+                </dl>
+              </div>
+              <div class="decider">
+                <label class="label" for="ap-2">Deciding officer (named, required)<span class="req">*</span></label>
+                <input class="input" id="ap-2" type="text" value="Dana Ruiz — Senior Credit Officer" readonly>
+                <label class="label mt-3" for="ap-2-note">Decision rationale</label>
+                <textarea class="textarea" id="ap-2-note" placeholder="Required for decline and return; optional for approve."></textarea>
+                <div class="hint">Decline requires a documented <strong>adverse-action reason</strong>. Return requires a target stage and reason.</div>
+              </div>
+              <div class="approval-actions">
+                <button type="button" class="btn btn-sm btn-ok">Approve $275,000</button>
+                <button type="button" class="btn btn-sm btn-danger">Decline (adverse-action reason)</button>
+                <select class="control" aria-label="Return to stage">
+                  <option>Return to stage&hellip;</option>
+                  <option>3 &mdash; Financial Spreading</option>
+                  <option>5 &mdash; Memo Drafting</option>
+                  <option>6 &mdash; Policy Check</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- TIER 3 -->
+        <div class="tier-col">
+          <div class="tier-head">
+            <span class="tier-badge tier-3">Tier 3</span>
+            <div class="tier-name">Credit Committee</div>
+            <div class="tier-range">Exposure above $1,000,000</div>
+            <div class="tier-stats">
+              <div class="tier-stat"><div class="n">2</div><div class="l">Waiting</div></div>
+              <div class="tier-stat"><div class="n">$4.30M</div><div class="l">Exposure</div></div>
+              <div class="tier-stat"><div class="n">7.5d</div><div class="l">Avg wait</div></div>
+            </div>
+          </div>
+          <div class="tier-body">
+            <div class="approval-card">
+              <div class="approval-top">
+                <div class="row"><strong>Ironwood Craft Brewing</strong><span class="grade grade-c right">5C</span></div>
+                <div class="small faint">DL-2026-0371 &middot; CRE + equipment package</div>
+                <div class="dc-exposure">$2,400,000</div>
+                <div class="dc-chips">
+                  <span class="chip chip-danger">Idle 11 days</span>
+                  <span class="chip chip-warn">POL-CONC-03 exception</span>
+                </div>
+                <dl class="kv mt-4">
+                  <dt>Quorum</dt><dd>3 of 5 members</dd>
+                  <dt>Votes recorded</dt><dd>1 approve, 0 decline</dd>
+                  <dt>Next session</dt><dd>Thu 6 Aug, 10:00</dd>
+                </dl>
+              </div>
+              <div class="approval-actions">
+                <button type="button" class="btn btn-sm">Add to agenda</button>
+                <button type="button" class="btn btn-sm btn-ghost">Record my vote</button>
+                <span class="xsmall faint">Committee authority required</span>
+              </div>
+            </div>
+
+            <div class="approval-card">
+              <div class="approval-top">
+                <div class="row"><strong>Fairmont Auto Body</strong><span class="grade grade-d right">6D</span></div>
+                <div class="small faint">DL-2026-0368 &middot; CRE acquisition</div>
+                <div class="dc-exposure">$1,900,000</div>
+                <div class="dc-chips">
+                  <span class="chip chip-danger">POL-LTV-02 &mdash; 88.2% LTV</span>
+                  <span class="chip chip-warn">Decline recommended</span>
+                </div>
+              </div>
+              <div class="approval-actions">
+                <button type="button" class="btn btn-sm">Add to agenda</button>
+                <button type="button" class="btn btn-sm btn-ghost">View memo</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel mt-5">
+        <div class="panel-head"><span class="panel-title">Recent decisions</span><span class="spacer"></span><span class="panel-note">Every entry names a human decider</span></div>
+        <div class="panel-body tight">
+          <div class="table-wrap">
+            <table class="data">
+              <thead><tr><th>Deal</th><th>Exposure</th><th>Tier</th><th>Decision</th><th>Named decider</th><th>Reason</th><th>Timestamp</th></tr></thead>
+              <tbody>
+                <tr>
+                  <td class="rowlabel">Terrace Hill Assisted Living</td>
+                  <td class="num">610,000</td>
+                  <td><span class="chip chip-outline">Senior officer</span></td>
+                  <td><span class="chip chip-ok">Approved</span></td>
+                  <td>Dana Ruiz</td>
+                  <td class="small faint">Conditions: DSCR covenant 1.20x</td>
+                  <td class="num">24 Jul 15:12</td>
+                </tr>
+                <tr>
+                  <td class="rowlabel">Harbor Point Nail Studio</td>
+                  <td class="num">88,000</td>
+                  <td><span class="chip chip-outline">Analyst</span></td>
+                  <td><span class="chip chip-danger">Declined</span></td>
+                  <td>Jae Park</td>
+                  <td class="small faint">Adverse action: insufficient cash flow to service the requested debt (DSCR 0.82x)</td>
+                  <td class="num">23 Jul 11:47</td>
+                </tr>
+                <tr>
+                  <td class="rowlabel">Sunbelt HVAC Services</td>
+                  <td class="num">880,000</td>
+                  <td><span class="chip chip-outline">Senior officer</span></td>
+                  <td><span class="chip chip-warn">Returned</span></td>
+                  <td>Dana Ruiz</td>
+                  <td class="small faint">Return to stage 3: spread omits the 2025 equipment note</td>
+                  <td class="num">21 Jul 09:33</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= SLA ================= -->
+    <section id="screen-sla" class="screen" aria-label="SLA dashboard">
+      <div class="screen-head">
+        <div>
+          <div class="eyebrow">REQ-022 &middot; REQ-044</div>
+          <h2 class="screen-title">SLA Watch</h2>
+          <p class="screen-sub">Deals idle more than 5 business days, grouped by breach severity. Idle time is measured from the last human or system action on the deal.</p>
+        </div>
+        <div class="screen-head-actions">
+          <select class="control" aria-label="Queue filter">
+            <option>All queues</option><option>Analyst queue</option>
+            <option>Officer queue</option><option>Committee queue</option>
+          </select>
+          <button type="button" class="btn btn-sm">Export CSV</button>
+        </div>
+      </div>
+
+      <div class="statbar">
+        <div class="stat" style="--accent: var(--danger)">
+          <div class="stat-label">In breach</div><div class="stat-value">4</div>
+          <div class="stat-foot">of 12 active deals</div>
+        </div>
+        <div class="stat" style="--accent: var(--warn)">
+          <div class="stat-label">Longest idle</div><div class="stat-value sm">11 days</div>
+          <div class="stat-foot">Ironwood Craft Brewing</div>
+        </div>
+        <div class="stat" style="--accent: var(--stage-7)">
+          <div class="stat-label">Exposure at risk</div><div class="stat-value sm">$4.63M</div>
+          <div class="stat-foot">sum of breached deals</div>
+        </div>
+        <div class="stat" style="--accent: var(--stage-3)">
+          <div class="stat-label">Median cycle time</div><div class="stat-value sm">9.2 days</div>
+          <div class="stat-foot">intake to decision, 90d</div>
+        </div>
+      </div>
+
+      <div class="cols-3">
+        <!-- WATCH -->
+        <div class="sev-col">
+          <div class="sev-head watch">
+            <div class="sev-n">1</div>
+            <div class="sev-l">Watch</div>
+            <div class="sev-r">5&ndash;7 business days idle</div>
+          </div>
+          <div class="sev-body">
+            <div class="sla-card">
+              <div class="row">
+                <span class="sla-days warn">6<small>days</small></span>
+                <div>
+                  <div style="font-weight:800">Cedar &amp; Vine Restaurant Group</div>
+                  <div class="small faint">DL-2026-0388 &middot; $1,450,000</div>
+                </div>
+              </div>
+              <dl class="kv mt-4">
+                <dt>Stage</dt><dd>5 &mdash; Memo Drafting</dd>
+                <dt>Owning queue</dt><dd>Analyst &mdash; A. Kaur</dd>
+                <dt>Blocked by</dt><dd>Unaccepted memo draft</dd>
+                <dt>Last action</dt><dd>28 Jul 11:04</dd>
+              </dl>
+              <div class="row mt-4">
+                <button type="button" class="btn btn-sm btn-primary" data-goto="review">Open review</button>
+                <button type="button" class="btn btn-sm btn-ghost">Nudge owner</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- BREACH -->
+        <div class="sev-col">
+          <div class="sev-head breach">
+            <div class="sev-n">2</div>
+            <div class="sev-l">Breach</div>
+            <div class="sev-r">8&ndash;14 business days idle</div>
+          </div>
+          <div class="sev-body">
+            <div class="sla-card">
+              <div class="row">
+                <span class="sla-days bad">9<small>days</small></span>
+                <div>
+                  <div style="font-weight:800">Sunbelt HVAC Services</div>
+                  <div class="small faint">DL-2026-0399 &middot; $880,000</div>
+                </div>
+              </div>
+              <dl class="kv mt-4">
+                <dt>Stage</dt><dd>3 &mdash; Financial Spreading</dd>
+                <dt>Owning queue</dt><dd>Analyst &mdash; A. Kaur</dd>
+                <dt>Blocked by</dt><dd>Returned for missing equipment note</dd>
+                <dt>Last action</dt><dd>21 Jul 09:33</dd>
+              </dl>
+              <div class="row mt-4">
+                <button type="button" class="btn btn-sm btn-primary" data-goto="deal">Open deal</button>
+                <button type="button" class="btn btn-sm btn-ghost">Reassign</button>
+              </div>
+            </div>
+            <div class="sla-card">
+              <div class="row">
+                <span class="sla-days bad">11<small>days</small></span>
+                <div>
+                  <div style="font-weight:800">Ironwood Craft Brewing</div>
+                  <div class="small faint">DL-2026-0371 &middot; $2,400,000</div>
+                </div>
+              </div>
+              <dl class="kv mt-4">
+                <dt>Stage</dt><dd>7 &mdash; Approval</dd>
+                <dt>Owning queue</dt><dd>Committee</dd>
+                <dt>Blocked by</dt><dd>Awaiting quorum &mdash; 1 of 3 votes</dd>
+                <dt>Last action</dt><dd>19 Jul 16:20</dd>
+              </dl>
+              <div class="row mt-4">
+                <button type="button" class="btn btn-sm btn-primary" data-goto="approvals">Open approvals</button>
+                <button type="button" class="btn btn-sm btn-ghost">Escalate</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- CRITICAL -->
+        <div class="sev-col">
+          <div class="sev-head critical">
+            <div class="sev-n">1</div>
+            <div class="sev-l">Critical</div>
+            <div class="sev-r">15+ business days idle</div>
+          </div>
+          <div class="sev-body">
+            <div class="sla-card">
+              <div class="row">
+                <span class="sla-days bad">17<small>days</small></span>
+                <div>
+                  <div style="font-weight:800">Delmar Freight Brokers</div>
+                  <div class="small faint">DL-2026-0344 &middot; $520,000</div>
+                </div>
+              </div>
+              <dl class="kv mt-4">
+                <dt>Stage</dt><dd>2 &mdash; Doc Extraction</dd>
+                <dt>Owning queue</dt><dd>RM &mdash; M. Tran</dd>
+                <dt>Blocked by</dt><dd>Borrower has not supplied 2025 return</dd>
+                <dt>Last action</dt><dd>7 Jul 13:55</dd>
+              </dl>
+              <div class="row mt-4">
+                <button type="button" class="btn btn-sm btn-danger">Escalate to head of credit</button>
+                <button type="button" class="btn btn-sm btn-ghost">Withdraw deal</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= AUDIT ================= -->
+    <section id="screen-audit" class="screen" aria-label="Audit trail">
+      <div class="screen-head">
+        <div>
+          <div class="eyebrow">REQ-018 &middot; REQ-047</div>
+          <h2 class="screen-title">Audit Trail</h2>
+          <p class="screen-sub">Append-only. Entries cannot be edited or deleted by any role, including administrators. Each entry is hash-chained to the entry before it.</p>
+        </div>
+        <div class="screen-head-actions">
+          <button type="button" class="btn btn-sm">Export CSV</button>
+          <button type="button" class="btn btn-sm">Export JSON</button>
+        </div>
+      </div>
+
+      <div class="readonly-banner">
+        <span class="lock" aria-hidden="true">&#128274;</span>
+        <span>
+          <strong>Read-only ledger.</strong> 41,882 entries retained for 7 years under record-retention policy REC-002.
+          Last verified hash <span class="mono">a91f&hellip;7c04</span> at 30 Jul 2026 09:40 UTC.
+        </span>
+      </div>
+
+      <div class="toolbar">
+        <span class="field-inline">Deal
+          <select class="control" aria-label="Deal filter">
+            <option>All deals</option><option>DL-2026-0395</option>
+            <option>DL-2026-0388</option><option>DL-2026-0371</option>
+          </select>
+        </span>
+        <span class="field-inline">Actor
+          <select class="control" aria-label="Actor filter">
+            <option>All actors</option><option>Humans only</option>
+            <option>Agents only</option><option>Deterministic engine</option>
+          </select>
+        </span>
+        <span class="field-inline">Action
+          <select class="control" aria-label="Action filter">
+            <option>All actions</option><option>approval.*</option>
+            <option>draft.*</option><option>policy.*</option><option>stage.*</option>
+          </select>
+        </span>
+        <span class="field-inline">From
+          <input class="control" type="date" value="2026-07-01" aria-label="From date">
+        </span>
+        <span class="field-inline">To
+          <input class="control" type="date" value="2026-07-30" aria-label="To date">
+        </span>
+        <div class="spacer"></div>
+        <span class="chip chip-outline">248 entries in range</span>
+      </div>
+
+      <div class="panel">
+        <div class="panel-body">
+          <div class="spine">
+
+            <div class="tl-item">
+              <div class="tl-node ok">&#10003;</div>
+              <div class="tl-card">
+                <div class="tl-head">
+                  <span class="tl-action">approval.granted</span>
+                  <span class="chip chip-ok">Approved</span>
+                  <span class="tl-time">2026-07-24T15:12:08Z</span>
+                </div>
+                <div class="tl-actor"><b>Dana Ruiz</b> &middot; credit_officer &middot; DL-2026-0361 Terrace Hill Assisted Living</div>
+                <div class="tl-detail">tier=senior_officer exposure=610000 authority_max=1000000<br>conditions="DSCR covenant 1.20x tested annually"<br>prev_hash=7bd1&hellip;19aa entry_hash=c440&hellip;8e21</div>
+              </div>
+            </div>
+
+            <div class="tl-item">
+              <div class="tl-node bad">&#10005;</div>
+              <div class="tl-card">
+                <div class="tl-head">
+                  <span class="tl-action">approval.declined</span>
+                  <span class="chip chip-danger">Adverse action</span>
+                  <span class="tl-time">2026-07-23T11:47:31Z</span>
+                </div>
+                <div class="tl-actor"><b>Jae Park</b> &middot; credit_analyst &middot; DL-2026-0357 Harbor Point Nail Studio</div>
+                <div class="tl-detail">adverse_action_reason="Insufficient cash flow to service the requested debt; DSCR 0.82x against policy floor 1.25x (POL-DSCR-01)"<br>notice_sent=true ecoa_code=07<br>prev_hash=3a20&hellip;dd51 entry_hash=7bd1&hellip;19aa</div>
+              </div>
+            </div>
+
+            <div class="tl-item">
+              <div class="tl-node warn">&#8617;</div>
+              <div class="tl-card">
+                <div class="tl-head">
+                  <span class="tl-action">stage.returned</span>
+                  <span class="chip chip-warn">Returned</span>
+                  <span class="tl-time">2026-07-21T09:33:12Z</span>
+                </div>
+                <div class="tl-actor"><b>Dana Ruiz</b> &middot; credit_officer &middot; DL-2026-0399 Sunbelt HVAC Services</div>
+                <div class="tl-detail">from_stage=5_memo to_stage=3_spreading<br>reason="Spread omits the 2025 equipment note on the debt schedule; re-spread before grading"<br>prev_hash=91ce&hellip;40b7 entry_hash=3a20&hellip;dd51</div>
+              </div>
+            </div>
+
+            <div class="tl-item">
+              <div class="tl-node info">&#9881;</div>
+              <div class="tl-card">
+                <div class="tl-head">
+                  <span class="tl-action">metrics.computed</span>
+                  <span class="chip chip-info">Deterministic</span>
+                  <span class="tl-time">2026-07-21T16:44:02Z</span>
+                </div>
+                <div class="tl-actor"><b>engine v4.2</b> &middot; system &middot; DL-2026-0395 Ridgeline Precision Machining</div>
+                <div class="tl-detail">dscr=1.4201 leverage=2.8003 current_ratio=1.6500 ltv=0.7143<br>rubric=FY26-Q3 score=60 grade=4B<br>inputs_hash=de07&hellip;1f39 no_model_involved=true</div>
+              </div>
+            </div>
+
+            <div class="tl-item">
+              <div class="tl-node ok">&#10003;</div>
+              <div class="tl-card">
+                <div class="tl-head">
+                  <span class="tl-action">draft.accepted</span>
+                  <span class="chip chip-ok">Accepted</span>
+                  <span class="tl-time">2026-07-21T16:41:55Z</span>
+                </div>
+                <div class="tl-actor"><b>Amrita Kaur</b> &middot; credit_analyst &middot; DL-2026-0395 &middot; artifact=financial_spread</div>
+                <div class="tl-detail">agent=uw-spread-4.1 prompt_version=v5.0.2 run_id=run_5c81ae40<br>figures=12 citations=12 edits=0 latency_ms=18412 tokens=31940</div>
+              </div>
+            </div>
+
+            <div class="tl-item">
+              <div class="tl-node bad">&#9998;</div>
+              <div class="tl-card">
+                <div class="tl-head">
+                  <span class="tl-action">draft.rejected</span>
+                  <span class="chip chip-danger">Rejected</span>
+                  <span class="tl-time">2026-07-24T10:05:44Z</span>
+                </div>
+                <div class="tl-actor"><b>Amrita Kaur</b> &middot; credit_analyst &middot; DL-2026-0388 &middot; artifact=credit_memo v0</div>
+                <div class="tl-detail">reason="Memo cites the superseded 2024 appraisal; collateral section must use the 3 May 2026 valuation"<br>agent=uw-memo-2.9 prompt_version=v3.7.0 run_id=run_1de4c883</div>
+              </div>
+            </div>
+
+            <div class="tl-item">
+              <div class="tl-node warn">&#9873;</div>
+              <div class="tl-card">
+                <div class="tl-head">
+                  <span class="tl-action">policy.exception_raised</span>
+                  <span class="chip chip-warn">POL-CONC-03</span>
+                  <span class="tl-time">2026-07-20T14:18:09Z</span>
+                </div>
+                <div class="tl-actor"><b>uw-policy-1.8</b> &middot; agent &middot; DL-2026-0395 Ridgeline Precision Machining</div>
+                <div class="tl-detail">rule=POL-CONC-03 measured=0.234 limit=0.250 severity=medium<br>disposition=written_exception_required requires_human=true</div>
+              </div>
+            </div>
+
+            <div class="tl-item">
+              <div class="tl-node info">&#9679;</div>
+              <div class="tl-card">
+                <div class="tl-head">
+                  <span class="tl-action">deal.submitted</span>
+                  <span class="chip chip-info">Intake</span>
+                  <span class="tl-time">2026-07-18T09:22:41Z</span>
+                </div>
+                <div class="tl-actor"><b>Marcus Tran</b> &middot; relationship_manager &middot; DL-2026-0395</div>
+                <div class="tl-detail">borrower="Ridgeline Precision Machining, Inc." exposure=875000 facility=oo_cre<br>documents=7 ip=10.44.2.19 session=sess_b7714f</div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+        <div class="panel-foot">
+          <button type="button" class="btn btn-sm">Load 40 older entries</button>
+          <span class="right hash">Chain verified &middot; 0 gaps detected &middot; verifier build 2026.07.29</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= CHAT ================= -->
+    <div id="screen-chat" class="screen" aria-label="Portfolio Q&amp;A">
+      <div class="screen-head">
+        <div>
+          <div class="eyebrow">REQ-008 &middot; REQ-039 &middot; REQ-040</div>
+          <h2 class="screen-title">Portfolio Q&amp;A</h2>
+          <p class="screen-sub">Grounded strictly in stored deal data and scoped to your role. The agent abstains when the record does not support an answer &mdash; it never estimates, and it never decides.</p>
+        </div>
+        <div class="screen-head-actions">
+          <span class="scope-chip">&#9673; RBAC scope: credit_officer &middot; 12 deals visible</span>
+        </div>
+      </div>
+
+      <div class="chat-wrap">
+        <div class="chat-panel">
+          <div class="chat-head">
+            <span class="agent-avatar">Q&amp;A</span>
+            <div>
+              <div class="agent-name">Portfolio Q&amp;A Agent</div>
+              <div class="agent-meta">uw-portfolio-qa-2.2 &middot; prompt v6.0.1 &middot; read-only access</div>
+            </div>
+            <span class="spacer"></span>
+            <span class="chip chip-outline">Answers cite deal records</span>
+          </div>
+
+          <ul id="messages">
+            <li class="msg agent">
+              <span class="msg-av">Q&amp;A</span>
+              <div>
+                <div class="msg-who">Portfolio Q&amp;A Agent</div>
+                <div class="bubble">
+                  I can answer questions across the 12 deals in your scope &mdash; spreads, computed metrics, grades, policy exceptions, decisions, and timing. I quote only what is stored on the deal record.
+                </div>
+              </div>
+            </li>
+
+            <li class="msg user">
+              <span class="msg-av">DR</span>
+              <div>
+                <div class="msg-who" style="text-align:right">Dana Ruiz</div>
+                <div class="bubble">Which deals in approval have a DSCR below the policy floor?</div>
+              </div>
+            </li>
+
+            <li class="msg agent">
+              <span class="msg-av">Q&amp;A</span>
+              <div>
+                <div class="msg-who">Portfolio Q&amp;A Agent</div>
+                <div class="bubble">
+                  Two deals currently at stage 7 (Approval) have a code-computed DSCR below the 1.25x floor in POL-DSCR-01:
+                  <br><br>
+                  &bull; <strong>Ironwood Craft Brewing</strong> (DL-2026-0371, $2,400,000) &mdash; DSCR <strong>1.18x</strong>, grade 5C, committee tier.<br>
+                  &bull; <strong>Fairmont Auto Body</strong> (DL-2026-0368, $1,900,000) &mdash; DSCR <strong>1.04x</strong>, grade 6D, also breaching POL-LTV-02 at 88.2% LTV.
+                  <br><br>
+                  Granite Ridge Plumbing is the only approval-stage deal that clears every threshold (DSCR 2.04x).
+                  <div class="msg-cites">
+                    <button type="button" class="cite">engine m_44903</button>
+                    <button type="button" class="cite">engine m_44871</button>
+                    <button type="button" class="cite">POL-DSCR-01</button>
+                    <button type="button" class="cite">POL-LTV-02</button>
+                    <button type="button" class="cite">DL-2026-0371</button>
+                    <button type="button" class="cite">DL-2026-0368</button>
+                  </div>
+                </div>
+              </div>
+            </li>
+
+            <li class="msg user">
+              <span class="msg-av">DR</span>
+              <div>
+                <div class="msg-who" style="text-align:right">Dana Ruiz</div>
+                <div class="bubble">What is Ironwood's projected occupancy for the new taproom in 2027?</div>
+              </div>
+            </li>
+
+            <li class="msg agent">
+              <span class="msg-av">Q&amp;A</span>
+              <div>
+                <div class="msg-who">Portfolio Q&amp;A Agent</div>
+                <div class="bubble abstain">
+                  <strong>Not supported by the record.</strong> The stored file for DL-2026-0371 contains historical financials through FY2025, the debt schedule, and the 2026 appraisal. There is no occupancy projection or 2027 forecast in any accepted artifact, and I will not estimate one.
+                  <br><br>
+                  If the borrower supplies projections, upload them to the deal and re-run the spread &mdash; I can answer from them once they are accepted by an analyst.
+                  <div class="msg-cites">
+                    <button type="button" class="cite">DL-2026-0371 doc index</button>
+                    <button type="button" class="cite">abstention policy</button>
+                  </div>
+                </div>
+              </div>
+            </li>
+
+            <li class="msg user">
+              <span class="msg-av">DR</span>
+              <div>
+                <div class="msg-who" style="text-align:right">Dana Ruiz</div>
+                <div class="bubble">Should I approve Granite Ridge?</div>
+              </div>
+            </li>
+
+            <li class="msg agent">
+              <span class="msg-av">Q&amp;A</span>
+              <div>
+                <div class="msg-who">Portfolio Q&amp;A Agent</div>
+                <div class="bubble abstain">
+                  <strong>Out of scope.</strong> I cannot approve, decline, recommend a credit decision, or advance a deal. Approval authority for a $275,000 exposure sits with a senior credit officer, and the decision must record your name.
+                  <br><br>
+                  What I can tell you from the record: grade 2A (rubric score 78), DSCR 2.04x, current ratio 2.31x, no open policy exceptions, memo accepted by A. Kaur on 27 Jul.
+                  <div class="msg-cites">
+                    <button type="button" class="cite">DL-2026-0366</button>
+                    <button type="button" class="cite">rubric score 78</button>
+                    <button type="button" class="cite">engine m_44955</button>
+                  </div>
+                </div>
+              </div>
+            </li>
+          </ul>
+
+          <div class="suggestions">
+            <button type="button" class="suggestion" data-fill="Which deals have open POL-CONC-03 exceptions?">Open POL-CONC-03 exceptions?</button>
+            <button type="button" class="suggestion" data-fill="Show me every deal idle more than 5 business days with its owning queue.">Idle &gt; 5 days by queue</button>
+            <button type="button" class="suggestion" data-fill="What drove the 4B grade on Ridgeline Precision Machining?">Why is Ridgeline 4B?</button>
+          </div>
+
+          <form id="composer" autocomplete="off">
+            <label class="sr-only" for="input">Ask the portfolio Q&amp;A agent</label>
+            <input id="input" type="text" placeholder="Ask about any deal in your scope — answers cite the record…">
+            <button type="submit" class="btn btn-lg btn-primary">Ask</button>
+          </form>
+        </div>
+
+        <!-- side column -->
+        <div>
+          <div class="panel">
+            <div class="panel-head"><span class="panel-title">Grounding &amp; limits</span></div>
+            <div class="panel-body">
+              <div class="stack small">
+                <div class="row tight"><span class="chip chip-ok">Cites</span><span>Deal records, accepted spreads, engine metrics, policy text</span></div>
+                <div class="row tight"><span class="chip chip-warn">Abstains</span><span>When no accepted artifact supports the answer</span></div>
+                <div class="row tight"><span class="chip chip-danger">Never</span><span>Approves, declines, advances a stage, or edits a record</span></div>
+                <div class="row tight"><span class="chip chip-info">Scope</span><span>RBAC-filtered &mdash; RMs see only their own deals</span></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-head"><span class="panel-title">Deals in scope</span><span class="spacer"></span><span class="panel-note">12</span></div>
+            <div class="panel-body">
+              <div class="stack">
+                <div class="file"><span class="doc-ico">RP</span><div><div>Ridgeline Precision</div><div class="meta">DL-2026-0395 &middot; stage 4</div></div></div>
+                <div class="file"><span class="doc-ico">CV</span><div><div>Cedar &amp; Vine</div><div class="meta">DL-2026-0388 &middot; stage 5</div></div></div>
+                <div class="file"><span class="doc-ico">IC</span><div><div>Ironwood Craft Brewing</div><div class="meta">DL-2026-0371 &middot; stage 7</div></div></div>
+                <div class="file"><span class="doc-ico">FA</span><div><div>Fairmont Auto Body</div><div class="meta">DL-2026-0368 &middot; stage 7</div></div></div>
+                <div class="file"><span class="doc-ico">GR</span><div><div>Granite Ridge Plumbing</div><div class="meta">DL-2026-0366 &middot; stage 7</div></div></div>
+              </div>
+              <div class="mt-4"><button type="button" class="btn btn-sm btn-ghost" data-goto="pipeline">See all on the board &rarr;</button></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  var screens = ["pipeline","intake","deal","review","approvals","sla","audit","chat"];
+
+  function show(name) {
+    if (screens.indexOf(name) === -1) { return; }
+    screens.forEach(function (s) {
+      var el = document.getElementById("screen-" + s);
+      if (el) { el.classList.toggle("active", s === name); }
+    });
+    document.querySelectorAll(".rail-item").forEach(function (b) {
+      b.classList.toggle("active", b.getAttribute("data-screen") === name);
+    });
+    var main = document.querySelector(".main");
+    if (main) { main.scrollTop = 0; }
+    if (history.replaceState) { history.replaceState(null, "", "#" + name); }
+  }
+
+  /* rail nav */
+  document.querySelectorAll(".rail-item").forEach(function (btn) {
+    btn.addEventListener("click", function () { show(btn.getAttribute("data-screen")); });
+  });
+
+  /* any element with data-goto jumps screens */
+  document.addEventListener("click", function (e) {
+    var t = e.target.closest("[data-goto]");
+    if (t) { e.preventDefault(); show(t.getAttribute("data-goto")); }
+  });
+
+  /* deal cards are div[role=button] for valid HTML content model —
+     restore native button keyboard activation (Enter / Space) */
+  document.addEventListener("keydown", function (e) {
+    if (e.key !== "Enter" && e.key !== " " && e.key !== "Spacebar") { return; }
+    var t = e.target.closest('[role="button"][data-goto]');
+    if (t) { e.preventDefault(); show(t.getAttribute("data-goto")); }
+  });
+
+  /* agent mode switcher */
+  var agentMode = document.getElementById("agent-mode");
+  agentMode.addEventListener("click", function (e) {
+    var chip = e.target.closest(".agent-chip");
+    if (!chip) { return; }
+    agentMode.querySelectorAll(".agent-chip").forEach(function (c) {
+      c.setAttribute("aria-pressed", String(c === chip));
+    });
+    document.body.setAttribute("data-active-agent", chip.getAttribute("data-agent"));
+    if (chip.getAttribute("data-agent") === "qa") { show("chat"); }
+  });
+
+  /* chat composer */
+  var composer = document.getElementById("composer");
+  var input = document.getElementById("input");
+  var messages = document.getElementById("messages");
+
+  function addMessage(role, who, html, cites, abstain) {
+    var li = document.createElement("li");
+    li.className = "msg " + role;
+
+    var av = document.createElement("span");
+    av.className = "msg-av";
+    av.textContent = role === "user" ? "DR" : "Q&A";
+
+    var wrap = document.createElement("div");
+
+    var whoEl = document.createElement("div");
+    whoEl.className = "msg-who";
+    whoEl.textContent = who;
+    if (role === "user") { whoEl.style.textAlign = "right"; }
+
+    var bubble = document.createElement("div");
+    bubble.className = "bubble" + (abstain ? " abstain" : "");
+    bubble.innerHTML = html;
+
+    if (cites && cites.length) {
+      var box = document.createElement("div");
+      box.className = "msg-cites";
+      cites.forEach(function (c) {
+        var b = document.createElement("button");
+        b.type = "button";
+        b.className = "cite";
+        b.textContent = c;
+        box.appendChild(b);
+      });
+      bubble.appendChild(box);
+    }
+
+    wrap.appendChild(whoEl);
+    wrap.appendChild(bubble);
+    li.appendChild(av);
+    li.appendChild(wrap);
+    messages.appendChild(li);
+    messages.scrollTop = messages.scrollHeight;
+  }
+
+  composer.addEventListener("submit", function (e) {
+    e.preventDefault();
+    var q = input.value.trim();
+    if (!q) { return; }
+    addMessage("user", "Dana Ruiz", q.replace(/[<>&]/g, ""));
+    input.value = "";
+    setTimeout(function () {
+      addMessage(
+        "agent",
+        "Portfolio Q&A Agent",
+        "Retrieving from stored deal records within your RBAC scope. Wire this handler to <span class=\"mono\">POST /api/agents/portfolio-qa</span> — the response should carry an answer plus a citation array, and an <span class=\"mono\">abstained</span> flag when the record does not support an answer.",
+        ["pending response"],
+        false
+      );
+    }, 320);
+  });
+
+  document.querySelectorAll(".suggestion").forEach(function (s) {
+    s.addEventListener("click", function () {
+      input.value = s.getAttribute("data-fill");
+      input.focus();
+    });
+  });
+
+  /* deep link */
+  var hash = (location.hash || "").replace("#", "");
+  if (hash) { show(hash); }
+})();
+</script>
+
+</body>
+</html>

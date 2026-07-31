@@ -1,0 +1,315 @@
+{
+  "modules": [
+    "persistence-core",
+    "agent-runtime",
+    "chat-shell",
+    "postgres-adapter",
+    "migrations",
+    "blob-store",
+    "file-upload",
+    "file-preview",
+    "doc-extract",
+    "table-extract",
+    "rag-core",
+    "citation-tracker",
+    "search-index",
+    "workflow-engine",
+    "state-machine",
+    "approval-flow",
+    "audit-log",
+    "audit-view",
+    "row-history",
+    "assignment",
+    "sla-timers",
+    "versioned-drafts",
+    "auth-basic",
+    "rbac",
+    "row-level-security",
+    "agent-router",
+    "tool-registry",
+    "prompt-registry",
+    "eval-harness",
+    "transcript-store",
+    "pii-redaction",
+    "cost-meter",
+    "data-table",
+    "record-detail",
+    "forms-engine",
+    "dashboard-cards",
+    "screen-router",
+    "export-csv",
+    "env-config",
+    "secrets-manager",
+    "structured-logging",
+    "health-plus"
+  ],
+  "deploy_target": "cloud-run",
+  "runtime_choice": {
+    "runtime": "agent-runtime",
+    "why": "Neither the intake nor the requirements name a mandated department framework (no LangGraph / ADK / Strands mandate), so the default Claude Agent SDK runtime is kept. No adapter swap; no runtime conflict."
+  },
+  "pack_basis": {
+    "packs_considered": [
+      "pack-document-review",
+      "pack-intake-triage",
+      "pack-support-copilot"
+    ],
+    "started_from": "pack-document-review",
+    "why": "The app's spine is ingest -> extract -> human review queue -> decision trail over borrower documents, which is exactly pack-document-review. It is a hybrid though: the intake-triage half (queues, SLA, explicit stage machine) and the support-copilot half (grounded citations, approval gate, transcripts) are both required, so the two other packs were merged in rather than adopted whole.",
+    "added_beyond_pack": {
+      "from pack-intake-triage": [
+        "assignment (already in base pack)",
+        "state-machine",
+        "sla-timers",
+        "agent-router",
+        "forms-engine"
+      ],
+      "from pack-support-copilot": [
+        "rag-core",
+        "citation-tracker",
+        "transcript-store"
+      ],
+      "workflow spine": [
+        "workflow-engine",
+        "approval-flow",
+        "audit-view",
+        "versioned-drafts"
+      ],
+      "identity + authorization": [
+        "auth-basic",
+        "rbac",
+        "row-level-security"
+      ],
+      "agent governance": [
+        "tool-registry",
+        "prompt-registry",
+        "eval-harness",
+        "cost-meter",
+        "pii-redaction"
+      ],
+      "durability on a stateless runtime": [
+        "postgres-adapter",
+        "migrations"
+      ],
+      "ui surfaces": [
+        "data-table",
+        "record-detail",
+        "dashboard-cards",
+        "screen-router",
+        "file-preview",
+        "export-csv",
+        "search-index"
+      ],
+      "cloud-run operability": [
+        "env-config",
+        "secrets-manager",
+        "structured-logging",
+        "health-plus"
+      ]
+    },
+    "removed_from_pack": [],
+    "notable_exclusions": [
+      "ocr-bridge — GAP-056 settled that borrower documents arrive as native-text PDFs with extractable text; OCR is explicitly out of scope, so doc-extract + table-extract are sufficient.",
+      "email-ingest — the pack-intake-triage intake path is a form (REQ-028), not a mailbox; no requirement asks for forwarded email.",
+      "slack-notify / email-send / notifications-ui — no requirement asks for outbound notification; the SLA surface is a dashboard (REQ-022), not a push channel.",
+      "scheduling / batch-runner — SLA idle time is computed on read from a business-day calendar (REQ-044); nothing requires background jobs, and Cloud Run request handling is stateless (REQ-026).",
+      "soft-delete / data-retention — REQ-018 makes the audit trail append-only and undeletable; there is no retention/purge requirement to honor.",
+      "permissions-ui / admin-console — REQ-041 fixes identities to built-in role-assigned accounts, so there is no role-administration surface to build.",
+      "pdf-render — REQ-047 asks that the audit trail be exportable for examiner review; export-csv satisfies that without a document generator.",
+      "sso-oidc — REQ-041 explicitly assumes no external SSO/IdP in v1.",
+      "guardrails-io / data-classification — REQ-049's sensitivity handling is met by pii-redaction under transcript-store plus rbac-scoped access; no requirement asks for topic fences or column-level classification."
+    ]
+  },
+  "module_coverage": [
+    {
+      "module": "persistence-core",
+      "addresses": ["REQ-027", "REQ-029", "REQ-031", "REQ-035", "REQ-037"]
+    },
+    {
+      "module": "agent-runtime",
+      "addresses": ["REQ-003", "REQ-004", "REQ-005", "REQ-006", "REQ-007", "REQ-008", "REQ-038", "REQ-039"]
+    },
+    {
+      "module": "chat-shell",
+      "addresses": ["REQ-008", "REQ-046"]
+    },
+    {
+      "module": "postgres-adapter",
+      "addresses": ["REQ-018", "REQ-026", "REQ-027", "REQ-029"]
+    },
+    {
+      "module": "migrations",
+      "addresses": ["REQ-026", "REQ-027"]
+    },
+    {
+      "module": "blob-store",
+      "addresses": ["REQ-029"]
+    },
+    {
+      "module": "file-upload",
+      "addresses": ["REQ-029"]
+    },
+    {
+      "module": "file-preview",
+      "addresses": ["REQ-032", "REQ-046"]
+    },
+    {
+      "module": "doc-extract",
+      "addresses": ["REQ-005", "REQ-030"]
+    },
+    {
+      "module": "table-extract",
+      "addresses": ["REQ-005", "REQ-030", "REQ-031"]
+    },
+    {
+      "module": "rag-core",
+      "addresses": ["REQ-008", "REQ-039"]
+    },
+    {
+      "module": "citation-tracker",
+      "addresses": ["REQ-005", "REQ-006", "REQ-032", "REQ-046"]
+    },
+    {
+      "module": "search-index",
+      "addresses": ["REQ-008"]
+    },
+    {
+      "module": "workflow-engine",
+      "addresses": ["REQ-001", "REQ-009", "REQ-010", "REQ-014", "REQ-016", "REQ-036", "REQ-043", "REQ-048"]
+    },
+    {
+      "module": "state-machine",
+      "addresses": ["REQ-001", "REQ-017", "REQ-036", "REQ-048"]
+    },
+    {
+      "module": "approval-flow",
+      "addresses": ["REQ-011", "REQ-012", "REQ-013", "REQ-015", "REQ-016", "REQ-017", "REQ-035", "REQ-037", "REQ-043", "REQ-046"]
+    },
+    {
+      "module": "audit-log",
+      "addresses": ["REQ-015", "REQ-018"]
+    },
+    {
+      "module": "audit-view",
+      "addresses": ["REQ-045", "REQ-047"]
+    },
+    {
+      "module": "row-history",
+      "addresses": ["REQ-018", "REQ-037"]
+    },
+    {
+      "module": "assignment",
+      "addresses": ["REQ-004", "REQ-033"]
+    },
+    {
+      "module": "sla-timers",
+      "addresses": ["REQ-022", "REQ-044"]
+    },
+    {
+      "module": "versioned-drafts",
+      "addresses": ["REQ-016", "REQ-034", "REQ-037"]
+    },
+    {
+      "module": "auth-basic",
+      "addresses": ["REQ-015", "REQ-041"]
+    },
+    {
+      "module": "rbac",
+      "addresses": ["REQ-019", "REQ-020", "REQ-021", "REQ-042", "REQ-049"]
+    },
+    {
+      "module": "row-level-security",
+      "addresses": ["REQ-019", "REQ-040", "REQ-042"]
+    },
+    {
+      "module": "agent-router",
+      "addresses": ["REQ-003"]
+    },
+    {
+      "module": "tool-registry",
+      "addresses": ["REQ-003", "REQ-009", "REQ-010", "REQ-014"]
+    },
+    {
+      "module": "prompt-registry",
+      "addresses": ["REQ-034", "REQ-038"]
+    },
+    {
+      "module": "eval-harness",
+      "addresses": ["REQ-025"]
+    },
+    {
+      "module": "transcript-store",
+      "addresses": ["REQ-038", "REQ-049"]
+    },
+    {
+      "module": "pii-redaction",
+      "addresses": ["REQ-049"]
+    },
+    {
+      "module": "cost-meter",
+      "addresses": ["REQ-038"]
+    },
+    {
+      "module": "data-table",
+      "addresses": ["REQ-002", "REQ-033", "REQ-047"]
+    },
+    {
+      "module": "record-detail",
+      "addresses": ["REQ-010", "REQ-045", "REQ-046"]
+    },
+    {
+      "module": "forms-engine",
+      "addresses": ["REQ-028", "REQ-031"]
+    },
+    {
+      "module": "dashboard-cards",
+      "addresses": ["REQ-002", "REQ-022"]
+    },
+    {
+      "module": "screen-router",
+      "addresses": ["REQ-002", "REQ-045"]
+    },
+    {
+      "module": "export-csv",
+      "addresses": ["REQ-047"]
+    },
+    {
+      "module": "env-config",
+      "addresses": ["REQ-026", "REQ-051"]
+    },
+    {
+      "module": "secrets-manager",
+      "addresses": ["REQ-026", "REQ-049"]
+    },
+    {
+      "module": "structured-logging",
+      "addresses": ["REQ-018", "REQ-051"]
+    },
+    {
+      "module": "health-plus",
+      "addresses": ["REQ-026", "REQ-051"]
+    }
+  ],
+  "build_budget_plan": {
+    "nodes": {
+      "slice-plan": 2.5,
+      "slice-1": 7.0,
+      "slice-2": 8.0,
+      "slice-3": 8.0,
+      "slice-4": 8.0,
+      "slice-5": 7.5,
+      "slice-6": 7.0
+    },
+    "total_usd": 48.0,
+    "rationale": "42 certified modules carry the substrate (durable store, workflow engine, approval trail, RBAC, citations, document extraction, SLA math, UI shells, Cloud Run operability), so each slice is mostly wiring plus this app's genuinely bespoke logic. The estimates sit well under the per-node $15 runaway guards because composition removes the expensive generation: only the ratio/grading engine, the policy rule set, and the five agent mandates are written from scratch. Total leaves ~$52 of the $100 run envelope for the design phase already in flight (design-options alone guards at $36).",
+    "node_notes": {
+      "slice-plan": "Derives the vertical slices; bounded planning output, cheapest node in the build phase.",
+      "slice-1": "Deal entity + intake form + auth/RBAC + pipeline board skeleton — heaviest composition, lightest bespoke code (persistence-core, postgres-adapter, migrations, forms-engine, auth-basic, rbac, row-level-security, data-table, screen-router).",
+      "slice-2": "Document upload, native-text PDF extraction, and the financial spreading agent with per-figure citations — three modules do the plumbing (file-upload, doc-extract, table-extract, citation-tracker) but the spread template and citation binding are bespoke.",
+      "slice-3": "Deterministic DSCR/leverage/current-ratio engine and the 5-point grading rubric from GAP-052, plus exhaustive unit tests (REQ-023). Entirely bespoke code with no module to lean on, hence the full allocation despite a narrow surface.",
+      "slice-4": "Credit memo agent and policy compliance agent over the versioned rule set from GAP-053, with drafts landing in the accept/edit/reject review UI (versioned-drafts, approval-flow, record-detail).",
+      "slice-5": "Tiered approval per GAP-054/GAP-055, decline with adverse-action reason, return-to-stage, and the audit view/export — approval-flow, state-machine, audit-view and export-csv cover most of it.",
+      "slice-6": "SLA dashboard with business-day math and escalation owner, portfolio Q&A agent under RBAC-scoped retrieval, and the eval suites for all five agents (sla-timers, dashboard-cards, rag-core, search-index, eval-harness)."
+    }
+  }
+}

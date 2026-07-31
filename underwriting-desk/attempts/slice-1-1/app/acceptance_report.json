@@ -1,0 +1,66 @@
+{
+  "proven_through_slice": 1,
+  "slices": [
+    {
+      "slice": "deal-intake-and-pipeline",
+      "name": "Submit a deal and see it on the pipeline board",
+      "objective": "As a relationship manager I log in with my role-assigned account, submit a new SMB loan request on the intake form (borrower, industry, facility type, requested and exposure amount), and the deal is created at the intake stage and appears immediately on the pipeline board in its stage column — with the audit trail recording who created it and RBAC limiting me to my own deals. This is the walking skeleton: one login, one form, one persisted Deal, one board.",
+      "addresses": [
+        "REQ-001",
+        "REQ-002",
+        "REQ-018",
+        "REQ-019",
+        "REQ-020",
+        "REQ-021",
+        "REQ-026",
+        "REQ-027",
+        "REQ-028",
+        "REQ-041",
+        "REQ-042",
+        "REQ-051"
+      ],
+      "checks": [
+        {
+          "method": "POST",
+          "path": "/api/auth/login",
+          "expected_status": 200,
+          "contains": [
+            "relationship_manager"
+          ],
+          "ok": true
+        },
+        {
+          "method": "POST",
+          "path": "/api/deals",
+          "expected_status": 201,
+          "contains": [
+            "Acme Fabrication LLC",
+            "intake"
+          ],
+          "ok": true
+        },
+        {
+          "method": "GET",
+          "path": "/api/deals",
+          "expected_status": 200,
+          "contains": [
+            "Acme Fabrication LLC",
+            "intake"
+          ],
+          "ok": true
+        },
+        {
+          "method": "GET",
+          "path": "/api/pipeline",
+          "expected_status": 200,
+          "contains": [
+            "intake",
+            "document_extraction",
+            "approval"
+          ],
+          "ok": true
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,41 @@
+INFO:     Started server process [13405]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:49395 (Press CTRL+C to quit)
+INFO:     127.0.0.1:49398 - "GET /health HTTP/1.1" 200 OK
+{"ts": "2026-07-31T05:55:18Z", "level": "info", "event": "audit.appended", "event_type": "deal.created", "audit_log_id": 7, "deal_reference": "DEAL-1001"}
+{"ts": "2026-07-31T05:55:18Z", "level": "info", "event": "audit.appended", "event_type": "stage.transition", "audit_log_id": 9, "deal_reference": "DEAL-1001"}
+{"ts": "2026-07-31T05:55:18Z", "level": "info", "event": "audit.appended", "event_type": "document.stored", "audit_log_id": 12, "deal_reference": "DEAL-1001"}
+{"ts": "2026-07-31T05:55:18Z", "level": "info", "event": "audit.appended", "event_type": "document.stored", "audit_log_id": 14, "deal_reference": "DEAL-1001"}
+{"ts": "2026-07-31T05:55:18Z", "level": "info", "event": "audit.appended", "event_type": "deal.documents_stored", "audit_log_id": 15, "deal_reference": "DEAL-1001"}
+{"ts": "2026-07-31T05:55:18Z", "level": "info", "event": "audit.appended", "event_type": "document.extracted", "audit_log_id": 32, "deal_reference": "DEAL-1001"}
+{"ts": "2026-07-31T05:55:18Z", "level": "info", "event": "agent.run", "agent": "intake_triage", "deal_reference": "DEAL-1001", "agent_run_id": 38, "source": "workflow"}
+{"ts": "2026-07-31T05:55:18Z", "level": "info", "event": "audit.appended", "event_type": "agent_draft.created", "audit_log_id": 40, "deal_reference": "DEAL-1001"}
+{"ts": "2026-07-31T05:55:18Z", "level": "info", "event": "deal.submitted", "deal_reference": "DEAL-1001", "correlation_id": "cid-1c4cda563297", "workflow_run_id": "wf-4"}
+INFO:     127.0.0.1:49402 - "POST /deals HTTP/1.1" 200 OK
+{"ts": "2026-07-31T05:55:19Z", "level": "info", "event": "audit.appended", "event_type": "deal.created", "audit_log_id": 44, "deal_reference": "DEAL-2001"}
+{"ts": "2026-07-31T05:55:19Z", "level": "info", "event": "audit.appended", "event_type": "stage.transition", "audit_log_id": 46, "deal_reference": "DEAL-2001"}
+{"ts": "2026-07-31T05:55:19Z", "level": "info", "event": "audit.appended", "event_type": "deal.documents_stored", "audit_log_id": 48, "deal_reference": "DEAL-2001"}
+{"ts": "2026-07-31T05:55:19Z", "level": "info", "event": "agent.run", "agent": "intake_triage", "deal_reference": "DEAL-2001", "agent_run_id": 55, "source": "workflow"}
+{"ts": "2026-07-31T05:55:19Z", "level": "info", "event": "audit.appended", "event_type": "agent_draft.created", "audit_log_id": 57, "deal_reference": "DEAL-2001"}
+{"ts": "2026-07-31T05:55:19Z", "level": "info", "event": "deal.submitted", "deal_reference": "DEAL-2001", "correlation_id": "cid-c3c5084ac6fe", "workflow_run_id": "wf-41"}
+INFO:     127.0.0.1:49402 - "POST /deals HTTP/1.1" 200 OK
+{"ts": "2026-07-31T05:55:25Z", "level": "info", "event": "audit.appended", "event_type": "agent_draft.accepted", "audit_log_id": 59, "deal_reference": "DEAL-1001"}
+{"ts": "2026-07-31T05:55:25Z", "level": "info", "event": "audit.appended", "event_type": "deal.routed", "audit_log_id": 62, "deal_reference": "DEAL-1001"}
+{"ts": "2026-07-31T05:55:25Z", "level": "info", "event": "audit.appended", "event_type": "stage.transition", "audit_log_id": 65, "deal_reference": "DEAL-1001"}
+{"ts": "2026-07-31T05:55:25Z", "level": "info", "event": "audit.appended", "event_type": "deal.queue_assigned", "audit_log_id": 69, "deal_reference": "DEAL-1001"}
+INFO:     127.0.0.1:49403 - "POST /deals/DEAL-1001/drafts/triage/review HTTP/1.1" 200 OK
+{"ts": "2026-07-31T05:55:25Z", "level": "info", "event": "agent.run", "agent": "financial_spreading", "deal_reference": "DEAL-1001", "agent_run_id": 75, "source": "workflow"}
+{"ts": "2026-07-31T05:55:25Z", "level": "info", "event": "audit.appended", "event_type": "stage.transition", "audit_log_id": 78, "deal_reference": "DEAL-1001"}
+{"ts": "2026-07-31T05:55:25Z", "level": "info", "event": "audit.appended", "event_type": "agent_draft.created", "audit_log_id": 80, "deal_reference": "DEAL-1001"}
+INFO:     127.0.0.1:49403 - "POST /deals/DEAL-1001/spread HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49403 - "POST /deals/DEAL-1001/drafts/spread/review HTTP/1.1" 400 Bad Request
+{"ts": "2026-07-31T05:55:27Z", "level": "info", "event": "audit.appended", "event_type": "agent_draft.accepted", "audit_log_id": 82, "deal_reference": "DEAL-1001"}
+{"ts": "2026-07-31T05:55:27Z", "level": "info", "event": "audit.appended", "event_type": "spread.persisted", "audit_log_id": 103, "deal_reference": "DEAL-1001"}
+{"ts": "2026-07-31T05:55:27Z", "level": "info", "event": "audit.appended", "event_type": "stage.transition", "audit_log_id": 106, "deal_reference": "DEAL-1001"}
+{"ts": "2026-07-31T05:55:27Z", "level": "info", "event": "audit.appended", "event_type": "spread.persist_confirmed", "audit_log_id": 110, "deal_reference": "DEAL-1001"}
+INFO:     127.0.0.1:49403 - "POST /deals/DEAL-1001/drafts/spread/review HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [13405]

@@ -1,0 +1,111 @@
+/* ============================================================
+   Underwriting Command Center — Option 2 "Operations Console"
+   Design tokens only. All structure lives in index.html <style>.
+   Dark control-room base, luminous state color, one bright primary.
+   ============================================================ */
+
+:root {
+  /* ---- MANDATORY SEVEN ---- */
+  --primary: #35e0d0;
+  --on-primary: #04201f;
+  --bg: #080b10;
+  --fg: #dfe6ef;
+  --surface: #101620;
+  --border: #212b3a;
+  --font: "Inter", "SF Pro Text", "Segoe UI", system-ui, -apple-system, sans-serif;
+
+  /* ---- Extended surfaces (console depth stack) ---- */
+  --bg-deep: #05070b;
+  --surface-2: #161e2b;
+  --surface-3: #1c2634;
+  --surface-raised: #223044;
+  --rail: #0b1017;
+  --strip: #0d131c;
+  --overlay: rgba(4, 7, 12, 0.78);
+
+  /* ---- Text ramp ---- */
+  --fg-strong: #f2f6fb;
+  --fg-muted: #8d9bb0;
+  --fg-dim: #5d6a7e;
+  --fg-faint: #414d5e;
+
+  /* ---- Borders ---- */
+  --border-soft: #18212e;
+  --border-strong: #2e3b4e;
+  --border-hot: #3b4c64;
+
+  /* ---- Primary variants ---- */
+  --primary-dim: #1c9e94;
+  --primary-deep: #0d3d3b;
+  --primary-glow: rgba(53, 224, 208, 0.18);
+  --primary-line: rgba(53, 224, 208, 0.45);
+
+  /* ---- Luminous state semantics ---- */
+  --ok: #3ddc84;
+  --ok-bg: rgba(61, 220, 132, 0.12);
+  --ok-line: rgba(61, 220, 132, 0.4);
+
+  --warn: #ffb340;
+  --warn-bg: rgba(255, 179, 64, 0.13);
+  --warn-line: rgba(255, 179, 64, 0.42);
+
+  --crit: #ff5f6b;
+  --crit-bg: rgba(255, 95, 107, 0.14);
+  --crit-line: rgba(255, 95, 107, 0.45);
+
+  --info: #5aa9ff;
+  --info-bg: rgba(90, 169, 255, 0.13);
+  --info-line: rgba(90, 169, 255, 0.42);
+
+  --violet: #b98bff;
+  --violet-bg: rgba(185, 139, 255, 0.13);
+  --violet-line: rgba(185, 139, 255, 0.42);
+
+  --idle: #7c8aa0;
+  --idle-bg: rgba(124, 138, 160, 0.12);
+  --idle-line: rgba(124, 138, 160, 0.35);
+
+  /* ---- Typography ---- */
+  --font-mono: "JetBrains Mono", "SF Mono", "Roboto Mono", ui-monospace, Menlo, Consolas, monospace;
+  --fs-micro: 9.5px;
+  --fs-tiny: 10.5px;
+  --fs-xs: 11.5px;
+  --fs-sm: 12.5px;
+  --fs-md: 13.5px;
+  --fs-lg: 15px;
+  --fs-xl: 18px;
+  --fs-2xl: 22px;
+  --fs-num: 12.5px;
+  --lh-tight: 1.25;
+  --lh-body: 1.5;
+  --tracking-caps: 0.09em;
+  --tracking-wide: 0.04em;
+
+  /* ---- Geometry (tight, instrument-like) ---- */
+  --r-xs: 2px;
+  --r-sm: 3px;
+  --r-md: 5px;
+  --r-lg: 8px;
+  --sp-1: 3px;
+  --sp-2: 6px;
+  --sp-3: 9px;
+  --sp-4: 12px;
+  --sp-5: 16px;
+  --sp-6: 22px;
+  --sp-7: 30px;
+
+  /* ---- Console chrome metrics ---- */
+  --rail-w: 196px;
+  --rail-w-collapsed: 56px;
+  --strip-h: 34px;
+  --header-h: 46px;
+  --row-h: 30px;
+  --footbar-h: 26px;
+
+  /* ---- Elevation / glow ---- */
+  --shadow-1: 0 1px 0 rgba(255, 255, 255, 0.03), 0 1px 3px rgba(0, 0, 0, 0.5);
+  --shadow-2: 0 6px 20px rgba(0, 0, 0, 0.55);
+  --shadow-pop: 0 18px 48px rgba(0, 0, 0, 0.7);
+  --inset-top: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  --scanline: rgba(255, 255, 255, 0.018);
+}

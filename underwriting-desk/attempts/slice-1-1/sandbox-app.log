@@ -1,0 +1,24 @@
+INFO:     Started server process [4269]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:64673 (Press CTRL+C to quit)
+INFO:     127.0.0.1:64678 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64679 - "POST /api/auth/login HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64680 - "POST /api/auth/login HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:64681 - "POST /api/deals HTTP/1.1" 201 Created
+INFO:     127.0.0.1:64682 - "POST /api/deals HTTP/1.1" 403 Forbidden
+INFO:     127.0.0.1:64683 - "GET /api/deals HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64684 - "GET /api/pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64685 - "GET /api/deals?as_user_id=user-rm1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64686 - "GET /export/deals.csv HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64687 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64689 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64690 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64691 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64692 - "GET /app.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64693 - "GET /mod_router.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64694 - "GET /mod_datatable.js HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [4269]

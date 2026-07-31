@@ -1,0 +1,3078 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Underwriting Command Center — Operations Console</title>
+<link rel="stylesheet" href="tokens.css">
+<style>
+/* ============================================================
+   OPERATIONS CONSOLE — structural CSS
+   Dense dark control room. Instrumentation, not documents.
+   ============================================================ */
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: var(--bg-deep);
+  color: var(--fg);
+  font-family: var(--font);
+  font-size: var(--fs-sm);
+  line-height: var(--lh-body);
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+}
+
+/* faint scanline texture — control-room CRT residue */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 900;
+  background: repeating-linear-gradient(
+    to bottom,
+    var(--scanline) 0px,
+    var(--scanline) 1px,
+    transparent 1px,
+    transparent 3px
+  );
+  opacity: 0.6;
+}
+
+h1, h2, h3, h4, p, ul, ol, figure { margin: 0; padding: 0; }
+ul, ol { list-style: none; }
+button, input, select, textarea { font: inherit; color: inherit; }
+
+::selection { background: var(--primary-line); color: var(--on-primary); }
+
+/* ---------- scrollbars: thin instrument sliders ---------- */
+* { scrollbar-width: thin; scrollbar-color: var(--border-strong) transparent; }
+*::-webkit-scrollbar { width: 9px; height: 9px; }
+*::-webkit-scrollbar-track { background: var(--bg-deep); }
+*::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border: 2px solid var(--bg-deep);
+  border-radius: 6px;
+}
+*::-webkit-scrollbar-thumb:hover { background: var(--border-hot); }
+
+/* ============================================================
+   SHELL GRID
+   ============================================================ */
+.shell {
+  display: grid;
+  grid-template-columns: var(--rail-w) 1fr;
+  grid-template-rows: var(--header-h) var(--strip-h) 1fr var(--footbar-h);
+  grid-template-areas:
+    "brand  topbar"
+    "strip  strip"
+    "rail   main"
+    "foot   foot";
+  height: 100vh;
+  background: var(--bg);
+}
+
+/* ---------- brand block (top-left corner of console) ---------- */
+.brand {
+  grid-area: brand;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: 0 var(--sp-4);
+  background: var(--rail);
+  border-right: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+.brand-mark {
+  width: 26px; height: 26px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: var(--r-sm);
+  background: linear-gradient(150deg, var(--primary) 0%, var(--primary-dim) 100%);
+  color: var(--on-primary);
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  box-shadow: 0 0 14px var(--primary-glow);
+}
+.brand-txt { min-width: 0; }
+.brand-txt h1 {
+  font-size: var(--fs-xs);
+  font-weight: 650;
+  letter-spacing: var(--tracking-wide);
+  color: var(--fg-strong);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.2;
+}
+.brand-sub {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  color: var(--fg-dim);
+}
+
+/* ---------- topbar ---------- */
+.topbar {
+  grid-area: topbar;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-4);
+  padding: 0 var(--sp-4);
+  background: linear-gradient(180deg, var(--surface) 0%, var(--strip) 100%);
+  border-bottom: 1px solid var(--border);
+}
+.topbar-title {
+  display: flex;
+  align-items: baseline;
+  gap: var(--sp-3);
+  min-width: 0;
+}
+.topbar-title .app-name {
+  font-size: var(--fs-lg);
+  font-weight: 640;
+  letter-spacing: -0.005em;
+  color: var(--fg-strong);
+  white-space: nowrap;
+}
+.topbar-title .app-env {
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-caps);
+  color: var(--warn);
+  border: 1px solid var(--warn-line);
+  background: var(--warn-bg);
+  border-radius: var(--r-xs);
+  padding: 1px 5px;
+}
+.topbar-spacer { flex: 1 1 auto; }
+
+.cmdbar {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  width: 340px;
+  height: 26px;
+  padding: 0 var(--sp-2) 0 var(--sp-3);
+  background: var(--bg-deep);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  color: var(--fg-dim);
+  font-size: var(--fs-xs);
+  cursor: text;
+}
+.cmdbar:hover { border-color: var(--border-hot); }
+.cmdbar .cmd-glyph { color: var(--fg-faint); font-family: var(--font-mono); }
+.cmdbar .cmd-txt { flex: 1; white-space: nowrap; overflow: hidden; }
+
+.topbar-clock {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  color: var(--fg-muted);
+  letter-spacing: var(--tracking-wide);
+  white-space: nowrap;
+}
+.topbar-clock b { color: var(--fg-strong); font-weight: 600; }
+
+.userchip {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: 3px var(--sp-2) 3px 3px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+}
+.userchip .avatar {
+  width: 20px; height: 20px;
+  border-radius: 50%;
+  display: grid; place-items: center;
+  background: var(--violet-bg);
+  border: 1px solid var(--violet-line);
+  color: var(--violet);
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  font-weight: 700;
+}
+.userchip .uname { font-size: var(--fs-tiny); color: var(--fg-strong); font-weight: 600; }
+.userchip .urole {
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-caps);
+  color: var(--fg-dim);
+}
+
+/* ============================================================
+   STATUS STRIP — always-on instrumentation bar
+   ============================================================ */
+.statusstrip {
+  grid-area: strip;
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+  background: var(--strip);
+  border-bottom: 1px solid var(--border);
+  box-shadow: var(--inset-top);
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+.strip-sep { width: 1px; flex: none; background: var(--border-soft); }
+.strip-spacer { flex: 1 1 auto; }
+
+.strip-cell {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: 0 var(--sp-4);
+  white-space: nowrap;
+}
+.strip-label {
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-caps);
+  color: var(--fg-dim);
+}
+.strip-val {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  color: var(--fg-strong);
+  font-variant-numeric: tabular-nums;
+}
+.strip-val.is-ok { color: var(--ok); }
+.strip-val.is-warn { color: var(--warn); }
+.strip-val.is-crit { color: var(--crit); }
+.strip-val.is-info { color: var(--info); }
+
+/* ---------- AGENT MODE selector — the five narrow agents ---------- */
+#agent-mode {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: 0 var(--sp-3) 0 var(--sp-4);
+  background: linear-gradient(180deg, rgba(53,224,208,0.06), rgba(53,224,208,0.02));
+  border-right: 1px solid var(--border);
+  position: relative;
+}
+#agent-mode::before {
+  content: "";
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 2px;
+  background: var(--primary);
+  box-shadow: 0 0 10px var(--primary-glow);
+}
+.agent-legend {
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-caps);
+  color: var(--primary);
+  font-weight: 700;
+}
+.agent-switch { display: flex; gap: 2px; }
+.agent-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 22px;
+  padding: 0 var(--sp-2);
+  background: var(--bg-deep);
+  border: 1px solid var(--border);
+  border-radius: var(--r-xs);
+  color: var(--fg-muted);
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 90ms linear, color 90ms linear, border-color 90ms linear;
+}
+.agent-btn:hover { border-color: var(--border-hot); color: var(--fg); }
+.agent-btn .a-num {
+  font-size: var(--fs-micro);
+  color: var(--fg-faint);
+}
+.agent-btn[aria-pressed="true"] {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: var(--on-primary);
+  font-weight: 700;
+  box-shadow: 0 0 12px var(--primary-glow);
+}
+.agent-btn[aria-pressed="true"] .a-num { color: var(--on-primary); opacity: 0.6; }
+.agent-btn:focus-visible { outline: 1px solid var(--primary); outline-offset: 1px; }
+
+.agent-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 22px;
+  padding: 0 var(--sp-2);
+  border-radius: var(--r-xs);
+  border: 1px solid var(--ok-line);
+  background: var(--ok-bg);
+  color: var(--ok);
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-caps);
+}
+
+/* live pulsing dot */
+.dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  flex: none;
+}
+.dot.pulse { animation: pulse 1.6s ease-in-out infinite; }
+@keyframes pulse {
+  0%, 100% { opacity: 1; box-shadow: 0 0 0 0 currentColor; }
+  50% { opacity: 0.45; box-shadow: 0 0 0 3px transparent; }
+}
+
+/* mini bar meter used inline in the strip */
+.mini-meter {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 1px;
+  height: 12px;
+}
+.mini-meter i {
+  display: block;
+  width: 3px;
+  background: var(--fg-faint);
+  border-radius: 1px;
+}
+.mini-meter i.on { background: var(--primary); }
+.mini-meter i.warn { background: var(--warn); }
+.mini-meter i.crit { background: var(--crit); }
+
+/* ============================================================
+   LEFT RAIL NAVIGATION
+   ============================================================ */
+.rail {
+  grid-area: rail;
+  background: var(--rail);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  padding-bottom: var(--sp-4);
+}
+.rail-section {
+  padding: var(--sp-4) var(--sp-3) var(--sp-1);
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-caps);
+  color: var(--fg-faint);
+}
+.navlist { display: flex; flex-direction: column; gap: 1px; padding: 0 var(--sp-2); }
+.navitem {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  width: 100%;
+  height: 28px;
+  padding: 0 var(--sp-2);
+  background: transparent;
+  border: 0;
+  border-left: 2px solid transparent;
+  border-radius: var(--r-xs);
+  color: var(--fg-muted);
+  font-size: var(--fs-xs);
+  text-align: left;
+  cursor: pointer;
+  position: relative;
+}
+.navitem:hover { background: var(--surface); color: var(--fg-strong); }
+.navitem:focus-visible { outline: 1px solid var(--primary); outline-offset: -1px; }
+.navitem .nav-glyph {
+  width: 14px;
+  flex: none;
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: var(--fs-tiny);
+  color: var(--fg-faint);
+}
+.navitem .nav-label { flex: 1; white-space: nowrap; letter-spacing: var(--tracking-wide); }
+.navitem .nav-count {
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  font-variant-numeric: tabular-nums;
+  color: var(--fg-dim);
+  background: var(--surface-2);
+  border: 1px solid var(--border-soft);
+  border-radius: 20px;
+  padding: 0 5px;
+  min-width: 18px;
+  text-align: center;
+}
+.navitem .nav-count.crit {
+  color: var(--crit);
+  background: var(--crit-bg);
+  border-color: var(--crit-line);
+}
+.navitem .nav-count.warn {
+  color: var(--warn);
+  background: var(--warn-bg);
+  border-color: var(--warn-line);
+}
+.navitem .nav-kbd {
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  color: var(--fg-faint);
+  opacity: 0;
+}
+.navitem:hover .nav-kbd { opacity: 1; }
+.navitem.active {
+  background: linear-gradient(90deg, var(--primary-glow), transparent 70%);
+  border-left-color: var(--primary);
+  color: var(--fg-strong);
+  font-weight: 600;
+}
+.navitem.active .nav-glyph { color: var(--primary); }
+
+.rail-foot {
+  margin-top: auto;
+  padding: var(--sp-4) var(--sp-3) 0;
+  border-top: 1px solid var(--border-soft);
+}
+.rail-metric {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 3px 0;
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-caps);
+  color: var(--fg-dim);
+}
+.rail-metric b {
+  color: var(--fg);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0;
+}
+
+/* ============================================================
+   MAIN REGION + SCREENS
+   ============================================================ */
+.main {
+  grid-area: main;
+  overflow: hidden;
+  position: relative;
+  background:
+    radial-gradient(1100px 420px at 70% -12%, rgba(53,224,208,0.05), transparent 65%),
+    var(--bg);
+}
+.screen { display: none; height: 100%; flex-direction: column; }
+.screen.active { display: flex; }
+
+.scr-hd {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-4);
+  flex: none;
+  height: 40px;
+  padding: 0 var(--sp-5);
+  background: var(--strip);
+  border-bottom: 1px solid var(--border);
+}
+.scr-hd h2 {
+  font-size: var(--fs-md);
+  font-weight: 640;
+  letter-spacing: var(--tracking-wide);
+  color: var(--fg-strong);
+  white-space: nowrap;
+}
+.scr-hd .scr-sub {
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-caps);
+  color: var(--fg-dim);
+  white-space: nowrap;
+}
+.scr-hd .spacer { flex: 1; }
+.scr-body {
+  flex: 1;
+  overflow: auto;
+  padding: var(--sp-4) var(--sp-5) var(--sp-6);
+}
+.scr-body.no-pad { padding: 0; }
+.scr-split {
+  flex: 1;
+  display: grid;
+  overflow: hidden;
+}
+
+/* ============================================================
+   PANELS — instrument enclosures with corner ticks
+   ============================================================ */
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  box-shadow: var(--shadow-1);
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  position: relative;
+}
+.panel::before,
+.panel::after {
+  content: "";
+  position: absolute;
+  width: 5px; height: 5px;
+  border-color: var(--border-hot);
+  border-style: solid;
+  pointer-events: none;
+}
+.panel::before { top: -1px; left: -1px; border-width: 1px 0 0 1px; }
+.panel::after { bottom: -1px; right: -1px; border-width: 0 1px 1px 0; }
+
+.panel-hd {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex: none;
+  min-height: 28px;
+  padding: 0 var(--sp-3);
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--border);
+  border-radius: var(--r-md) var(--r-md) 0 0;
+}
+.panel-hd h3 {
+  font-family: var(--font-mono);
+  font-size: var(--fs-tiny);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-caps);
+  color: var(--fg-strong);
+  white-space: nowrap;
+}
+.panel-hd .hd-note {
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-caps);
+  color: var(--fg-dim);
+}
+.panel-hd .spacer { flex: 1; }
+.panel-bd { padding: var(--sp-3); overflow: auto; flex: 1; min-height: 0; }
+.panel-bd.flush { padding: 0; }
+.panel-ft {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-3);
+  border-top: 1px solid var(--border-soft);
+  background: var(--strip);
+  border-radius: 0 0 var(--r-md) var(--r-md);
+}
+
+.grid { display: grid; gap: var(--sp-3); }
+.g-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.g-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.g-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.span-2 { grid-column: span 2; }
+.span-3 { grid-column: span 3; }
+.stack { display: flex; flex-direction: column; gap: var(--sp-3); }
+.row { display: flex; align-items: center; gap: var(--sp-2); }
+.row.wrap { flex-wrap: wrap; }
+.row.tight { gap: var(--sp-1); }
+
+/* ============================================================
+   CHIPS / PILLS / BADGES
+   ============================================================ */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 17px;
+  padding: 0 5px;
+  border-radius: var(--r-xs);
+  border: 1px solid var(--idle-line);
+  background: var(--idle-bg);
+  color: var(--idle);
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-caps);
+  white-space: nowrap;
+  vertical-align: middle;
+}
+.chip.ok { border-color: var(--ok-line); background: var(--ok-bg); color: var(--ok); }
+.chip.warn { border-color: var(--warn-line); background: var(--warn-bg); color: var(--warn); }
+.chip.crit { border-color: var(--crit-line); background: var(--crit-bg); color: var(--crit); }
+.chip.info { border-color: var(--info-line); background: var(--info-bg); color: var(--info); }
+.chip.violet { border-color: var(--violet-line); background: var(--violet-bg); color: var(--violet); }
+.chip.pri { border-color: var(--primary-line); background: var(--primary-glow); color: var(--primary); }
+.chip.solid { background: var(--primary); border-color: var(--primary); color: var(--on-primary); }
+.chip.lg { height: 20px; padding: 0 7px; font-size: var(--fs-tiny); }
+
+/* citation chip — clickable source pointer on every figure */
+.cite {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  height: 15px;
+  padding: 0 4px;
+  border-radius: var(--r-xs);
+  border: 1px dashed var(--info-line);
+  background: var(--info-bg);
+  color: var(--info);
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  white-space: nowrap;
+  text-decoration: none;
+}
+.cite:hover {
+  border-style: solid;
+  background: rgba(90,169,255,0.22);
+  color: #a8ccff;
+}
+.cite::before { content: "\2197"; opacity: 0.7; }
+
+.kbd {
+  display: inline-grid;
+  place-items: center;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: var(--r-xs);
+  border: 1px solid var(--border-strong);
+  border-bottom-width: 2px;
+  background: var(--surface-3);
+  color: var(--fg-muted);
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  font-weight: 600;
+}
+
+/* ============================================================
+   BUTTONS
+   ============================================================ */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 24px;
+  padding: 0 var(--sp-3);
+  background: var(--surface-3);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-sm);
+  color: var(--fg);
+  font-size: var(--fs-xs);
+  font-weight: 550;
+  letter-spacing: var(--tracking-wide);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 90ms linear, border-color 90ms linear;
+}
+.btn:hover { background: var(--surface-raised); border-color: var(--border-hot); }
+.btn:active { transform: translateY(1px); }
+.btn:focus-visible { outline: 1px solid var(--primary); outline-offset: 1px; }
+.btn.primary {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: var(--on-primary);
+  font-weight: 680;
+  box-shadow: 0 0 14px var(--primary-glow);
+}
+.btn.primary:hover { background: #4ae9da; border-color: #4ae9da; }
+.btn.ok { background: var(--ok-bg); border-color: var(--ok-line); color: var(--ok); }
+.btn.warn { background: var(--warn-bg); border-color: var(--warn-line); color: var(--warn); }
+.btn.crit { background: var(--crit-bg); border-color: var(--crit-line); color: var(--crit); }
+.btn.ghost { background: transparent; border-color: var(--border); color: var(--fg-muted); }
+.btn.ghost:hover { color: var(--fg-strong); }
+.btn.sm { height: 20px; padding: 0 var(--sp-2); font-size: var(--fs-tiny); }
+.btn.block { width: 100%; justify-content: center; }
+.btn[disabled] { opacity: 0.4; cursor: not-allowed; }
+.btn .k {
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  opacity: 0.65;
+  border-left: 1px solid currentColor;
+  padding-left: 5px;
+  margin-left: 2px;
+}
+
+.segbar {
+  display: inline-flex;
+  background: var(--bg-deep);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  overflow: hidden;
+}
+.segbar button {
+  height: 22px;
+  padding: 0 var(--sp-3);
+  background: transparent;
+  border: 0;
+  border-right: 1px solid var(--border-soft);
+  color: var(--fg-dim);
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-caps);
+  cursor: pointer;
+}
+.segbar button:last-child { border-right: 0; }
+.segbar button:hover { color: var(--fg-strong); background: var(--surface-2); }
+.segbar button[aria-pressed="true"] {
+  background: var(--surface-raised);
+  color: var(--primary);
+  font-weight: 700;
+}
+
+/* ============================================================
+   DENSE TABLES — sticky headers, tabular numerics
+   ============================================================ */
+.tbl-wrap { overflow: auto; max-height: 100%; }
+table.tbl {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: var(--fs-xs);
+}
+table.tbl thead th {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--border-strong);
+  padding: 5px var(--sp-3);
+  text-align: left;
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-caps);
+  color: var(--fg-muted);
+  white-space: nowrap;
+}
+table.tbl thead th.num, table.tbl td.num { text-align: right; }
+table.tbl tbody td {
+  padding: 0 var(--sp-3);
+  height: var(--row-h);
+  border-bottom: 1px solid var(--border-soft);
+  color: var(--fg);
+  white-space: nowrap;
+  vertical-align: middle;
+}
+table.tbl tbody tr:hover td { background: var(--surface-2); }
+table.tbl tbody tr.sel td {
+  background: linear-gradient(90deg, var(--primary-glow), rgba(53,224,208,0.04));
+  box-shadow: inset 2px 0 0 var(--primary);
+}
+table.tbl tbody tr.rowcrit td { box-shadow: inset 2px 0 0 var(--crit); }
+table.tbl tbody tr.rowwarn td { box-shadow: inset 2px 0 0 var(--warn); }
+table.tbl td.mono, table.tbl th.mono, .mono {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+table.tbl td .sub {
+  display: block;
+  font-size: var(--fs-micro);
+  color: var(--fg-dim);
+  line-height: 1.1;
+}
+table.tbl.rows-tall tbody td { height: 38px; }
+.tbl-id { color: var(--primary); font-family: var(--font-mono); cursor: pointer; }
+.tbl-id:hover { text-decoration: underline; }
+
+/* ============================================================
+   METERS / TRACKS / SPARKLINES
+   ============================================================ */
+.meter {
+  position: relative;
+  height: 6px;
+  min-width: 60px;
+  background: var(--bg-deep);
+  border: 1px solid var(--border-soft);
+  border-radius: 20px;
+  overflow: hidden;
+}
+.meter > i {
+  display: block;
+  height: 100%;
+  background: var(--primary);
+  border-radius: 20px;
+}
+.meter > i.ok { background: var(--ok); }
+.meter > i.warn { background: var(--warn); }
+.meter > i.crit { background: var(--crit); }
+.meter.tall { height: 9px; }
+.meter .tickmark {
+  position: absolute;
+  top: -2px; bottom: -2px;
+  width: 1px;
+  background: var(--fg-strong);
+  opacity: 0.65;
+}
+
+/* 8-segment stage track: the deal's position in the workflow */
+.track {
+  display: inline-flex;
+  gap: 2px;
+  align-items: center;
+}
+.track i {
+  display: block;
+  width: 11px;
+  height: 7px;
+  border-radius: 1px;
+  background: var(--surface-3);
+  border: 1px solid var(--border-soft);
+}
+.track i.done { background: var(--primary-deep); border-color: var(--primary-line); }
+.track i.here {
+  background: var(--primary);
+  border-color: var(--primary);
+  box-shadow: 0 0 8px var(--primary-glow);
+}
+.track i.blocked { background: var(--crit); border-color: var(--crit); }
+.track i.stalled { background: var(--warn); border-color: var(--warn); }
+.track.sm i { width: 7px; height: 6px; }
+
+.spark { display: block; }
+.spark polyline { fill: none; stroke-width: 1.25; vector-effect: non-scaling-stroke; }
+
+/* key/value readout grid */
+.kv {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 3px var(--sp-3);
+  align-items: baseline;
+}
+.kv dt {
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-caps);
+  color: var(--fg-dim);
+  white-space: nowrap;
+}
+.kv dd {
+  margin: 0;
+  font-size: var(--fs-xs);
+  color: var(--fg-strong);
+}
+.kv dd.mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+
+/* big readout tile */
+.readout {
+  background: var(--bg-deep);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  padding: var(--sp-2) var(--sp-3);
+  min-width: 0;
+}
+.readout .r-label {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-caps);
+  color: var(--fg-dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.readout .r-val {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: var(--fs-xl);
+  font-weight: 620;
+  line-height: 1.25;
+  color: var(--fg-strong);
+  font-variant-numeric: tabular-nums;
+}
+.readout .r-val.ok { color: var(--ok); }
+.readout .r-val.warn { color: var(--warn); }
+.readout .r-val.crit { color: var(--crit); }
+.readout .r-val.pri { color: var(--primary); }
+.readout .r-foot {
+  display: block;
+  font-size: var(--fs-micro);
+  color: var(--fg-dim);
+}
+
+/* banners */
+.banner {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-3);
+  border: 1px solid var(--border);
+  border-left-width: 3px;
+  border-radius: var(--r-sm);
+  background: var(--surface-2);
+  font-size: var(--fs-xs);
+  color: var(--fg-muted);
+}
+.banner b { color: var(--fg-strong); }
+.banner.warn { border-left-color: var(--warn); background: var(--warn-bg); color: var(--warn); }
+.banner.warn b { color: var(--warn); }
+.banner.crit { border-left-color: var(--crit); background: var(--crit-bg); color: var(--crit); }
+.banner.crit b { color: var(--crit); }
+.banner.info { border-left-color: var(--info); background: var(--info-bg); color: #a8ccff; }
+.banner.info b { color: var(--info); }
+.banner.pri { border-left-color: var(--primary); background: var(--primary-glow); color: var(--fg); }
+.banner.ok { border-left-color: var(--ok); background: var(--ok-bg); color: var(--ok); }
+.banner.ok b { color: var(--ok); }
+.banner .b-icon { font-family: var(--font-mono); font-weight: 700; flex: none; }
+
+/* lock / read-only marker */
+.locked-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-caps);
+  color: var(--fg-dim);
+}
+
+/* form controls */
+.field { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.field > label {
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-caps);
+  color: var(--fg-dim);
+}
+.field > label .req { color: var(--crit); }
+.inp, .sel, .ta {
+  width: 100%;
+  background: var(--bg-deep);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  padding: 0 var(--sp-2);
+  height: 26px;
+  color: var(--fg-strong);
+  font-size: var(--fs-xs);
+}
+.inp.mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.ta { height: auto; min-height: 56px; padding: var(--sp-2); line-height: 1.45; resize: vertical; }
+.inp:focus, .sel:focus, .ta:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px var(--primary-glow);
+}
+.inp::placeholder, .ta::placeholder { color: var(--fg-faint); }
+.sel { appearance: none; cursor: pointer; }
+.hint { font-size: var(--fs-micro); color: var(--fg-dim); }
+.hint.crit { color: var(--crit); }
+
+/* dropzone */
+.dropzone {
+  border: 1px dashed var(--border-hot);
+  border-radius: var(--r-sm);
+  background: var(--bg-deep);
+  padding: var(--sp-4);
+  text-align: center;
+  color: var(--fg-dim);
+  font-size: var(--fs-xs);
+  cursor: pointer;
+}
+.dropzone:hover { border-color: var(--primary); color: var(--fg-muted); }
+
+/* file list rows */
+.filerow {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: 4px var(--sp-2);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--r-xs);
+  background: var(--bg-deep);
+  font-size: var(--fs-xs);
+}
+.filerow .f-name { flex: 1; font-family: var(--font-mono); font-size: var(--fs-tiny); color: var(--fg); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.filerow .f-meta { font-family: var(--font-mono); font-size: var(--fs-micro); color: var(--fg-dim); }
+
+/* ============================================================
+   FOOT BAR — keyboard legend
+   ============================================================ */
+.footbar {
+  grid-area: foot;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-4);
+  padding: 0 var(--sp-4);
+  background: var(--rail);
+  border-top: 1px solid var(--border);
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-caps);
+  color: var(--fg-faint);
+  overflow: hidden;
+}
+.footbar .fkey { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+.footbar .fkey span { color: var(--fg-dim); }
+.footbar .spacer { flex: 1; }
+.footbar .lamp { color: var(--ok); }
+
+/* ============================================================
+   SCREEN-SPECIFIC MODULES
+   ============================================================ */
+
+/* --- pipeline stage rail (NOT a card wall: an 8-cell gauge strip) --- */
+.stagerail {
+  display: grid;
+  grid-template-columns: repeat(8, minmax(0, 1fr));
+  gap: 1px;
+  background: var(--border-soft);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  overflow: hidden;
+  flex: none;
+}
+.stagecell {
+  background: var(--surface);
+  padding: var(--sp-2) var(--sp-3) var(--sp-2);
+  min-width: 0;
+  position: relative;
+  cursor: pointer;
+}
+.stagecell:hover { background: var(--surface-2); }
+.stagecell.hot { background: linear-gradient(180deg, var(--crit-bg), var(--surface)); }
+.stagecell .s-idx {
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  color: var(--fg-faint);
+}
+.stagecell .s-name {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: var(--fs-tiny);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-caps);
+  color: var(--fg-strong);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.stagecell .s-count {
+  font-family: var(--font-mono);
+  font-size: var(--fs-2xl);
+  font-weight: 600;
+  line-height: 1.05;
+  color: var(--fg-strong);
+  font-variant-numeric: tabular-nums;
+}
+.stagecell .s-count.crit { color: var(--crit); }
+.stagecell .s-count.warn { color: var(--warn); }
+.stagecell .s-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-1);
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  color: var(--fg-dim);
+}
+.stagecell .s-agent {
+  position: absolute;
+  top: var(--sp-2);
+  right: var(--sp-2);
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  color: var(--primary);
+}
+
+/* --- deal header band --- */
+.dealband {
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+  flex: none;
+  background: linear-gradient(180deg, var(--surface-2), var(--surface));
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  overflow: hidden;
+}
+.dealband .db-cell {
+  padding: var(--sp-2) var(--sp-4);
+  border-right: 1px solid var(--border-soft);
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+}
+.dealband .db-cell:last-child { border-right: 0; }
+.dealband .db-cell.grow { flex: 1; }
+.db-label {
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-caps);
+  color: var(--fg-dim);
+}
+.db-name { font-size: var(--fs-lg); font-weight: 640; color: var(--fg-strong); }
+.db-val {
+  font-family: var(--font-mono);
+  font-size: var(--fs-md);
+  font-weight: 620;
+  color: var(--fg-strong);
+  font-variant-numeric: tabular-nums;
+}
+
+/* grade token */
+.grade {
+  display: inline-grid;
+  place-items: center;
+  width: 34px; height: 34px;
+  border-radius: var(--r-sm);
+  font-family: var(--font-mono);
+  font-size: var(--fs-xl);
+  font-weight: 700;
+  border: 1px solid;
+}
+.grade.g-ok { color: var(--ok); border-color: var(--ok-line); background: var(--ok-bg); }
+.grade.g-warn { color: var(--warn); border-color: var(--warn-line); background: var(--warn-bg); }
+.grade.g-crit { color: var(--crit); border-color: var(--crit-line); background: var(--crit-bg); }
+
+/* computed-by-code marker on deterministic values */
+.det {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-caps);
+  color: var(--ok);
+  border: 1px solid var(--ok-line);
+  background: var(--ok-bg);
+  border-radius: var(--r-xs);
+  padding: 0 4px;
+  height: 15px;
+  white-space: nowrap;
+}
+.det::before { content: "\0192()"; opacity: 0.8; }
+
+/* memo body with inline citations */
+.memo {
+  font-size: var(--fs-xs);
+  line-height: 1.62;
+  color: var(--fg);
+  max-width: 78ch;
+}
+.memo h4 {
+  font-family: var(--font-mono);
+  font-size: var(--fs-tiny);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-caps);
+  color: var(--primary);
+  margin: var(--sp-3) 0 3px;
+}
+.memo h4:first-child { margin-top: 0; }
+.memo p { margin: 0 0 var(--sp-2); }
+
+/* timeline / event log */
+.timeline { display: flex; flex-direction: column; }
+.tl-row {
+  display: grid;
+  grid-template-columns: 88px 14px 1fr;
+  gap: var(--sp-2);
+  padding: 4px 0;
+  border-bottom: 1px dashed var(--border-soft);
+  font-size: var(--fs-xs);
+}
+.tl-row:last-child { border-bottom: 0; }
+.tl-time {
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  color: var(--fg-dim);
+  font-variant-numeric: tabular-nums;
+}
+.tl-mark { display: grid; place-items: center; color: var(--fg-faint); font-size: 8px; }
+.tl-mark.ok { color: var(--ok); }
+.tl-mark.warn { color: var(--warn); }
+.tl-mark.crit { color: var(--crit); }
+.tl-mark.pri { color: var(--primary); }
+.tl-body { color: var(--fg-muted); }
+.tl-body b { color: var(--fg-strong); font-weight: 600; }
+
+/* review split + diff-ish draft surface */
+.draftbox {
+  background: var(--bg-deep);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  padding: var(--sp-3);
+  font-size: var(--fs-xs);
+  line-height: 1.6;
+}
+.draftbox mark {
+  background: var(--primary-glow);
+  color: var(--primary);
+  border-radius: 2px;
+  padding: 0 2px;
+}
+.evidence-item {
+  border: 1px solid var(--border-soft);
+  border-left: 2px solid var(--info);
+  border-radius: var(--r-xs);
+  background: var(--bg-deep);
+  padding: var(--sp-2);
+  font-size: var(--fs-xs);
+}
+.evidence-item .ev-src {
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  color: var(--info);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-caps);
+}
+.evidence-item .ev-quote { color: var(--fg-muted); font-style: italic; }
+
+/* run telemetry bar */
+.telemetry {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  background: var(--bg-deep);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  overflow-x: auto;
+}
+.telemetry .t-cell {
+  padding: var(--sp-2) var(--sp-3);
+  border-right: 1px solid var(--border-soft);
+  white-space: nowrap;
+}
+.telemetry .t-cell:last-child { border-right: 0; }
+.telemetry .t-k {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-caps);
+  color: var(--fg-dim);
+}
+.telemetry .t-v {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  color: var(--fg-strong);
+  font-variant-numeric: tabular-nums;
+}
+
+/* tier ladder for approvals */
+.ladder { display: flex; flex-direction: column; gap: 2px; }
+.ladder-step {
+  display: grid;
+  grid-template-columns: 18px 1fr auto;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-2);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--r-xs);
+  background: var(--bg-deep);
+  font-size: var(--fs-xs);
+}
+.ladder-step .l-idx {
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  color: var(--fg-faint);
+  text-align: center;
+}
+.ladder-step.on {
+  border-color: var(--primary-line);
+  background: var(--primary-glow);
+  box-shadow: inset 0 0 0 1px var(--primary-line);
+}
+.ladder-step.on .l-idx { color: var(--primary); }
+.ladder-step .l-cap { font-family: var(--font-mono); color: var(--fg-dim); font-variant-numeric: tabular-nums; }
+
+/* exposure vs tier gauge */
+.gauge {
+  position: relative;
+  height: 20px;
+  background: var(--bg-deep);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  overflow: hidden;
+}
+.gauge .g-zone {
+  position: absolute;
+  top: 0; bottom: 0;
+  opacity: 0.16;
+}
+.gauge .g-zone.z1 { background: var(--ok); }
+.gauge .g-zone.z2 { background: var(--warn); }
+.gauge .g-zone.z3 { background: var(--crit); }
+.gauge .g-needle {
+  position: absolute;
+  top: -2px; bottom: -2px;
+  width: 2px;
+  background: var(--primary);
+  box-shadow: 0 0 10px var(--primary);
+}
+.gauge .g-tick {
+  position: absolute;
+  top: 0; bottom: 0;
+  width: 1px;
+  background: var(--border-hot);
+}
+.gauge .g-lab {
+  position: absolute;
+  top: 3px;
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  color: var(--fg-dim);
+  transform: translateX(3px);
+}
+
+/* ============================================================
+   CHAT / PORTFOLIO Q&A
+   ============================================================ */
+.chat-wrap {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  height: 100%;
+  overflow: hidden;
+}
+.chat-col {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  border-right: 1px solid var(--border);
+}
+#messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--sp-4) var(--sp-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+#messages > li { display: flex; gap: var(--sp-3); max-width: 900px; }
+#messages .m-gutter {
+  flex: none;
+  width: 58px;
+  text-align: right;
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  color: var(--fg-faint);
+  padding-top: 3px;
+  line-height: 1.3;
+}
+#messages .m-gutter b { display: block; color: var(--fg-dim); font-weight: 600; }
+#messages .m-body { min-width: 0; flex: 1; }
+#messages .bubble {
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  padding: var(--sp-2) var(--sp-3);
+  font-size: var(--fs-xs);
+  line-height: 1.6;
+}
+#messages li.from-user .bubble {
+  background: var(--surface-2);
+  border-left: 2px solid var(--fg-dim);
+}
+#messages li.from-agent .bubble {
+  border-left: 2px solid var(--primary);
+  background: linear-gradient(180deg, rgba(53,224,208,0.045), var(--surface));
+}
+#messages li.abstain .bubble {
+  border-left: 2px solid var(--warn);
+  background: var(--warn-bg);
+  color: var(--warn);
+}
+#messages li.abstain .bubble b { color: var(--warn); }
+#messages .m-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  margin-top: 5px;
+}
+#messages .m-meta .lbl {
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-caps);
+  color: var(--fg-faint);
+}
+#messages .typing .bubble { color: var(--fg-dim); font-family: var(--font-mono); font-size: var(--fs-tiny); }
+
+#composer {
+  flex: none;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-3) var(--sp-5);
+  background: var(--strip);
+  border-top: 1px solid var(--border);
+}
+#composer .comp-scope {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 28px;
+  padding: 0 var(--sp-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  background: var(--bg-deep);
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-caps);
+  color: var(--primary);
+  white-space: nowrap;
+}
+#input {
+  height: 28px;
+  background: var(--bg-deep);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  padding: 0 var(--sp-3);
+  color: var(--fg-strong);
+  font-size: var(--fs-xs);
+  width: 100%;
+}
+#input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px var(--primary-glow);
+}
+#input::placeholder { color: var(--fg-faint); }
+#composer button[type="submit"] {
+  height: 28px;
+  padding: 0 var(--sp-4);
+  background: var(--primary);
+  border: 1px solid var(--primary);
+  border-radius: var(--r-sm);
+  color: var(--on-primary);
+  font-size: var(--fs-xs);
+  font-weight: 680;
+  letter-spacing: var(--tracking-wide);
+  cursor: pointer;
+  box-shadow: 0 0 14px var(--primary-glow);
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+#composer button[type="submit"]:hover { background: #4ae9da; }
+#composer button[type="submit"]:focus-visible { outline: 1px solid var(--fg-strong); outline-offset: 2px; }
+.chat-side {
+  background: var(--rail);
+  overflow-y: auto;
+  padding: var(--sp-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+.suggest {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 5px var(--sp-2);
+  background: var(--bg-deep);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--r-xs);
+  color: var(--fg-muted);
+  font-size: var(--fs-tiny);
+  cursor: pointer;
+  line-height: 1.35;
+}
+.suggest:hover { border-color: var(--primary-line); color: var(--fg-strong); }
+
+/* misc helpers */
+.muted { color: var(--fg-muted); }
+.dim { color: var(--fg-dim); }
+.crit-t { color: var(--crit); }
+.warn-t { color: var(--warn); }
+.ok-t { color: var(--ok); }
+.pri-t { color: var(--primary); }
+.nowrap { white-space: nowrap; }
+.txt-xs { font-size: var(--fs-xs); }
+.txt-tiny { font-size: var(--fs-tiny); }
+.sr-only {
+  position: absolute; width: 1px; height: 1px;
+  padding: 0; margin: -1px; overflow: hidden;
+  clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+hr.sep { border: 0; border-top: 1px solid var(--border-soft); margin: var(--sp-2) 0; }
+
+/* ============================================================
+   LOGIN OVERLAY — role-assigned account gate (REQ-001)
+   ============================================================ */
+.login-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 980;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--overlay);
+}
+.login-overlay.hidden { display: none; }
+.login-overlay .panel { width: 360px; }
+.login-overlay .hint { font-size: var(--fs-tiny); color: var(--fg-dim); margin-top: var(--sp-2); }
+
+@media (max-width: 1280px) {
+  .g-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .chat-wrap { grid-template-columns: minmax(0, 1fr) 240px; }
+}
+@media (max-width: 1040px) {
+  .shell { grid-template-columns: var(--rail-w-collapsed) 1fr; }
+  .brand-txt, .navitem .nav-label, .navitem .nav-kbd, .rail-foot { display: none; }
+  .navitem { justify-content: center; }
+  .g-2, .g-3 { grid-template-columns: minmax(0, 1fr); }
+  .chat-wrap { grid-template-columns: minmax(0, 1fr); }
+  .chat-side { display: none; }
+}
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <!-- ============ BRAND CORNER ============ -->
+  <div class="brand">
+    <span class="brand-mark">UCC</span>
+    <div class="brand-txt">
+      <h1>Underwriting Command Center</h1>
+      <span class="brand-sub">Console v4.2 &middot; NE-4</span>
+    </div>
+  </div>
+
+  <!-- ============ TOP BAR ============ -->
+  <header class="topbar">
+    <div class="topbar-title">
+      <span class="app-name">Underwriting Command Center</span>
+      <span class="app-env">Prod</span>
+      <span class="scr-sub" id="crumb">/ pipeline</span>
+    </div>
+    <div class="topbar-spacer"></div>
+    <div class="cmdbar" id="cmdbar" role="search" title="Command palette">
+      <span class="cmd-glyph">&gt;</span>
+      <span class="cmd-txt">Jump to deal, borrower, policy rule&hellip;</span>
+      <span class="kbd">/</span>
+    </div>
+    <div class="topbar-clock mono">SESSION <b id="clock">14:22:07</b> ET</div>
+    <div class="userchip" title="Signed-in operator and active RBAC role">
+      <span class="avatar">MR</span>
+      <span>
+        <span class="uname">M. Reyes</span>
+        <span class="urole" id="role-readout">Sr. Credit Officer</span>
+      </span>
+    </div>
+  </header>
+
+  <!-- ============ STATUS STRIP ============ -->
+  <div class="statusstrip" role="status" aria-label="Console status strip">
+
+    <!-- FIVE NARROW AGENTS — active agent switch -->
+    <div id="agent-mode" role="group" aria-label="Active agent">
+      <span class="agent-legend">Agent</span>
+      <div class="agent-switch">
+        <button class="agent-btn" type="button" data-agent="triage" data-agent-name="Intake Triage Agent" aria-pressed="false"><span class="a-num">1</span>Triage</button>
+        <button class="agent-btn" type="button" data-agent="spreading" data-agent-name="Financial Spreading Agent" aria-pressed="false"><span class="a-num">2</span>Spread</button>
+        <button class="agent-btn" type="button" data-agent="memo" data-agent-name="Credit Memo Agent" aria-pressed="false"><span class="a-num">3</span>Memo</button>
+        <button class="agent-btn" type="button" data-agent="policy" data-agent-name="Policy Compliance Agent" aria-pressed="false"><span class="a-num">4</span>Policy</button>
+        <button class="agent-btn" type="button" data-agent="portfolio" data-agent-name="Portfolio Q&amp;A Agent" aria-pressed="true"><span class="a-num">5</span>Portfolio Q&amp;A</button>
+      </div>
+      <span class="agent-state" id="agent-run-state"><span class="dot pulse"></span><span id="agent-run-text">Idle</span></span>
+    </div>
+
+    <div class="strip-cell">
+      <span class="strip-label">Queue</span>
+      <span class="strip-val" id="m-queue">14</span>
+      <span class="mini-meter" aria-hidden="true"><i class="on" style="height:5px"></i><i class="on" style="height:8px"></i><i class="on" style="height:6px"></i><i class="warn" style="height:11px"></i><i class="on" style="height:7px"></i><i class="warn" style="height:12px"></i></span>
+    </div>
+    <div class="strip-sep"></div>
+    <div class="strip-cell">
+      <span class="strip-label">SLA breach</span>
+      <span class="strip-val is-crit" id="m-sla">3</span>
+      <span class="chip crit">&gt;5 BD idle</span>
+    </div>
+    <div class="strip-sep"></div>
+    <div class="strip-cell">
+      <span class="strip-label">Awaiting accept</span>
+      <span class="strip-val is-warn" id="m-pending">6</span>
+      <span class="strip-label">drafts</span>
+    </div>
+    <div class="strip-sep"></div>
+    <div class="strip-cell">
+      <span class="strip-label">Approvals due</span>
+      <span class="strip-val is-info" id="m-approvals-due">0</span>
+    </div>
+    <div class="strip-sep"></div>
+    <div class="strip-cell">
+      <span class="strip-label">Exposure live</span>
+      <span class="strip-val" id="m-exposure">$0</span>
+    </div>
+    <div class="strip-spacer"></div>
+    <div class="strip-sep"></div>
+    <div class="strip-cell">
+      <span class="strip-label">Policy pack</span>
+      <span class="strip-val is-ok">CLP-2026.2</span>
+    </div>
+    <div class="strip-sep"></div>
+    <div class="strip-cell">
+      <span class="strip-label">Audit</span>
+      <span class="strip-val is-ok"><span class="dot" style="display:inline-block;margin-right:4px"></span>APPEND-ONLY</span>
+    </div>
+  </div>
+
+  <!-- ============ LEFT RAIL ============ -->
+  <nav class="rail" aria-label="Primary navigation">
+    <div class="rail-section">Workflow</div>
+    <div class="navlist">
+      <button class="navitem active" type="button" data-screen="pipeline"><span class="nav-glyph">::</span><span class="nav-label">Pipeline</span><span class="nav-count">14</span><span class="nav-kbd">1</span></button>
+      <button class="navitem" type="button" data-screen="intake"><span class="nav-glyph">+</span><span class="nav-label">Intake</span><span class="nav-count warn">2</span><span class="nav-kbd">2</span></button>
+      <button class="navitem" type="button" data-screen="deal"><span class="nav-glyph">&#9636;</span><span class="nav-label">Deal Desk</span><span class="nav-count">1</span><span class="nav-kbd">3</span></button>
+      <button class="navitem" type="button" data-screen="review"><span class="nav-glyph">&#9679;</span><span class="nav-label">Draft Review</span><span class="nav-count warn">6</span><span class="nav-kbd">4</span></button>
+    </div>
+    <div class="rail-section">Control</div>
+    <div class="navlist">
+      <button class="navitem" type="button" data-screen="approvals"><span class="nav-glyph">&#10003;</span><span class="nav-label">Approvals</span><span class="nav-count">5</span><span class="nav-kbd">5</span></button>
+      <button class="navitem" type="button" data-screen="sla"><span class="nav-glyph">&#9201;</span><span class="nav-label">SLA Watch</span><span class="nav-count crit">3</span><span class="nav-kbd">6</span></button>
+      <button class="navitem" type="button" data-screen="audit"><span class="nav-glyph">&#9776;</span><span class="nav-label">Audit Trail</span><span class="nav-count">2.4k</span><span class="nav-kbd">7</span></button>
+    </div>
+    <div class="rail-section">Assist</div>
+    <div class="navlist">
+      <button class="navitem" type="button" data-screen="chat"><span class="nav-glyph">&#8250;_</span><span class="nav-label">Portfolio Q&amp;A</span><span class="nav-count">&#8734;</span><span class="nav-kbd">8</span></button>
+    </div>
+
+    <div class="rail-foot">
+      <div class="rail-metric"><span>Active agent</span><b id="rail-agent" class="pri-t">PORTFOLIO</b></div>
+      <div class="rail-metric"><span>Role scope</span><b>OFFICER</b></div>
+      <div class="rail-metric"><span>Deals in view</span><b>14</b></div>
+      <div class="rail-metric"><span>Node</span><b>uw-desk-02</b></div>
+    </div>
+  </nav>
+
+  <!-- ============ MAIN ============ -->
+  <main class="main" id="main">
+    <!-- ================= PIPELINE ================= -->
+    <section class="screen active" id="screen-pipeline" data-title="Pipeline Board">
+      <div class="scr-hd">
+        <h2>Pipeline Board</h2>
+        <span class="scr-sub">8 stages &middot; 14 active deals &middot; auto-refresh 30s</span>
+        <div class="spacer"></div>
+        <div class="segbar" role="group" aria-label="Board filter">
+          <button type="button" aria-pressed="true">All</button>
+          <button type="button" aria-pressed="false">My queue</button>
+          <button type="button" aria-pressed="false">Blocked</button>
+          <button type="button" aria-pressed="false">&gt;$1M</button>
+        </div>
+        <button class="btn ghost sm" type="button">Columns</button>
+        <button class="btn sm" type="button">Export CSV</button>
+      </div>
+
+      <div class="scr-body stack">
+
+        <!-- stage gauge strip: all 8 workflow stages at a glance -->
+        <div class="stagerail" aria-label="Workflow stages">
+          <div class="stagecell" title="Stage 1 — Intake">
+            <span class="s-idx">01</span><span class="s-name">Intake</span>
+            <span class="s-agent">A1</span>
+            <div class="s-count">2</div>
+            <div class="s-foot"><span>avg 0.4d</span><span class="ok-t">OK</span></div>
+            <div class="meter" style="margin-top:4px"><i class="ok" style="width:22%"></i></div>
+          </div>
+          <div class="stagecell" title="Stage 2 — Document Extraction">
+            <span class="s-idx">02</span><span class="s-name">Extraction</span>
+            <span class="s-agent">A2</span>
+            <div class="s-count">1</div>
+            <div class="s-foot"><span>avg 0.8d</span><span class="ok-t">OK</span></div>
+            <div class="meter" style="margin-top:4px"><i class="ok" style="width:14%"></i></div>
+          </div>
+          <div class="stagecell hot" title="Stage 3 — Financial Spreading">
+            <span class="s-idx">03</span><span class="s-name">Spreading</span>
+            <span class="s-agent">A2</span>
+            <div class="s-count warn">3</div>
+            <div class="s-foot"><span>avg 3.1d</span><span class="warn-t">WIP CAP</span></div>
+            <div class="meter" style="margin-top:4px"><i class="warn" style="width:78%"></i></div>
+          </div>
+          <div class="stagecell" title="Stage 4 — Risk Grading (deterministic)">
+            <span class="s-idx">04</span><span class="s-name">Grading</span>
+            <span class="s-agent" style="color:var(--ok)">&#402;()</span>
+            <div class="s-count">2</div>
+            <div class="s-foot"><span>avg 0.2d</span><span class="ok-t">CODE</span></div>
+            <div class="meter" style="margin-top:4px"><i class="ok" style="width:30%"></i></div>
+          </div>
+          <div class="stagecell" title="Stage 5 — Memo Drafting">
+            <span class="s-idx">05</span><span class="s-name">Memo</span>
+            <span class="s-agent">A3</span>
+            <div class="s-count">2</div>
+            <div class="s-foot"><span>avg 1.6d</span><span class="ok-t">OK</span></div>
+            <div class="meter" style="margin-top:4px"><i style="width:38%"></i></div>
+          </div>
+          <div class="stagecell hot" title="Stage 6 — Policy Compliance">
+            <span class="s-idx">06</span><span class="s-name">Policy</span>
+            <span class="s-agent">A4</span>
+            <div class="s-count crit">2</div>
+            <div class="s-foot"><span>avg 4.4d</span><span class="crit-t">2 EXC</span></div>
+            <div class="meter" style="margin-top:4px"><i class="crit" style="width:88%"></i></div>
+          </div>
+          <div class="stagecell" title="Stage 7 — Tiered Approval">
+            <span class="s-idx">07</span><span class="s-name">Approval</span>
+            <span class="s-agent" style="color:var(--violet)">HUM</span>
+            <div class="s-count">3</div>
+            <div class="s-foot"><span>avg 2.0d</span><span class="warn-t">1 IDLE</span></div>
+            <div class="meter" style="margin-top:4px"><i class="warn" style="width:56%"></i></div>
+          </div>
+          <div class="stagecell" title="Stage 8 — Closing">
+            <span class="s-idx">08</span><span class="s-name">Closing</span>
+            <span class="s-agent" style="color:var(--violet)">HUM</span>
+            <div class="s-count">1</div>
+            <div class="s-foot"><span>avg 5.2d</span><span class="ok-t">OK</span></div>
+            <div class="meter" style="margin-top:4px"><i class="ok" style="width:18%"></i></div>
+          </div>
+        </div>
+
+        <div class="banner info">
+          <span class="b-icon">i</span>
+          <span>Stage advancement is gated. A deal cannot leave a stage while an agent draft sits <b>PENDING</b>, and no agent may advance a deal past <b>Stage 07 Approval</b> &mdash; approvals are human-only and named.</span>
+        </div>
+
+        <!-- deal register -->
+        <div class="panel" style="flex:1;min-height:340px">
+          <div class="panel-hd">
+            <h3>Active Deal Register</h3>
+            <span class="hd-note">14 rows &middot; sorted by idle desc</span>
+            <div class="spacer"></div>
+            <span class="locked-tag"><span class="dot" style="background:var(--ok)"></span> live</span>
+          </div>
+          <div class="panel-bd flush">
+            <div class="tbl-wrap">
+              <table class="tbl">
+                <thead>
+                  <tr>
+                    <th style="width:112px">Deal</th>
+                    <th>Borrower</th>
+                    <th style="width:120px">Segment</th>
+                    <th class="num" style="width:96px">Exposure</th>
+                    <th style="width:104px">Tier</th>
+                    <th style="width:118px">Stage</th>
+                    <th style="width:126px">Track 01&ndash;08</th>
+                    <th style="width:78px">Grade</th>
+                    <th class="num" style="width:66px">DSCR</th>
+                    <th style="width:130px">Agent state</th>
+                    <th style="width:118px">Owner</th>
+                    <th class="num" style="width:108px">Idle</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr class="rowcrit">
+                    <td class="mono"><span class="tbl-id" data-goto="deal">UW-2026-0418</span></td>
+                    <td>Harbor Point Marine Supply LLC<span class="sub">Portsmouth, NH &middot; est. 2009</span></td>
+                    <td class="dim">CRE / Marine retail</td>
+                    <td class="num mono">$1,850,000</td>
+                    <td><span class="chip crit">Committee</span></td>
+                    <td><span class="chip warn">06 Policy</span></td>
+                    <td><span class="track"><i class="done"></i><i class="done"></i><i class="done"></i><i class="done"></i><i class="done"></i><i class="blocked"></i><i></i><i></i></span></td>
+                    <td><span class="chip warn">6 / Pass</span></td>
+                    <td class="num mono warn-t">1.18</td>
+                    <td><span class="chip crit">2 exceptions</span></td>
+                    <td>D. Whitfield<span class="sub">Analyst</span></td>
+                    <td class="num mono crit-t">7 d
+                      <svg class="spark" width="52" height="12" viewBox="0 0 52 12" aria-hidden="true"><polyline points="0,10 8,9 16,9 24,6 32,5 40,3 52,1" stroke="var(--crit)"></polyline></svg>
+                    </td>
+                  </tr>
+                  <tr class="rowcrit">
+                    <td class="mono"><span class="tbl-id" data-goto="deal">UW-2026-0402</span></td>
+                    <td>Sandoval Produce Distributors Inc.<span class="sub">Fresno, CA &middot; est. 1998</span></td>
+                    <td class="dim">C&amp;I / Food dist.</td>
+                    <td class="num mono">$920,000</td>
+                    <td><span class="chip warn">Sr. Officer</span></td>
+                    <td><span class="chip info">07 Approval</span></td>
+                    <td><span class="track"><i class="done"></i><i class="done"></i><i class="done"></i><i class="done"></i><i class="done"></i><i class="done"></i><i class="stalled"></i><i></i></span></td>
+                    <td><span class="chip ok">4 / Pass</span></td>
+                    <td class="num mono ok-t">1.62</td>
+                    <td><span class="chip">Accepted &times;4</span></td>
+                    <td>M. Reyes<span class="sub">Sr. Officer</span></td>
+                    <td class="num mono crit-t">9 d
+                      <svg class="spark" width="52" height="12" viewBox="0 0 52 12" aria-hidden="true"><polyline points="0,11 10,8 20,7 30,5 40,3 52,1" stroke="var(--crit)"></polyline></svg>
+                    </td>
+                  </tr>
+                  <tr class="rowwarn">
+                    <td class="mono"><span class="tbl-id" data-goto="deal">UW-2026-0431</span></td>
+                    <td>Delgado Precision Machining LLC<span class="sub">Toledo, OH &middot; est. 2014</span></td>
+                    <td class="dim">Equip. finance</td>
+                    <td class="num mono">$465,000</td>
+                    <td><span class="chip warn">Sr. Officer</span></td>
+                    <td><span class="chip pri">03 Spreading</span></td>
+                    <td><span class="track"><i class="done"></i><i class="done"></i><i class="here"></i><i></i><i></i><i></i><i></i><i></i></span></td>
+                    <td><span class="chip">&mdash;</span></td>
+                    <td class="num mono dim">&mdash;</td>
+                    <td><span class="chip warn"><span class="dot pulse"></span>Draft pending</span></td>
+                    <td>K. Osei<span class="sub">Analyst</span></td>
+                    <td class="num mono warn-t">6 d
+                      <svg class="spark" width="52" height="12" viewBox="0 0 52 12" aria-hidden="true"><polyline points="0,10 10,9 20,8 30,6 40,5 52,3" stroke="var(--warn)"></polyline></svg>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="mono"><span class="tbl-id" data-goto="deal">UW-2026-0447</span></td>
+                    <td>Kettleman Brewing Co.<span class="sub">Bend, OR &middot; est. 2016</span></td>
+                    <td class="dim">C&amp;I / Beverage</td>
+                    <td class="num mono">$238,000</td>
+                    <td><span class="chip ok">Analyst</span></td>
+                    <td><span class="chip pri">05 Memo</span></td>
+                    <td><span class="track"><i class="done"></i><i class="done"></i><i class="done"></i><i class="done"></i><i class="here"></i><i></i><i></i><i></i></span></td>
+                    <td><span class="chip ok">5 / Pass</span></td>
+                    <td class="num mono ok-t">1.41</td>
+                    <td><span class="chip info"><span class="dot pulse"></span>Memo running</span></td>
+                    <td>K. Osei<span class="sub">Analyst</span></td>
+                    <td class="num mono">2 d
+                      <svg class="spark" width="52" height="12" viewBox="0 0 52 12" aria-hidden="true"><polyline points="0,9 10,7 20,8 30,6 40,7 52,5" stroke="var(--fg-dim)"></polyline></svg>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="mono"><span class="tbl-id" data-goto="deal">UW-2026-0455</span></td>
+                    <td>Northline Freight Systems Inc.<span class="sub">Duluth, MN &middot; est. 2004</span></td>
+                    <td class="dim">Transport / Fleet</td>
+                    <td class="num mono">$1,240,000</td>
+                    <td><span class="chip crit">Committee</span></td>
+                    <td><span class="chip pri">04 Grading</span></td>
+                    <td><span class="track"><i class="done"></i><i class="done"></i><i class="done"></i><i class="here"></i><i></i><i></i><i></i><i></i></span></td>
+                    <td><span class="chip warn">6 / Watch</span></td>
+                    <td class="num mono warn-t">1.24</td>
+                    <td><span class="chip ok">&#402;() computed</span></td>
+                    <td>A. Boone<span class="sub">Analyst</span></td>
+                    <td class="num mono">1 d
+                      <svg class="spark" width="52" height="12" viewBox="0 0 52 12" aria-hidden="true"><polyline points="0,8 10,9 20,7 30,8 40,6 52,7" stroke="var(--fg-dim)"></polyline></svg>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="mono"><span class="tbl-id" data-goto="deal">UW-2026-0461</span></td>
+                    <td>Cypress Grove Dental Partners<span class="sub">Savannah, GA &middot; est. 2011</span></td>
+                    <td class="dim">Prof. practice</td>
+                    <td class="num mono">$610,000</td>
+                    <td><span class="chip warn">Sr. Officer</span></td>
+                    <td><span class="chip info">07 Approval</span></td>
+                    <td><span class="track"><i class="done"></i><i class="done"></i><i class="done"></i><i class="done"></i><i class="done"></i><i class="done"></i><i class="here"></i><i></i></span></td>
+                    <td><span class="chip ok">4 / Pass</span></td>
+                    <td class="num mono ok-t">1.87</td>
+                    <td><span class="chip">Accepted &times;4</span></td>
+                    <td>M. Reyes<span class="sub">Sr. Officer</span></td>
+                    <td class="num mono">3 d
+                      <svg class="spark" width="52" height="12" viewBox="0 0 52 12" aria-hidden="true"><polyline points="0,9 10,8 20,8 30,7 40,6 52,6" stroke="var(--fg-dim)"></polyline></svg>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="mono"><span class="tbl-id" data-goto="deal">UW-2026-0466</span></td>
+                    <td>Auburn Ridge Storage LLC<span class="sub">Auburn, AL &middot; est. 2019</span></td>
+                    <td class="dim">CRE / Self-storage</td>
+                    <td class="num mono">$2,400,000</td>
+                    <td><span class="chip crit">Committee</span></td>
+                    <td><span class="chip warn">06 Policy</span></td>
+                    <td><span class="track"><i class="done"></i><i class="done"></i><i class="done"></i><i class="done"></i><i class="done"></i><i class="here"></i><i></i><i></i></span></td>
+                    <td><span class="chip warn">7 / Watch</span></td>
+                    <td class="num mono warn-t">1.21</td>
+                    <td><span class="chip warn"><span class="dot pulse"></span>Draft pending</span></td>
+                    <td>D. Whitfield<span class="sub">Analyst</span></td>
+                    <td class="num mono warn-t">5 d
+                      <svg class="spark" width="52" height="12" viewBox="0 0 52 12" aria-hidden="true"><polyline points="0,10 10,9 20,7 30,7 40,5 52,4" stroke="var(--warn)"></polyline></svg>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="mono"><span class="tbl-id" data-goto="deal">UW-2026-0470</span></td>
+                    <td>Vantage HVAC Services Inc.<span class="sub">Mesa, AZ &middot; est. 2007</span></td>
+                    <td class="dim">C&amp;I / Services</td>
+                    <td class="num mono">$185,000</td>
+                    <td><span class="chip ok">Analyst</span></td>
+                    <td><span class="chip pri">03 Spreading</span></td>
+                    <td><span class="track"><i class="done"></i><i class="done"></i><i class="here"></i><i></i><i></i><i></i><i></i><i></i></span></td>
+                    <td><span class="chip">&mdash;</span></td>
+                    <td class="num mono dim">&mdash;</td>
+                    <td><span class="chip info"><span class="dot pulse"></span>Spreading run</span></td>
+                    <td>A. Boone<span class="sub">Analyst</span></td>
+                    <td class="num mono">1 d
+                      <svg class="spark" width="52" height="12" viewBox="0 0 52 12" aria-hidden="true"><polyline points="0,8 10,7 20,8 30,7 40,8 52,7" stroke="var(--fg-dim)"></polyline></svg>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="mono"><span class="tbl-id" data-goto="deal">UW-2026-0473</span></td>
+                    <td>R&iacute;o Verde Landscaping LLC<span class="sub">Tucson, AZ &middot; est. 2015</span></td>
+                    <td class="dim">C&amp;I / Services</td>
+                    <td class="num mono">$96,500</td>
+                    <td><span class="chip ok">Analyst</span></td>
+                    <td><span class="chip">02 Extraction</span></td>
+                    <td><span class="track"><i class="done"></i><i class="here"></i><i></i><i></i><i></i><i></i><i></i><i></i></span></td>
+                    <td><span class="chip">&mdash;</span></td>
+                    <td class="num mono dim">&mdash;</td>
+                    <td><span class="chip info"><span class="dot pulse"></span>Extracting 6/9</span></td>
+                    <td>K. Osei<span class="sub">Analyst</span></td>
+                    <td class="num mono">0 d
+                      <svg class="spark" width="52" height="12" viewBox="0 0 52 12" aria-hidden="true"><polyline points="0,7 10,8 20,7 30,8 40,7 52,8" stroke="var(--fg-dim)"></polyline></svg>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="mono"><span class="tbl-id" data-goto="deal">UW-2026-0478</span></td>
+                    <td>Piedmont Orthopedic Devices LLC<span class="sub">Greensboro, NC &middot; est. 2012</span></td>
+                    <td class="dim">C&amp;I / Med-tech</td>
+                    <td class="num mono">$3,100,000</td>
+                    <td><span class="chip crit">Committee</span></td>
+                    <td><span class="chip">01 Intake</span></td>
+                    <td><span class="track"><i class="here"></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span></td>
+                    <td><span class="chip">&mdash;</span></td>
+                    <td class="num mono dim">&mdash;</td>
+                    <td><span class="chip warn"><span class="dot pulse"></span>Triage pending</span></td>
+                    <td>J. Farrow<span class="sub">RM</span></td>
+                    <td class="num mono">0 d
+                      <svg class="spark" width="52" height="12" viewBox="0 0 52 12" aria-hidden="true"><polyline points="0,8 10,8 20,8 30,8 40,8 52,8" stroke="var(--fg-dim)"></polyline></svg>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="mono"><span class="tbl-id" data-goto="deal">UW-2026-0399</span></td>
+                    <td>Lakeside Fabrication Works Inc.<span class="sub">Erie, PA &middot; est. 2001</span></td>
+                    <td class="dim">Equip. finance</td>
+                    <td class="num mono">$742,000</td>
+                    <td><span class="chip warn">Sr. Officer</span></td>
+                    <td><span class="chip ok">08 Closing</span></td>
+                    <td><span class="track"><i class="done"></i><i class="done"></i><i class="done"></i><i class="done"></i><i class="done"></i><i class="done"></i><i class="done"></i><i class="here"></i></span></td>
+                    <td><span class="chip ok">3 / Pass</span></td>
+                    <td class="num mono ok-t">2.04</td>
+                    <td><span class="chip ok">Approved</span></td>
+                    <td>M. Reyes<span class="sub">Sr. Officer</span></td>
+                    <td class="num mono">2 d
+                      <svg class="spark" width="52" height="12" viewBox="0 0 52 12" aria-hidden="true"><polyline points="0,7 10,6 20,7 30,6 40,7 52,6" stroke="var(--ok)"></polyline></svg>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="mono"><span class="tbl-id" data-goto="deal">UW-2026-0481</span></td>
+                    <td>Stonebridge Veterinary Group<span class="sub">Boise, ID &middot; est. 2018</span></td>
+                    <td class="dim">Prof. practice</td>
+                    <td class="num mono">$148,000</td>
+                    <td><span class="chip ok">Analyst</span></td>
+                    <td><span class="chip">01 Intake</span></td>
+                    <td><span class="track"><i class="here"></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span></td>
+                    <td><span class="chip">&mdash;</span></td>
+                    <td class="num mono dim">&mdash;</td>
+                    <td><span class="chip warn"><span class="dot pulse"></span>Triage pending</span></td>
+                    <td>J. Farrow<span class="sub">RM</span></td>
+                    <td class="num mono">0 d
+                      <svg class="spark" width="52" height="12" viewBox="0 0 52 12" aria-hidden="true"><polyline points="0,8 10,8 20,8 30,8 40,8 52,8" stroke="var(--fg-dim)"></polyline></svg>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="mono"><span class="tbl-id" data-goto="deal">UW-2026-0388</span></td>
+                    <td>Merrick Tool &amp; Die Corp.<span class="sub">Racine, WI &middot; est. 1996</span></td>
+                    <td class="dim">Equip. finance</td>
+                    <td class="num mono">$512,000</td>
+                    <td><span class="chip warn">Sr. Officer</span></td>
+                    <td><span class="chip pri">05 Memo</span></td>
+                    <td><span class="track"><i class="done"></i><i class="done"></i><i class="done"></i><i class="done"></i><i class="here"></i><i></i><i></i><i></i></span></td>
+                    <td><span class="chip ok">5 / Pass</span></td>
+                    <td class="num mono ok-t">1.55</td>
+                    <td><span class="chip warn"><span class="dot pulse"></span>Draft pending</span></td>
+                    <td>D. Whitfield<span class="sub">Analyst</span></td>
+                    <td class="num mono warn-t">4 d
+                      <svg class="spark" width="52" height="12" viewBox="0 0 52 12" aria-hidden="true"><polyline points="0,9 10,8 20,8 30,7 40,6 52,5" stroke="var(--warn)"></polyline></svg>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="mono"><span class="tbl-id" data-goto="deal">UW-2026-0412</span></td>
+                    <td>Copperfield Auto Group LLC<span class="sub">Amarillo, TX &middot; est. 2008</span></td>
+                    <td class="dim">Floor plan</td>
+                    <td class="num mono">$1,050,000</td>
+                    <td><span class="chip crit">Committee</span></td>
+                    <td><span class="chip info">07 Approval</span></td>
+                    <td><span class="track"><i class="done"></i><i class="done"></i><i class="done"></i><i class="done"></i><i class="done"></i><i class="done"></i><i class="here"></i><i></i></span></td>
+                    <td><span class="chip warn">6 / Watch</span></td>
+                    <td class="num mono warn-t">1.32</td>
+                    <td><span class="chip">Accepted &times;4</span></td>
+                    <td>Committee<span class="sub">Queue</span></td>
+                    <td class="num mono">3 d
+                      <svg class="spark" width="52" height="12" viewBox="0 0 52 12" aria-hidden="true"><polyline points="0,9 10,8 20,7 30,7 40,6 52,6" stroke="var(--fg-dim)"></polyline></svg>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <div class="panel-ft">
+            <span class="locked-tag">Row actions</span>
+            <button class="btn sm" type="button" data-goto="deal">Open deal <span class="k">&#8629;</span></button>
+            <button class="btn sm" type="button" data-goto="review">Review draft <span class="k">V</span></button>
+            <button class="btn sm ghost" type="button" data-goto="audit">Trail</button>
+            <div class="spacer" style="flex:1"></div>
+            <span class="dim txt-tiny">14 of 14 shown &middot; RBAC filter: officer sees all deals in NE-4</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= INTAKE ================= -->
+    <section class="screen" id="screen-intake" data-title="Deal Intake">
+      <div class="scr-hd">
+        <h2>Deal Intake</h2>
+        <span class="scr-sub">Stage 01 &middot; submitter role: relationship manager</span>
+        <div class="spacer"></div>
+        <span class="chip violet">RBAC: RM may submit &amp; view own deals only</span>
+        <button class="btn ghost sm" type="button" id="in-save-draft">Save draft</button>
+        <button class="btn primary sm" type="button" id="in-submit">Submit to triage <span class="k">&#8984;&#8629;</span></button>
+      </div>
+
+      <div class="scr-body">
+        <div class="banner" id="intake-feedback" style="display:none;margin-bottom:var(--sp-3)"></div>
+        <div class="grid" style="grid-template-columns: minmax(0,1.15fr) minmax(0,1fr); align-items:start">
+
+          <!-- LEFT: submission form -->
+          <div class="stack">
+            <div class="panel">
+              <div class="panel-hd"><h3>Borrower</h3><span class="hd-note">REQ-028</span></div>
+              <div class="panel-bd">
+                <div class="grid g-2">
+                  <div class="field"><label for="in-legal">Legal name <span class="req">*</span></label><input class="inp" id="in-legal" value="Piedmont Orthopedic Devices LLC"></div>
+                  <div class="field"><label for="in-dba">DBA</label><input class="inp" id="in-dba" value="Piedmont Ortho"></div>
+                  <div class="field"><label for="in-tin">TIN / EIN <span class="req">*</span></label><input class="inp mono" id="in-tin" value="56-2841907"></div>
+                  <div class="field"><label for="in-naics">NAICS <span class="req">*</span></label><input class="inp mono" id="in-naics" value="339112 — Surgical instrument mfg"></div>
+                  <div class="field"><label for="in-industry">Industry <span class="req">*</span></label>
+                    <select class="sel" id="in-industry">
+                      <option value="manufacturing">Manufacturing</option>
+                      <option value="medical_devices">Medical devices</option>
+                      <option value="professional_services">Professional services</option>
+                      <option value="food_and_beverage">Food &amp; beverage</option>
+                      <option value="transportation">Transportation</option>
+                      <option value="real_estate">Real estate</option>
+                      <option value="retail">Retail</option>
+                      <option value="other">Other</option>
+                    </select>
+                  </div>
+                  <div class="field"><label for="in-state">State of org.</label><input class="inp" id="in-state" value="North Carolina"></div>
+                  <div class="field"><label for="in-est">Established</label><input class="inp mono" id="in-est" value="2012"></div>
+                  <div class="field span-2"><label for="in-addr">Principal address</label><input class="inp" id="in-addr" value="4412 Kestrel Ave, Greensboro, NC 27409"></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="panel">
+              <div class="panel-hd"><h3>Requested Facility</h3><span class="hd-note">REQ-029 &middot; exposure drives approval tier</span></div>
+              <div class="panel-bd stack">
+                <div class="grid g-3">
+                  <div class="field"><label for="in-type">Facility type <span class="req">*</span></label>
+                    <select class="sel" id="in-type">
+                      <option value="term_loan">Term loan — equipment</option>
+                      <option value="line_of_credit">Revolving line of credit</option>
+                      <option value="cre_mortgage">CRE mortgage</option>
+                      <option value="sba_7a">SBA 7(a)</option>
+                    </select>
+                  </div>
+                  <div class="field"><label for="in-amt">Exposure amount <span class="req">*</span></label><input class="inp mono" id="in-amt" value="$3,100,000"></div>
+                  <div class="field"><label for="in-term">Term (months)</label><input class="inp mono" id="in-term" value="84"></div>
+                  <div class="field"><label for="in-purpose">Purpose</label><input class="inp" id="in-purpose" value="CNC line expansion + refi"></div>
+                  <div class="field"><label for="in-collat">Primary collateral</label><input class="inp" id="in-collat" value="Equipment + blanket UCC-1"></div>
+                  <div class="field"><label for="in-ltv">Requested LTV</label><input class="inp mono" id="in-ltv" value="72%"></div>
+                </div>
+
+                <div>
+                  <div class="row" style="justify-content:space-between;margin-bottom:4px">
+                    <span class="db-label">Exposure vs approval tier</span>
+                    <span class="chip crit lg" id="in-tier-chip">Tier 3 &middot; Credit Committee</span>
+                  </div>
+                  <div class="gauge" aria-label="Exposure relative to tier thresholds">
+                    <span class="g-zone z1" style="left:0;width:20%"></span>
+                    <span class="g-zone z2" style="left:20%;width:22%"></span>
+                    <span class="g-zone z3" style="left:42%;width:58%"></span>
+                    <span class="g-tick" style="left:20%"></span>
+                    <span class="g-tick" style="left:42%"></span>
+                    <span class="g-lab" style="left:0">$0</span>
+                    <span class="g-lab" style="left:20%">$250k</span>
+                    <span class="g-lab" style="left:42%">$1M</span>
+                    <span class="g-needle" id="in-tier-needle" style="left:78%"></span>
+                  </div>
+                  <div class="hint" style="margin-top:4px" id="in-tier-hint">$3,100,000 exceeds the $1,000,000 senior-officer ceiling &rarr; routes to <b class="crit-t">credit committee</b> at Stage 07.</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="panel">
+              <div class="panel-hd"><h3>Documents</h3><span class="hd-note" id="intake-doc-note">REQ-004 &middot; unlocks after the deal is created</span></div>
+              <div class="panel-bd stack">
+                <div class="dropzone" id="intake-dropzone" style="opacity:.5;pointer-events:none" aria-disabled="true">Upload opens once this deal exists &mdash; submit the form below first</div>
+                <div class="banner" id="intake-doc-empty">No documents yet. Document upload and deterministic extraction land on this deal's Deal Desk once it is created (next slice adds the Intake Triage Agent read).</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- RIGHT: triage agent draft -->
+          <div class="stack">
+            <div class="banner" id="intake-triage-banner">
+              <span class="b-icon">i</span>
+              <span><b>NOT YET RUN.</b> The Intake Triage Agent reads a deal's uploaded documents and proposes a queue — it runs once documents are on file. Nothing in this panel is real until then. (REQ-033)</span>
+            </div>
+
+            <div class="panel">
+              <div class="panel-hd">
+                <h3>Agent 1 &middot; Intake Triage</h3>
+                <span class="chip" id="intake-triage-state">Not started</span>
+                <div class="spacer"></div>
+                <span class="hd-note">available after document upload</span>
+              </div>
+              <div class="panel-bd stack">
+                <div class="hint">This deal has no agent run yet. Once borrower documents are uploaded, the triage agent will propose a classification, flag missing documents, and suggest an analyst queue here for a named human to accept, edit, or reject.</div>
+              </div>
+              <div class="panel-ft">
+                <button class="btn ok sm" type="button" disabled>Accept <span class="k">A</span></button>
+                <button class="btn sm" type="button" disabled>Edit &amp; accept <span class="k">E</span></button>
+                <button class="btn crit sm" type="button" disabled>Reject &mdash; reason required <span class="k">R</span></button>
+                <div class="spacer" style="flex:1"></div>
+                <span class="locked-tag">No draft to decide on yet</span>
+              </div>
+            </div>
+
+            <div class="panel">
+              <div class="panel-hd"><h3>Intake Preflight</h3><span class="hd-note">deterministic checks</span></div>
+              <div class="panel-bd">
+                <dl class="kv">
+                  <dt>Duplicate request</dt><dd id="pf-duplicate"><span class="chip">Fill the form to check</span></dd>
+                  <dt>Submitted by</dt><dd id="pf-submitted-by">Sign in to see your account</dd>
+                  <dt>Prohibited industry</dt><dd><span class="chip">N/A</span> <span class="dim txt-tiny">screening ships in a later slice</span></dd>
+                  <dt>OFAC / watchlist</dt><dd><span class="chip">N/A</span> <span class="dim txt-tiny">screening ships in a later slice</span></dd>
+                </dl>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+    <!-- ================= DEAL DESK ================= -->
+    <section class="screen" id="screen-deal" data-title="Deal Desk">
+      <div class="scr-hd">
+        <h2>Deal Desk</h2>
+        <span class="scr-sub mono">UW-2026-0418</span>
+        <div class="spacer"></div>
+        <div class="segbar" role="group" aria-label="Deal section jump">
+          <button type="button" aria-pressed="true">Spread</button>
+          <button type="button" aria-pressed="false">Memo</button>
+          <button type="button" aria-pressed="false">Policy</button>
+          <button type="button" aria-pressed="false">Timeline</button>
+        </div>
+        <button class="btn ghost sm" type="button" data-goto="audit">Audit trail</button>
+        <button class="btn sm" type="button" data-goto="review">Open review queue <span class="k">4</span></button>
+      </div>
+
+      <div class="scr-body stack">
+
+        <!-- borrower header band -->
+        <div class="dealband">
+          <div class="db-cell grow">
+            <span class="db-label">Borrower &middot; Deal UW-2026-0418</span>
+            <span class="db-name">Harbor Point Marine Supply LLC</span>
+            <span class="db-label">Portsmouth, NH &middot; NAICS 441222 &middot; est. 2009 &middot; RM: J. Farrow</span>
+          </div>
+          <div class="db-cell">
+            <span class="db-label">Exposure</span>
+            <span class="db-val">$1,850,000</span>
+            <span class="chip crit">Tier 3 &middot; Committee</span>
+          </div>
+          <div class="db-cell">
+            <span class="db-label">Facility</span>
+            <span class="db-val" style="font-size:var(--fs-xs)">CRE mortgage &middot; 240 mo</span>
+            <span class="db-label">LTV 74.6% &middot; cap 75% (POL-LTV-07)</span>
+          </div>
+          <div class="db-cell">
+            <span class="db-label">Risk grade</span>
+            <div class="row"><span class="grade g-warn">6</span><span><span class="chip warn">Pass / Watch</span><span class="db-label" style="display:block">rubric CLP-2026.2</span></span></div>
+          </div>
+          <div class="db-cell">
+            <span class="db-label">Stage 06 &middot; Policy compliance</span>
+            <span class="track" style="margin:3px 0"><i class="done"></i><i class="done"></i><i class="done"></i><i class="done"></i><i class="done"></i><i class="blocked"></i><i></i><i></i></span>
+            <span class="db-label crit-t">Blocked &mdash; 2 open exceptions</span>
+          </div>
+          <div class="db-cell">
+            <span class="db-label">Idle</span>
+            <span class="db-val crit-t">7 d</span>
+            <span class="db-label">SLA breach &middot; owner D. Whitfield</span>
+          </div>
+        </div>
+
+        <div class="grid" style="grid-template-columns: 260px minmax(0,1.5fr) minmax(0,1fr); align-items:start">
+
+          <!-- documents column -->
+          <div class="stack">
+            <div class="panel">
+              <div class="panel-hd"><h3>Documents</h3><span class="hd-note">9 files</span></div>
+              <div class="panel-bd stack" style="gap:2px">
+                <div class="filerow"><span class="chip ok">EXT</span><span class="f-name">2024-FYE-Financials-Reviewed.pdf</span><span class="f-meta">p.1-14</span></div>
+                <div class="filerow"><span class="chip ok">EXT</span><span class="f-name">2023-FYE-Financials.pdf</span><span class="f-meta">p.1-12</span></div>
+                <div class="filerow"><span class="chip ok">EXT</span><span class="f-name">2026-Q2-Interim-BS-PL.xlsx</span><span class="f-meta">Sh.2</span></div>
+                <div class="filerow"><span class="chip ok">EXT</span><span class="f-name">Rent-Roll-HarborPoint-2026-06.pdf</span><span class="f-meta">p.1-3</span></div>
+                <div class="filerow"><span class="chip ok">EXT</span><span class="f-name">Appraisal-88-Sagamore-Rd.pdf</span><span class="f-meta">p.42</span></div>
+                <div class="filerow"><span class="chip ok">EXT</span><span class="f-name">Debt-Schedule-2026-06-30.xlsx</span><span class="f-meta">Sh.1</span></div>
+                <div class="filerow"><span class="chip ok">EXT</span><span class="f-name">Business-Tax-Return-1120S-2024.pdf</span><span class="f-meta">p.1-9</span></div>
+                <div class="filerow"><span class="chip ok">EXT</span><span class="f-name">Personal-Financial-Stmt-Alvarez.pdf</span><span class="f-meta">p.1-4</span></div>
+                <div class="filerow"><span class="chip warn">STALE</span><span class="f-name">AR-Aging-2026-03-31.csv</span><span class="f-meta">120 d</span></div>
+              </div>
+            </div>
+
+            <div class="panel">
+              <div class="panel-hd"><h3>Draft States</h3><span class="hd-note">REQ-016 gate</span></div>
+              <div class="panel-bd stack" style="gap:3px">
+                <div class="row" style="justify-content:space-between"><span class="txt-xs">Triage classification</span><span class="chip ok">Accepted</span></div>
+                <div class="row" style="justify-content:space-between"><span class="txt-xs">Financial spread</span><span class="chip info">Edited</span></div>
+                <div class="row" style="justify-content:space-between"><span class="txt-xs">Credit memo</span><span class="chip ok">Accepted</span></div>
+                <div class="row" style="justify-content:space-between"><span class="txt-xs">Policy review</span><span class="chip warn"><span class="dot pulse"></span>Pending</span></div>
+                <div class="banner warn" style="margin-top:4px"><span class="b-icon">!</span><span>Advancement to Stage 07 is <b>blocked</b> until the policy review draft is accepted by a named human.</span></div>
+              </div>
+            </div>
+
+            <div class="panel">
+              <div class="panel-hd"><h3>Decisions</h3><span class="hd-note">named humans only</span></div>
+              <div class="panel-bd stack" style="gap:4px">
+                <div class="ladder-step"><span class="l-idx">&#10003;</span><span><b>Spread accepted (edited)</b><br><span class="dim txt-tiny">K. Osei &middot; Credit Analyst &middot; 07-24 11:04</span></span><span class="l-cap">2 edits</span></div>
+                <div class="ladder-step"><span class="l-idx">&#10003;</span><span><b>Grade 6 confirmed</b><br><span class="dim txt-tiny">D. Whitfield &middot; Credit Analyst &middot; 07-25 09:31</span></span><span class="l-cap">&#402;()</span></div>
+                <div class="ladder-step"><span class="l-idx">&#10003;</span><span><b>Memo accepted</b><br><span class="dim txt-tiny">D. Whitfield &middot; Credit Analyst &middot; 07-26 16:12</span></span><span class="l-cap">v3</span></div>
+                <div class="ladder-step on"><span class="l-idx">&#8226;</span><span><b>Awaiting policy acceptance</b><br><span class="dim txt-tiny">assigned M. Reyes &middot; Sr. Credit Officer</span></span><span class="l-cap">open</span></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- center: spread + ratios + memo -->
+          <div class="stack">
+            <div class="panel">
+              <div class="panel-hd">
+                <h3>Standard Spread</h3>
+                <span class="hd-note">every figure carries a source citation (REQ-005)</span>
+                <div class="spacer"></div>
+                <span class="chip info">Edited by K. Osei</span>
+              </div>
+              <div class="panel-bd flush">
+                <div class="tbl-wrap" style="max-height:330px">
+                  <table class="tbl">
+                    <thead>
+                      <tr>
+                        <th>Line item</th>
+                        <th class="num" style="width:110px">FY2023</th>
+                        <th class="num" style="width:110px">FY2024</th>
+                        <th class="num" style="width:120px">TTM 2026-Q2</th>
+                        <th style="width:170px">Source</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr><td>Revenue</td><td class="num mono">$8,412,300</td><td class="num mono">$9,106,880</td><td class="num mono">$9,455,120</td><td><span class="cite">FY24-Fin p.4 L12</span></td></tr>
+                      <tr><td>COGS</td><td class="num mono">$5,681,900</td><td class="num mono">$6,148,140</td><td class="num mono">$6,418,700</td><td><span class="cite">FY24-Fin p.4 L18</span></td></tr>
+                      <tr><td>Gross profit</td><td class="num mono">$2,730,400</td><td class="num mono">$2,958,740</td><td class="num mono">$3,036,420</td><td><span class="cite">derived L12-L18</span></td></tr>
+                      <tr><td>Operating expense</td><td class="num mono">$2,014,700</td><td class="num mono">$2,187,300</td><td class="num mono">$2,281,050</td><td><span class="cite">FY24-Fin p.5 L27</span></td></tr>
+                      <tr><td>EBITDA</td><td class="num mono">$862,400</td><td class="num mono">$941,180</td><td class="num mono">$928,640</td><td><span class="cite">FY24-Fin p.5 L31</span></td></tr>
+                      <tr><td>Depreciation &amp; amort.</td><td class="num mono">$146,700</td><td class="num mono">$169,740</td><td class="num mono">$173,270</td><td><span class="cite">1120S p.3 L14</span></td></tr>
+                      <tr><td>Interest expense</td><td class="num mono">$188,200</td><td class="num mono">$214,900</td><td class="num mono">$228,410</td><td><span class="cite">Debt-Sched Sh.1 B22</span></td></tr>
+                      <tr><td>Net income</td><td class="num mono">$402,600</td><td class="num mono">$421,340</td><td class="num mono">$392,180</td><td><span class="cite">FY24-Fin p.6 L44</span></td></tr>
+                      <tr><td>Cash &amp; equivalents</td><td class="num mono">$318,400</td><td class="num mono">$286,910</td><td class="num mono">$241,880</td><td><span class="cite">Q2-Interim Sh.2 C8</span></td></tr>
+                      <tr><td>Accounts receivable</td><td class="num mono">$1,104,200</td><td class="num mono">$1,268,430</td><td class="num mono">$1,392,600</td><td><span class="cite">Q2-Interim Sh.2 C14</span></td></tr>
+                      <tr><td>Inventory</td><td class="num mono">$1,842,700</td><td class="num mono">$2,016,540</td><td class="num mono">$2,188,900</td><td><span class="cite">Q2-Interim Sh.2 C19</span></td></tr>
+                      <tr><td>Total current assets</td><td class="num mono">$3,412,900</td><td class="num mono">$3,706,180</td><td class="num mono">$3,948,240</td><td><span class="cite">derived C8+C14+C19</span></td></tr>
+                      <tr><td>Total current liabilities</td><td class="num mono">$2,684,100</td><td class="num mono">$2,911,620</td><td class="num mono">$3,204,510</td><td><span class="cite">Q2-Interim Sh.2 C41</span></td></tr>
+                      <tr><td>Total funded debt</td><td class="num mono">$3,188,400</td><td class="num mono">$3,412,700</td><td class="num mono">$3,614,880</td><td><span class="cite">Debt-Sched Sh.1 B31</span></td></tr>
+                      <tr><td>Tangible net worth</td><td class="num mono">$1,742,600</td><td class="num mono">$1,918,220</td><td class="num mono">$2,004,410</td><td><span class="cite">FY24-Fin p.7 L52</span></td></tr>
+                      <tr><td>Annual debt service</td><td class="num mono">$698,300</td><td class="num mono">$742,180</td><td class="num mono">$786,440</td><td><span class="cite">Debt-Sched Sh.1 B38</span></td></tr>
+                      <tr><td>Property appraised value</td><td class="num dim">&mdash;</td><td class="num dim">&mdash;</td><td class="num mono">$2,480,000</td><td><span class="cite">Appraisal p.42</span></td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+              <div class="panel-ft">
+                <span class="locked-tag">17 figures &middot; 17 citations &middot; <b class="ok-t">0 uncited</b></span>
+                <div class="spacer" style="flex:1"></div>
+                <button class="btn sm ghost" type="button">Recalculate</button>
+                <button class="btn sm" type="button" data-goto="review">Inspect spread run</button>
+              </div>
+            </div>
+
+            <div class="panel">
+              <div class="panel-hd">
+                <h3>Credit Memo</h3>
+                <span class="chip ok">Accepted &middot; v3</span>
+                <div class="spacer"></div>
+                <span class="hd-note">D. Whitfield &middot; 07-26 16:12</span>
+              </div>
+              <div class="panel-bd">
+                <div class="memo">
+                  <h4>Recommendation</h4>
+                  <p>Recommend approval of a $1,850,000 CRE mortgage to Harbor Point Marine Supply LLC at a risk grade of <b>6 (Pass/Watch)</b> <span class="cite">grade-trace</span>, subject to clearance of the two open policy exceptions below. Pricing indication SOFR + 315bps, 240-month amortization.</p>
+                  <h4>Cash Flow &amp; Coverage</h4>
+                  <p>TTM EBITDA of $928,640 <span class="cite">spread L-EBITDA</span> against annual debt service of $786,440 <span class="cite">Debt-Sched B38</span> produces a DSCR of <b>1.18x</b> <span class="cite">&#402;() computed</span>, below the 1.25x floor in <span class="mono">POL-DSCR-02</span> <span class="cite">CLP-2026.2 &sect;4.1</span>. EBITDA declined 1.3% year over year on flat gross margin, driven by a $93,750 increase in operating expense <span class="cite">spread L-OPEX</span>.</p>
+                  <h4>Leverage &amp; Liquidity</h4>
+                  <p>Funded debt of $3,614,880 <span class="cite">Debt-Sched B31</span> equals <b>3.89x</b> TTM EBITDA <span class="cite">&#402;() computed</span>, inside the 4.00x ceiling in <span class="mono">POL-LEV-05</span>. Current ratio of <b>1.23x</b> <span class="cite">&#402;() computed</span> is adequate but trending down from 1.27x in FY2023 as inventory absorbed working capital <span class="cite">Q2-Interim C19</span>.</p>
+                  <h4>Collateral</h4>
+                  <p>First mortgage on 88 Sagamore Rd appraised at $2,480,000 <span class="cite">Appraisal p.42</span> yields an LTV of <b>74.6%</b>, within the 75% cap of <span class="mono">POL-LTV-07</span> with only 40bps of headroom. A 10% valuation decline would breach the cap.</p>
+                  <h4>Mitigants</h4>
+                  <p>Unlimited personal guaranty of R. Alvarez with verified liquid assets of $612,000 <span class="cite">PFS-Alvarez p.2</span>; 17-year operating history; contracted marina service revenue of $1.42M under multi-year agreements <span class="cite">Rent-Roll p.2</span>.</p>
+                </div>
+              </div>
+              <div class="panel-ft">
+                <span class="locked-tag">14 inline citations &middot; memo agent run 3 of 3</span>
+                <div class="spacer" style="flex:1"></div>
+                <button class="btn sm ghost" type="button">Version history</button>
+                <button class="btn sm" type="button" data-goto="review">Open in review</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- right: computed ratios, rubric, exceptions, timeline -->
+          <div class="stack">
+            <div class="panel">
+              <div class="panel-hd">
+                <h3>Computed Ratios</h3>
+                <div class="spacer"></div>
+                <span class="det">computed by code, not by agent</span>
+              </div>
+              <div class="panel-bd stack">
+                <div class="grid g-2">
+                  <div class="readout">
+                    <span class="r-label">DSCR</span>
+                    <span class="r-val warn">1.18x</span>
+                    <span class="r-foot">floor 1.25 &middot; POL-DSCR-02</span>
+                    <div class="meter" style="margin-top:5px"><i class="warn" style="width:59%"></i><span class="tickmark" style="left:62.5%"></span></div>
+                  </div>
+                  <div class="readout">
+                    <span class="r-label">Leverage</span>
+                    <span class="r-val ok">3.89x</span>
+                    <span class="r-foot">ceiling 4.00 &middot; POL-LEV-05</span>
+                    <div class="meter" style="margin-top:5px"><i class="ok" style="width:88%"></i><span class="tickmark" style="left:91%"></span></div>
+                  </div>
+                  <div class="readout">
+                    <span class="r-label">Current ratio</span>
+                    <span class="r-val ok">1.23x</span>
+                    <span class="r-foot">min 1.10 &middot; trend &darr; 0.04</span>
+                    <div class="meter" style="margin-top:5px"><i class="ok" style="width:66%"></i><span class="tickmark" style="left:52%"></span></div>
+                  </div>
+                  <div class="readout">
+                    <span class="r-label">LTV</span>
+                    <span class="r-val warn">74.6%</span>
+                    <span class="r-foot">cap 75.0 &middot; POL-LTV-07</span>
+                    <div class="meter" style="margin-top:5px"><i class="warn" style="width:95%"></i><span class="tickmark" style="left:96%"></span></div>
+                  </div>
+                </div>
+                <div class="banner ok">
+                  <span class="b-icon">&#402;</span>
+                  <span>These four values are produced by the deterministic calculation service <span class="mono">calc-svc 2.4.1</span>, never by a language model. Formula and inputs are inspectable per value.</span>
+                </div>
+                <div class="stack" style="gap:2px">
+                  <div class="filerow"><span class="f-meta">DSCR</span><span class="f-name mono">EBITDA(928,640) / ADS(786,440)</span><span class="cite">inputs</span></div>
+                  <div class="filerow"><span class="f-meta">LEV</span><span class="f-name mono">FundedDebt(3,614,880) / EBITDA</span><span class="cite">inputs</span></div>
+                  <div class="filerow"><span class="f-meta">CR</span><span class="f-name mono">CA(3,948,240) / CL(3,204,510)</span><span class="cite">inputs</span></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="panel">
+              <div class="panel-hd"><h3>Risk Grade Rubric Trace</h3><span class="hd-note">REQ-009 / REQ-032</span><div class="spacer"></div><span class="det">code</span></div>
+              <div class="panel-bd flush">
+                <table class="tbl">
+                  <thead><tr><th>Rubric factor</th><th class="num" style="width:64px">Input</th><th class="num" style="width:54px">Band</th><th class="num" style="width:52px">Wt</th><th class="num" style="width:56px">Pts</th></tr></thead>
+                  <tbody>
+                    <tr><td>Debt service coverage</td><td class="num mono">1.18x</td><td class="num mono warn-t">7</td><td class="num mono">30%</td><td class="num mono">2.10</td></tr>
+                    <tr><td>Leverage</td><td class="num mono">3.89x</td><td class="num mono">6</td><td class="num mono">20%</td><td class="num mono">1.20</td></tr>
+                    <tr><td>Liquidity</td><td class="num mono">1.23x</td><td class="num mono">5</td><td class="num mono">15%</td><td class="num mono">0.75</td></tr>
+                    <tr><td>Collateral / LTV</td><td class="num mono">74.6%</td><td class="num mono warn-t">6</td><td class="num mono">15%</td><td class="num mono">0.90</td></tr>
+                    <tr><td>Operating history</td><td class="num mono">17 yr</td><td class="num mono ok-t">3</td><td class="num mono">10%</td><td class="num mono">0.30</td></tr>
+                    <tr><td>Industry outlook</td><td class="num mono">441222</td><td class="num mono">6</td><td class="num mono">10%</td><td class="num mono">0.60</td></tr>
+                    <tr style="background:var(--surface-2)"><td><b>Weighted grade</b></td><td class="num mono dim">&mdash;</td><td class="num mono dim">&mdash;</td><td class="num mono">100%</td><td class="num mono warn-t"><b>5.85 &rarr; 6</b></td></tr>
+                  </tbody>
+                </table>
+              </div>
+              <div class="panel-ft"><span class="locked-tag">Rubric CLP-2026.2 &middot; rounding: half-up to integer grade &middot; no model involvement</span></div>
+            </div>
+
+            <div class="panel">
+              <div class="panel-hd"><h3>Policy Exceptions</h3><span class="chip crit">2 open</span><div class="spacer"></div><span class="hd-note">Agent 4 output</span></div>
+              <div class="panel-bd stack" style="gap:4px">
+                <div class="banner crit">
+                  <span class="b-icon">&times;</span>
+                  <span><b class="mono">POL-DSCR-02</b> &mdash; minimum DSCR 1.25x. Computed DSCR is <b>1.18x</b>, a shortfall of 0.07x. Written exception required from an officer at or above the exposure tier. <span class="cite">CLP-2026.2 &sect;4.1</span></span>
+                </div>
+                <div class="banner crit">
+                  <span class="b-icon">&times;</span>
+                  <span><b class="mono">POL-CONC-03</b> &mdash; marine/recreational CRE concentration would reach <b>23.4%</b> of the NE-4 CRE book against a 22.0% limit. Committee-level concentration waiver required. <span class="cite">CLP-2026.2 &sect;7.3</span></span>
+                </div>
+                <div class="banner warn">
+                  <span class="b-icon">!</span>
+                  <span><b class="mono">POL-LTV-07</b> &mdash; LTV 74.6% is inside the 75% cap with 0.4pt of headroom. Advisory only; no exception raised.</span>
+                </div>
+                <div class="banner"><span class="b-icon">&#10003;</span><span><b class="mono">POL-IND-11</b> prohibited-industry screen: clear. <b class="mono">POL-GUAR-01</b> guaranty on file: satisfied.</span></div>
+              </div>
+              <div class="panel-ft">
+                <span class="chip warn"><span class="dot pulse"></span>Draft pending acceptance</span>
+                <div class="spacer" style="flex:1"></div>
+                <button class="btn sm" type="button" data-goto="review">Review exceptions <span class="k">4</span></button>
+              </div>
+            </div>
+
+            <div class="panel">
+              <div class="panel-hd"><h3>Deal Timeline</h3><span class="hd-note">REQ-045</span></div>
+              <div class="panel-bd">
+                <div class="timeline">
+                  <div class="tl-row"><span class="tl-time">07-30 09:14</span><span class="tl-mark warn">&#9679;</span><span class="tl-body"><b>Policy compliance agent</b> raised 2 exceptions &mdash; draft PENDING</span></div>
+                  <div class="tl-row"><span class="tl-time">07-26 16:12</span><span class="tl-mark ok">&#9679;</span><span class="tl-body"><b>D. Whitfield</b> accepted memo v3 <span class="dim">(Credit Analyst)</span></span></div>
+                  <div class="tl-row"><span class="tl-time">07-26 15:48</span><span class="tl-mark pri">&#9679;</span><span class="tl-body"><b>Credit memo agent</b> produced v3 after edit-request</span></div>
+                  <div class="tl-row"><span class="tl-time">07-26 11:03</span><span class="tl-mark crit">&#9679;</span><span class="tl-body"><b>D. Whitfield</b> rejected memo v2 &mdash; reason: &ldquo;omitted concentration exposure&rdquo;</span></div>
+                  <div class="tl-row"><span class="tl-time">07-25 09:31</span><span class="tl-mark ok">&#9679;</span><span class="tl-body"><b>calc-svc 2.4.1</b> assigned grade 6 &middot; confirmed by D. Whitfield</span></div>
+                  <div class="tl-row"><span class="tl-time">07-24 11:04</span><span class="tl-mark ok">&#9679;</span><span class="tl-body"><b>K. Osei</b> accepted spread with 2 edits <span class="dim">(inventory, ADS)</span></span></div>
+                  <div class="tl-row"><span class="tl-time">07-23 08:22</span><span class="tl-mark pri">&#9679;</span><span class="tl-body"><b>Financial spreading agent</b> produced spread &middot; 17 cited figures</span></div>
+                  <div class="tl-row"><span class="tl-time">07-22 14:40</span><span class="tl-mark">&#9679;</span><span class="tl-body">Extraction complete &mdash; 9 documents, 412 fields</span></div>
+                  <div class="tl-row"><span class="tl-time">07-22 10:05</span><span class="tl-mark ok">&#9679;</span><span class="tl-body"><b>M. Reyes</b> accepted triage classification &middot; queue: marine CRE</span></div>
+                  <div class="tl-row"><span class="tl-time">07-22 09:51</span><span class="tl-mark">&#9679;</span><span class="tl-body"><b>J. Farrow</b> submitted deal <span class="dim">(Relationship Manager)</span></span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+    <!-- ================= REVIEW ================= -->
+    <section class="screen" id="screen-review" data-title="Draft Review">
+      <div class="scr-hd">
+        <h2>Draft Review</h2>
+        <span class="scr-sub">Agent output vs. cited evidence &middot; 6 awaiting acceptance</span>
+        <div class="spacer"></div>
+        <span class="chip warn"><span class="dot pulse"></span>Unaccepted drafts block advancement</span>
+        <button class="btn ghost sm" type="button">&#8593; Prev <span class="k">K</span></button>
+        <button class="btn ghost sm" type="button">Next &#8595; <span class="k">J</span></button>
+      </div>
+
+      <div class="scr-body stack">
+
+        <!-- queue strip -->
+        <div class="panel">
+          <div class="panel-hd"><h3>Acceptance Queue</h3><span class="hd-note">state chips: pending / accepted / edited / rejected</span></div>
+          <div class="panel-bd flush">
+            <table class="tbl">
+              <thead><tr><th style="width:112px">Deal</th><th>Borrower</th><th style="width:150px">Artifact</th><th style="width:130px">Agent</th><th style="width:96px">State</th><th style="width:150px">Model</th><th class="num" style="width:78px">Latency</th><th class="num" style="width:88px">Tokens</th><th class="num" style="width:70px">Cost</th><th class="num" style="width:64px">Age</th></tr></thead>
+              <tbody>
+                <tr class="sel"><td class="mono"><span class="tbl-id">UW-2026-0418</span></td><td>Harbor Point Marine Supply</td><td>Policy exception set</td><td>4 &middot; Policy compliance</td><td><span class="chip warn"><span class="dot pulse"></span>Pending</span></td><td class="mono dim">uw-policy-v2</td><td class="num mono">3,410ms</td><td class="num mono">18,204</td><td class="num mono">$0.094</td><td class="num mono crit-t">3 d</td></tr>
+                <tr><td class="mono"><span class="tbl-id">UW-2026-0466</span></td><td>Auburn Ridge Storage</td><td>Policy exception set</td><td>4 &middot; Policy compliance</td><td><span class="chip warn"><span class="dot pulse"></span>Pending</span></td><td class="mono dim">uw-policy-v2</td><td class="num mono">2,988ms</td><td class="num mono">15,881</td><td class="num mono">$0.081</td><td class="num mono warn-t">2 d</td></tr>
+                <tr><td class="mono"><span class="tbl-id">UW-2026-0431</span></td><td>Delgado Precision Machining</td><td>Financial spread</td><td>2 &middot; Spreading</td><td><span class="chip warn"><span class="dot pulse"></span>Pending</span></td><td class="mono dim">uw-spread-v5</td><td class="num mono">6,742ms</td><td class="num mono">31,470</td><td class="num mono">$0.158</td><td class="num mono warn-t">2 d</td></tr>
+                <tr><td class="mono"><span class="tbl-id">UW-2026-0388</span></td><td>Merrick Tool &amp; Die</td><td>Credit memo v1</td><td>3 &middot; Memo</td><td><span class="chip warn"><span class="dot pulse"></span>Pending</span></td><td class="mono dim">uw-memo-v4</td><td class="num mono">9,120ms</td><td class="num mono">42,908</td><td class="num mono">$0.221</td><td class="num mono">1 d</td></tr>
+                <tr><td class="mono"><span class="tbl-id">UW-2026-0478</span></td><td>Piedmont Orthopedic Devices</td><td>Triage classification</td><td>1 &middot; Intake triage</td><td><span class="chip warn"><span class="dot pulse"></span>Pending</span></td><td class="mono dim">uw-triage-v3</td><td class="num mono">1,284ms</td><td class="num mono">4,912</td><td class="num mono">$0.021</td><td class="num mono">0 d</td></tr>
+                <tr><td class="mono"><span class="tbl-id">UW-2026-0481</span></td><td>Stonebridge Veterinary Group</td><td>Triage classification</td><td>1 &middot; Intake triage</td><td><span class="chip warn"><span class="dot pulse"></span>Pending</span></td><td class="mono dim">uw-triage-v3</td><td class="num mono">1,102ms</td><td class="num mono">4,388</td><td class="num mono">$0.019</td><td class="num mono">0 d</td></tr>
+                <tr><td class="mono"><span class="tbl-id">UW-2026-0418</span></td><td>Harbor Point Marine Supply</td><td>Credit memo v3</td><td>3 &middot; Memo</td><td><span class="chip ok">Accepted</span></td><td class="mono dim">uw-memo-v4</td><td class="num mono">8,864ms</td><td class="num mono">40,112</td><td class="num mono">$0.206</td><td class="num mono dim">4 d</td></tr>
+                <tr><td class="mono"><span class="tbl-id">UW-2026-0418</span></td><td>Harbor Point Marine Supply</td><td>Credit memo v2</td><td>3 &middot; Memo</td><td><span class="chip crit">Rejected</span></td><td class="mono dim">uw-memo-v4</td><td class="num mono">8,201ms</td><td class="num mono">38,644</td><td class="num mono">$0.198</td><td class="num mono dim">4 d</td></tr>
+                <tr><td class="mono"><span class="tbl-id">UW-2026-0418</span></td><td>Harbor Point Marine Supply</td><td>Financial spread</td><td>2 &middot; Spreading</td><td><span class="chip info">Edited</span></td><td class="mono dim">uw-spread-v5</td><td class="num mono">7,015ms</td><td class="num mono">33,902</td><td class="num mono">$0.171</td><td class="num mono dim">6 d</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- run telemetry for the selected draft -->
+        <div class="telemetry">
+          <div class="t-cell"><span class="t-k">Deal</span><span class="t-v">UW-2026-0418</span></div>
+          <div class="t-cell"><span class="t-k">Artifact</span><span class="t-v">Policy exception set</span></div>
+          <div class="t-cell"><span class="t-k">Agent</span><span class="t-v">4 &middot; Policy compliance</span></div>
+          <div class="t-cell"><span class="t-k">Model id</span><span class="t-v">uw-policy-v2 / claude-sonnet-4-6-20260514</span></div>
+          <div class="t-cell"><span class="t-k">Prompt version</span><span class="t-v">policy-review@2026.07.1</span></div>
+          <div class="t-cell"><span class="t-k">Policy pack</span><span class="t-v">CLP-2026.2</span></div>
+          <div class="t-cell"><span class="t-k">Latency</span><span class="t-v">3,410 ms</span></div>
+          <div class="t-cell"><span class="t-k">Tokens in/out</span><span class="t-v">14,880 / 3,324</span></div>
+          <div class="t-cell"><span class="t-k">Cost</span><span class="t-v">$0.094</span></div>
+          <div class="t-cell"><span class="t-k">Run id</span><span class="t-v">run_01JT7QF3K2</span></div>
+          <div class="t-cell"><span class="t-k">Temp</span><span class="t-v">0.0</span></div>
+        </div>
+
+        <!-- side-by-side: draft vs evidence -->
+        <div class="grid g-2" style="align-items:start">
+          <div class="panel">
+            <div class="panel-hd"><h3>Agent Draft</h3><span class="chip warn"><span class="dot pulse"></span>Pending acceptance</span><div class="spacer"></div><span class="hd-note">hover a claim to pin its evidence</span></div>
+            <div class="panel-bd stack">
+              <div class="draftbox">
+                <p><b class="crit-t">EXCEPTION 1 &mdash; POL-DSCR-02 (minimum debt service coverage).</b><br>
+                The computed debt service coverage ratio of <mark>1.18x</mark> falls below the policy minimum of <mark>1.25x</mark> stated in CLP-2026.2 &sect;4.1. Shortfall is 0.07x, or approximately <mark>$55,051</mark> of additional annual EBITDA. A written exception approved at committee level is required before Stage 07 may proceed.</p>
+                <hr class="sep">
+                <p><b class="crit-t">EXCEPTION 2 &mdash; POL-CONC-03 (segment concentration limit).</b><br>
+                Booking this facility would raise marine and recreational CRE exposure in region NE-4 to <mark>23.4%</mark> of the CRE book against a stated limit of <mark>22.0%</mark> in CLP-2026.2 &sect;7.3. Current segment balance is <mark>$41.2M</mark> on a <mark>$186.4M</mark> CRE book; the requested <mark>$1.85M</mark> brings the segment to <mark>$43.05M</mark>. A concentration waiver from the credit committee is required.</p>
+                <hr class="sep">
+                <p><b class="warn-t">ADVISORY &mdash; POL-LTV-07 (loan-to-value cap).</b><br>
+                LTV of <mark>74.6%</mark> is within the 75.0% cap. Headroom is 0.4 percentage points; a valuation decline greater than <mark>0.5%</mark> would breach the cap. No exception raised.</p>
+                <hr class="sep">
+                <p><b class="ok-t">CLEAR &mdash; POL-IND-11, POL-GUAR-01, POL-LEV-05.</b><br>
+                Prohibited-industry screen returns no match for NAICS 441222. Unlimited personal guaranty of R. Alvarez is on file. Leverage of <mark>3.89x</mark> is inside the 4.00x ceiling.</p>
+              </div>
+              <div class="banner info"><span class="b-icon">i</span><span>The agent may only <b>raise</b> written exceptions. It cannot waive, approve, or clear one &mdash; waivers are captured on the Approvals screen against a named human.</span></div>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-hd"><h3>Cited Evidence</h3><span class="hd-note">9 sources &middot; all claims grounded</span><div class="spacer"></div><span class="chip ok">0 uncited claims</span></div>
+            <div class="panel-bd stack" style="gap:5px">
+              <div class="evidence-item"><span class="ev-src">calc-svc 2.4.1 &middot; dscr</span><div>DSCR = EBITDA 928,640 &divide; ADS 786,440 = <b class="mono">1.1808</b> &rarr; displayed 1.18x. <span class="det">computed by code, not by agent</span></div></div>
+              <div class="evidence-item"><span class="ev-src">CLP-2026.2 &sect;4.1 &middot; POL-DSCR-02</span><div class="ev-quote">&ldquo;No credit exposure shall be approved with a debt service coverage ratio below 1.25x without a written exception approved at or above the exposure tier.&rdquo;</div></div>
+              <div class="evidence-item"><span class="ev-src">Debt-Schedule-2026-06-30.xlsx &middot; Sh.1 B38</span><div>Annual debt service pro forma including the requested facility: <b class="mono">$786,440</b>.</div></div>
+              <div class="evidence-item"><span class="ev-src">portfolio-svc &middot; NE-4 CRE book 2026-07-29</span><div>Segment balance marine/recreational CRE <b class="mono">$41,200,000</b>; total CRE <b class="mono">$186,400,000</b>; ratio <b class="mono">22.10%</b> pre-booking.</div></div>
+              <div class="evidence-item"><span class="ev-src">CLP-2026.2 &sect;7.3 &middot; POL-CONC-03</span><div class="ev-quote">&ldquo;Single-segment CRE concentration shall not exceed 22.0% of regional CRE outstandings absent a committee waiver.&rdquo;</div></div>
+              <div class="evidence-item"><span class="ev-src">Appraisal-88-Sagamore-Rd.pdf &middot; p.42</span><div>As-is market value <b class="mono">$2,480,000</b>, effective 2026-05-18, MAI appraiser cert #NH-1142.</div></div>
+              <div class="evidence-item"><span class="ev-src">Personal-Financial-Stmt-Alvarez.pdf &middot; p.2</span><div>Verified liquid assets <b class="mono">$612,000</b>; unlimited guaranty executed 2026-07-19.</div></div>
+              <div class="evidence-item"><span class="ev-src">naics-screen-svc &middot; POL-IND-11</span><div>NAICS 441222 not present on the prohibited-industry list rev. 2026-04.</div></div>
+              <div class="evidence-item"><span class="ev-src">calc-svc 2.4.1 &middot; leverage</span><div>Funded debt 3,614,880 &divide; EBITDA 928,640 = <b class="mono">3.8927</b> &rarr; 3.89x. <span class="det">computed by code, not by agent</span></div></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- decision bar -->
+        <div class="panel">
+          <div class="panel-hd"><h3>Human Disposition</h3><span class="hd-note">REQ-037 / REQ-038 &middot; required before advancement</span><div class="spacer"></div><span class="chip violet">Decider: M. Reyes &middot; Sr. Credit Officer</span></div>
+          <div class="panel-bd">
+            <div class="grid" style="grid-template-columns: minmax(0,1fr) 300px; align-items:start">
+              <div class="field">
+                <label for="rev-reason">Reason <span class="req">*</span> <span class="dim">&mdash; mandatory on reject, optional on accept, recorded verbatim in the audit trail</span></label>
+                <textarea class="ta" id="rev-reason" placeholder="e.g. Exception 2 understates segment balance — portfolio feed is stale as of 07-29; re-run against 07-30 close."></textarea>
+                <div class="hint crit" id="rev-reason-hint" hidden>A written reason is required to reject an agent draft.</div>
+              </div>
+              <div class="stack">
+                <div class="row tight">
+                  <button class="btn ok block" type="button" data-disp="accept">Accept draft <span class="k">A</span></button>
+                </div>
+                <div class="row tight">
+                  <button class="btn block" type="button" data-disp="edit">Edit &amp; accept <span class="k">E</span></button>
+                </div>
+                <div class="row tight">
+                  <button class="btn crit block" type="button" data-disp="reject">Reject <span class="k">R</span></button>
+                </div>
+                <div class="banner"><span class="b-icon">&#9678;</span><span id="disp-readout">No disposition recorded. Draft remains <b class="warn-t">PENDING</b> and Stage 06 &rarr; 07 advancement is blocked.</span></div>
+              </div>
+            </div>
+          </div>
+          <div class="panel-ft">
+            <span class="locked-tag">Dispositions are append-only &middot; edits store a diff against the agent original</span>
+            <div class="spacer" style="flex:1"></div>
+            <button class="btn sm ghost" type="button" data-goto="audit">View trail entries for this run</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= APPROVALS ================= -->
+    <section class="screen" id="screen-approvals" data-title="Approval Queue">
+      <div class="scr-hd">
+        <h2>Approval Queue</h2>
+        <span class="scr-sub">Stage 07 &middot; tiered by exposure &middot; human-only</span>
+        <div class="spacer"></div>
+        <span class="chip crit">No agent may approve, decline, or advance</span>
+        <div class="segbar" role="group" aria-label="Tier filter">
+          <button type="button" aria-pressed="true">All tiers</button>
+          <button type="button" aria-pressed="false">&le;$250k</button>
+          <button type="button" aria-pressed="false">&le;$1M</button>
+          <button type="button" aria-pressed="false">&gt;$1M</button>
+        </div>
+      </div>
+
+      <div class="scr-body stack">
+
+        <div class="grid g-4">
+          <div class="readout"><span class="r-label">Awaiting decision</span><span class="r-val pri">5</span><span class="r-foot">2 at committee tier</span></div>
+          <div class="readout"><span class="r-label">Exposure in queue</span><span class="r-val">$6.06M</span><span class="r-foot">avg $1.21M</span></div>
+          <div class="readout"><span class="r-label">Oldest in queue</span><span class="r-val crit">9 d</span><span class="r-foot">UW-2026-0402 &middot; SLA breach</span></div>
+          <div class="readout"><span class="r-label">Your authority</span><span class="r-val ok">$1,000,000</span><span class="r-foot">M. Reyes &middot; Sr. Credit Officer</span></div>
+        </div>
+
+        <div class="grid" style="grid-template-columns: minmax(0,1.35fr) minmax(0,1fr); align-items:start">
+
+          <div class="panel">
+            <div class="panel-hd"><h3>Queue</h3><span class="hd-note">tier derived from exposure, not from role</span></div>
+            <div class="panel-bd flush">
+              <table class="tbl rows-tall">
+                <thead><tr><th style="width:112px">Deal</th><th>Borrower</th><th class="num" style="width:100px">Exposure</th><th style="width:180px">Tier ladder</th><th style="width:74px">Grade</th><th style="width:120px">Exceptions</th><th style="width:120px">Decider</th><th class="num" style="width:56px">Idle</th></tr></thead>
+                <tbody>
+                  <tr class="sel"><td class="mono"><span class="tbl-id">UW-2026-0418</span></td><td>Harbor Point Marine Supply<span class="sub">CRE mortgage</span></td><td class="num mono">$1,850,000</td>
+                    <td><span class="chip crit">Committee</span><div class="meter" style="margin-top:3px"><i class="crit" style="width:92%"></i></div></td>
+                    <td><span class="chip warn">6</span></td><td><span class="chip crit">2 open</span></td><td class="dim">Committee</td><td class="num mono crit-t">7d</td></tr>
+                  <tr class="rowcrit"><td class="mono"><span class="tbl-id">UW-2026-0402</span></td><td>Sandoval Produce Distributors<span class="sub">Revolving LOC</span></td><td class="num mono">$920,000</td>
+                    <td><span class="chip warn">Sr. Officer</span><div class="meter" style="margin-top:3px"><i class="warn" style="width:92%"></i></div></td>
+                    <td><span class="chip ok">4</span></td><td><span class="chip ok">None</span></td><td>M. Reyes</td><td class="num mono crit-t">9d</td></tr>
+                  <tr><td class="mono"><span class="tbl-id">UW-2026-0461</span></td><td>Cypress Grove Dental Partners<span class="sub">Term loan</span></td><td class="num mono">$610,000</td>
+                    <td><span class="chip warn">Sr. Officer</span><div class="meter" style="margin-top:3px"><i class="warn" style="width:61%"></i></div></td>
+                    <td><span class="chip ok">4</span></td><td><span class="chip ok">None</span></td><td>M. Reyes</td><td class="num mono">3d</td></tr>
+                  <tr><td class="mono"><span class="tbl-id">UW-2026-0412</span></td><td>Copperfield Auto Group<span class="sub">Floor plan</span></td><td class="num mono">$1,050,000</td>
+                    <td><span class="chip crit">Committee</span><div class="meter" style="margin-top:3px"><i class="crit" style="width:53%"></i></div></td>
+                    <td><span class="chip warn">6</span></td><td><span class="chip warn">1 open</span></td><td class="dim">Committee</td><td class="num mono">3d</td></tr>
+                  <tr><td class="mono"><span class="tbl-id">UW-2026-0489</span></td><td>Thistle Lane Bakery Co.<span class="sub">Equip. term</span></td><td class="num mono">$212,000</td>
+                    <td><span class="chip ok">Analyst</span><div class="meter" style="margin-top:3px"><i class="ok" style="width:85%"></i></div></td>
+                    <td><span class="chip ok">3</span></td><td><span class="chip ok">None</span></td><td>K. Osei</td><td class="num mono">1d</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="panel-ft">
+              <span class="locked-tag">RBAC: credit officer may approve / decline / return. Analyst may recommend only.</span>
+              <div class="spacer" style="flex:1"></div>
+              <span class="chip violet">Selected: UW-2026-0418</span>
+            </div>
+          </div>
+
+          <div class="stack">
+            <div class="panel">
+              <div class="panel-hd"><h3>Authority Ladder</h3><span class="hd-note">REQ-011 / REQ-012</span></div>
+              <div class="panel-bd stack">
+                <div class="gauge" aria-label="Exposure 1.85M against tier thresholds">
+                  <span class="g-zone z1" style="left:0;width:20%"></span>
+                  <span class="g-zone z2" style="left:20%;width:22%"></span>
+                  <span class="g-zone z3" style="left:42%;width:58%"></span>
+                  <span class="g-tick" style="left:20%"></span>
+                  <span class="g-tick" style="left:42%"></span>
+                  <span class="g-lab" style="left:0">$0</span>
+                  <span class="g-lab" style="left:20%">$250k</span>
+                  <span class="g-lab" style="left:42%">$1M</span>
+                  <span class="g-needle" style="left:66%"></span>
+                </div>
+                <div class="ladder">
+                  <div class="ladder-step"><span class="l-idx">1</span><span>Credit analyst</span><span class="l-cap">up to $250,000</span></div>
+                  <div class="ladder-step"><span class="l-idx">2</span><span>Senior credit officer</span><span class="l-cap">up to $1,000,000</span></div>
+                  <div class="ladder-step on"><span class="l-idx">3</span><span><b>Credit committee</b> &mdash; required</span><span class="l-cap">above $1,000,000</span></div>
+                </div>
+                <div class="banner warn"><span class="b-icon">!</span><span>$1,850,000 exceeds your $1,000,000 authority. You may <b>recommend</b> and <b>return</b>, but the approve action is locked to a quorum of the credit committee.</span></div>
+              </div>
+            </div>
+
+            <div class="panel">
+              <div class="panel-hd"><h3>Record Decision</h3><span class="chip crit">Named human required</span></div>
+              <div class="panel-bd stack">
+                <div class="grid g-2">
+                  <div class="field"><label for="ap-name">Decider name <span class="req">*</span></label><input class="inp" id="ap-name" value="Marisol Reyes"></div>
+                  <div class="field"><label for="ap-id">Employee ID <span class="req">*</span></label><input class="inp mono" id="ap-id" value="EMP-40871"></div>
+                  <div class="field"><label for="ap-role">Role at decision <span class="req">*</span></label>
+                    <select class="sel" id="ap-role"><option>Senior Credit Officer</option><option>Credit Committee Chair</option><option>Credit Analyst</option></select>
+                  </div>
+                  <div class="field"><label for="ap-auth">Authority applied</label><input class="inp mono" id="ap-auth" value="$1,000,000" readonly></div>
+                </div>
+                <div class="field">
+                  <label for="ap-cond">Conditions / covenants</label>
+                  <textarea class="ta" id="ap-cond" placeholder="e.g. DSCR covenant tested quarterly at 1.20x stepping to 1.30x at month 18; annual reviewed financials within 120 days of FYE."></textarea>
+                </div>
+                <div class="field">
+                  <label for="ap-reason">Reason <span class="req">*</span> <span class="dim">&mdash; adverse-action reason mandatory on decline, return reason mandatory on return</span></label>
+                  <textarea class="ta" id="ap-reason" placeholder="Adverse action reason (e.g. insufficient debt service coverage — DSCR 1.18x vs 1.25x policy minimum)"></textarea>
+                  <div class="hint crit" id="ap-reason-hint" hidden>A documented reason is required for this action.</div>
+                </div>
+                <div class="row tight">
+                  <button class="btn ok" type="button" data-decision="approve" disabled title="Exposure exceeds your authority">Approve <span class="k">&#8984;&#8629;</span></button>
+                  <button class="btn crit" type="button" data-decision="decline">Decline &mdash; adverse action <span class="k">D</span></button>
+                  <button class="btn warn" type="button" data-decision="return">Return to stage <span class="k">T</span></button>
+                  <div class="spacer" style="flex:1"></div>
+                  <button class="btn ghost sm" type="button">Refer to committee</button>
+                </div>
+                <div class="banner" id="ap-readout"><span class="b-icon">&#9678;</span><span>No decision recorded for <b class="mono">UW-2026-0418</b>. Deal remains at Stage 07.</span></div>
+              </div>
+              <div class="panel-ft">
+                <span class="locked-tag">Every decision writes actor, role, authority, timestamp and reason to the immutable trail</span>
+              </div>
+            </div>
+
+            <div class="panel">
+              <div class="panel-hd"><h3>Return Targets</h3><span class="hd-note">REQ-017</span></div>
+              <div class="panel-bd stack" style="gap:2px">
+                <div class="ladder-step"><span class="l-idx">03</span><span>Financial spreading &mdash; re-spread with 07-30 debt schedule</span><span class="l-cap">K. Osei</span></div>
+                <div class="ladder-step"><span class="l-idx">05</span><span>Memo drafting &mdash; expand concentration discussion</span><span class="l-cap">D. Whitfield</span></div>
+                <div class="ladder-step"><span class="l-idx">06</span><span>Policy compliance &mdash; re-run against refreshed portfolio feed</span><span class="l-cap">Agent 4</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+    <!-- ================= SLA ================= -->
+    <section class="screen" id="screen-sla" data-title="SLA Watch">
+      <div class="scr-hd">
+        <h2>SLA Watch</h2>
+        <span class="scr-sub">Deals idle more than 5 business days &middot; business-day clock, holidays excluded</span>
+        <div class="spacer"></div>
+        <span class="chip crit"><span class="dot pulse"></span>3 in breach</span>
+        <span class="chip warn">4 approaching</span>
+        <button class="btn sm" type="button">Notify owners</button>
+      </div>
+
+      <div class="scr-body stack">
+        <div class="grid g-4">
+          <div class="readout"><span class="r-label">In breach (&gt;5 BD)</span><span class="r-val crit">3</span><span class="r-foot">$4.02M exposure held</span><div class="meter" style="margin-top:5px"><i class="crit" style="width:21%"></i></div></div>
+          <div class="readout"><span class="r-label">Approaching (4&ndash;5 BD)</span><span class="r-val warn">4</span><span class="r-foot">roll into breach within 48h</span><div class="meter" style="margin-top:5px"><i class="warn" style="width:29%"></i></div></div>
+          <div class="readout"><span class="r-label">Median cycle time</span><span class="r-val">11.4 d</span><span class="r-foot">target 9.0 d &middot; &plus;2.4 vs target</span><div class="meter" style="margin-top:5px"><i class="warn" style="width:79%"></i></div></div>
+          <div class="readout"><span class="r-label">Worst queue</span><span class="r-val" style="font-size:var(--fs-md)">Policy compliance</span><span class="r-foot">avg 4.4 d resident &middot; 2 blocked drafts</span></div>
+        </div>
+
+        <div class="grid" style="grid-template-columns: minmax(0,2fr) minmax(0,1fr); align-items:start">
+          <div class="panel">
+            <div class="panel-hd"><h3>Idle Register</h3><span class="hd-note">REQ-022 &middot; sorted by idle days desc</span><div class="spacer"></div><span class="locked-tag"><span class="dot" style="background:var(--crit)"></span> breach threshold 5 BD</span></div>
+            <div class="panel-bd flush">
+              <table class="tbl rows-tall">
+                <thead><tr><th style="width:112px">Deal</th><th>Borrower</th><th class="num" style="width:100px">Exposure</th><th style="width:126px">Stage</th><th style="width:140px">Owning queue</th><th style="width:180px">Idle days</th><th style="width:120px">Blocked by</th><th style="width:110px">Last action</th></tr></thead>
+                <tbody>
+                  <tr class="rowcrit"><td class="mono"><span class="tbl-id" data-goto="deal">UW-2026-0402</span></td><td>Sandoval Produce Distributors<span class="sub">Fresno, CA</span></td><td class="num mono">$920,000</td><td><span class="chip info">07 Approval</span></td><td>Sr. officer queue<span class="sub">M. Reyes</span></td>
+                    <td><div class="row"><span class="mono crit-t" style="width:30px">9d</span><div class="meter tall" style="flex:1"><i class="crit" style="width:90%"></i><span class="tickmark" style="left:50%"></span></div></div><span class="sub">4 BD over threshold</span></td>
+                    <td><span class="chip warn">Decision</span></td><td class="mono dim">07-21 16:40</td></tr>
+                  <tr class="rowcrit"><td class="mono"><span class="tbl-id" data-goto="deal">UW-2026-0418</span></td><td>Harbor Point Marine Supply<span class="sub">Portsmouth, NH</span></td><td class="num mono">$1,850,000</td><td><span class="chip warn">06 Policy</span></td><td>Policy queue<span class="sub">D. Whitfield</span></td>
+                    <td><div class="row"><span class="mono crit-t" style="width:30px">7d</span><div class="meter tall" style="flex:1"><i class="crit" style="width:70%"></i><span class="tickmark" style="left:50%"></span></div></div><span class="sub">2 BD over threshold</span></td>
+                    <td><span class="chip crit">Pending draft</span></td><td class="mono dim">07-23 09:14</td></tr>
+                  <tr class="rowcrit"><td class="mono"><span class="tbl-id" data-goto="deal">UW-2026-0431</span></td><td>Delgado Precision Machining<span class="sub">Toledo, OH</span></td><td class="num mono">$465,000</td><td><span class="chip pri">03 Spreading</span></td><td>Equip. finance<span class="sub">K. Osei</span></td>
+                    <td><div class="row"><span class="mono crit-t" style="width:30px">6d</span><div class="meter tall" style="flex:1"><i class="crit" style="width:60%"></i><span class="tickmark" style="left:50%"></span></div></div><span class="sub">1 BD over threshold</span></td>
+                    <td><span class="chip crit">Pending draft</span></td><td class="mono dim">07-24 13:02</td></tr>
+                  <tr class="rowwarn"><td class="mono"><span class="tbl-id" data-goto="deal">UW-2026-0466</span></td><td>Auburn Ridge Storage<span class="sub">Auburn, AL</span></td><td class="num mono">$2,400,000</td><td><span class="chip warn">06 Policy</span></td><td>Policy queue<span class="sub">D. Whitfield</span></td>
+                    <td><div class="row"><span class="mono warn-t" style="width:30px">5d</span><div class="meter tall" style="flex:1"><i class="warn" style="width:50%"></i><span class="tickmark" style="left:50%"></span></div></div><span class="sub">at threshold</span></td>
+                    <td><span class="chip warn">Pending draft</span></td><td class="mono dim">07-25 10:26</td></tr>
+                  <tr class="rowwarn"><td class="mono"><span class="tbl-id" data-goto="deal">UW-2026-0388</span></td><td>Merrick Tool &amp; Die<span class="sub">Racine, WI</span></td><td class="num mono">$512,000</td><td><span class="chip pri">05 Memo</span></td><td>General C&amp;I<span class="sub">D. Whitfield</span></td>
+                    <td><div class="row"><span class="mono warn-t" style="width:30px">4d</span><div class="meter tall" style="flex:1"><i class="warn" style="width:40%"></i><span class="tickmark" style="left:50%"></span></div></div><span class="sub">1 BD to threshold</span></td>
+                    <td><span class="chip warn">Pending draft</span></td><td class="mono dim">07-26 15:11</td></tr>
+                  <tr class="rowwarn"><td class="mono"><span class="tbl-id" data-goto="deal">UW-2026-0412</span></td><td>Copperfield Auto Group<span class="sub">Amarillo, TX</span></td><td class="num mono">$1,050,000</td><td><span class="chip info">07 Approval</span></td><td>Committee queue<span class="sub">Unassigned</span></td>
+                    <td><div class="row"><span class="mono warn-t" style="width:30px">3d</span><div class="meter tall" style="flex:1"><i class="warn" style="width:30%"></i><span class="tickmark" style="left:50%"></span></div></div><span class="sub">2 BD to threshold</span></td>
+                    <td><span class="chip">Quorum</span></td><td class="mono dim">07-27 11:34</td></tr>
+                  <tr class="rowwarn"><td class="mono"><span class="tbl-id" data-goto="deal">UW-2026-0461</span></td><td>Cypress Grove Dental Partners<span class="sub">Savannah, GA</span></td><td class="num mono">$610,000</td><td><span class="chip info">07 Approval</span></td><td>Sr. officer queue<span class="sub">M. Reyes</span></td>
+                    <td><div class="row"><span class="mono warn-t" style="width:30px">3d</span><div class="meter tall" style="flex:1"><i class="warn" style="width:30%"></i><span class="tickmark" style="left:50%"></span></div></div><span class="sub">2 BD to threshold</span></td>
+                    <td><span class="chip warn">Decision</span></td><td class="mono dim">07-27 09:02</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="panel-ft"><span class="locked-tag">Idle clock resets on any recorded human action &middot; agent runs do not reset the clock</span></div>
+          </div>
+
+          <div class="stack">
+            <div class="panel">
+              <div class="panel-hd"><h3>Queue Load</h3><span class="hd-note">resident deals by owner</span></div>
+              <div class="panel-bd stack" style="gap:6px">
+                <div><div class="row" style="justify-content:space-between"><span class="txt-xs">D. Whitfield <span class="dim">&middot; Analyst</span></span><span class="mono txt-tiny crit-t">6 / 6</span></div><div class="meter"><i class="crit" style="width:100%"></i></div></div>
+                <div><div class="row" style="justify-content:space-between"><span class="txt-xs">K. Osei <span class="dim">&middot; Analyst</span></span><span class="mono txt-tiny warn-t">5 / 6</span></div><div class="meter"><i class="warn" style="width:83%"></i></div></div>
+                <div><div class="row" style="justify-content:space-between"><span class="txt-xs">A. Boone <span class="dim">&middot; Analyst</span></span><span class="mono txt-tiny ok-t">3 / 6</span></div><div class="meter"><i class="ok" style="width:50%"></i></div></div>
+                <div><div class="row" style="justify-content:space-between"><span class="txt-xs">M. Reyes <span class="dim">&middot; Sr. Officer</span></span><span class="mono txt-tiny warn-t">3 / 4</span></div><div class="meter"><i class="warn" style="width:75%"></i></div></div>
+                <div><div class="row" style="justify-content:space-between"><span class="txt-xs">Credit committee <span class="dim">&middot; quorum</span></span><span class="mono txt-tiny">2 / &#8734;</span></div><div class="meter"><i style="width:34%"></i></div></div>
+              </div>
+            </div>
+
+            <div class="panel">
+              <div class="panel-hd"><h3>Breach Trend</h3><span class="hd-note">14 business days</span></div>
+              <div class="panel-bd">
+                <svg class="spark" width="100%" height="72" viewBox="0 0 280 72" preserveAspectRatio="none" aria-label="Breach count trend">
+                  <line x1="0" y1="54" x2="280" y2="54" stroke="var(--border-soft)"></line>
+                  <line x1="0" y1="36" x2="280" y2="36" stroke="var(--border-soft)"></line>
+                  <line x1="0" y1="18" x2="280" y2="18" stroke="var(--border-soft)"></line>
+                  <polyline points="0,58 20,54 40,58 60,48 80,44 100,48 120,40 140,36 160,44 180,32 200,28 220,34 240,24 260,20 280,16" stroke="var(--crit)" stroke-width="1.5"></polyline>
+                  <polyline points="0,50 20,46 40,44 60,40 80,42 100,36 120,34 140,30 160,32 180,26 200,24 220,26 240,22 260,18 280,14" stroke="var(--warn)" stroke-width="1" stroke-dasharray="3 3"></polyline>
+                </svg>
+                <div class="row" style="justify-content:space-between;margin-top:4px">
+                  <span class="txt-tiny crit-t">&mdash; in breach</span>
+                  <span class="txt-tiny warn-t">- - approaching</span>
+                  <span class="txt-tiny dim mono">07-11 &rarr; 07-30</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="panel">
+              <div class="panel-hd"><h3>Root Cause Mix</h3><span class="hd-note">current breaches</span></div>
+              <div class="panel-bd stack" style="gap:5px">
+                <div><div class="row" style="justify-content:space-between"><span class="txt-xs">Unaccepted agent draft</span><span class="mono txt-tiny">3</span></div><div class="meter"><i class="crit" style="width:60%"></i></div></div>
+                <div><div class="row" style="justify-content:space-between"><span class="txt-xs">Awaiting human decision</span><span class="mono txt-tiny">2</span></div><div class="meter"><i class="warn" style="width:40%"></i></div></div>
+                <div><div class="row" style="justify-content:space-between"><span class="txt-xs">Missing document</span><span class="mono txt-tiny">1</span></div><div class="meter"><i style="width:20%"></i></div></div>
+                <div><div class="row" style="justify-content:space-between"><span class="txt-xs">Committee quorum</span><span class="mono txt-tiny">1</span></div><div class="meter"><i style="width:20%"></i></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= AUDIT ================= -->
+    <section class="screen" id="screen-audit" data-title="Audit Trail">
+      <div class="scr-hd">
+        <h2>Audit Trail</h2>
+        <span class="scr-sub">Immutable &middot; append-only &middot; hash-chained</span>
+        <div class="spacer"></div>
+        <span class="chip ok"><span class="dot"></span>Chain verified 14:22:04</span>
+        <span class="locked-tag">&#128274; READ-ONLY &mdash; no edit or delete path exists</span>
+        <button class="btn sm" type="button">Export CSV</button>
+        <button class="btn sm ghost" type="button">Export JSONL</button>
+      </div>
+
+      <div class="scr-body stack">
+        <div class="banner pri">
+          <span class="b-icon">&#128274;</span>
+          <span>This ledger is append-only. Entries cannot be altered, redacted, or removed by any role, including administrators. Corrections are recorded as <b>new</b> entries referencing the prior sequence number. (REQ-018 / REQ-047)</span>
+        </div>
+
+        <div class="panel">
+          <div class="panel-hd"><h3>Filters</h3><div class="spacer"></div><span class="hd-note">2,418 entries &middot; showing 14</span></div>
+          <div class="panel-bd">
+            <div class="grid" style="grid-template-columns: repeat(6, minmax(0,1fr)); gap:var(--sp-3)">
+              <div class="field"><label for="au-deal">Deal</label><input class="inp mono" id="au-deal" value="UW-2026-0418"></div>
+              <div class="field"><label for="au-actor">Actor</label><input class="inp" id="au-actor" placeholder="any"></div>
+              <div class="field"><label for="au-role">Role</label><select class="sel" id="au-role"><option>Any role</option><option>Relationship Manager</option><option>Credit Analyst</option><option>Credit Officer</option><option>System / Agent</option></select></div>
+              <div class="field"><label for="au-action">Action</label><select class="sel" id="au-action"><option>Any action</option><option>agent.run</option><option>draft.accept</option><option>draft.reject</option><option>decision.approve</option><option>decision.decline</option><option>stage.advance</option></select></div>
+              <div class="field"><label for="au-from">From</label><input class="inp mono" id="au-from" value="2026-07-22"></div>
+              <div class="field"><label for="au-to">To</label><input class="inp mono" id="au-to" value="2026-07-30"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel" style="flex:1;min-height:300px">
+          <div class="panel-hd"><h3>Ledger</h3><span class="hd-note">newest first</span><div class="spacer"></div><span class="locked-tag mono">sha256 chain &middot; genesis 0000&hellip;a41f</span></div>
+          <div class="panel-bd flush">
+            <div class="tbl-wrap">
+              <table class="tbl">
+                <thead><tr><th style="width:64px">Seq</th><th style="width:140px">Timestamp (UTC)</th><th style="width:130px">Actor</th><th style="width:140px">Role</th><th style="width:150px">Action</th><th style="width:112px">Deal</th><th>Detail</th><th style="width:104px">Prev hash</th></tr></thead>
+                <tbody>
+                  <tr><td class="mono dim">2418</td><td class="mono">2026-07-30 13:14:02</td><td>svc:policy-agent</td><td><span class="chip info">System / Agent</span></td><td class="mono">agent.run</td><td class="mono">UW-2026-0418</td><td class="dim">Policy compliance run_01JT7QF3K2 &middot; 2 exceptions raised &middot; state=PENDING &middot; 3,410ms &middot; $0.094</td><td class="mono dim">9c31&hellip;b70e</td></tr>
+                  <tr><td class="mono dim">2417</td><td class="mono">2026-07-30 12:58:41</td><td>svc:calc-svc</td><td><span class="chip info">System / Code</span></td><td class="mono">ratio.compute</td><td class="mono">UW-2026-0418</td><td class="dim">DSCR=1.1808 LEV=3.8927 CR=1.2321 LTV=0.7460 &middot; rubric CLP-2026.2 &middot; deterministic</td><td class="mono dim">44a8&hellip;12cd</td></tr>
+                  <tr><td class="mono dim">2416</td><td class="mono">2026-07-29 20:03:15</td><td>M. Reyes</td><td><span class="chip violet">Credit Officer</span></td><td class="mono">deal.view</td><td class="mono">UW-2026-0402</td><td class="dim">Opened approval queue item &middot; tier=SR_OFFICER &middot; authority=$1,000,000</td><td class="mono dim">7f02&hellip;91a4</td></tr>
+                  <tr><td class="mono dim">2415</td><td class="mono">2026-07-27 15:11:52</td><td>svc:memo-agent</td><td><span class="chip info">System / Agent</span></td><td class="mono">agent.run</td><td class="mono">UW-2026-0388</td><td class="dim">Memo v1 drafted &middot; 11 citations &middot; state=PENDING &middot; prompt memo@2026.05.2</td><td class="mono dim">18be&hellip;4d77</td></tr>
+                  <tr><td class="mono dim">2414</td><td class="mono">2026-07-26 20:12:07</td><td>D. Whitfield</td><td><span class="chip">Credit Analyst</span></td><td class="mono">draft.accept</td><td class="mono">UW-2026-0418</td><td class="dim">Accepted memo v3 &middot; artifact=memo &middot; no edits &middot; reason="citations verified against spread"</td><td class="mono dim">e5c1&hellip;3308</td></tr>
+                  <tr><td class="mono dim">2413</td><td class="mono">2026-07-26 19:48:33</td><td>svc:memo-agent</td><td><span class="chip info">System / Agent</span></td><td class="mono">agent.run</td><td class="mono">UW-2026-0418</td><td class="dim">Memo v3 drafted after edit-request &middot; 14 citations &middot; 8,864ms &middot; 40,112 tok</td><td class="mono dim">a204&hellip;77fa</td></tr>
+                  <tr><td class="mono dim">2412</td><td class="mono">2026-07-26 15:03:19</td><td>D. Whitfield</td><td><span class="chip">Credit Analyst</span></td><td class="mono crit-t">draft.reject</td><td class="mono">UW-2026-0418</td><td class="dim">Rejected memo v2 &middot; reason="omitted marine CRE concentration exposure under POL-CONC-03"</td><td class="mono dim">6b9d&hellip;0e15</td></tr>
+                  <tr><td class="mono dim">2411</td><td class="mono">2026-07-25 13:31:44</td><td>D. Whitfield</td><td><span class="chip">Credit Analyst</span></td><td class="mono">grade.confirm</td><td class="mono">UW-2026-0418</td><td class="dim">Confirmed deterministic grade 6 &middot; weighted 5.85 &middot; rubric inputs snapshot stored</td><td class="mono dim">c710&hellip;ba62</td></tr>
+                  <tr><td class="mono dim">2410</td><td class="mono">2026-07-24 15:04:11</td><td>K. Osei</td><td><span class="chip">Credit Analyst</span></td><td class="mono">draft.edit</td><td class="mono">UW-2026-0418</td><td class="dim">Spread accepted with 2 edits &middot; inventory 2,188,900 (was 2,140,300); ADS 786,440 (was 771,900)</td><td class="mono dim">2fa6&hellip;5c98</td></tr>
+                  <tr><td class="mono dim">2409</td><td class="mono">2026-07-23 12:22:58</td><td>svc:spread-agent</td><td><span class="chip info">System / Agent</span></td><td class="mono">agent.run</td><td class="mono">UW-2026-0418</td><td class="dim">Spread produced &middot; 17 figures &middot; 17 citations &middot; 0 uncited &middot; 7,015ms &middot; $0.171</td><td class="mono dim">83d0&hellip;e2b1</td></tr>
+                  <tr><td class="mono dim">2408</td><td class="mono">2026-07-22 18:40:02</td><td>svc:extract</td><td><span class="chip info">System / Code</span></td><td class="mono">docs.extract</td><td class="mono">UW-2026-0418</td><td class="dim">9 documents &middot; 412 fields &middot; 1 stale (AR-Aging-2026-03-31.csv, 120d)</td><td class="mono dim">51e7&hellip;9a03</td></tr>
+                  <tr><td class="mono dim">2407</td><td class="mono">2026-07-22 14:05:37</td><td>M. Reyes</td><td><span class="chip violet">Credit Officer</span></td><td class="mono">draft.accept</td><td class="mono">UW-2026-0418</td><td class="dim">Accepted triage classification &middot; queue=marine CRE &middot; owner=D. Whitfield</td><td class="mono dim">0cb4&hellip;7f26</td></tr>
+                  <tr><td class="mono dim">2406</td><td class="mono">2026-07-22 13:52:08</td><td>svc:triage-agent</td><td><span class="chip info">System / Agent</span></td><td class="mono">agent.run</td><td class="mono">UW-2026-0418</td><td class="dim">Triage classification &middot; CRE/marine retail &middot; 1 missing doc flagged &middot; confidence 0.91</td><td class="mono dim">bd39&hellip;41aa</td></tr>
+                  <tr><td class="mono dim">2405</td><td class="mono">2026-07-22 13:51:20</td><td>J. Farrow</td><td><span class="chip warn">Relationship Mgr</span></td><td class="mono">deal.submit</td><td class="mono">UW-2026-0418</td><td class="dim">Deal created &middot; exposure $1,850,000 &middot; CRE mortgage &middot; 8 documents attached</td><td class="mono dim">1a77&hellip;c0d2</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <div class="panel-ft">
+            <span class="locked-tag">&#128274; Rendered read-only &mdash; this table has no edit affordance by design</span>
+            <div class="spacer" style="flex:1"></div>
+            <span class="dim txt-tiny mono">Retention 7 years &middot; WORM storage &middot; last verification 14:22:04 &middot; 0 chain faults</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= CHAT ================= -->
+    <section class="screen" id="screen-chat" data-title="Portfolio Q&amp;A">
+      <div class="scr-hd">
+        <h2>Portfolio Q&amp;A</h2>
+        <span class="scr-sub">Agent 5 &middot; grounded strictly in stored deal data &middot; abstains when unsupported</span>
+        <div class="spacer"></div>
+        <span class="chip violet">Scope: NE-4 &middot; role Sr. Credit Officer</span>
+        <span class="chip ok"><span class="dot pulse"></span>Grounding: ON</span>
+        <button class="btn ghost sm" type="button">Clear thread</button>
+      </div>
+
+      <div class="chat-wrap">
+        <div class="chat-col">
+          <ul id="messages">
+            <li class="from-agent">
+              <div class="m-gutter"><b>AGENT 5</b>14:04:11</div>
+              <div class="m-body">
+                <div class="bubble">Portfolio Q&amp;A online. I answer only from stored deal records inside your RBAC scope &mdash; 14 active deals in region NE-4. I do not approve, decline, or advance deals, and I will abstain rather than infer when the record does not support an answer.</div>
+                <div class="m-meta"><span class="lbl">scope</span><span class="chip">14 deals</span><span class="chip">policy pack CLP-2026.2</span><span class="chip ok">read-only</span></div>
+              </div>
+            </li>
+
+            <li class="from-user">
+              <div class="m-gutter"><b>M. REYES</b>14:06:02</div>
+              <div class="m-body">
+                <div class="bubble">Which deals in the queue are below the DSCR policy minimum right now?</div>
+              </div>
+            </li>
+
+            <li class="from-agent">
+              <div class="m-gutter"><b>AGENT 5</b>14:06:05</div>
+              <div class="m-body">
+                <div class="bubble">
+                  Two active deals sit below the 1.25x minimum in <b>POL-DSCR-02</b>:<br><br>
+                  &bull; <b>UW-2026-0418</b> &mdash; Harbor Point Marine Supply LLC, DSCR <b class="warn-t">1.18x</b>, exposure $1,850,000, Stage 06 Policy. A written exception has been raised and is pending acceptance.<br>
+                  &bull; <b>UW-2026-0466</b> &mdash; Auburn Ridge Storage LLC, DSCR <b class="warn-t">1.21x</b>, exposure $2,400,000, Stage 06 Policy. Exception draft pending.<br><br>
+                  <b>UW-2026-0455</b> (Northline Freight Systems, 1.24x) is below the minimum on the computed figure but has not yet reached policy review, so no exception exists yet.
+                </div>
+                <div class="m-meta">
+                  <span class="lbl">cited</span>
+                  <span class="cite">calc-svc &middot; UW-2026-0418 dscr</span>
+                  <span class="cite">calc-svc &middot; UW-2026-0466 dscr</span>
+                  <span class="cite">calc-svc &middot; UW-2026-0455 dscr</span>
+                  <span class="cite">CLP-2026.2 &sect;4.1</span>
+                  <span class="chip ok">3 records</span>
+                </div>
+              </div>
+            </li>
+
+            <li class="from-user">
+              <div class="m-gutter"><b>M. REYES</b>14:09:47</div>
+              <div class="m-body">
+                <div class="bubble">What is our total marine and recreational CRE concentration if Harbor Point books?</div>
+              </div>
+            </li>
+
+            <li class="from-agent">
+              <div class="m-gutter"><b>AGENT 5</b>14:09:51</div>
+              <div class="m-body">
+                <div class="bubble">
+                  Pre-booking, the NE-4 marine/recreational CRE segment stands at <b class="mono">$41,200,000</b> against a total CRE book of <b class="mono">$186,400,000</b> &mdash; <b class="mono">22.10%</b>. Booking UW-2026-0418 at $1,850,000 raises the segment to <b class="mono">$43,050,000</b>, or <b class="crit-t mono">23.44%</b>, against the 22.0% limit in <b>POL-CONC-03</b>. That is the basis of the open concentration exception on that deal.
+                </div>
+                <div class="m-meta">
+                  <span class="lbl">cited</span>
+                  <span class="cite">portfolio-svc 2026-07-29 close</span>
+                  <span class="cite">CLP-2026.2 &sect;7.3</span>
+                  <span class="cite">UW-2026-0418 facility</span>
+                  <span class="chip ok">3 records</span>
+                </div>
+              </div>
+            </li>
+
+            <li class="from-user">
+              <div class="m-gutter"><b>M. REYES</b>14:14:20</div>
+              <div class="m-body">
+                <div class="bubble">Is Harbor Point's owner planning to sell the business in the next two years?</div>
+              </div>
+            </li>
+
+            <li class="abstain">
+              <div class="m-gutter"><b>AGENT 5</b>14:14:22</div>
+              <div class="m-body">
+                <div class="bubble">
+                  <b>Not supported by the record.</b> I have no stored data on ownership succession or sale intent for Harbor Point Marine Supply LLC. The deal file contains financial statements, a rent roll, an appraisal, a debt schedule, a tax return, and a personal financial statement &mdash; none of which address this question. I will not infer an answer. To capture it, add a management-discussion note to the deal file and re-ask.
+                </div>
+                <div class="m-meta"><span class="lbl">abstained</span><span class="chip warn">no grounding</span><span class="chip">0 records matched</span><span class="chip info">9 documents searched</span></div>
+              </div>
+            </li>
+
+            <li class="from-user">
+              <div class="m-gutter"><b>M. REYES</b>14:18:09</div>
+              <div class="m-body">
+                <div class="bubble">Show me every deal over $1M currently waiting on a human decision.</div>
+              </div>
+            </li>
+
+            <li class="from-agent">
+              <div class="m-gutter"><b>AGENT 5</b>14:18:12</div>
+              <div class="m-body">
+                <div class="bubble">
+                  Three deals above $1,000,000 are waiting on a named human, all at committee tier:<br><br>
+                  &bull; <b>UW-2026-0402</b> &mdash; Sandoval Produce Distributors, $920,000 &mdash; correction: this is below $1M and sits with you at senior-officer tier, idle 9 days.<br>
+                  &bull; <b>UW-2026-0412</b> &mdash; Copperfield Auto Group, $1,050,000, Stage 07, awaiting committee quorum, idle 3 days.<br>
+                  &bull; <b>UW-2026-0418</b> &mdash; Harbor Point Marine Supply, $1,850,000, Stage 06, blocked by an unaccepted policy draft, idle 7 days.<br><br>
+                  UW-2026-0466 ($2,400,000) is also blocked by a pending draft but has not yet entered the approval stage.
+                </div>
+                <div class="m-meta">
+                  <span class="lbl">cited</span>
+                  <span class="cite">pipeline-svc active register</span>
+                  <span class="cite">sla-svc idle counters</span>
+                  <span class="chip ok">4 records</span>
+                  <span class="chip violet">RBAC filtered: 0 hidden</span>
+                </div>
+              </div>
+            </li>
+          </ul>
+
+          <form id="composer" autocomplete="off">
+            <span class="comp-scope" title="Active agent and data scope"><span class="dot pulse"></span><span id="composer-agent">Agent 5 &middot; NE-4</span></span>
+            <label class="sr-only" for="input">Ask the portfolio Q&amp;A agent</label>
+            <input id="input" name="input" type="text" placeholder="Ask about any deal in scope — e.g. 'which deals breached SLA this week and why'" autocomplete="off">
+            <button type="submit">Send <span class="kbd" style="background:transparent;border-color:currentColor;color:inherit">&#8629;</span></button>
+          </form>
+        </div>
+
+        <aside class="chat-side">
+          <div class="panel">
+            <div class="panel-hd"><h3>Grounding Scope</h3></div>
+            <div class="panel-bd">
+              <dl class="kv">
+                <dt>Region</dt><dd class="mono">NE-4</dd>
+                <dt>Deals visible</dt><dd class="mono">14 of 14</dd>
+                <dt>Hidden by RBAC</dt><dd class="mono">0</dd>
+                <dt>Doc corpus</dt><dd class="mono">126 files</dd>
+                <dt>Policy pack</dt><dd class="mono">CLP-2026.2</dd>
+                <dt>Portfolio feed</dt><dd class="mono">2026-07-29 close</dd>
+                <dt>Abstain rate</dt><dd class="mono">7.4% (30d)</dd>
+              </dl>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-hd"><h3>Guardrails</h3></div>
+            <div class="panel-bd stack" style="gap:4px">
+              <div class="banner"><span class="b-icon">&#10003;</span><span>Answers only from stored deal records</span></div>
+              <div class="banner"><span class="b-icon">&#10003;</span><span>Abstains when the record is silent</span></div>
+              <div class="banner"><span class="b-icon">&#10003;</span><span>Every claim carries a citation chip</span></div>
+              <div class="banner crit"><span class="b-icon">&times;</span><span>Cannot approve, decline, or advance a deal</span></div>
+              <div class="banner crit"><span class="b-icon">&times;</span><span>Cannot see deals outside your role scope</span></div>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-hd"><h3>Suggested</h3></div>
+            <div class="panel-bd stack" style="gap:3px">
+              <button class="suggest" type="button">Which deals have open policy exceptions and who owns them?</button>
+              <button class="suggest" type="button">Average DSCR by segment across active deals</button>
+              <button class="suggest" type="button">Which drafts have been pending acceptance longest?</button>
+              <button class="suggest" type="button">Total exposure at committee tier this quarter</button>
+              <button class="suggest" type="button">Show every deal where a memo was rejected and why</button>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-hd"><h3>Last Run</h3></div>
+            <div class="panel-bd">
+              <dl class="kv">
+                <dt>Model</dt><dd class="mono">uw-qa-v2</dd>
+                <dt>Prompt</dt><dd class="mono">portfolio-qa@2026.07.2</dd>
+                <dt>Latency</dt><dd class="mono">2,140 ms</dd>
+                <dt>Tokens</dt><dd class="mono">9,884</dd>
+                <dt>Cost</dt><dd class="mono">$0.048</dd>
+                <dt>Records hit</dt><dd class="mono">4</dd>
+              </dl>
+            </div>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ============ FOOT BAR ============ -->
+  <div class="footbar">
+    <span class="fkey"><span class="lamp">&#9679;</span> <span>Link OK</span></span>
+    <span class="fkey"><span class="kbd">1</span>&ndash;<span class="kbd">8</span> <span>Screen</span></span>
+    <span class="fkey"><span class="kbd">&#8997;</span><span class="kbd">1</span>&ndash;<span class="kbd">5</span> <span>Agent</span></span>
+    <span class="fkey"><span class="kbd">/</span> <span>Command</span></span>
+    <span class="fkey"><span class="kbd">A</span> <span>Accept draft</span></span>
+    <span class="fkey"><span class="kbd">R</span> <span>Reject + reason</span></span>
+    <span class="fkey"><span class="kbd">?</span> <span>Shortcuts</span></span>
+    <span class="spacer"></span>
+    <span class="fkey"><span>Last sync</span> <b id="sync-clock" style="color:var(--fg-dim)">14:22:04</b></span>
+    <span class="fkey"><span>Build 4.2.118</span></span>
+  </div>
+
+</div>
+
+<!-- ============ LOGIN OVERLAY (REQ-001: role-assigned account) ============ -->
+<div class="login-overlay" id="login-overlay">
+  <div class="panel">
+    <div class="panel-hd"><h3>Sign in &middot; Underwriting Command Center</h3></div>
+    <div class="panel-bd stack">
+      <div class="field"><label for="login-username">Username</label><input class="inp" id="login-username" autocomplete="username" value="rm1"></div>
+      <div class="field"><label for="login-password">Password</label><input class="inp" id="login-password" type="password" autocomplete="current-password" value="demo1234"></div>
+      <div class="banner crit" id="login-error" style="display:none"></div>
+      <button class="btn primary block" type="button" id="login-submit">Sign in <span class="k">&#8629;</span></button>
+      <div class="hint">Demo accounts (password <span class="mono">demo1234</span>): <span class="mono">rm1</span> &middot; relationship manager, <span class="mono">analyst1</span> &middot; credit analyst, <span class="mono">officer1</span> &middot; senior credit officer.</div>
+    </div>
+  </div>
+</div>
+
+<!-- SCRIPT_PLACEHOLDER -->
+<script src="mod_router.js" defer></script>
+<script src="mod_datatable.js" defer></script>
+<script src="app.js" defer></script>
+</body>
+</html>

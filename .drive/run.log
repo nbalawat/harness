@@ -4,3 +4,44 @@ running agentic-app@0.11.0 (36 nodes)
 (node:82349) [CLAUDE_SDK_CAN_USE_TOOL_SHADOWED] Warning: canUseTool will not be invoked for: Read, Write, Edit, Bash, Glob, Grep. Bare allowedTools entries auto-approve the whole tool before the callback is consulted. To gate every tool call, use a PreToolUse hook; or remove the bare names from allowedTools so they fall through to canUseTool. Allow rules from settings files can also shadow the callback but are not visible here.
 (node:82349) [CLAUDE_SDK_CAN_USE_TOOL_SHADOWED] Warning: canUseTool will not be invoked for: Read, Write, Edit, Bash, Glob, Grep. Bare allowedTools entries auto-approve the whole tool before the callback is consulted. To gate every tool call, use a PreToolUse hook; or remove the bare names from allowedTools so they fall through to canUseTool. Allow rules from settings files can also shadow the callback but are not visible here.
 (node:82349) [CLAUDE_SDK_CAN_USE_TOOL_SHADOWED] Warning: canUseTool will not be invoked for: Read, Write, Edit, Bash, Glob, Grep, Task. Bare allowedTools entries auto-approve the whole tool before the callback is consulted. To gate every tool call, use a PreToolUse hook; or remove the bare names from allowedTools so they fall through to canUseTool. Allow rules from settings files can also shadow the callback but are not visible here.
+(node:82349) [CLAUDE_SDK_CAN_USE_TOOL_SHADOWED] Warning: canUseTool will not be invoked for: Read, Write, Edit, Bash, Glob, Grep. Bare allowedTools entries auto-approve the whole tool before the callback is consulted. To gate every tool call, use a PreToolUse hook; or remove the bare names from allowedTools so they fall through to canUseTool. Allow rules from settings files can also shadow the callback but are not visible here.
+
+run parked (clarify)
+  intake               gate           committed
+  ingest               agent          committed
+  requirements-synthesis agent          committed
+  gap-questions        agent          committed
+  clarify              gate           pending
+  architecture         agent          pending
+  budget-check         verifier       pending
+  design-options       agent          committed
+  design-check         verifier       pending
+  design-select        gate           pending
+  design-contract      deterministic  pending
+  data-design          agent          committed
+  agent-design         agent          pending
+  workflow-design      agent          pending
+  traceability         deterministic  pending
+  design-review        gate           pending
+  scaffold             deterministic  pending
+  slice-plan           agent          pending
+  slice-1              agent          pending
+  slice-2              agent          pending
+  slice-3              agent          pending
+  slice-4              agent          pending
+  slice-5              agent          pending
+  slice-6              agent          pending
+  review-slice-1       gate           pending
+  review-slice-2       gate           pending
+  review-slice-3       gate           pending
+  review-slice-4       gate           pending
+  review-slice-5       gate           pending
+  review-slice-6       gate           pending
+  integrate            verifier       pending
+  design-coverage      deterministic  pending
+  security-scan        verifier       pending
+  governance-report    deterministic  pending
+  uat                  gate           pending
+  deploy               deterministic  pending
+  total cost: $10.6237
+  workspace:  /Users/nbalawat/development/harness/underwriting-desk

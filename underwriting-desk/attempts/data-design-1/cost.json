@@ -1,0 +1,8 @@
+{
+  "model": "claude-haiku-4-5",
+  "inputTokens": 83,
+  "outputTokens": 14340,
+  "cacheReadTokens": 497178,
+  "cacheWriteTokens": 39893,
+  "costUsd": 0.25289564999999997
+}

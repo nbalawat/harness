@@ -1,0 +1,128 @@
+/* ============================================================
+   Underwriting Command Center — Option 3 "Deal Board"
+   Design tokens. Variables only: all structure lives in index.html.
+   Direction: bright, spatial, card-and-column workspace.
+   ============================================================ */
+
+:root {
+  /* ---- MANDATORY SEVEN ---- */
+  --primary: #2f6df6;
+  --on-primary: #ffffff;
+  --bg: #f2f5fb;
+  --fg: #16203a;
+  --surface: #ffffff;
+  --border: #dde5f2;
+  --font: "Nunito", "Avenir Next", "Segoe UI", -apple-system, BlinkMacSystemFont,
+    "Helvetica Neue", Arial, sans-serif;
+
+  /* ---- extended palette ---- */
+  --primary-soft: #e5edff;
+  --primary-deep: #1c47b4;
+  --primary-ink: #12306f;
+
+  --fg-muted: #5a688a;
+  --fg-faint: #8b98b4;
+  --surface-sunken: #eef2fa;
+  --surface-raised: #ffffff;
+  --canvas-tint: #e8eefb;
+  --border-strong: #c3cfe4;
+  --border-dashed: #ccd7ea;
+
+  /* ---- semantic status ---- */
+  --ok: #17916b;
+  --ok-soft: #dff5ec;
+  --ok-ink: #0c5b43;
+
+  --warn: #c07a05;
+  --warn-soft: #fdf0d5;
+  --warn-ink: #7c4e00;
+
+  --danger: #d3402f;
+  --danger-soft: #fde8e5;
+  --danger-ink: #8d2417;
+
+  --info: #2f6df6;
+  --info-soft: #e5edff;
+  --info-ink: #12306f;
+
+  --neutral-soft: #eceff6;
+  --neutral-ink: #4b5878;
+
+  /* ---- pipeline stage column accents (8 stages) ---- */
+  --stage-1: #6c8cff;  /* intake */
+  --stage-2: #35a5d8;  /* extraction */
+  --stage-3: #17b0a4;  /* spreading */
+  --stage-4: #52a83f;  /* risk grading */
+  --stage-5: #d9a417;  /* memo */
+  --stage-6: #e2802b;  /* policy */
+  --stage-7: #d9536f;  /* approval */
+  --stage-8: #8a63d2;  /* closing */
+
+  /* ---- risk grade chips ---- */
+  --grade-a: #17916b;
+  --grade-b: #52a83f;
+  --grade-c: #c07a05;
+  --grade-d: #e2802b;
+  --grade-e: #d3402f;
+
+  /* ---- draft states ---- */
+  --state-pending: #c07a05;
+  --state-accepted: #17916b;
+  --state-edited: #2f6df6;
+  --state-rejected: #d3402f;
+
+  /* ---- spatial system: generous, airy ---- */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 22px;
+  --space-6: 30px;
+  --space-7: 40px;
+  --space-8: 56px;
+
+  /* ---- generous rounded radii ---- */
+  --radius-xs: 6px;
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --radius-xl: 28px;
+  --radius-pill: 999px;
+
+  /* ---- soft elevation ---- */
+  --shadow-flat: 0 1px 2px rgba(22, 32, 58, 0.05);
+  --shadow-card: 0 2px 4px rgba(22, 32, 58, 0.05), 0 8px 20px rgba(22, 32, 58, 0.07);
+  --shadow-lift: 0 6px 12px rgba(22, 32, 58, 0.08), 0 18px 40px rgba(22, 32, 58, 0.12);
+  --shadow-inset: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+  --ring-focus: 0 0 0 3px rgba(47, 109, 246, 0.28);
+
+  /* ---- typography scale (humanist sans, larger touch scale) ---- */
+  --font-mono: "SF Mono", "JetBrains Mono", "Roboto Mono", ui-monospace, Menlo, monospace;
+  --text-xs: 11px;
+  --text-sm: 12.5px;
+  --text-base: 14px;
+  --text-md: 15.5px;
+  --text-lg: 18px;
+  --text-xl: 23px;
+  --text-2xl: 30px;
+  --text-3xl: 40px;
+  --weight-normal: 500;
+  --weight-medium: 600;
+  --weight-bold: 700;
+  --weight-black: 800;
+  --tracking-caps: 0.09em;
+  --leading-tight: 1.25;
+  --leading-body: 1.6;
+
+  /* ---- controls: larger touch targets ---- */
+  --control-h: 42px;
+  --control-h-sm: 34px;
+  --control-h-lg: 50px;
+
+  /* ---- layout ---- */
+  --rail-w: 232px;
+  --header-h: 68px;
+  --column-w: 296px;
+
+  --transition: 140ms cubic-bezier(0.4, 0, 0.2, 1);
+}

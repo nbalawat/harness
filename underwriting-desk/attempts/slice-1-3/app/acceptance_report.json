@@ -1,0 +1,76 @@
+{
+  "proven_through_slice": 1,
+  "slices": [
+    {
+      "slice": "deal-intake-and-triage",
+      "name": "Deal intake, triage draft, and the pipeline board",
+      "objective": "As a relationship manager I submit a borrower's loan request with its documents on the Deal Intake screen, and the deal is created at the intake stage with its exposure and approval tier derived deterministically; the intake triage agent then drafts a classification, a missing-document list, and a proposed analyst queue as a PENDING draft that no one can bypass, and every active deal with its current stage appears on the Pipeline Board. Canonical stage slugs used by the whole app, in order: intake, document_extraction, financial_spreading, risk_grading, memo_drafting, policy_compliance, tiered_approval, closing. Exposure = the requested facility amount alone; approval_tier is derived from it: <= $250,000 = analyst, $250,000-$1,000,000 = officer, > $1,000,000 = committee. Deals are addressed by their client-supplied deal_reference. Seeded role accounts identify actors: rm.rivera (relationship manager), an.chen (credit analyst), co.brennan (credit officer); HTTP callers name the actor with an explicit acting_user / submitted_by field in the body while the UI uses the signed-in identity, and every create and transition writes an append-only audit row.",
+      "addresses": [
+        "REQ-001",
+        "REQ-002",
+        "REQ-003",
+        "REQ-004",
+        "REQ-016",
+        "REQ-018",
+        "REQ-019",
+        "REQ-027",
+        "REQ-028",
+        "REQ-029",
+        "REQ-030",
+        "REQ-033",
+        "REQ-037",
+        "REQ-041",
+        "REQ-042",
+        "REQ-043",
+        "REQ-054",
+        "REQ-056"
+      ],
+      "checks": [
+        {
+          "method": "POST",
+          "path": "/deals",
+          "expected_status": 200,
+          "contains": [
+            "DEAL-1001",
+            "intake",
+            "officer"
+          ],
+          "ok": true
+        },
+        {
+          "method": "POST",
+          "path": "/deals",
+          "expected_status": 200,
+          "contains": [
+            "DEAL-2001",
+            "committee"
+          ],
+          "ok": true
+        },
+        {
+          "method": "POST",
+          "path": "/deals/DEAL-1001/triage",
+          "expected_status": 200,
+          "contains": [
+            "classification",
+            "missing_documents",
+            "proposed_queue",
+            "pending"
+          ],
+          "ok": true
+        },
+        {
+          "method": "GET",
+          "path": "/deals",
+          "expected_status": 200,
+          "contains": [
+            "DEAL-1001",
+            "DEAL-2001",
+            "current_stage"
+          ],
+          "ok": true
+        }
+      ]
+    }
+  ]
+}

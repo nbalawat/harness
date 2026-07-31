@@ -1,0 +1,109 @@
+/* ==========================================================================
+   Underwriting Command Center — Option 4 "Underwriting Terminal"
+   MINIMAL TERMINAL direction. Tokens only; all structure lives in
+   index.html <style>.
+
+   Palette law for this direction:
+     - near-monochrome: off-black ink on bone paper
+     - EXACTLY ONE accent (--primary, ink vermilion) reserved for STATE:
+       pending / blocked / exception / breach / active-command.
+     - everything else is achieved with rules, alignment and weight.
+   ========================================================================== */
+
+:root {
+  /* ---------- MANDATORY SEVEN ---------- */
+  --primary: #bf3a1d;
+  --on-primary: #f7f5ef;
+  --bg: #e7e4db;
+  --fg: #16150f;
+  --surface: #f1efe8;
+  --border: #c2bdae;
+  --font: "SF Mono", "SFMono-Regular", "JetBrains Mono", "IBM Plex Mono",
+    "Roboto Mono", ui-monospace, Menlo, Consolas, "Liberation Mono", monospace;
+
+  /* ---------- Paper stack (no shadows anywhere; depth = value only) ------- */
+  --paper: #e7e4db;
+  --paper-deep: #ddd9cd;   /* strips, table heads, gutters                    */
+  --paper-sunk: #d5d0c2;   /* inputs, wells                                   */
+  --paper-raised: #f6f4ee; /* panels that must lift off the sheet             */
+
+  /* ---------- Ink ramp ---------- */
+  --ink: #16150f;
+  --ink-strong: #000000;
+  --ink-mid: #45412f;
+  --ink-dim: #767161;
+  --ink-faint: #9c9686;
+  --ink-ghost: #b6b0a0;
+
+  /* ---------- Rules / hairlines ---------- */
+  --rule: #c2bdae;
+  --rule-hair: #d4cfc1;
+  --rule-strong: #9d9787;
+  --rule-heavy: #6c6656;
+
+  /* ---------- The single accent, in its permitted dilutions --------------- */
+  --accent: #bf3a1d;
+  --accent-ink: #8f2a13;
+  --accent-line: rgba(191, 58, 29, 0.45);
+  --accent-wash: rgba(191, 58, 29, 0.09);
+  --accent-wash-2: rgba(191, 58, 29, 0.16);
+
+  /* ---------- Neutral state washes (state without a second hue) ----------- */
+  --wash: rgba(22, 21, 15, 0.055);
+  --wash-2: rgba(22, 21, 15, 0.1);
+  --wash-3: rgba(22, 21, 15, 0.16);
+  --select: rgba(22, 21, 15, 0.09);
+
+  /* ---------- Typography ---------- */
+  --font-mono: var(--font);
+  --fs-micro: 9.5px;
+  --fs-tiny: 10.5px;
+  --fs-xs: 11px;
+  --fs-sm: 12px;
+  --fs-base: 13px;
+  --fs-md: 14px;
+  --fs-lg: 16px;
+  --fs-xl: 19px;
+  --fs-2xl: 23px;
+
+  --lh: 20px;          /* the line unit — ALL vertical rhythm is a multiple  */
+  --lh-tight: 17px;
+  --lh-loose: 22px;
+
+  --track-caps: 0.14em;
+  --track-wide: 0.06em;
+  --track-tight: 0.01em;
+
+  --w-normal: 400;
+  --w-medium: 500;
+  --w-bold: 700;
+
+  /* ---------- Space scale (multiples of the half line unit) --------------- */
+  --sp-0: 0px;
+  --sp-1: 2px;
+  --sp-2: 5px;
+  --sp-3: 10px;
+  --sp-4: 15px;
+  --sp-5: 20px;
+  --sp-6: 30px;
+  --sp-7: 40px;
+  --sp-8: 60px;
+
+  /* ---------- Geometry: brutally square ---------- */
+  --radius: 0px;
+  --hair: 1px;
+  --stripe: 2px;
+
+  /* ---------- Chrome metrics ---------- */
+  --head-h: 42px;
+  --palette-h: 30px;
+  --tabstrip-h: 26px;
+  --status-h: 24px;
+  --row-h: 24px;
+  --gutter-w: 4ch;
+  --measure: 78ch;
+
+  /* ---------- Motion: almost none ---------- */
+  --t-fast: 60ms linear;
+  --t: 110ms linear;
+}

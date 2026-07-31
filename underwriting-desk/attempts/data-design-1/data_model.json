@@ -1,0 +1,260 @@
+{
+  "tables": [
+    {
+      "name": "deals",
+      "addresses": ["REQ-001", "REQ-002", "REQ-027", "REQ-028", "REQ-043", "REQ-044", "REQ-048"],
+      "columns": [
+        {"name": "id", "type": "string"},
+        {"name": "borrower_name", "type": "string"},
+        {"name": "borrower_industry", "type": "string"},
+        {"name": "facility_type", "type": "string"},
+        {"name": "requested_amount", "type": "number"},
+        {"name": "exposure_amount", "type": "number"},
+        {"name": "current_stage", "type": "string"},
+        {"name": "assigned_analyst_id", "type": "string"},
+        {"name": "submitted_by_user_id", "type": "string"},
+        {"name": "created_at", "type": "timestamp"},
+        {"name": "last_activity_at", "type": "timestamp"},
+        {"name": "closed_at", "type": "timestamp"},
+        {"name": "is_closed", "type": "boolean"},
+        {"name": "approval_tier", "type": "string"}
+      ]
+    },
+    {
+      "name": "documents",
+      "addresses": ["REQ-029", "REQ-030"],
+      "columns": [
+        {"name": "id", "type": "string"},
+        {"name": "deal_id", "type": "string"},
+        {"name": "original_filename", "type": "string"},
+        {"name": "content_type", "type": "string"},
+        {"name": "uploaded_by_user_id", "type": "string"},
+        {"name": "uploaded_at", "type": "timestamp"},
+        {"name": "storage_path", "type": "string"},
+        {"name": "document_type", "type": "string"}
+      ]
+    },
+    {
+      "name": "document_locations",
+      "addresses": ["REQ-030"],
+      "columns": [
+        {"name": "id", "type": "string"},
+        {"name": "document_id", "type": "string"},
+        {"name": "page_number", "type": "number"},
+        {"name": "section", "type": "string"},
+        {"name": "extracted_text", "type": "string"}
+      ]
+    },
+    {
+      "name": "spread_line_items",
+      "addresses": ["REQ-031"],
+      "columns": [
+        {"name": "id", "type": "string"},
+        {"name": "deal_id", "type": "string"},
+        {"name": "line_item_key", "type": "string"},
+        {"name": "category", "type": "string"},
+        {"name": "label", "type": "string"},
+        {"name": "value", "type": "number"},
+        {"name": "unit", "type": "string"},
+        {"name": "period", "type": "string"}
+      ]
+    },
+    {
+      "name": "citations",
+      "addresses": ["REQ-005", "REQ-006", "REQ-032"],
+      "columns": [
+        {"name": "id", "type": "string"},
+        {"name": "deal_id", "type": "string"},
+        {"name": "cited_value", "type": "string"},
+        {"name": "source_type", "type": "string"},
+        {"name": "source_reference", "type": "json"},
+        {"name": "document_id", "type": "string"},
+        {"name": "document_location_id", "type": "string"},
+        {"name": "spread_line_item_id", "type": "string"},
+        {"name": "ratio_id", "type": "string"},
+        {"name": "policy_rule_id", "type": "string"},
+        {"name": "created_at", "type": "timestamp"}
+      ]
+    },
+    {
+      "name": "ratios",
+      "addresses": ["REQ-009"],
+      "columns": [
+        {"name": "id", "type": "string"},
+        {"name": "deal_id", "type": "string"},
+        {"name": "ratio_type", "type": "string"},
+        {"name": "value", "type": "number"},
+        {"name": "computed_at", "type": "timestamp"},
+        {"name": "computed_by_version", "type": "string"}
+      ]
+    },
+    {
+      "name": "risk_grades",
+      "addresses": ["REQ-010", "REQ-045"],
+      "columns": [
+        {"name": "id", "type": "string"},
+        {"name": "deal_id", "type": "string"},
+        {"name": "grade", "type": "string"},
+        {"name": "rubric_inputs", "type": "json"},
+        {"name": "computed_at", "type": "timestamp"},
+        {"name": "computed_by_version", "type": "string"}
+      ]
+    },
+    {
+      "name": "policy_rules",
+      "addresses": ["REQ-034", "REQ-053"],
+      "columns": [
+        {"name": "id", "type": "string"},
+        {"name": "rule_name", "type": "string"},
+        {"name": "rule_type", "type": "string"},
+        {"name": "description", "type": "string"},
+        {"name": "parameters", "type": "json"},
+        {"name": "version", "type": "number"},
+        {"name": "effective_date", "type": "timestamp"},
+        {"name": "is_active", "type": "boolean"}
+      ]
+    },
+    {
+      "name": "policy_exceptions",
+      "addresses": ["REQ-007", "REQ-035"],
+      "columns": [
+        {"name": "id", "type": "string"},
+        {"name": "deal_id", "type": "string"},
+        {"name": "policy_rule_id", "type": "string"},
+        {"name": "breached_value", "type": "string"},
+        {"name": "rule_threshold", "type": "string"},
+        {"name": "agent_rationale", "type": "string"},
+        {"name": "human_disposition", "type": "string"},
+        {"name": "disposition_by_user_id", "type": "string"},
+        {"name": "disposition_reason", "type": "string"},
+        {"name": "created_at", "type": "timestamp"},
+        {"name": "disposition_at", "type": "timestamp"}
+      ]
+    },
+    {
+      "name": "memos",
+      "addresses": ["REQ-006", "REQ-045"],
+      "columns": [
+        {"name": "id", "type": "string"},
+        {"name": "deal_id", "type": "string"},
+        {"name": "content", "type": "string"},
+        {"name": "citations", "type": "json"},
+        {"name": "drafted_at", "type": "timestamp"}
+      ]
+    },
+    {
+      "name": "agent_runs",
+      "addresses": ["REQ-037", "REQ-038"],
+      "columns": [
+        {"name": "id", "type": "string"},
+        {"name": "deal_id", "type": "string"},
+        {"name": "agent_type", "type": "string"},
+        {"name": "run_stage", "type": "string"},
+        {"name": "model_id", "type": "string"},
+        {"name": "prompt_template_version", "type": "string"},
+        {"name": "inputs", "type": "json"},
+        {"name": "raw_output", "type": "string"},
+        {"name": "latency_ms", "type": "number"},
+        {"name": "token_cost", "type": "json"},
+        {"name": "ran_at", "type": "timestamp"}
+      ]
+    },
+    {
+      "name": "agent_drafts",
+      "addresses": ["REQ-016", "REQ-037", "REQ-046"],
+      "columns": [
+        {"name": "id", "type": "string"},
+        {"name": "agent_run_id", "type": "string"},
+        {"name": "deal_id", "type": "string"},
+        {"name": "draft_type", "type": "string"},
+        {"name": "draft_content", "type": "string"},
+        {"name": "review_status", "type": "string"},
+        {"name": "reviewed_by_user_id", "type": "string"},
+        {"name": "review_action", "type": "string"},
+        {"name": "review_reason", "type": "string"},
+        {"name": "human_edits", "type": "string"},
+        {"name": "created_at", "type": "timestamp"},
+        {"name": "reviewed_at", "type": "timestamp"}
+      ]
+    },
+    {
+      "name": "approvals",
+      "addresses": ["REQ-011", "REQ-012", "REQ-013", "REQ-015", "REQ-021", "REQ-043"],
+      "columns": [
+        {"name": "id", "type": "string"},
+        {"name": "deal_id", "type": "string"},
+        {"name": "approval_stage", "type": "string"},
+        {"name": "approval_tier", "type": "string"},
+        {"name": "approved_by_user_id", "type": "string"},
+        {"name": "decision", "type": "string"},
+        {"name": "reason", "type": "string"},
+        {"name": "approved_at", "type": "timestamp"}
+      ]
+    },
+    {
+      "name": "declines",
+      "addresses": ["REQ-017", "REQ-021"],
+      "columns": [
+        {"name": "id", "type": "string"},
+        {"name": "deal_id", "type": "string"},
+        {"name": "declined_by_user_id", "type": "string"},
+        {"name": "adverse_action_reason", "type": "string"},
+        {"name": "declined_at", "type": "timestamp"}
+      ]
+    },
+    {
+      "name": "stage_transitions",
+      "addresses": ["REQ-001", "REQ-036"],
+      "columns": [
+        {"name": "id", "type": "string"},
+        {"name": "deal_id", "type": "string"},
+        {"name": "from_stage", "type": "string"},
+        {"name": "to_stage", "type": "string"},
+        {"name": "transitioned_by_user_id", "type": "string"},
+        {"name": "transition_reason", "type": "string"},
+        {"name": "transitioned_at", "type": "timestamp"}
+      ]
+    },
+    {
+      "name": "audit_log",
+      "addresses": ["REQ-018", "REQ-047"],
+      "columns": [
+        {"name": "id", "type": "string"},
+        {"name": "deal_id", "type": "string"},
+        {"name": "event_type", "type": "string"},
+        {"name": "entity_type", "type": "string"},
+        {"name": "entity_id", "type": "string"},
+        {"name": "actor_user_id", "type": "string"},
+        {"name": "action", "type": "string"},
+        {"name": "old_values", "type": "json"},
+        {"name": "new_values", "type": "json"},
+        {"name": "details", "type": "json"},
+        {"name": "created_at", "type": "timestamp"}
+      ]
+    },
+    {
+      "name": "users",
+      "addresses": ["REQ-019", "REQ-020", "REQ-021", "REQ-041"],
+      "columns": [
+        {"name": "id", "type": "string"},
+        {"name": "username", "type": "string"},
+        {"name": "email", "type": "string"},
+        {"name": "password_hash", "type": "string"},
+        {"name": "role", "type": "string"},
+        {"name": "is_active", "type": "boolean"},
+        {"name": "created_at", "type": "timestamp"}
+      ]
+    },
+    {
+      "name": "analyst_queues",
+      "addresses": ["REQ-033"],
+      "columns": [
+        {"name": "id", "type": "string"},
+        {"name": "analyst_user_id", "type": "string"},
+        {"name": "deal_id", "type": "string"},
+        {"name": "queue_status", "type": "string"},
+        {"name": "added_at", "type": "timestamp"}
+      ]
+    }
+  ]
+}

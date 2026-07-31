@@ -1,0 +1,450 @@
+{
+  "chosen_option": "option-2",
+  "screens": [
+    {
+      "id": "screen-pipeline",
+      "title": "Pipeline Board",
+      "elements": [
+        {
+          "tag": "button",
+          "id": null,
+          "label": "All"
+        },
+        {
+          "tag": "button",
+          "id": null,
+          "label": "My queue"
+        },
+        {
+          "tag": "button",
+          "id": null,
+          "label": "Blocked"
+        },
+        {
+          "tag": "button",
+          "id": null,
+          "label": "&gt;$1M"
+        },
+        {
+          "tag": "button",
+          "id": null,
+          "label": "Columns"
+        },
+        {
+          "tag": "button",
+          "id": null,
+          "label": "Export CSV"
+        },
+        {
+          "tag": "button",
+          "id": null,
+          "label": "Open deal"
+        },
+        {
+          "tag": "button",
+          "id": null,
+          "label": "Review draft"
+        },
+        {
+          "tag": "button",
+          "id": null,
+          "label": "Trail"
+        }
+      ],
+      "element_count": 9
+    },
+    {
+      "id": "screen-intake",
+      "title": "Deal Intake",
+      "elements": [
+        {
+          "tag": "button",
+          "id": null,
+          "label": "Save draft"
+        },
+        {
+          "tag": "button",
+          "id": null,
+          "label": "Submit to triage"
+        },
+        {
+          "tag": "input",
+          "id": "in-legal",
+          "label": null
+        },
+        {
+          "tag": "input",
+          "id": "in-dba",
+          "label": null
+        },
+        {
+          "tag": "input",
+          "id": "in-tin",
+          "label": null
+        },
+        {
+          "tag": "input",
+          "id": "in-naics",
+          "label": null
+        },
+        {
+          "tag": "input",
+          "id": "in-state",
+          "label": null
+        },
+        {
+          "tag": "input",
+          "id": "in-est",
+          "label": null
+        },
+        {
+          "tag": "input",
+          "id": "in-addr",
+          "label": null
+        },
+        {
+          "tag": "select",
+          "id": "in-type",
+          "label": null
+        },
+        {
+          "tag": "input",
+          "id": "in-amt",
+          "label": null
+        },
+        {
+          "tag": "input",
+          "id": "in-term",
+          "label": null
+        },
+        {
+          "tag": "input",
+          "id": "in-purpose",
+          "label": null
+        },
+        {
+          "tag": "input",
+          "id": "in-collat",
+          "label": null
+        },
+        {
+          "tag": "input",
+          "id": "in-ltv",
+          "label": null
+        },
+        {
+          "tag": "button",
+          "id": null,
+          "label": "Accept"
+        },
+        {
+          "tag": "button",
+          "id": null,
+          "label": "Edit &amp; accept"
+        },
+        {
+          "tag": "button",
+          "id": null,
+          "label": "Reject &mdash; reason required"
+        }
+      ],
+      "element_count": 18
+    },
+    {
+      "id": "screen-deal",
+      "title": "Deal Desk",
+      "elements": [
+        {
+          "tag": "button",
+          "id": null,
+          "label": "Spread"
+        },
+        {
+          "tag": "button",
+          "id": null,
+          "label": "Memo"
+        },
+        {
+          "tag": "button",
+          "id": null,
+          "label": "Policy"
+        },
+        {
+          "tag": "button",
+          "id": null,
+          "label": "Timeline"
+        },
+        {
+          "tag": "button",
+          "id": null,
+          "label": "Audit trail"
+        },
+        {
+          "tag": "button",
+          "id": null,
+          "label": "Open review queue"
+        },
+        {
+          "tag": "button",
+          "id": null,
+          "label": "Recalculate"
+        },
+        {
+          "tag": "button",
+          "id": null,
+          "label": "Inspect spread run"
+        },
+        {
+          "tag": "button",
+          "id": null,
+          "label": "Version history"
+        },
+        {
+          "tag": "button",
+          "id": null,
+          "label": "Open in review"
+        },
+        {
+          "tag": "button",
+          "id": null,
+          "label": "Review exceptions"
+        }
+      ],
+      "element_count": 11
+    },
+    {
+      "id": "screen-review",
+      "title": "Draft Review",
+      "elements": [
+        {
+          "tag": "button",
+          "id": null,
+          "label": "&#8593; Prev"
+        },
+        {
+          "tag": "button",
+          "id": null,
+          "label": "Next &#8595;"
+        },
+        {
+          "tag": "textarea",
+          "id": "rev-reason",
+          "label": null
+        },
+        {
+          "tag": "button",
+          "id": null,
+          "label": "Accept draft"
+        },
+        {
+          "tag": "button",
+          "id": null,
+          "label": "Edit &amp; accept"
+        },
+        {
+          "tag": "button",
+          "id": null,
+          "label": "Reject"
+        },
+        {
+          "tag": "button",
+          "id": null,
+          "label": "View trail entries for this run"
+        }
+      ],
+      "element_count": 7
+    },
+    {
+      "id": "screen-approvals",
+      "title": "Approval Queue",
+      "elements": [
+        {
+          "tag": "button",
+          "id": null,
+          "label": "All tiers"
+        },
+        {
+          "tag": "button",
+          "id": null,
+          "label": "&le;$250k"
+        },
+        {
+          "tag": "button",
+          "id": null,
+          "label": "&le;$1M"
+        },
+        {
+          "tag": "button",
+          "id": null,
+          "label": "&gt;$1M"
+        },
+        {
+          "tag": "input",
+          "id": "ap-name",
+          "label": null
+        },
+        {
+          "tag": "input",
+          "id": "ap-id",
+          "label": null
+        },
+        {
+          "tag": "select",
+          "id": "ap-role",
+          "label": null
+        },
+        {
+          "tag": "input",
+          "id": "ap-auth",
+          "label": null
+        },
+        {
+          "tag": "textarea",
+          "id": "ap-cond",
+          "label": null
+        },
+        {
+          "tag": "textarea",
+          "id": "ap-reason",
+          "label": null
+        },
+        {
+          "tag": "button",
+          "id": null,
+          "label": "Approve"
+        },
+        {
+          "tag": "button",
+          "id": null,
+          "label": "Decline &mdash; adverse action"
+        },
+        {
+          "tag": "button",
+          "id": null,
+          "label": "Return to stage"
+        },
+        {
+          "tag": "button",
+          "id": null,
+          "label": "Refer to committee"
+        }
+      ],
+      "element_count": 14
+    },
+    {
+      "id": "screen-sla",
+      "title": "SLA Watch",
+      "elements": [
+        {
+          "tag": "button",
+          "id": null,
+          "label": "Notify owners"
+        }
+      ],
+      "element_count": 1
+    },
+    {
+      "id": "screen-audit",
+      "title": "Audit Trail",
+      "elements": [
+        {
+          "tag": "button",
+          "id": null,
+          "label": "Export CSV"
+        },
+        {
+          "tag": "button",
+          "id": null,
+          "label": "Export JSONL"
+        },
+        {
+          "tag": "input",
+          "id": "au-deal",
+          "label": null
+        },
+        {
+          "tag": "input",
+          "id": "au-actor",
+          "label": "any"
+        },
+        {
+          "tag": "select",
+          "id": "au-role",
+          "label": null
+        },
+        {
+          "tag": "select",
+          "id": "au-action",
+          "label": null
+        },
+        {
+          "tag": "input",
+          "id": "au-from",
+          "label": null
+        },
+        {
+          "tag": "input",
+          "id": "au-to",
+          "label": null
+        }
+      ],
+      "element_count": 8
+    },
+    {
+      "id": "screen-chat",
+      "title": "Portfolio Q&amp;A",
+      "elements": [
+        {
+          "tag": "button",
+          "id": null,
+          "label": "Clear thread"
+        },
+        {
+          "tag": "form",
+          "id": "composer",
+          "label": null
+        },
+        {
+          "tag": "input",
+          "id": "input",
+          "label": "input"
+        },
+        {
+          "tag": "button",
+          "id": null,
+          "label": "Send"
+        },
+        {
+          "tag": "button",
+          "id": null,
+          "label": "Which deals have open policy exceptions and who owns them?"
+        },
+        {
+          "tag": "button",
+          "id": null,
+          "label": "Average DSCR by segment across active deals"
+        },
+        {
+          "tag": "button",
+          "id": null,
+          "label": "Which drafts have been pending acceptance longest?"
+        },
+        {
+          "tag": "button",
+          "id": null,
+          "label": "Total exposure at committee tier this quarter"
+        },
+        {
+          "tag": "button",
+          "id": null,
+          "label": "Show every deal where a memo was rejected and why"
+        }
+      ],
+      "element_count": 9
+    }
+  ],
+  "totals": {
+    "screens": 8,
+    "elements": 77
+  }
+}

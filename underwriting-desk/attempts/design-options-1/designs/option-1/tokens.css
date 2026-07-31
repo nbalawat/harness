@@ -1,0 +1,66 @@
+/* ============================================================
+   Underwriting Command Center — Option 1 "Credit Ledger"
+   Editorial print direction. Design tokens only.
+   Structural CSS lives in index.html.
+   ============================================================ */
+
+:root {
+  /* ---- Mandatory seven ---------------------------------- */
+  --primary: #8a2011;              /* the printer's second ink — oxblood vermilion */
+  --on-primary: #fbf8f1;
+  --bg: #f2ede3;                   /* warm laid paper */
+  --fg: #17140f;                   /* dense ink */
+  --surface: #fbf8f1;              /* leaf / inset stock */
+  --border: #cdc2ac;               /* hairline rule */
+  --font: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua",
+          Georgia, "Times New Roman", Times, serif;
+
+  /* ---- Extended ink palette ----------------------------- */
+  --ink-strong: #0d0b08;           /* masthead rules, heavy rules */
+  --ink-mid: #4a4238;              /* body secondary */
+  --ink-soft: #7b7263;             /* marginalia, folios */
+  --ink-faint: #a89d88;            /* struck / dormant */
+  --primary-deep: #5f1409;
+  --primary-tint: #eddcd5;         /* second ink at 12% — stamp fills */
+  --paper-2: #ece5d7;              /* ruled band / ledger tint */
+  --paper-3: #e3dac8;              /* deeper band */
+  --rule: #cdc2ac;
+  --rule-hair: #ded4c0;
+
+  /* ---- Typography --------------------------------------- */
+  --font-display: var(--font);
+  --font-text: var(--font);
+  --font-figure: "Iowan Old Style", "Times New Roman", Times, Georgia, serif;
+  --font-label: "Iowan Old Style", Georgia, "Times New Roman", serif;
+  --font-mono: "SFMono-Regular", "IBM Plex Mono", Menlo, Consolas, monospace;
+
+  --ts-masthead: clamp(2.4rem, 5.2vw, 4.1rem);
+  --ts-display: 2.05rem;
+  --ts-head: 1.42rem;
+  --ts-sub: 1.06rem;
+  --ts-body: 1rem;
+  --ts-small: 0.875rem;
+  --ts-fine: 0.78rem;
+  --ts-micro: 0.69rem;
+
+  --lh-body: 1.68;
+  --lh-tight: 1.28;
+  --tracking-caps: 0.13em;
+
+  /* ---- Measure & rhythm --------------------------------- */
+  --measure: 34rem;                /* the reading column */
+  --measure-wide: 44rem;
+  --margin-col: 15.5rem;           /* marginalia / footnote column */
+  --gutter: 2.75rem;
+  --baseline: 0.5rem;
+
+  /* ---- Rules -------------------------------------------- */
+  --rule-hairline: 1px solid var(--rule);
+  --rule-fine: 1px solid var(--rule-hair);
+  --rule-ink: 1px solid var(--ink-strong);
+  --rule-heavy: 3px solid var(--ink-strong);
+  --rule-spot: 1px solid var(--primary);
+
+  --radius: 0;                     /* print has no rounded corners */
+  --shadow: none;                  /* nor drop shadows */
+}

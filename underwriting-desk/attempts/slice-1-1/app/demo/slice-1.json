@@ -1,0 +1,14 @@
+{
+  "screen": "screen-pipeline",
+  "caption": "A relationship manager (rm1) signs in, submits a new SMB loan request for Riverside Metalworks LLC from the Intake form, and the deal appears immediately on the Pipeline Board's Intake column.",
+  "steps": [
+    { "action": "click", "selector": "#login-submit" },
+    { "action": "click", "selector": ".navitem[data-screen=\"intake\"]" },
+    { "action": "fill", "selector": "#in-legal", "value": "Riverside Metalworks LLC" },
+    { "action": "fill", "selector": "#in-industry", "value": "manufacturing" },
+    { "action": "fill", "selector": "#in-type", "value": "term_loan" },
+    { "action": "fill", "selector": "#in-amt", "value": "250000" },
+    { "action": "click", "selector": "#in-submit" },
+    { "action": "click", "selector": ".navitem[data-screen=\"pipeline\"]" }
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "screen": "screen-intake",
+  "caption": "A relationship manager submits Cedar Fork Precision Tooling's $640,000 term loan on the Deal Intake screen: the console derives the exposure tier from the amount, scores the required-document checklist, and the intake triage agent's classification, missing-document flags and proposed analyst queue land as a PENDING draft that no one can bypass.",
+  "steps": [
+    { "action": "click", "selector": ".navitem[data-screen=\"intake\"]" },
+    { "action": "fill", "selector": "#in-ref", "value": "UW-2026-0512" },
+    { "action": "fill", "selector": "#in-legal", "value": "Cedar Fork Precision Tooling LLC" },
+    { "action": "fill", "selector": "#in-naics", "value": "333517 — machine tool manufacturing" },
+    { "action": "fill", "selector": "#in-state", "value": "North Carolina" },
+    { "action": "fill", "selector": "#in-amt", "value": "$640,000" },
+    { "action": "fill", "selector": "#in-collat-val", "value": "$900,000" },
+    { "action": "fill", "selector": "#in-purpose", "value": "Five-axis mill purchase and working capital" },
+    { "action": "click", "selector": "#btn-intake-submit" }
+  ]
+}

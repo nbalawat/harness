@@ -1,0 +1,76 @@
+INFO:     Started server process [16689]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:50001 (Press CTRL+C to quit)
+INFO:     127.0.0.1:50007 - "GET /health HTTP/1.1" 200 OK
+{"ts": "2026-07-31T07:01:38Z", "level": "info", "event": "audit.appended", "event_type": "deal.created", "audit_log_id": 7, "deal_reference": "DEAL-1001"}
+{"ts": "2026-07-31T07:01:38Z", "level": "info", "event": "audit.appended", "event_type": "stage.transition", "audit_log_id": 9, "deal_reference": "DEAL-1001"}
+{"ts": "2026-07-31T07:01:38Z", "level": "info", "event": "audit.appended", "event_type": "document.stored", "audit_log_id": 12, "deal_reference": "DEAL-1001"}
+{"ts": "2026-07-31T07:01:38Z", "level": "info", "event": "audit.appended", "event_type": "document.stored", "audit_log_id": 14, "deal_reference": "DEAL-1001"}
+{"ts": "2026-07-31T07:01:38Z", "level": "info", "event": "audit.appended", "event_type": "deal.documents_stored", "audit_log_id": 15, "deal_reference": "DEAL-1001"}
+{"ts": "2026-07-31T07:01:38Z", "level": "info", "event": "audit.appended", "event_type": "document.extracted", "audit_log_id": 32, "deal_reference": "DEAL-1001"}
+{"ts": "2026-07-31T07:01:38Z", "level": "info", "event": "agent.run", "agent": "intake_triage", "deal_reference": "DEAL-1001", "agent_run_id": 39, "source": "workflow"}
+{"ts": "2026-07-31T07:01:38Z", "level": "info", "event": "audit.appended", "event_type": "agent_draft.created", "audit_log_id": 41, "deal_reference": "DEAL-1001"}
+{"ts": "2026-07-31T07:01:38Z", "level": "info", "event": "deal.submitted", "deal_reference": "DEAL-1001", "correlation_id": "cid-f084ff94f195", "workflow_run_id": "wf-4"}
+INFO:     127.0.0.1:50017 - "POST /deals HTTP/1.1" 200 OK
+{"ts": "2026-07-31T07:01:38Z", "level": "info", "event": "audit.appended", "event_type": "deal.created", "audit_log_id": 45, "deal_reference": "DEAL-2001"}
+{"ts": "2026-07-31T07:01:38Z", "level": "info", "event": "audit.appended", "event_type": "stage.transition", "audit_log_id": 47, "deal_reference": "DEAL-2001"}
+{"ts": "2026-07-31T07:01:38Z", "level": "info", "event": "audit.appended", "event_type": "deal.documents_stored", "audit_log_id": 49, "deal_reference": "DEAL-2001"}
+{"ts": "2026-07-31T07:01:38Z", "level": "info", "event": "agent.run", "agent": "intake_triage", "deal_reference": "DEAL-2001", "agent_run_id": 57, "source": "workflow"}
+{"ts": "2026-07-31T07:01:38Z", "level": "info", "event": "audit.appended", "event_type": "agent_draft.created", "audit_log_id": 59, "deal_reference": "DEAL-2001"}
+{"ts": "2026-07-31T07:01:38Z", "level": "info", "event": "deal.submitted", "deal_reference": "DEAL-2001", "correlation_id": "cid-00c931d5232a", "workflow_run_id": "wf-42"}
+INFO:     127.0.0.1:50018 - "POST /deals HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50019 - "POST /deals/DEAL-1001/triage HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50020 - "GET /deals HTTP/1.1" 200 OK
+{"ts": "2026-07-31T07:01:38Z", "level": "info", "event": "audit.appended", "event_type": "agent_draft.accepted", "audit_log_id": 61, "deal_reference": "DEAL-1001"}
+{"ts": "2026-07-31T07:01:38Z", "level": "info", "event": "audit.appended", "event_type": "deal.routed", "audit_log_id": 64, "deal_reference": "DEAL-1001"}
+{"ts": "2026-07-31T07:01:38Z", "level": "info", "event": "audit.appended", "event_type": "stage.transition", "audit_log_id": 67, "deal_reference": "DEAL-1001"}
+{"ts": "2026-07-31T07:01:38Z", "level": "info", "event": "audit.appended", "event_type": "deal.queue_assigned", "audit_log_id": 71, "deal_reference": "DEAL-1001"}
+INFO:     127.0.0.1:50021 - "POST /deals/DEAL-1001/drafts/triage/review HTTP/1.1" 200 OK
+{"ts": "2026-07-31T07:01:38Z", "level": "info", "event": "agent.run", "agent": "financial_spreading", "deal_reference": "DEAL-1001", "agent_run_id": 77, "source": "workflow"}
+{"ts": "2026-07-31T07:01:38Z", "level": "info", "event": "audit.appended", "event_type": "stage.transition", "audit_log_id": 80, "deal_reference": "DEAL-1001"}
+{"ts": "2026-07-31T07:01:38Z", "level": "info", "event": "audit.appended", "event_type": "agent_draft.created", "audit_log_id": 82, "deal_reference": "DEAL-1001"}
+INFO:     127.0.0.1:50022 - "POST /deals/DEAL-1001/spread HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50023 - "POST /deals/DEAL-1001/drafts/spread/review HTTP/1.1" 400 Bad Request
+{"ts": "2026-07-31T07:01:38Z", "level": "info", "event": "audit.appended", "event_type": "agent_draft.accepted", "audit_log_id": 84, "deal_reference": "DEAL-1001"}
+{"ts": "2026-07-31T07:01:38Z", "level": "info", "event": "audit.appended", "event_type": "spread.persisted", "audit_log_id": 105, "deal_reference": "DEAL-1001"}
+{"ts": "2026-07-31T07:01:38Z", "level": "info", "event": "audit.appended", "event_type": "stage.transition", "audit_log_id": 108, "deal_reference": "DEAL-1001"}
+{"ts": "2026-07-31T07:01:38Z", "level": "info", "event": "audit.appended", "event_type": "spread.persist_confirmed", "audit_log_id": 112, "deal_reference": "DEAL-1001"}
+INFO:     127.0.0.1:50024 - "POST /deals/DEAL-1001/drafts/spread/review HTTP/1.1" 200 OK
+{"ts": "2026-07-31T07:01:54Z", "level": "info", "event": "audit.appended", "event_type": "deal.created", "audit_log_id": 118, "deal_reference": "UW-2026-0793"}
+{"ts": "2026-07-31T07:01:54Z", "level": "info", "event": "audit.appended", "event_type": "stage.transition", "audit_log_id": 120, "deal_reference": "UW-2026-0793"}
+{"ts": "2026-07-31T07:01:54Z", "level": "info", "event": "audit.appended", "event_type": "document.stored", "audit_log_id": 123, "deal_reference": "UW-2026-0793"}
+{"ts": "2026-07-31T07:01:54Z", "level": "info", "event": "audit.appended", "event_type": "deal.documents_stored", "audit_log_id": 124, "deal_reference": "UW-2026-0793"}
+{"ts": "2026-07-31T07:01:54Z", "level": "info", "event": "audit.appended", "event_type": "document.extracted", "audit_log_id": 137, "deal_reference": "UW-2026-0793"}
+{"ts": "2026-07-31T07:01:54Z", "level": "info", "event": "agent.run", "agent": "intake_triage", "deal_reference": "UW-2026-0793", "agent_run_id": 144, "source": "workflow"}
+{"ts": "2026-07-31T07:01:54Z", "level": "info", "event": "audit.appended", "event_type": "agent_draft.created", "audit_log_id": 146, "deal_reference": "UW-2026-0793"}
+{"ts": "2026-07-31T07:01:54Z", "level": "info", "event": "deal.submitted", "deal_reference": "UW-2026-0793", "correlation_id": "cid-c71a17726440", "workflow_run_id": "wf-115"}
+INFO:     127.0.0.1:50033 - "POST /deals HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50034 - "POST /deals/UW-2026-0793/triage HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50035 - "GET /drafts?acting_user=co.brennan HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50036 - "GET /drafts/145?acting_user=co.brennan HTTP/1.1" 200 OK
+{"ts": "2026-07-31T07:01:54Z", "level": "info", "event": "audit.appended", "event_type": "agent_draft.accepted", "audit_log_id": 148, "deal_reference": "UW-2026-0793"}
+{"ts": "2026-07-31T07:01:54Z", "level": "info", "event": "audit.appended", "event_type": "deal.routed", "audit_log_id": 151, "deal_reference": "UW-2026-0793"}
+{"ts": "2026-07-31T07:01:54Z", "level": "info", "event": "audit.appended", "event_type": "stage.transition", "audit_log_id": 154, "deal_reference": "UW-2026-0793"}
+{"ts": "2026-07-31T07:01:54Z", "level": "info", "event": "audit.appended", "event_type": "deal.queue_assigned", "audit_log_id": 158, "deal_reference": "UW-2026-0793"}
+INFO:     127.0.0.1:50037 - "POST /deals/UW-2026-0793/drafts/triage/review HTTP/1.1" 200 OK
+{"ts": "2026-07-31T07:01:54Z", "level": "info", "event": "agent.run", "agent": "financial_spr{"ts": "2026-07-31T07:02:16Z", "level": "info", "event": "audit.appended", "event_type": "deal.created", "audit_log_id": 159, "deal_reference": "UW-2026-0793"}
+{"ts": "2026-07-31T07:02:16Z", "level": "info", "event": "audit.appended", "event_type": "stage.transition", "audit_log_id": 161, "deal_reference": "UW-2026-0793"}
+{"ts": "2026-07-31T07:02:16Z", "level": "info", "event": "audit.appended", "event_type": "document.stored", "audit_log_id": 164, "deal_reference": "UW-2026-0793"}
+{"ts": "2026-07-31T07:02:16Z", "level": "info", "event": "audit.appended", "event_type": "deal.documents_stored", "audit_log_id": 165, "deal_reference": "UW-2026-0793"}
+{"ts": "2026-07-31T07:02:16Z", "level": "info", "event": "audit.appended", "event_type": "document.extracted", "audit_log_id": 178, "deal_reference": "UW-2026-0793"}
+{"ts": "2026-07-31T07:02:16Z", "level": "info", "event": "agent.run", "agent": "intake_triage", "deal_reference": "UW-2026-0793", "agent_run_id": 185, "source": "workflow"}
+{"ts": "2026-07-31T07:02:16Z", "level": "info", "event": "audit.appended", "event_type": "agent_draft.created", "audit_log_id": 187, "deal_reference": "UW-2026-0793"}
+{"ts": "2026-07-31T07:02:16Z", "level": "info", "event": "deal.submitted", "deal_reference": "UW-2026-0793", "correlation_id": "cid-d5a1ca523453", "workflow_run_id": "wf-156"}
+INFO:     127.0.0.1:50045 - "POST /deals HTTP/1.1" 200 OK
+{"ts": "2026-07-31T07:02:19Z", "level": "info", "event": "audit.appended", "event_type": "agent_draft.accepted", "audit_log_id": 189, "deal_reference": "UW-2026-0793"}
+{"ts": "2026-07-31T07:02:19Z", "level": "info", "event": "audit.appended", "event_type": "deal.routed", "audit_log_id": 192, "deal_reference": "UW-2026-0793"}
+{"ts": "2026-07-31T07:02:19Z", "level": "info", "event": "audit.appended", "event_type": "stage.transition", "audit_log_id": 195, "deal_reference": "UW-2026-0793"}
+{"ts": "2026-07-31T07:02:19Z", "level": "info", "event": "audit.appended", "event_type": "deal.queue_assigned", "audit_log_id": 199, "deal_reference": "UW-2026-0793"}
+INFO:     127.0.0.1:50045 - "POST /deals/UW-2026-0793/drafts/triage/review HTTP/1.1" 200 OK
+{"ts": "2026-07-31T07:02:23Z", "level": "info", "event": "agent.run", "agent": "financial_spreading", "deal_reference": "UW-2026-0793", "agent_run_id": 205, "source": "workflow"}
+{"ts": "2026-07-31T07:02:23Z", "level": "info", "event": "audit.appended", "event_type": "stage.transition", "audit_log_id": 208, "deal_reference": "UW-2026-0793"}
+{"ts": "2026-07-31T07:02:23Z", "level": "info", "event": "audit.appended", "event_type": "agent_draft.created", "audit_log_id": 210, "deal_reference": "UW-2026-0793"}
+INFO:     127.0.0.1:50061 - "POST /deals/UW-2026-0793/spread HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50091 - "GET /deals/UW-2026-0793/drafts?acting_user=an.chen HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50091 - "GET /deals/UW-2026-0793/drafts HTTP/1.1" 401 Unauthorized

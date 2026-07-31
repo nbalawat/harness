@@ -1101,3 +1101,33 @@ test("review window: an answer arriving during the window wins over the default"
   assert.equal(gate.answers.verdict, "no - hold the line", "the human's answer was used");
   assert.equal(gate.source, "recorded");
 });
+
+test("retry policy: a retry projected to blow the node budget fails fast instead of starting", async () => {
+  // Agent node whose mock always fails validation; each attempt "costs" $6
+  // against an $8 budget. Attempt 1 runs ($6). Attempt 2 is BLOCKED before
+  // starting: 6 + 0.6*6 > 8 — no more money burned on a doomed retry.
+  const dir = writeFixture(
+    tmpDir("proj-pt"),
+    [
+      "name: proj",
+      "version: 0.0.1",
+      "cost: { nodes: { flaky: { budget_usd: 8 } } }",
+      "nodes:",
+      "  - id: flaky",
+      "    kind: agent",
+      "    retries: 3",
+      "    prompt: prompts/p.md",
+      '    mock: node -e "require(String.fromCharCode(110,111,100,101,58,102,115)).writeFileSync(\'cost.json\',JSON.stringify({costUsd:6}))"',
+      "    outputs: [{name: out, file: never-written.json}]",
+    ].join("\n"),
+  );
+  fs.mkdirSync(path.join(dir, "prompts"), { recursive: true });
+  fs.writeFileSync(path.join(dir, "prompts/p.md"), "x");
+  const ctx = makeCtx(tmpDir("proj-ws"), dir);
+  const result = await runLoop(ctx);
+  assert.equal(result.status, "failed");
+  const blocks = events(ctx, "budget.exceeded");
+  assert.ok(blocks.length >= 1);
+  assert.match(String(blocks.at(-1).reason ?? ""), /retry blocked: projected/);
+  assert.equal(events(ctx, "node.running").length, 1, "only ONE attempt ever ran — no blind re-attempts");
+});

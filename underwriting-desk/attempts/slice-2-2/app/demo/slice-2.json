@@ -1,0 +1,21 @@
+{
+  "screen": "screen-review",
+  "caption": "The Draft Review workspace is now the single accept / edit / reject seat for every agent draft: accepting Cedar Fork Precision Tooling's intake triage draft chains straight into the financial spreading agent, whose PENDING draft fills all ten standard spread-template lines with a citation on every single figure naming the exact document and document location it was read from — shown side by side with that cited evidence, and with the run's model, prompt version, latency and cost on the telemetry bar.",
+  "steps": [
+    { "action": "click", "selector": ".navitem[data-screen=\"intake\"]" },
+    { "action": "fill", "selector": "#in-ref", "value": "UW-2026-0793" },
+    { "action": "fill", "selector": "#in-legal", "value": "Cedar Fork Precision Tooling LLC" },
+    { "action": "fill", "selector": "#in-naics", "value": "333517 — machine tool manufacturing" },
+    { "action": "fill", "selector": "#in-state", "value": "North Carolina" },
+    { "action": "fill", "selector": "#in-amt", "value": "$820,000" },
+    { "action": "fill", "selector": "#in-collat-val", "value": "$1,150,000" },
+    { "action": "fill", "selector": "#in-purpose", "value": "Five-axis mill purchase and working capital" },
+    { "action": "fill", "selector": "#intake-doc-name", "value": "2025-FYE-Financials.pdf" },
+    { "action": "fill", "selector": "#intake-doc-text", "value": "FY2025 Audited Financial Statements — Cedar Fork Precision Tooling LLC.\nIncome Statement: Revenue 9,850,000; Cost of Goods Sold 5,410,000; Operating Expenses 2,930,000; EBITDA 1,510,000; Interest Expense 246,000.\nBalance Sheet: Current Assets 2,760,000; Current Liabilities 1,280,000; Total Debt 4,100,000; Tangible Net Worth 2,340,000.\nDebt Service: Annual Principal and Interest 905,000." },
+    { "action": "click", "selector": "#btn-attach-text" },
+    { "action": "click", "selector": "#btn-intake-submit" },
+    { "action": "click", "selector": ".navitem[data-screen=\"review\"]" },
+    { "action": "click", "selector": "#review-queue-rows tr:first-child" },
+    { "action": "click", "selector": "[data-disp=\"accept\"]" }
+  ]
+}
