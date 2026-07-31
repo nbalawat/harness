@@ -1,0 +1,5 @@
+# Verifier stage: executable exit criteria over an upstream artifact.
+# Params: file (to check), require (substring that must appear).
+kind: verifier
+description: "Verifies {{file}} meets its contract."
+command: node "$HARNESS_PROJECT_DIR/scripts/{{id}}.cjs"

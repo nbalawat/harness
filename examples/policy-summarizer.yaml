@@ -1,0 +1,28 @@
+# A dynamically composed pipeline: gate -> agent -> verifier -> windowed
+# checkpoint -> deterministic packaging. Same engine, same guarantees.
+name: policy-summarizer
+version: 0.1.0
+description: Summarizes a policy topic into a reviewed, packaged brief.
+run_budget_usd: 5
+stages:
+  - use: intake
+    id: intake
+    questions:
+      - { id: topic, prompt: "What policy area should be summarized?", default: "credit policy" }
+      - { id: audience, prompt: "Who is the audience?", type: choice, default: "analysts",
+          options: [ { value: "analysts", label: "Credit analysts" }, { value: "executives", label: "Executive committee" } ] }
+  - use: derive
+    id: summarize
+    instruction: "Read the intake answers and produce a structured summary brief titled 'Summary' for the declared audience, covering scope, key rules, and open questions."
+    output: summary.md
+  - use: quality-gate
+    id: check-summary
+    file: summary.md
+    require: "Summary"
+  - use: approve
+    id: signoff
+    window: 60
+    questions:
+      - { id: verdict, prompt: "Brief looks right — package it?", type: boolean, default: "yes" }
+  - use: package
+    id: package

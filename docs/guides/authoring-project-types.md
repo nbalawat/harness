@@ -153,3 +153,30 @@ catch you (it caught pytest timings on its first run).
 
 Tag the repo `<name>@<version>` and push. Consumers install exactly that tag.
 See [versioning-and-releases.md](versioning-and-releases.md).
+
+## Composing dynamic DAGs (`harness compose`)
+
+Teams that need a pipeline the catalog doesn't have don't start from a blank
+dag.yaml — they compose one from the **certified stage library**
+(`stage-library/`): parameterized, pre-verified node templates (intake gate,
+`derive` agent stage, deterministic `transform`, `quality-gate` verifier,
+windowed `approve` checkpoint, `package`). A spec picks and parameterizes
+stages:
+
+```yaml
+name: policy-summarizer
+version: 0.1.0
+stages:
+  - { use: intake, id: intake, questions: [...typed questions...] }
+  - { use: derive, id: summarize, instruction: "Produce a summary brief...", output: summary.md }
+  - { use: quality-gate, id: check-summary, file: summary.md, require: "Summary" }
+  - { use: approve, id: signoff, window: 60 }
+  - { use: package, id: package }
+```
+
+`harness compose spec.yaml --out my-type` emits a NORMAL project-type package
+— same engine, same envelope, same certification path. Composition is dynamic;
+execution stays deterministic: agentic stages run inside the same certified
+node contract (mock replay is byte-identical run to run), and the composed
+type goes through `harness certify` before it reaches other users. Stages are
+chained linearly by default; pass `deps:` for fan-out.

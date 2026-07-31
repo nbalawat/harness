@@ -1,0 +1,4 @@
+# Deterministic packaging: gathers upstream artifacts into out/ (dir artifact).
+kind: deterministic
+description: "Packages the pipeline's results."
+command: node "$HARNESS_PROJECT_DIR/scripts/{{id}}.cjs"

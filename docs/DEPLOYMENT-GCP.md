@@ -419,3 +419,18 @@ GCS-backed registry storage (dev uses container-local /tmp).
 [ROLLOUT.md](ROLLOUT.md) phases — Phase A needs only `dist` + `gateway` + a
 minimal collector; `gallery` and Tier-2 builders arrive in Phase B; VPC-SC
 hardening and provisioned throughput are Phase C concerns.*
+
+## 11. App deployment patterns (local -> cloud)
+
+Three certified paths for where a BUILT app ends up — all reviewed-plan-based
+(the harness never applies to cloud directly; CI does, after review):
+
+| Pattern | How | Mechanics |
+|---|---|---|
+| **(a) Local only** | intake: deploy target "My machine" | No deploy stage; run from the dashboard's app preview. |
+| **(b) Local now, cloud later** | `harness deploy <workspace> --target cloud-run` | Runs the certified deploy-plan generator against the finished app artifact — no rebuild, no cascade. Produces `deploy-plan/deploy/{service.yaml,plan.md}` for CI to apply. |
+| **(c) Cloud from the start** | intake: deploy target "Google Cloud Run" | The pipeline's conditional deploy stage produces the same reviewed plan as a build artifact; UAT sees it before sign-off. |
+
+The same pattern extends to other clouds as deploy-target adapters (the
+architecture keeps deploy planning deterministic and cloud-agnostic at the
+core).

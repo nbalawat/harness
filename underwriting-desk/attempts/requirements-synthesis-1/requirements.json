@@ -1,0 +1,393 @@
+{
+  "requirements": [
+    {
+      "id": "REQ-001",
+      "text": "The system runs SMB loan underwriting as an explicit multi-stage workflow with the ordered stages: intake -> document extraction -> financial spreading -> risk grading -> memo drafting -> policy compliance check -> tiered approval -> closing. Stage transitions are modeled explicitly rather than implied by data state.",
+      "category": "functional",
+      "confidence": "stated",
+      "provenance": { "source": "src-intake", "claim": "claim-001" }
+    },
+    {
+      "id": "REQ-002",
+      "text": "A pipeline board displays every active deal and the workflow stage it currently occupies, so stage status is visible at a glance.",
+      "category": "ux",
+      "confidence": "stated",
+      "provenance": { "source": "src-intake", "claim": "claim-002" }
+    },
+    {
+      "id": "REQ-003",
+      "text": "Exactly five distinct AI agents operate inside the workflow, each scoped to a single narrow mandate; no general-purpose or catch-all agent is introduced.",
+      "category": "agent",
+      "confidence": "stated",
+      "provenance": { "source": "src-intake", "claim": "claim-003" }
+    },
+    {
+      "id": "REQ-004",
+      "text": "Intake triage agent: classifies an incoming loan request, flags documents that are missing for its request type, and proposes routing to the appropriate analyst queue.",
+      "category": "agent",
+      "confidence": "stated",
+      "provenance": { "source": "src-intake", "claim": "claim-004" }
+    },
+    {
+      "id": "REQ-005",
+      "text": "Financial spreading agent: extracts figures from borrower financial statements into the standard spread template, and attaches a source citation to every extracted number.",
+      "category": "agent",
+      "confidence": "stated",
+      "provenance": { "source": "src-intake", "claim": "claim-005" }
+    },
+    {
+      "id": "REQ-006",
+      "text": "Credit memo agent: drafts the underwriting memo and cites the specific ratios, spread figures, and policy rules each assertion relied on.",
+      "category": "agent",
+      "confidence": "stated",
+      "provenance": { "source": "src-intake", "claim": "claim-006" }
+    },
+    {
+      "id": "REQ-007",
+      "text": "Policy compliance agent: reviews every memo against lending policy — including concentration limits, prohibited industries, and LTV caps — and raises written exceptions where policy is breached.",
+      "category": "agent",
+      "confidence": "stated",
+      "provenance": { "source": "src-intake", "claim": "claim-007" }
+    },
+    {
+      "id": "REQ-008",
+      "text": "Portfolio Q&A agent: answers credit officers' questions spanning active deals, grounded strictly in stored deal data.",
+      "category": "agent",
+      "confidence": "stated",
+      "provenance": { "source": "src-intake", "claim": "claim-008" }
+    },
+    {
+      "id": "REQ-009",
+      "text": "DSCR, leverage, and current ratio are computed by deterministic code — never by an agent. Agents may read the computed values but may not produce or override them.",
+      "category": "functional",
+      "confidence": "stated",
+      "provenance": { "source": "src-intake", "claim": "claim-009" }
+    },
+    {
+      "id": "REQ-010",
+      "text": "The risk grade is assigned by deterministic logic from a transparent, inspectable rubric — never by an agent — and the rubric inputs that produced a given grade are shown to the user.",
+      "category": "functional",
+      "confidence": "stated",
+      "provenance": { "source": "src-intake", "claim": "claim-010" }
+    },
+    {
+      "id": "REQ-011",
+      "text": "A credit analyst may approve deals with exposure up to $250,000.",
+      "category": "functional",
+      "confidence": "stated",
+      "provenance": { "source": "src-intake", "claim": "claim-011" }
+    },
+    {
+      "id": "REQ-012",
+      "text": "A senior credit officer may approve deals with exposure up to $1,000,000.",
+      "category": "functional",
+      "confidence": "stated",
+      "provenance": { "source": "src-intake", "claim": "claim-012" }
+    },
+    {
+      "id": "REQ-013",
+      "text": "Deals with exposure above $1,000,000 require credit committee approval.",
+      "category": "functional",
+      "confidence": "stated",
+      "provenance": { "source": "src-intake", "claim": "claim-013" }
+    },
+    {
+      "id": "REQ-014",
+      "text": "No agent may approve a deal, decline a deal, or advance a deal past an approval step. This is enforced server-side in the workflow engine, not merely by agent prompting.",
+      "category": "security",
+      "confidence": "stated",
+      "provenance": { "source": "src-intake", "claim": "claim-014" }
+    },
+    {
+      "id": "REQ-015",
+      "text": "Every approval step records a mandatory named human decision — the identity of the deciding user is captured and non-optional.",
+      "category": "security",
+      "confidence": "stated",
+      "provenance": { "source": "src-intake", "claim": "claim-015" }
+    },
+    {
+      "id": "REQ-016",
+      "text": "Every agent output requires explicit human acceptance before the workflow proceeds to the next stage; an unaccepted agent draft blocks advancement.",
+      "category": "functional",
+      "confidence": "stated",
+      "provenance": { "source": "src-intake", "claim": "claim-016" }
+    },
+    {
+      "id": "REQ-017",
+      "text": "Declining a deal requires a documented adverse-action reason; the decline cannot be recorded without one.",
+      "category": "functional",
+      "confidence": "stated",
+      "provenance": { "source": "src-intake", "claim": "claim-017" }
+    },
+    {
+      "id": "REQ-018",
+      "text": "An immutable audit trail records every state change, every ratio calculation, every agent draft, and every human decision. Audit entries are append-only and cannot be edited or deleted through the application.",
+      "category": "data",
+      "confidence": "stated",
+      "provenance": { "source": "src-intake", "claim": "claim-018" }
+    },
+    {
+      "id": "REQ-019",
+      "text": "RBAC role 'relationship manager': may submit deals and may view only their own deals.",
+      "category": "security",
+      "confidence": "stated",
+      "provenance": { "source": "src-intake", "claim": "claim-019" }
+    },
+    {
+      "id": "REQ-020",
+      "text": "RBAC role 'credit analyst': may spread financials, draft memos, and make recommendations.",
+      "category": "security",
+      "confidence": "stated",
+      "provenance": { "source": "src-intake", "claim": "claim-020" }
+    },
+    {
+      "id": "REQ-021",
+      "text": "RBAC role 'credit officer': may approve, decline, or return deals.",
+      "category": "security",
+      "confidence": "stated",
+      "provenance": { "source": "src-intake", "claim": "claim-021" }
+    },
+    {
+      "id": "REQ-022",
+      "text": "An SLA dashboard surfaces deals that have been idle for more than 5 business days.",
+      "category": "ux",
+      "confidence": "stated",
+      "provenance": { "source": "src-intake", "claim": "claim-022" }
+    },
+    {
+      "id": "REQ-023",
+      "text": "Unit tests cover every ratio calculation and every grading rule.",
+      "category": "ops",
+      "confidence": "stated",
+      "provenance": { "source": "src-intake", "claim": "claim-023" }
+    },
+    {
+      "id": "REQ-024",
+      "text": "API tests cover every endpoint and every workflow transition, including rejected/illegal transitions.",
+      "category": "ops",
+      "confidence": "stated",
+      "provenance": { "source": "src-intake", "claim": "claim-024" }
+    },
+    {
+      "id": "REQ-025",
+      "text": "Every one of the five agents has an eval suite with fixed inputs and scored expectations.",
+      "category": "ops",
+      "confidence": "stated",
+      "provenance": { "source": "src-intake", "claim": "claim-025" }
+    },
+    {
+      "id": "REQ-026",
+      "text": "The system is deployable to Google Cloud Run: containerized, stateless request handling, configuration and secrets supplied via environment.",
+      "category": "ops",
+      "confidence": "stated",
+      "provenance": { "source": "src-intake", "claim": "claim-026" }
+    },
+
+    {
+      "id": "REQ-027",
+      "text": "A Deal is the central persisted entity, carrying borrower identity, requested facility, exposure amount, current workflow stage, assigned analyst, and lifecycle timestamps. All other artifacts (documents, spreads, ratios, grades, memos, exceptions, decisions) hang off the deal.",
+      "category": "data",
+      "confidence": "inferred",
+      "provenance": { "source": "src-intake" }
+    },
+    {
+      "id": "REQ-028",
+      "text": "Relationship managers can submit a new deal through an intake form capturing borrower details and the requested amount, which creates the deal at the intake stage.",
+      "category": "functional",
+      "confidence": "inferred",
+      "provenance": { "source": "src-intake" }
+    },
+    {
+      "id": "REQ-029",
+      "text": "Borrower documents can be uploaded and are stored durably and immutably; each stored document keeps its original filename, content type, upload user, and timestamp.",
+      "category": "data",
+      "confidence": "inferred",
+      "provenance": { "source": "src-intake" }
+    },
+    {
+      "id": "REQ-030",
+      "text": "The document extraction stage converts uploaded borrower documents into structured, addressable content that later stages and citations can reference by document and location.",
+      "category": "functional",
+      "confidence": "inferred",
+      "provenance": { "source": "src-intake" }
+    },
+    {
+      "id": "REQ-031",
+      "text": "A standard spread template exists as a defined line-item schema; the financial spreading agent fills it, and the spread is persisted as structured line items rather than free text.",
+      "category": "data",
+      "confidence": "inferred",
+      "provenance": { "source": "src-intake" }
+    },
+    {
+      "id": "REQ-032",
+      "text": "Citations are a first-class data structure: each cited value links to its supporting source (document + location for spread figures; ratio, spread line, or policy rule id for memo assertions) and is rendered as a clickable trace in the UI.",
+      "category": "data",
+      "confidence": "inferred",
+      "provenance": { "source": "src-intake" }
+    },
+    {
+      "id": "REQ-033",
+      "text": "Analyst work queues exist as a routable destination; the triage agent proposes a queue and deals appear in the assigned analyst's queue view.",
+      "category": "functional",
+      "confidence": "inferred",
+      "provenance": { "source": "src-intake" }
+    },
+    {
+      "id": "REQ-034",
+      "text": "Lending policy rules (concentration limits, prohibited industries, LTV caps) are stored as structured, versioned configuration data with stable rule ids — not hardcoded in prompts — so the compliance agent and memo citations can reference specific rules.",
+      "category": "data",
+      "confidence": "inferred",
+      "provenance": { "source": "src-intake" }
+    },
+    {
+      "id": "REQ-035",
+      "text": "Policy exceptions are persisted records attached to a deal, each with the breached rule, the agent's written rationale, and a human disposition (accepted / waived-with-justification / blocking).",
+      "category": "functional",
+      "confidence": "inferred",
+      "provenance": { "source": "src-intake" }
+    },
+    {
+      "id": "REQ-036",
+      "text": "Credit officers can return a deal to an earlier stage with a required reason; the return is a recorded workflow transition, not a silent state edit.",
+      "category": "functional",
+      "confidence": "inferred",
+      "provenance": { "source": "src-intake" }
+    },
+    {
+      "id": "REQ-037",
+      "text": "Agent outputs are persisted as pending drafts in a review state (pending / accepted / edited / rejected). Accepting or editing a draft is the act that promotes it into deal-of-record data; the original draft is retained alongside any human edit.",
+      "category": "agent",
+      "confidence": "inferred",
+      "provenance": { "source": "src-intake" }
+    },
+    {
+      "id": "REQ-038",
+      "text": "Every agent run records its model id, prompt/template version, inputs, raw output, latency, and token cost, so agent behavior is reproducible and auditable.",
+      "category": "agent",
+      "confidence": "inferred",
+      "provenance": { "source": "src-intake" }
+    },
+    {
+      "id": "REQ-039",
+      "text": "Agents are constrained to grounded retrieval over stored deal data and must abstain — returning an explicit 'not supported by the record' response — rather than speculate when evidence is absent.",
+      "category": "agent",
+      "confidence": "inferred",
+      "provenance": { "source": "src-intake" }
+    },
+    {
+      "id": "REQ-040",
+      "text": "The Portfolio Q&A agent's retrieval scope is filtered by the asking user's RBAC permissions, so it cannot surface deal data the user is not entitled to see.",
+      "category": "security",
+      "confidence": "inferred",
+      "provenance": { "source": "src-intake" }
+    },
+    {
+      "id": "REQ-041",
+      "text": "Users authenticate against built-in role-assigned accounts (assumption: no external SSO/IdP integration in v1), producing the named identity required for decisions and audit entries.",
+      "category": "security",
+      "confidence": "inferred",
+      "provenance": { "source": "src-intake" }
+    },
+    {
+      "id": "REQ-042",
+      "text": "Authorization is enforced server-side on every endpoint and every workflow transition; the relationship manager 'view own deals only' rule is applied at the data-access layer, not only by hiding UI affordances.",
+      "category": "security",
+      "confidence": "inferred",
+      "provenance": { "source": "src-intake" }
+    },
+    {
+      "id": "REQ-043",
+      "text": "The approval tier is derived deterministically from the deal's exposure amount, and an attempt to approve above one's tier is rejected server-side.",
+      "category": "security",
+      "confidence": "inferred",
+      "provenance": { "source": "src-intake" }
+    },
+    {
+      "id": "REQ-044",
+      "text": "SLA idle time is computed with a business-day calendar (excluding weekends and configured holidays) measured from the deal's last meaningful activity.",
+      "category": "functional",
+      "confidence": "inferred",
+      "provenance": { "source": "src-intake" }
+    },
+    {
+      "id": "REQ-045",
+      "text": "A deal detail view presents the full chronological deal record — documents, spread, computed ratios, grade with rubric trace, memo with citations, exceptions, decisions, and audit timeline — as the primary analyst and officer workspace.",
+      "category": "ux",
+      "confidence": "inferred",
+      "provenance": { "source": "src-intake" }
+    },
+    {
+      "id": "REQ-046",
+      "text": "A human-review UI lets the reviewer inspect an agent draft side-by-side with its cited evidence and accept, edit, or reject it, with a required reason on rejection.",
+      "category": "ux",
+      "confidence": "inferred",
+      "provenance": { "source": "src-intake" }
+    },
+    {
+      "id": "REQ-047",
+      "text": "The audit trail is viewable and filterable in the UI per deal and exportable for examiner review.",
+      "category": "ux",
+      "confidence": "inferred",
+      "provenance": { "source": "src-intake" }
+    },
+    {
+      "id": "REQ-048",
+      "text": "The closing stage records final terms and closes the deal, after which the deal becomes read-only except for audit-visible administrative actions.",
+      "category": "functional",
+      "confidence": "inferred",
+      "provenance": { "source": "src-intake" }
+    },
+    {
+      "id": "REQ-049",
+      "text": "Borrower financial data is treated as sensitive: secrets and model API keys are never committed or logged, and agent prompts/outputs stored for audit are access-controlled under the same RBAC as the deal.",
+      "category": "security",
+      "confidence": "inferred",
+      "provenance": { "source": "src-intake" }
+    },
+    {
+      "id": "REQ-050",
+      "text": "The build proceeds under every-slice supervision: each vertical slice is independently runnable, tested, and presented for human review before the next slice begins.",
+      "category": "ops",
+      "confidence": "inferred",
+      "provenance": { "source": "src-intake" }
+    },
+    {
+      "id": "REQ-051",
+      "text": "Structured request/agent logging and a health endpoint are provided for Cloud Run operability, with logs carrying deal id and correlation id.",
+      "category": "ops",
+      "confidence": "inferred",
+      "provenance": { "source": "src-intake" }
+    },
+
+    {
+      "id": "REQ-052",
+      "text": "The risk grading rubric's actual grade scale and thresholds are unspecified — how many grades, their labels, and the DSCR/leverage/current-ratio cutoffs that map to each. This determines the deterministic grading engine and its unit tests.",
+      "category": "functional",
+      "confidence": "unknown"
+    },
+    {
+      "id": "REQ-053",
+      "text": "The concrete lending policy parameters are unspecified — the prohibited industry list, the concentration limit definitions and thresholds, and the LTV caps by facility type. These are the rules the compliance agent evaluates against.",
+      "category": "data",
+      "confidence": "unknown"
+    },
+    {
+      "id": "REQ-054",
+      "text": "The definition of 'exposure' that drives approval tiering is unspecified — whether it is the requested facility amount alone, or the borrower's total aggregate relationship exposure including existing facilities. This changes both the data model and the tier routing logic.",
+      "category": "functional",
+      "confidence": "unknown"
+    },
+    {
+      "id": "REQ-055",
+      "text": "Credit committee approval mechanics above $1M are unspecified — whether it is a single recorded committee decision entered by a chair, or multiple individual member votes with a quorum/majority rule. This materially changes the approval data model and UI.",
+      "category": "functional",
+      "confidence": "unknown"
+    },
+    {
+      "id": "REQ-056",
+      "text": "The expected borrower document input format is unspecified — whether the system must perform real extraction from scanned/PDF financial statements (requiring OCR and layout parsing), or whether documents arrive as digital text/structured files. This materially changes the document extraction stage's architecture and cost.",
+      "category": "functional",
+      "confidence": "unknown"
+    }
+  ]
+}

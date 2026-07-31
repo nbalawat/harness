@@ -1,0 +1,4 @@
+# Human checkpoint with a review window: pauses, then proceeds on the default.
+kind: gate
+description: "Your checkpoint: review the work so far, then continue."
+window: 300

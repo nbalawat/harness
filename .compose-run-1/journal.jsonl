@@ -1,0 +1,19 @@
+{"type":"run.created","projectType":"policy-summarizer","projectTypeVersion":"0.1.0","ts":"2026-07-31T03:22:26.157Z"}
+{"type":"node.running","nodeId":"intake","attempt":1,"ts":"2026-07-31T03:22:26.166Z"}
+{"type":"gate.answered","nodeId":"intake","answers":{"topic":"credit policy","audience":"analysts"},"source":"default","questionCount":2,"ts":"2026-07-31T03:22:26.167Z"}
+{"type":"cost.recorded","nodeId":"intake","attempt":1,"cost":{"nodeId":"intake","attempt":1,"inputTokens":0,"outputTokens":0,"cacheReadTokens":0,"cacheWriteTokens":0,"costUsd":0,"wallClockMs":6},"ts":"2026-07-31T03:22:26.172Z"}
+{"type":"node.committed","nodeId":"intake","artifacts":{"intake":"artifacts/intake/intake.json"},"inputsHash":"44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a","ts":"2026-07-31T03:22:26.173Z"}
+{"type":"node.running","nodeId":"summarize","attempt":1,"ts":"2026-07-31T03:22:26.175Z"}
+{"type":"cost.recorded","nodeId":"summarize","attempt":1,"cost":{"nodeId":"summarize","attempt":1,"model":"claude-sonnet-5","inputTokens":0,"outputTokens":0,"cacheReadTokens":0,"cacheWriteTokens":0,"costUsd":0,"wallClockMs":109},"ts":"2026-07-31T03:22:26.284Z"}
+{"type":"node.committed","nodeId":"summarize","artifacts":{"summarize":"artifacts/summarize/summary.md"},"inputsHash":"ba60b209116d3a9bd791913142c7b87338807af67930c94b070239b6c2925a96","ts":"2026-07-31T03:22:26.285Z"}
+{"type":"node.running","nodeId":"check-summary","attempt":1,"ts":"2026-07-31T03:22:26.286Z"}
+{"type":"cost.recorded","nodeId":"check-summary","attempt":1,"cost":{"nodeId":"check-summary","attempt":1,"inputTokens":0,"outputTokens":0,"cacheReadTokens":0,"cacheWriteTokens":0,"costUsd":0,"wallClockMs":116},"ts":"2026-07-31T03:22:26.402Z"}
+{"type":"node.committed","nodeId":"check-summary","artifacts":{},"inputsHash":"f3ef4126fe8dd8e9da15a71032c6b7fbd51ea2e51debc570d4f43f52f44c93ee","ts":"2026-07-31T03:22:26.403Z"}
+{"type":"node.running","nodeId":"signoff","attempt":1,"ts":"2026-07-31T03:22:26.404Z"}
+{"type":"gate.answered","nodeId":"signoff","answers":{"verdict":"yes"},"source":"default","questionCount":1,"ts":"2026-07-31T03:22:26.405Z"}
+{"type":"cost.recorded","nodeId":"signoff","attempt":1,"cost":{"nodeId":"signoff","attempt":1,"inputTokens":0,"outputTokens":0,"cacheReadTokens":0,"cacheWriteTokens":0,"costUsd":0,"wallClockMs":1},"ts":"2026-07-31T03:22:26.405Z"}
+{"type":"node.committed","nodeId":"signoff","artifacts":{"signoff":"artifacts/signoff/signoff.json"},"inputsHash":"44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a","ts":"2026-07-31T03:22:26.406Z"}
+{"type":"node.running","nodeId":"package","attempt":1,"ts":"2026-07-31T03:22:26.407Z"}
+{"type":"cost.recorded","nodeId":"package","attempt":1,"cost":{"nodeId":"package","attempt":1,"inputTokens":0,"outputTokens":0,"cacheReadTokens":0,"cacheWriteTokens":0,"costUsd":0,"wallClockMs":106},"ts":"2026-07-31T03:22:26.513Z"}
+{"type":"node.committed","nodeId":"package","artifacts":{"bundle":"artifacts/package/out"},"inputsHash":"b01ea71b6c8087840cedb745513dff4e4026371222fca0771e9c0eee09ea5a92","ts":"2026-07-31T03:22:26.518Z"}
+{"type":"run.completed","ts":"2026-07-31T03:22:26.518Z"}

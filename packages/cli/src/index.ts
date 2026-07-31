@@ -175,6 +175,15 @@ function cmdStatus(args: string[]): number {
   return 0;
 }
 
+function cliPackageRoot(): string {
+  // dist/index.js -> packages/cli in source; the package root when bundled.
+  try {
+    return path.resolve(path.dirname(new URL(import.meta.url).pathname), "..", "..");
+  } catch {
+    return path.dirname(process.argv[1] ?? ".");
+  }
+}
+
 async function main(): Promise<void> {
   const [command, ...rest] = process.argv.slice(2);
   let code = 0;
@@ -251,6 +260,56 @@ async function main(): Promise<void> {
       });
       console.log(result.message);
       if (!result.ok) process.exitCode = 1;
+      break;
+    }
+    case "deploy": {
+      // Pattern (b) of the deployment story: build local first, deploy later.
+      // Runs the certified type's deploy-plan generator against the finished
+      // app — no rebuild, no revision cascade.
+      const { positional, flags } = parseFlags(rest);
+      if (!positional[0]) {
+        console.error("usage: harness deploy <workspace> [--target cloud-run]");
+        process.exitCode = 1;
+        break;
+      }
+      const ws = path.resolve(positional[0]);
+      const cfg = JSON.parse(fs.readFileSync(path.join(ws, "run.json"), "utf8")) as { projectTypeDir: string };
+      const arch = JSON.parse(fs.readFileSync(path.join(ws, "artifacts", "architecture", "architecture.json"), "utf8")) as Record<string, unknown>;
+      arch.deploy_target = (flags.target as string) ?? "cloud-run";
+      const stageDir = path.join(ws, "deploy-plan");
+      fs.rmSync(stageDir, { recursive: true, force: true });
+      fs.mkdirSync(stageDir, { recursive: true });
+      fs.writeFileSync(path.join(stageDir, "inputs.json"), JSON.stringify({ architecture: { path: "", data: arch } }));
+      const { spawnSync } = await import("node:child_process");
+      const r = spawnSync("node", [path.join(cfg.projectTypeDir, "scripts", "deploy-plan.cjs")], {
+        cwd: stageDir,
+        encoding: "utf8",
+        env: { ...process.env, HARNESS_PROJECT_DIR: cfg.projectTypeDir },
+      });
+      if (r.status !== 0) {
+        console.error(r.stderr || r.stdout);
+        process.exitCode = 1;
+        break;
+      }
+      console.log(r.stdout.trim());
+      console.log(`deploy plan written to ${stageDir}/deploy — review, then apply via your CI (the harness never touches cloud directly)`);
+      break;
+    }
+    case "compose": {
+      const { positional, flags } = parseFlags(rest);
+      if (!positional[0]) {
+        console.error("usage: harness compose <spec.yaml> [--out dir] [--library dir]");
+        process.exitCode = 1;
+        break;
+      }
+      const { composeType } = await import("./compose.js");
+      const spec = path.resolve(positional[0]);
+      const out = path.resolve((flags.out as string) ?? path.basename(spec).replace(/\.[^.]+$/, ""));
+      const lib = path.resolve((flags.library as string) ?? path.join(path.dirname(cliPackageRoot()), "stage-library"));
+      const result = composeType(spec, out, fs.existsSync(lib) ? lib : path.resolve("stage-library"));
+      console.log(`composed ${result.nodes} node(s) -> ${result.dir}`);
+      console.log(`try it:  harness run ${result.dir} --workspace .compose-test --mock-agents --accept-defaults`);
+      console.log(`certify: harness certify ${result.dir} --update-golden   (after adding fixtures)`);
       break;
     }
     case "self-update": {

@@ -1,0 +1,79 @@
+# Composed by `harness compose` from policy-summarizer.yaml — certified stage library.
+name: policy-summarizer
+version: 0.1.0
+description: Summarizes a policy topic into a reviewed, packaged brief.
+cost:
+  run_budget_usd: 5
+nodes:
+  - kind: gate
+    description: Collects the inputs this pipeline needs.
+    id: intake
+    deps: []
+    questions:
+      - id: topic
+        prompt: What policy area should be summarized?
+        default: credit policy
+      - id: audience
+        prompt: Who is the audience?
+        type: choice
+        default: analysts
+        options:
+          - value: analysts
+            label: Credit analysts
+          - value: executives
+            label: Executive committee
+    outputs:
+      - name: intake
+        file: intake.json
+  - kind: agent
+    description: Read the intake answers and produce a structured summary brief
+      titled 'Summary' for the declared audience, covering scope, key rules, and
+      open questions.
+    model: claude-sonnet-5
+    escalateModel: claude-opus-5
+    maxTurns: 30
+    allowedTools:
+      - Read
+      - Write
+      - Edit
+      - Bash
+      - Glob
+      - Grep
+    prompt: prompts/summarize.md
+    mock: node "$HARNESS_PROJECT_DIR/mocks/summarize.cjs"
+    id: summarize
+    deps:
+      - intake
+    outputs:
+      - name: summarize
+        file: summary.md
+  - kind: verifier
+    description: Verifies summary.md meets its contract.
+    command: node "$HARNESS_PROJECT_DIR/scripts/check-summary.cjs"
+    id: check-summary
+    deps:
+      - summarize
+  - kind: gate
+    description: "Your checkpoint: review the work so far, then continue."
+    window: 60
+    id: signoff
+    deps:
+      - check-summary
+    questions:
+      - id: verdict
+        prompt: Brief looks right — package it?
+        type: boolean
+        default: yes
+    outputs:
+      - name: signoff
+        file: signoff.json
+  - kind: deterministic
+    description: Packages the pipeline's results.
+    command: node "$HARNESS_PROJECT_DIR/scripts/package.cjs"
+    id: package
+    deps:
+      - signoff
+    outputs:
+      - name: bundle
+        file: out
+        dir: true

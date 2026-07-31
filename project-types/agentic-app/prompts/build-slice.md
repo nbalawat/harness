@@ -35,4 +35,4 @@ screens. A screenshot byte-identical to a previous slice's FAILS verification �
 stage real data through your steps so the shot visibly shows what this slice
 added. There is no fallback: a demo that cannot run is a failed slice.
 
-REVIEW BEFORE DONE (mandatory): after implementing, invoke the slice-reviewer subagent (Task tool) on your work. Address every finding it reports — fidelity breaks, shadowed routes, module bypasses, cumulative-acceptance risks — then re-run it until it replies NO FINDINGS. The verifier boots the app after you; the reviewer is how you avoid paying for a failed boot.
+REVIEW BEFORE DONE (mandatory): after implementing, invoke BOTH reviewer subagents (Task tool) on your work — slice-reviewer (contracts/fidelity) and security-reviewer (FSI hardening: validation, audit rows, human gates, RBAC, no LLM-computed money). Address every finding it reports — fidelity breaks, shadowed routes, module bypasses, cumulative-acceptance risks — then re-run it until it replies NO FINDINGS. The verifier boots the app after you; the reviewer is how you avoid paying for a failed boot.

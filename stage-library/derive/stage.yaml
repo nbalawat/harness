@@ -1,0 +1,10 @@
+# Agent stage: one hermetic agent session with a bounded instruction.
+# Params: instruction (what to produce), output (artifact file).
+kind: agent
+description: "{{instruction}}"
+model: claude-sonnet-5
+escalateModel: claude-opus-5
+maxTurns: 30
+allowedTools: [Read, Write, Edit, Bash, Glob, Grep]
+prompt: prompts/{{id}}.md
+mock: node "$HARNESS_PROJECT_DIR/mocks/{{id}}.cjs"

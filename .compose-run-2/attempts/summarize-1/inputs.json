@@ -1,0 +1,9 @@
+{
+  "intake": {
+    "path": "/Users/nbalawat/development/harness/.compose-run-2/artifacts/intake/intake.json",
+    "data": {
+      "topic": "credit policy",
+      "audience": "analysts"
+    }
+  }
+}

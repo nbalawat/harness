@@ -1,0 +1,3 @@
+# Gate stage: collects the run's inputs. Params: questions (passed through).
+kind: gate
+description: "Collects the inputs this pipeline needs."

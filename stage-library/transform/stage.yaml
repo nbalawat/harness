@@ -1,0 +1,4 @@
+# Deterministic stage: a plain command. Params: command, output.
+kind: deterministic
+description: "Deterministic transform: {{id}}."
+command: "{{command}}"

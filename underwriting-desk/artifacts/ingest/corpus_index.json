@@ -1,0 +1,142 @@
+{
+  "sources": [
+    {
+      "id": "src-intake",
+      "original": "/Users/nbalawat/development/harness/underwriting-desk/artifacts/intake/intake.json",
+      "extracted": "corpus/intake.md",
+      "type": "json"
+    }
+  ],
+  "claims": [
+    {
+      "id": "claim-001",
+      "text": "The application runs the underwriting pipeline as an explicit multi-stage workflow: intake -> document extraction -> financial spreading -> risk grading -> memo drafting -> policy compliance check -> tiered approval -> closing.",
+      "source": "src-intake"
+    },
+    {
+      "id": "claim-002",
+      "text": "Stage status must be visible on a pipeline board.",
+      "source": "src-intake"
+    },
+    {
+      "id": "claim-003",
+      "text": "Five distinct AI agents work inside the workflow, each with a narrow mandate.",
+      "source": "src-intake"
+    },
+    {
+      "id": "claim-004",
+      "text": "Intake triage agent: classifies incoming requests, flags missing documents, and routes them to analyst queues.",
+      "source": "src-intake"
+    },
+    {
+      "id": "claim-005",
+      "text": "Financial spreading agent: extracts figures from borrower statements into the standard spread template, citing a source for every number.",
+      "source": "src-intake"
+    },
+    {
+      "id": "claim-006",
+      "text": "Credit memo agent: drafts the underwriting memo, citing the specific ratios, spread figures, and policy rules it relied on.",
+      "source": "src-intake"
+    },
+    {
+      "id": "claim-007",
+      "text": "Policy compliance agent: reviews every memo against lending policy (concentration limits, prohibited industries, LTV caps) and raises written exceptions.",
+      "source": "src-intake"
+    },
+    {
+      "id": "claim-008",
+      "text": "Portfolio Q&A agent: answers credit officers' questions across active deals, grounded in stored deal data.",
+      "source": "src-intake"
+    },
+    {
+      "id": "claim-009",
+      "text": "Deterministic logic - never an agent - computes DSCR, leverage, and current ratio.",
+      "source": "src-intake"
+    },
+    {
+      "id": "claim-010",
+      "text": "Deterministic logic assigns the risk grade from a transparent rubric.",
+      "source": "src-intake"
+    },
+    {
+      "id": "claim-011",
+      "text": "Approvals tier by exposure: credit analyst can approve up to $250k.",
+      "source": "src-intake"
+    },
+    {
+      "id": "claim-012",
+      "text": "Approvals tier by exposure: senior credit officer can approve up to $1M.",
+      "source": "src-intake"
+    },
+    {
+      "id": "claim-013",
+      "text": "Approvals tier by exposure: credit committee approves exposure above $1M.",
+      "source": "src-intake"
+    },
+    {
+      "id": "claim-014",
+      "text": "No agent may approve, decline, or advance a deal past an approval step.",
+      "source": "src-intake"
+    },
+    {
+      "id": "claim-015",
+      "text": "A named human decision is mandatory at each approval step.",
+      "source": "src-intake"
+    },
+    {
+      "id": "claim-016",
+      "text": "Every agent output requires human acceptance before the workflow proceeds.",
+      "source": "src-intake"
+    },
+    {
+      "id": "claim-017",
+      "text": "Declined deals need a documented adverse-action reason.",
+      "source": "src-intake"
+    },
+    {
+      "id": "claim-018",
+      "text": "Every state change, ratio calculation, agent draft, and human decision lands in an immutable audit trail.",
+      "source": "src-intake"
+    },
+    {
+      "id": "claim-019",
+      "text": "RBAC separates relationship managers, who may submit deals and view only their own deals.",
+      "source": "src-intake"
+    },
+    {
+      "id": "claim-020",
+      "text": "RBAC separates credit analysts, who may spread financials, draft memos, and make recommendations.",
+      "source": "src-intake"
+    },
+    {
+      "id": "claim-021",
+      "text": "RBAC separates credit officers, who may approve, decline, or return deals.",
+      "source": "src-intake"
+    },
+    {
+      "id": "claim-022",
+      "text": "Deals idle past 5 business days must surface on an SLA dashboard.",
+      "source": "src-intake"
+    },
+    {
+      "id": "claim-023",
+      "text": "Unit tests are required for every ratio and grading rule.",
+      "source": "src-intake"
+    },
+    {
+      "id": "claim-024",
+      "text": "API tests are required for every endpoint and workflow transition.",
+      "source": "src-intake"
+    },
+    {
+      "id": "claim-025",
+      "text": "Agent evals are required for every agent.",
+      "source": "src-intake"
+    },
+    {
+      "id": "claim-026",
+      "text": "The system must be deployable to Cloud Run (deploy_target: cloud-run).",
+      "source": "src-intake"
+    }
+  ]
+}
