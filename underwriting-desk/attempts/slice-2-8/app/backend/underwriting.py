@@ -1280,29 +1280,19 @@ def adopt_workflow_triage(deal: dict, run_id: str | None, elapsed_ms: int, actor
         return None
 
     facts = triage_prompt_inputs(deal)
-    model = model_id()
-    cost_row = costmeter.record(model, _estimate_tokens(build_triage_prompt(deal, facts)), _estimate_tokens(reply))
-    run = store.insert(
-        "agent_runs",
-        {
-            "deal_id": deal["id"],
-            "deal_reference": deal["deal_reference"],
-            "agent_type": "intake_triage",
-            "agent_name": TRIAGE_AGENT_NAME,
-            "run_stage": "intake",
-            "model_id": model,
-            "prompt_template_version": prompt_version(TRIAGE_PROMPT_NAME),
-            "inputs": triage_run_inputs(deal, facts) | {"workflow_run_id": run_id, "workflow_node": "triage"},
-            "raw_output": pii.redact(reply)[:4000],
-            # wall clock of the workflow run's intake phase, which this agent
-            # node dominates — the engine does not expose a per-node timing.
-            "latency_ms": int(elapsed_ms),
-            "token_cost": cost_row["usd"],
-            "ran_at": now_iso(),
-            "error": None,
-        },
+    run = record_agent_run(
+        deal=deal,
+        agent_name=TRIAGE_AGENT_NAME,
+        agent_type="intake_triage",
+        run_stage="intake",
+        prompt_name=TRIAGE_PROMPT_NAME,
+        prompt=build_triage_prompt(deal, facts),
+        reply=reply,
+        inputs=triage_run_inputs(deal, facts) | {"workflow_run_id": run_id, "workflow_node": "triage"},
+        # wall clock of the workflow run's intake phase, which this agent node
+        # dominates — the engine does not expose a per-node timing.
+        latency_ms=int(elapsed_ms),
     )
-    _log("agent.run", agent="intake_triage", deal_reference=deal["deal_reference"], agent_run_id=run["id"], source="workflow")
     return _park_triage_draft(deal, _triage_content(deal, reply, facts), run["id"], actor_user_id)
 
 
@@ -1473,10 +1463,42 @@ def review_draft(*, deal: dict, draft_type: str, action: str, actor: dict, reaso
     return {"draft": draft, "promoted": promoted}
 
 
+def _unregistered_handler_ahead(run_id: str) -> str | None:
+    """First deterministic node ahead of the run whose handler this build does
+    not carry yet (a later slice owns it).
+
+    The engine fails a run outright when it reaches an unregistered handler, and
+    an event-sourced run cannot be un-failed. So when the next stretch of the
+    process needs a handler that has not shipped, the tick is deferred: the run
+    stays parked on its (already dispositioned) human node and the slice that
+    registers the handler resumes it from exactly there.
+    """
+    try:
+        state = workflow_engine.state(run_id)
+        workflow = next((w for w in workflow_engine.definitions() if w["name"] == state.get("workflow")), None)
+    except Exception:
+        return None
+    if workflow is None:
+        return None
+    nodes = workflow.get("nodes", [])
+    for offset, node in enumerate(nodes[int(state.get("cursor") or 0):]):
+        if node.get("kind") == "human":
+            if offset == 0:
+                continue  # the gate being resumed right now
+            break  # the run parks again here; anything past it is not our tick
+        if node.get("kind") == "deterministic" and node.get("handler") not in REGISTERED_HANDLERS:
+            return node["handler"]
+    return None
+
+
 def resume_workflow(deal: dict) -> dict | None:
     run_id = deal.get("workflow_run_id")
     if not run_id:
         return None
+    awaiting = _unregistered_handler_ahead(run_id)
+    if awaiting:
+        _log("workflow.tick_deferred", deal_reference=deal.get("deal_reference"), awaiting_handler=awaiting)
+        return {"run_id": run_id, "status": "deferred", "awaiting_handler": awaiting}
     try:
         state = workflow_engine.tick(run_id)
     except Exception as exc:
@@ -1510,6 +1532,9 @@ def _apply_edits(draft_type: str, content: dict, edits: dict) -> dict:
             applied["missing_documents"] = {"from": content.get("missing_documents"), "to": values}
             content["missing_documents"] = list(values)
             content["missing_document_labels"] = [DOCUMENT_TYPE_LABELS.get(v, v) for v in values]
+    editor = _EDITORS.get(draft_type)
+    if editor is not None:
+        applied.update(editor(content, edits or {}) or {})
     if not applied:
         raise DomainError(400, "an edited review must supply at least one recognised edit")
     content["source"] = "human-edited"
