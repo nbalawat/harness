@@ -571,3 +571,36 @@ test("remediation waves: robust across a MESSY span (multiple terminals + recove
   assert.equal(s.remediation[0].ended.kind, "completed");
   assert.equal(s.remediation[0].remaining.length, 0);
 });
+
+test("no phantom 'in progress': a COMPLETED run shows zero active waves (regression)", () => {
+  // The exact brittleness: after boundary-fold, a failed historical wave has
+  // remaining>0 forever. 'Active' must mean the LATEST wave with the run still
+  // running (ended:active) — never a dead wave's boundary remainder.
+  const ws = tmpDir("phantom");
+  fs.writeFileSync(path.join(ws, "run.json"), JSON.stringify({ projectTypeDir: DEMO_DIR, mockAgents: true }));
+  const T = "2026-08-01T10:00:00.000Z";
+  const ev = (o) => JSON.stringify({ ts: T, ...o });
+  fs.writeFileSync(path.join(ws, "journal.jsonl"), [
+    ev({ type: "node.committed", nodeId: "intake", artifacts: {} }),
+    // wave A: fails at merge, leaving downstream unfinished (remaining>0 forever)
+    ev({ type: "node.reopened", nodeId: "intake", reason: "user_revision", feedback: "fix" }),
+    ev({ type: "node.reopened", nodeId: "render", reason: "upstream_revised", revisionOf: "intake" }),
+    ev({ type: "node.running", nodeId: "intake", attempt: 2 }),
+    ev({ type: "node.committed", nodeId: "intake", artifacts: {} }),
+    ev({ type: "node.running", nodeId: "render", attempt: 2 }),
+    ev({ type: "node.attempt_failed", nodeId: "render", attempt: 2, error: "boom" }),
+    ev({ type: "run.failed", nodeId: "render" }),
+    // wave B: a fresh revision that completes the run
+    ev({ type: "node.reopened", nodeId: "intake", reason: "user_revision", feedback: "fix again" }),
+    ev({ type: "node.running", nodeId: "intake", attempt: 3 }),
+    ev({ type: "node.committed", nodeId: "intake", artifacts: {} }),
+    ev({ type: "node.committed", nodeId: "render", artifacts: {} }),
+    ev({ type: "run.completed" }),
+  ].join("\n") + "\n");
+  const s = buildState(ws);
+  assert.equal(s.remediationActive, false, "a completed run has NO wave in progress");
+  // wave A retains its historical boundary remaining, but is not 'active'.
+  assert.ok(s.remediation[0].remaining.length > 0, "historical wave keeps its boundary remainder");
+  assert.notEqual(s.remediation[0].ended.kind, "active", "a dead wave is never active");
+  assert.ok(s.remediation.every((r) => r.ended.kind !== "active"), "no wave is active on a completed run");
+});

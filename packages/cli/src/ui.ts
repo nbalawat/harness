@@ -659,7 +659,7 @@ export function buildState(workspace: string): Record<string, unknown> {
     windowGate,
     remediation,
     originalBuild,
-    remediationActive: remediation.some((r) => r.remaining.length > 0),
+    remediationActive: remediation.some((r) => r.ended.kind === "active"),
     designDelivery,
     appAgents: Array.isArray(rosterDoc?.agents) ? rosterDoc!.agents : null,
     agentOpportunityMap: Array.isArray(rosterDoc?.opportunity_map) ? rosterDoc!.opportunity_map : null,
@@ -2369,7 +2369,7 @@ async function tick() {
   // repeating itself. The banner carries the headline + live progress; the
   // timeline card below keeps the full history of every wave and its outcome.
   const remB = document.getElementById('remBanner');
-  const activeRems = (s.remediation || []).filter(r => r.remaining.length > 0);
+  const activeRems = (s.remediation || []).filter(r => r.ended.kind === 'active');
   remB.style.display = activeRems.length ? 'flex' : 'none';
   if (activeRems.length) {
     const r = activeRems[activeRems.length - 1];
@@ -2649,7 +2649,7 @@ async function tick() {
     // The live view during a wave: say WHY completed work looks in-flight
     // again, or "queued" steps read as the build going backwards.
     wi.style.display = '';
-    const act = waves.filter(r => r.remaining.length > 0).pop();
+    const act = waves.filter(r => r.ended.kind === 'active').pop();
     setHTML('waveInfo', '⟳ <b>This is the LIVE pipeline (current state).</b> ' + (act ? waveNoun(act) + ' ' + act.wave : 'A wave') +
       ' is re-deriving previously completed steps — they re-verify from scratch, nothing is patched in place. ' +
       'Click the wave tab above to freeze the view to that wave AS IT RAN.');
