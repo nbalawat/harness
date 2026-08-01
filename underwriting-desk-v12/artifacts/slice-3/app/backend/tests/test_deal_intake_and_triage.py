@@ -207,13 +207,16 @@ def test_workflow_start_and_tick_record_who_drove_the_run():
 
 def test_blob_and_upload_writes_require_a_known_identity():
     for path in ("/files/note.txt", "/uploads/note.txt"):
-        assert client.put(path, content=b"hello").status_code == 401, path
+        anon = client.put(path, content=b"hello")
+        assert anon.status_code == 401, path
+        assert anon.json()["detail"] == "x-user-email header required for uploads", path
         denied = client.put(path, content=b"hello", headers={"x-user-email": "nobody@evil.test"})
         assert denied.status_code == 403, path
         assert "authority" in denied.json()["detail"]
         allowed = client.put(path, content=b"hello", headers={"x-user-email": "analyst@bank.test"})
         assert allowed.status_code == 200, path
         assert allowed.json()["bytes"] == 5
+        assert allowed.json()["uploaded_by"] == "analyst@bank.test", path
 
 
 def test_upload_extension_guard_still_applies_to_identified_callers():

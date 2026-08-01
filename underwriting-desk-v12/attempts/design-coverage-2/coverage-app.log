@@ -1,0 +1,27 @@
+INFO:     Started server process [72550]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:52287 (Press CTRL+C to quit)
+INFO:     127.0.0.1:52290 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52300 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52300 - "GET /tokens.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52301 - "GET /app.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52301 - "GET /agent/mode HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52300 - "GET /agents HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52303 - "GET /api/pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52302 - "GET /api/conversations HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:52304 - "GET /api/adverse_action_reasons HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52301 - "GET /api/sla/idle HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52300 - "GET /api/approval-tiers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52305 - "GET /api/deals/DEAL-1002/dossier?acting_user_email=analyst%40bank.test HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52302 - "GET /api/pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52303 - "GET /api/qa/book-summary?acting_user_email=officer%40bank.test HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52305 - "GET /api/pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52305 - "GET /favicon.ico HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:52305 - "GET /api/deals/DEAL-1003/memo HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52303 - "GET /api/deals/DEAL-1003/policy-exceptions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52302 - "GET /api/deals/DEAL-1003/audit HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [72550]

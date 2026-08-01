@@ -1,43 +1,46 @@
-INFO:     Started server process [71049]
+INFO:     Started server process [71833]
 INFO:     Waiting for application startup.
 INFO:     Application startup complete.
-INFO:     Uvicorn running on http://127.0.0.1:51867 (Press CTRL+C to quit)
-INFO:     127.0.0.1:51879 - "GET /health HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51935 - "GET / HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51935 - "GET /tokens.css HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51936 - "GET /app.js HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51936 - "GET /agent/mode HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51935 - "GET /agents HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51937 - "GET /api/conversations HTTP/1.1" 404 Not Found
-INFO:     127.0.0.1:51938 - "GET /api/pipeline HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51937 - "GET /api/pipeline HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51936 - "GET /favicon.ico HTTP/1.1" 404 Not Found
-INFO:     127.0.0.1:51936 - "GET /api/deals/DEAL-1003/memo HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51937 - "GET /api/deals/DEAL-1003/policy-exceptions HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51938 - "GET /api/deals/DEAL-1003/audit HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51938 - "POST /chat HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51938 - "GET / HTTP/1.1" 304 Not Modified
-INFO:     127.0.0.1:51938 - "GET /app.js HTTP/1.1" 304 Not Modified
-INFO:     127.0.0.1:51938 - "GET /agent/mode HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51936 - "GET /api/conversations HTTP/1.1" 404 Not Found
-INFO:     127.0.0.1:51935 - "GET /api/pipeline HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51937 - "GET /agents HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51936 - "GET /api/pipeline HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51936 - "GET /api/deals/DEAL-1003/memo HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51937 - "GET /api/deals/DEAL-1003/policy-exceptions HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51935 - "GET /api/deals/DEAL-1003/audit HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51935 - "GET /api/pipeline HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51935 - "GET /api/deals/DEAL-1003/memo HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51937 - "GET /api/deals/DEAL-1003/policy-exceptions HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51936 - "GET /api/deals/DEAL-1003/audit HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51936 - "POST /api/deals/DEAL-1003/agents/credit-memo/run HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51936 - "GET /api/deals/DEAL-1003/audit HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51936 - "POST /api/deals/DEAL-1003/memo/accept HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51936 - "GET /api/deals/DEAL-1003/memo HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51937 - "GET /api/deals/DEAL-1003/audit HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51937 - "POST /api/deals/DEAL-1003/agents/policy-compliance/run HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51937 - "GET /api/deals/DEAL-1003/policy-exceptions HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51936 - "GET /api/deals/DEAL-1003/audit HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51936 - "POST /api/deals/DEAL-1003/policy-review/accept HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51936 - "GET /api/deals/DEAL-1003/policy-exceptions HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51937 - "GET /api/deals/DEAL-1003/audit HTTP/1.1" 200 OK
+INFO:     Uvicorn running on http://127.0.0.1:52096 (Press CTRL+C to quit)
+INFO:     127.0.0.1:52099 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52108 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52108 - "GET /tokens.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52109 - "GET /app.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52109 - "GET /agent/mode HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52108 - "GET /agents HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52111 - "GET /api/pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52110 - "GET /api/conversations HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:52109 - "GET /api/pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52108 - "GET /favicon.ico HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:52108 - "GET /api/deals/DEAL-1003/memo HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52109 - "GET /api/deals/DEAL-1003/policy-exceptions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52110 - "GET /api/deals/DEAL-1003/audit HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52110 - "POST /chat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52110 - "GET / HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:52110 - "GET /agent/mode HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52108 - "GET /api/conversations HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:52111 - "GET /api/pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52109 - "GET /agents HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52108 - "GET /api/pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52108 - "GET /api/deals/DEAL-1003/memo HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52109 - "GET /api/deals/DEAL-1003/policy-exceptions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52111 - "GET /api/deals/DEAL-1003/audit HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52111 - "GET /api/pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52111 - "GET /api/deals/DEAL-1003/memo HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52109 - "GET /api/deals/DEAL-1003/policy-exceptions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52108 - "GET /api/deals/DEAL-1003/audit HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52108 - "POST /api/deals/DEAL-1003/agents/credit-memo/run HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52108 - "GET /api/deals/DEAL-1003/audit HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52108 - "POST /api/deals/DEAL-1003/memo/accept HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52108 - "GET /api/deals/DEAL-1003/memo HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52109 - "GET /api/deals/DEAL-1003/audit HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52109 - "POST /api/deals/DEAL-1003/agents/policy-compliance/run HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52109 - "GET /api/deals/DEAL-1003/policy-exceptions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52108 - "GET /api/deals/DEAL-1003/audit HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52108 - "POST /api/deals/DEAL-1003/policy-review/accept HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52108 - "GET /api/deals/DEAL-1003/policy-exceptions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52109 - "GET /api/deals/DEAL-1003/audit HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [71833]

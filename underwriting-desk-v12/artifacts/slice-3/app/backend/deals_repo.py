@@ -23,8 +23,20 @@ def _now():
 
 
 def next_deal_code():
-    store.insert("_deal_code_seq", {})
-    return f"DEAL-{1000 + len(store.list('_deal_code_seq'))}"
+    """The next free code in the DEAL-1001+ sequence.
+
+    A code already carried by a stored row is SKIPPED rather than handed out
+    again: slices seed fixture deals by inserting a row with an explicit
+    deal_code (never through create_deal), and without this guard the
+    sequence would eventually hand a freshly filed deal the same code as a
+    fixture — two different borrowers answering to one deal_code, which
+    silently corrupts every read that resolves "the latest row for a code".
+    """
+    while True:
+        store.insert("_deal_code_seq", {})
+        code = f"DEAL-{1000 + len(store.list('_deal_code_seq'))}"
+        if not any(r.get("deal_code") == code for r in store.list("deals")):
+            return code
 
 
 def get_deal(deal_code):

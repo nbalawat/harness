@@ -1716,9 +1716,9 @@ button.ghost { background:transparent; border:1px solid var(--border); color:var
   </div>
   <div class="secwrap" id="sec-running" style="display:none">
     <div class="seclabel">See it running <span class="hint">— the application itself, as it grows</span></div>
-  <div class="card" id="shotsPanel" style="display:none"><h2>Watch it grow — one screenshot per slice</h2><div class="shots" id="shots"></div>
-    <details style="margin-top:.9rem"><summary style="cursor:pointer;font-weight:600;font-size:.88rem">Request a change to the app</summary>
-      <form id="feedbackForm" style="margin-top:.7rem;max-width:640px">
+  <div class="card" id="shotsPanel" style="display:none"><h2>Watch it grow — one screenshot per slice</h2><div class="shots" id="shots"></div></div>
+  <div class="card" id="feedbackPanel" style="display:none"><h2>Request a change <span class="hint">— describe it; the pipeline finds where it belongs and rebuilds only what it touches</span></h2>
+      <form id="feedbackForm" style="margin-top:.4rem;max-width:640px">
         <label class="opt"><input type="radio" name="fbKind" value="auto" checked><span><b>Just describe it — the pipeline routes it</b><div class="od">A clear match to one delivered feature becomes a targeted fix of that slice; anything broader or new enters through requirements with provenance and re-plans. You&#39;ll be told which path it took.</div></span></label>
         <label class="opt"><input type="radio" name="fbKind" value="fix-slice"><span><b>Fix a specific slice</b><div class="od">The build doesn&#39;t match what was agreed — the slice re-runs with your correction; requirements stay unchanged.</div></span></label>
         <label class="opt"><input type="radio" name="fbKind" value="new-requirement"><span><b>New or changed requirement</b><div class="od">Recorded as a change request, added to requirements with provenance, then re-planned and rebuilt with full traceability.</div></span></label>
@@ -1726,7 +1726,6 @@ button.ghost { background:transparent; border:1px solid var(--border); color:var
         <textarea id="fbText" rows="3" style="width:100%;box-sizing:border-box;border:1px solid var(--grid);border-radius:8px;padding:.5rem .7rem;font:inherit;background:var(--page);color:inherit" placeholder="Describe the change you want…"></textarea>
         <button type="submit" class="primary" style="margin-top:.5rem">Send feedback &amp; rebuild</button>
       </form>
-    </details>
   </div>
   <div class="card" id="appPanel" style="display:none">
     <div style="display:flex;align-items:center;gap:.8rem;flex-wrap:wrap">
@@ -2284,6 +2283,8 @@ async function tick() {
 
   // slice screenshots
   document.getElementById('shotsPanel').style.display = s.sliceShots.length ? '' : 'none';
+  // Feedback is first-class: visible whenever there is a built app to react to.
+  document.getElementById('feedbackPanel').style.display = (s.sliceShots.length || s.appAvailable) ? '' : 'none';
   const shotsChanged = setHTML('shots', s.sliceShots.map(x =>
     '<button class="shot" data-href="' + x.href + '" data-cap="' + esc(x.name || x.slice) + '" data-sub="' + esc(x.caption || '') + '"><img src="' + x.href + '" loading="lazy">' +
     '<div class="cap"><b>' + esc(x.name || x.slice) + '</b>' + (x.caption ? '<div class="capsub">' + esc(x.caption) + '</div>' : '') + '</div></button>').join(''));

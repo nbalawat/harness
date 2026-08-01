@@ -1468,57 +1468,78 @@ sup.cite:hover { background: var(--surface-sunken); }
         <span class="kicker">Section D · Append-Only</span>
         <h2>The Chronicle</h2>
       </div>
-      <span class="head-meta" id="chronicle-meta">Pick a deal below · nothing amended, nothing removed</span>
+      <span class="head-meta" id="chronicle-meta">select a deal · nothing amended, nothing removed</span>
     </div>
 
     <p class="deck">
-      The full history of a deal, set in order: state changes, deterministic calculations,
+      The full history of this deal, set in order: state changes, deterministic calculations,
       agent drafts and human decisions. Entries are written once. There is no edit path and no
       delete path — not in the interface, and not in the API beneath it.
     </p>
 
-    <!-- ---------- memo & policy desk: run the agents, accept the draft ---------- -->
+    <!-- ---------- memo & policy desk: the drafts this chronicle records ---------- -->
     <article class="manuscript" id="memo-policy-desk" style="margin-bottom:2rem;">
       <div class="manuscript__head">
-        <h3>Credit Memo &amp; Policy Compliance Desk</h3>
-        <p>Draft the underwriting memo, then run the deal against the active lending ruleset —
-          every step lands a new entry below.</p>
+        <h3>Memo &amp; Policy Desk</h3>
+        <p>The Credit Memo Agent drafts from accepted figures only; the Policy Compliance Agent
+          tests the deal against the active lending ruleset. Both are proposals — a named human
+          accepts, and every action below lands in the chronicle beneath it.</p>
       </div>
+
       <div class="find-bar" style="border-top:0;padding-top:0;">
-        <label class="field">
-          <span>Deal code</span>
-          <input type="text" id="chronicle-deal-code" value="DEAL-1003" placeholder="DEAL-1003">
+        <label class="field field--wide">
+          <span>Deal</span>
+          <select id="chronicle-deal"></select>
         </label>
         <label class="field">
-          <span>Your email (analyst)</span>
+          <span>Analyst email</span>
           <input type="email" id="chronicle-analyst-email" value="analyst@bank.test">
         </label>
-        <button type="button" class="btn btn--sm" id="chronicle-load-btn">Load chronicle</button>
-        <button type="button" class="btn btn--sm" id="memo-run-btn">Run Credit Memo Agent</button>
-        <button type="button" class="btn btn--sm btn--ink" id="memo-accept-btn" disabled>Accept memo draft</button>
-        <button type="button" class="btn btn--sm" id="policy-run-btn">Run Policy Compliance Agent</button>
+        <label class="field">
+          <span>Officer email (waivers)</span>
+          <input type="email" id="chronicle-officer-email" value="officer@bank.test">
+        </label>
       </div>
-      <p class="composer-hint" id="chronicle-status" role="status"></p>
 
-      <ul class="docket-list" id="memo-output"></ul>
-      <ul class="exception-list" id="policy-output"></ul>
+      <div class="decision-bar">
+        <button type="button" class="btn" id="memo-run-btn">Run Credit Memo Agent</button>
+        <button type="button" class="btn btn--ink" id="memo-accept-btn">Accept memo draft</button>
+        <p class="decision-note" id="memo-status">No memo drafted for this deal yet.</p>
+      </div>
+      <ul class="citation-rail" id="memo-output"></ul>
+
+      <div class="decision-bar">
+        <button type="button" class="btn" id="policy-run-btn">Run Policy Compliance Agent</button>
+        <button type="button" class="btn btn--ink" id="policy-accept-btn">Record exceptions</button>
+        <p class="decision-note" id="policy-status">No compliance review run for this deal yet.</p>
+      </div>
+      <ul class="docket-list" id="policy-output"></ul>
+
+      <div class="manuscript__head" style="margin-top:1.4rem;">
+        <h3>Policy Exceptions</h3>
+        <p>Every breach, written up with its rule reference, what was breached, and a rationale.
+          Only a credit officer may waive or uphold one, and never without writing why.</p>
+      </div>
+      <ul class="docket-list" id="exceptions-list"></ul>
+      <p class="composer-hint" id="exceptions-status" role="status"></p>
     </article>
 
     <div class="chronicle-layout">
 
-      <ol class="chronicle" id="chronicle-list">
-        <li class="by-system"><div class="entry-body"><p>Load a deal above to read its chronicle.</p></div></li>
-      </ol>
+      <div>
+        <ol class="chronicle" id="chronicle-list" aria-live="polite"></ol>
+        <p class="composer-hint" id="chronicle-empty" role="status">Loading the chronicle…</p>
+      </div>
 
       <aside class="marginalia" aria-label="Chronicle apparatus">
         <div class="margin-note">
           <h4>Filter the Chronicle</h4>
-          <ul>
-            <li><span>All entries</span><span id="chronicle-count-all">0</span></li>
-            <li><span>Human decisions</span><span id="chronicle-count-human">0</span></li>
-            <li><span>Agent drafts</span><span id="chronicle-count-agent">0</span></li>
-            <li><span>Calculations</span><span id="chronicle-count-calc">0</span></li>
-            <li><span>State changes</span><span id="chronicle-count-state">0</span></li>
+          <ul id="chronicle-filters">
+            <li><button type="button" class="btn btn--sm btn--quiet" id="chr-filter-all" data-kind="all" aria-pressed="true">All entries</button><span id="chr-count-all">0</span></li>
+            <li><button type="button" class="btn btn--sm btn--quiet" id="chr-filter-human" data-kind="human_decision" aria-pressed="false">Human decisions</button><span id="chr-count-human_decision">0</span></li>
+            <li><button type="button" class="btn btn--sm btn--quiet" id="chr-filter-agent" data-kind="agent_draft" aria-pressed="false">Agent drafts</button><span id="chr-count-agent_draft">0</span></li>
+            <li><button type="button" class="btn btn--sm btn--quiet" id="chr-filter-calc" data-kind="calculation" aria-pressed="false">Calculations</button><span id="chr-count-calculation">0</span></li>
+            <li><button type="button" class="btn btn--sm btn--quiet" id="chr-filter-state" data-kind="state_change" aria-pressed="false">State changes</button><span id="chr-count-state_change">0</span></li>
           </ul>
           <p style="margin-top:.7rem;">
             <button type="button" class="btn btn--sm btn--quiet" id="chronicle-export-btn">Export for audit</button>

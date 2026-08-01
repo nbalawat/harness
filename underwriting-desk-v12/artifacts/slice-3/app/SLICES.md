@@ -99,91 +99,99 @@ still works, and `frontend/app.js` and `frontend/index.html` were not touched.
 
 Covered by `backend/tests/test_deal_intake_and_triage.py` (24 tests green).
 
+### Revision — upload identity brought to the hardened module standard
+
+Both upload writes now declare identity in the handler signature rather than
+sniffing it off the request, which is the standard the security scan reads:
+
+- `backend/ext_blobs.py` `PUT /files/{name}` and `backend/ext_uploads.py`
+  `PUT /uploads/{name}` each take
+  `x_user_email: str | None = Header(default=None)` and return **401
+  `"x-user-email header required for uploads"`** when it is absent. The
+  `acting_user_email` query-parameter fallback (unused by any caller) is gone,
+  so the header is the single, explicit identity channel.
+- On success each response now carries `"uploaded_by": x_user_email` alongside
+  `name`/`bytes`, so the writer is visible in the response as well as in the
+  audit row.
+- Unknown/deactivated callers are still 403 via `identity.require_actor`, the
+  upload extension allowlist still applies, and
+  `test_blob_and_upload_writes_require_a_known_identity` now asserts the 401
+  detail and the `uploaded_by` echo. No other behavior changed; no frontend
+  caller PUTs to these endpoints.
+
 ## Slice 3 — Credit memo, policy exceptions, and the per-deal chronicle (`memo-policy-and-audit-trail`)
 
-Once a deal has an accepted spread, computed ratios, and an assigned risk
-grade, the Credit Memo Agent (`POST
-/api/deals/{deal_code}/agents/credit-memo/run`) drafts the underwriting memo,
-citing the ratio, spread-line, and risk-grade references behind every
-assertion; an analyst accepts it (`POST /api/deals/{deal_code}/memo/accept`),
-which advances the deal to `policy_compliance`. The Policy Compliance Agent
-(`POST /api/deals/{deal_code}/agents/policy-compliance/run`) then tests the
-deal, in deterministic code, against the active lending ruleset
-(`lending_policy`, versioned) — prohibited industries, portfolio
-concentration, and an LTV cap it reports `unevaluated` rather than "passed"
-when no appraisal is on file — and writes a formal, open exception
-(`policy_exceptions`, readable via `GET
-/api/deals/{deal_code}/policy-exceptions`) for every breach; the agent's own
-tool set denies it the ability to persist or waive one itself. Every one of
-these steps lands a normalized row in `audit_log`, and `GET
-/api/deals/{deal_code}/audit` reads a deal's whole history back in
-chronological order — state changes, deterministic calculations, agent
-drafts, and human acceptances alike. Backend: new `ext_memo_policy.py`,
-registering the `deal-underwriting-lifecycle` workflow's `persist_accepted_memo`
-(node `savememo`) and `record_policy_exceptions` (node `exceptions`) handlers.
-Built in parallel off the foundation app, this slice's acceptance drives
-`DEAL-1003` directly; `ext_memo_policy._ensure_fixture_deal` seeds that deal
-(a deliberately prohibited-industry cannabis-dispensary fixture, complete
-with an accepted spread, computed ratios and a risk grade) the first time it
-is addressed if no sibling slice has created it yet, and backfills only the
-missing underwriting inputs onto it if one already has. Frontend: the Audit
-Timeline screen (`screen-audit-timeline`) gained a Credit Memo & Policy
-Compliance desk (run memo, accept it, run policy compliance) and the
-Chronicle itself now renders live from `/api/deals/{deal_code}/audit`, with
-its filter counts, actor names, and "Export for audit" download all reading
-real data instead of the static mockup.
+Backend: `backend/ext_memo_policy_audit.py` (new file; no shared module
+rewritten). Frontend: the Audit Timeline screen (`screen-audit-timeline`)
+only. Tests: `backend/tests/test_memo_policy_audit.py` (20 tests; suite green
+at 44).
 
-**Revision (attempt 2, audit findings):** two governance fixes, no change to
-any acceptance path. (1) The DEAL-1003 fixture no longer writes a risk grade
-down as a literal. `ext_memo_policy` now carries the deterministic
-calculation chain explicitly — `compute_ratio` (fixed rounding, declared
-divide-by-zero rule) and `grade_from_rubric` (ordered, versioned
-`RUBRIC_BANDS`, first band wins, always total) — and the fixture is seeded by
-walking the real flow: `_seed_accepted_spread` → `_compute_and_store_ratios` →
-`_assign_risk_grade`. `_assign_risk_grade` is the only path by which a grade
-reaches a deal: it persists the rubric's output as a `risk_grades` row and
-then syncs `deals.risk_grade` FROM that row, deferring to a sibling slice's
-rubric row when one already exists. (2) Every mutating route here now resolves
-authority server-side through the foundation's default-deny guard,
-`identity.require_actor(email, "deal.memo" | "deal.policy_check", …)`, in
-place of the local role-set check — so an unknown email, a deactivated user,
-or a relationship manager is refused by the same rules the rest of the app
-uses. The two read routes take an optional `acting_user_email` and scope the
-answer with `identity.can_view_deal` when the caller identifies itself, and
-`GET /api/deals/{deal_code}/audit` now resolves each entry's `actor_name`
-server-side so the Chronicle no longer reads the `users` table.
+**Credit memo.** `POST /api/deals/{code}/agents/credit-memo/run` drafts the
+underwriting memo in six sections — borrower and request, financial position,
+ratio analysis, assigned risk grade, policy context, agent commentary — each
+carrying at least one citation that resolves to a stored ratio id, spread
+line-item key, risk-grade row, or policy rule reference. Every figure is
+*copied* from a record that already exists: the agent recomputes nothing, and
+the only free prose it produces is the commentary section. The draft is a
+proposal; `POST /api/deals/{code}/memo/accept` (accept / accept_with_edits /
+reject) is what persists it, writes its citation rows, records the
+`human_reviews` row, and moves the deal to `policy_compliance`.
+`GET /api/deals/{code}/memo` reads back draft and accepted versions.
 
-**Revision (attempt 3, rebase):** this slice was rebuilt on the CURRENT
-foundation after the foundation's own security-hardening revision landed. Every
-foundation and shared file (including this ledger, `frontend/app.js`'s base
-portion, `identity.py`, and `main.py`) is taken verbatim from the revised
-foundation; the only things re-applied on top are this slice's own additions —
-`backend/ext_memo_policy.py`, `backend/tests/test_memo_policy_and_audit_trail.py`,
-`demo/slice-3.json`, an append-only block at the end of `frontend/app.js`, and
-markup confined to the `screen-audit-timeline` container. No feature behaviour
-changed; Slice 1's and this slice's acceptance checks all still pass and the
-backend suite is green.
+**Policy compliance.** `POST /api/deals/{code}/agents/policy-compliance/run`
+tests the deal against the *active* lending ruleset (`lending_policy` v4.2:
+prohibited industries, single-obligor concentration, LTV cap, DSCR floor).
+The rule arithmetic is deterministic Python — no financial or policy maths is
+delegated to a model; the agent supplies the written commentary only. Each
+rule returns `passed`, `breached` or `unevaluated` (a rule whose input is
+missing is never reported as passed), and every breach becomes an exception
+carrying `rule_reference`, `violation_detail`, a written `rationale` and a
+`status`. Breaches are *proposed* until a human accepts the review at `POST
+/api/deals/{code}/policy-review/accept`, which writes them as `open`
+exceptions. `GET /api/deals/{code}/policy-exceptions` returns the recorded
+exceptions plus, clearly marked `pending_human_review`, anything the latest
+run proposed. `POST /api/deals/{code}/policy-exceptions/resolve` lets a
+credit officer — and only an officer, since the roster denies every agent the
+waiver tool — waive or uphold an exception, and refuses a blank rationale.
 
-**Revision (attempt 4, rebase onto module catalog 0.12.1):** rebased again onto
-the foundation's module-hardening revision, and adapted to the one shared
-contract it changed that this slice depends on. `ext_audit.record()` now takes
-an `actor` — an entry with no attributable actor is not an audit entry — so all
-nine audit calls in `ext_memo_policy.py` name theirs explicitly instead of
-silently defaulting to `"system"`: human acts (`spread.accepted`,
-`memo.accepted`, `policy.exception_raised`, `policy.exceptions_recorded`) name
-the acting analyst, agent drafts (`credit_memo.agent_draft`,
-`policy_compliance.agent_draft`) name whoever ran the agent, the fixture seed
-names the RM, and only the two deterministic calculations (`ratios.computed`,
-`risk_grade.assigned`) stay attributed to `"system"` — because no human authored
-those numbers, which is exactly what that default is for. The acting email is
-threaded into the two workflow handlers through their context (`actor_email`),
-so `persist_accepted_memo` and `record_policy_exceptions` stay correctly
-attributed when driven through `workflow_engine` rather than the REST routes.
-The Chronicle now shows that attribution: entries read `Analyst`, `Rm`, or
-`system` per act. Everything else — every foundation and shared file, including
-`main.py`, `identity.py`, `frontend/index.html`'s shell and `frontend/app.js`'s
-base portion — is taken verbatim from the current foundation. Verified in the
-sandbox: all four of this slice's acceptance checks pass, Slice 1's four still
-pass (in both orders — the `DEAL-1003` fixture uses an explicit `deal_code` and
-never shifts Slice 1's `DEAL-1001` sequence), and the backend suite is green at
-40 tests.
+**The chronicle.** `GET /api/deals/{code}/audit` reads the append-only
+`audit_log` back in order, resolves each actor to a named user and role, and
+classifies every entry as a `state_change`, a deterministic `calculation`, an
+`agent_draft`, or a `human_decision`, with per-kind counts and an optional
+`?kind=` filter. There is no update or delete path for an audit row anywhere
+in the API. Identified callers are scoped through `identity.can_view_deal`
+before a single entry is returned.
+
+**Workflow handlers.** Three `deal-underwriting-lifecycle` deterministic
+nodes are now real, registered functions: `persist_accepted_memo` (node
+`savememo`), `record_policy_exceptions` (node `exceptions`) and
+`resolve_policy_exceptions` (node `resolve`). Each re-checks the acting
+user's authority at the point of the state change, because each is also
+reachable through `workflow_engine.start()`.
+
+**Screen.** `screen-audit-timeline` is now fully live inside the approved
+design shell: a Memo & Policy Desk (deal picker, analyst and officer identity,
+run/accept for both agents, the memo rendered section-by-section with its
+citations, the ruleset findings with passed/breached/unevaluated flags, and
+the exception register with per-exception waive/uphold controls) sits above
+the chronicle itself, which renders live entries in the design's human/agent/
+system marks with before→after deltas. The marginalia filter is live (each
+kind narrows the list and shows its real count) and "Export for audit"
+downloads the deal's entries as JSON. Only markup inside
+`#screen-audit-timeline` was touched; `app.js` gained one appended block.
+
+**Foundation fix (shared, one function).** `deals_repo.next_deal_code()` now
+SKIPS a code already carried by a stored row instead of handing it out again.
+Slices seed fixture deals by inserting a row with an explicit `deal_code`, and
+without this guard the DEAL-1001+ sequence eventually hands a freshly filed
+deal the same code as a fixture — two borrowers answering to one deal_code,
+which silently corrupts every read that resolves "the latest row for a code"
+(it did, reproducibly, once the test suite filed its third deal). The first
+filed deal is still DEAL-1001, so slice 1's acceptance is unchanged.
+
+Fixture: `DEAL-1003` (Calder & Vance Millworks, $1.2M against $1.463M
+collateral) ships already spread, calculated and graded — accepted spread
+v3 with a document-and-cell citation per line, DSCR 1.24 / leverage 3.10 /
+current ratio 1.42, grade 4 band `band_4_watch` — so the memo has real cited
+inputs and the chronicle has history from boot. It breaches LTV-CAP-01
+(82.02% against a 75% cap) and DSCR-FLOOR-01 (1.24 against a 1.25 floor).

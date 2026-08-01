@@ -1,0 +1,36 @@
+{
+  "deal_code": "DEAL-1034",
+  "document_type": "income_statement",
+  "figures": [
+    {
+      "line_item_key": "revenue",
+      "period": "FY2025",
+      "value": 4180000.0,
+      "unit": "USD",
+      "page_number": 2,
+      "section": "Statement of Operations",
+      "cell_locator": "row 4",
+      "quoted_text": null
+    },
+    {
+      "line_item_key": "adjusted_ebitda",
+      "period": "FY2025",
+      "value": 712000.0,
+      "unit": "USD",
+      "page_number": 2,
+      "section": "Statement of Operations",
+      "cell_locator": "row 22",
+      "quoted_text": null
+    },
+    {
+      "line_item_key": "interest_expense",
+      "period": "FY2025",
+      "value": null,
+      "unit": "USD",
+      "page_number": 2,
+      "section": "Statement of Operations",
+      "cell_locator": "row 18",
+      "quoted_text": null
+    }
+  ]
+}
