@@ -1,0 +1,39 @@
+INFO:     Started server process [83098]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:56870 (Press CTRL+C to quit)
+INFO:     127.0.0.1:56873 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56874 - "POST /api/deals HTTP/1.1" 201 Created
+INFO:     127.0.0.1:56873 - "GET /api/pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56874 - "POST /api/deals/DEAL-1001/agents/intake-triage/run HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56873 - "POST /api/deals/DEAL-1001/triage/accept HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56874 - "POST /api/deals/DEAL-1002/agents/financial-spreading/run HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56873 - "POST /api/deals/DEAL-1002/spread/accept HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56874 - "GET /api/deals/DEAL-1002/ratios HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56873 - "GET /api/deals/DEAL-1002/risk-grade HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56883 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56884 - "GET /app.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56883 - "GET /tokens.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56883 - "GET /agent/mode HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56884 - "GET /agents HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56885 - "GET /api/conversations HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:56886 - "GET /api/pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56886 - "GET /favicon.ico HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:56886 - "POST /chat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56886 - "GET / HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:56886 - "GET /agent/mode HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56884 - "GET /api/conversations HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:56883 - "GET /api/pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56885 - "GET /agents HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56885 - "GET /api/deals/DEAL-1002 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56885 - "GET /api/deals/DEAL-1002/documents HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56883 - "GET /api/deals/DEAL-1002/ratios HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56884 - "GET /api/deals/DEAL-1002/risk-grade HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56884 - "POST /api/deals/DEAL-1002/agents/financial-spreading/run HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56884 - "POST /api/deals/DEAL-1002/spread/accept HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56884 - "GET /api/deals/DEAL-1002/ratios HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56883 - "GET /api/deals/DEAL-1002/risk-grade HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [83098]

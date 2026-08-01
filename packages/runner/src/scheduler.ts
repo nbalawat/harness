@@ -116,6 +116,39 @@ function whenSatisfied(ctx: RunContext, when: WhenClause, state: RunState): bool
  * journal is append-only and state is an order-insensitive fold per node.
  */
 export async function runLoop(ctx: RunContext): Promise<RunResult> {
+  // SINGLE-ENGINE LOCK: two engines driving one workspace can interleave a
+  // stale round's commits with a revision's rebuild (observed live: an audit
+  // committed against a pre-revision merge). One journal, one writer.
+  const lockFile = path.join(ctx.workspace, "engine.lock");
+  try {
+    const holder = Number(fs.readFileSync(lockFile, "utf8"));
+    if (holder && holder !== process.pid) {
+      try {
+        process.kill(holder, 0); // throws when the holder is gone
+        throw new Error(
+          `another engine (pid ${holder}) is driving this workspace — wait for it or stop it before resuming`,
+        );
+      } catch (e) {
+        if ((e as NodeJS.ErrnoException).code !== "ESRCH") throw e; // holder alive (or EPERM)
+        // stale lock from a dead process — take over
+      }
+    }
+  } catch (e) {
+    if ((e as NodeJS.ErrnoException).code !== "ENOENT") throw e;
+  }
+  fs.writeFileSync(lockFile, String(process.pid));
+  try {
+    return await runLoopLocked(ctx);
+  } finally {
+    try {
+      if (Number(fs.readFileSync(lockFile, "utf8")) === process.pid) fs.rmSync(lockFile, { force: true });
+    } catch {
+      /* already gone */
+    }
+  }
+}
+
+async function runLoopLocked(ctx: RunContext): Promise<RunResult> {
   for (;;) {
     const state = foldState(ctx.journal.read());
 

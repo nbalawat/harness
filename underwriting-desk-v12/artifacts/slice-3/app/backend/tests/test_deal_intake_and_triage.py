@@ -152,3 +152,74 @@ def test_missing_documents_reflects_attached_documents():
     code = deal["deal_code"]
     run_body = client.post(f"/api/deals/{code}/agents/intake-triage/run", json={"acting_user_email": "analyst@bank.test"}).json()
     assert set(run_body["missing_documents"]) == {"balance_sheet", "income_statement", "tax_return"}
+
+
+# ---------------------------------------------------------------------------
+# Hardened module surfaces (certified module catalog 0.12.1): every audit
+# entry is attributable, workflow runs record who started/advanced them, and
+# the two blob-write endpoints are identity-guarded like any other mutation.
+# ---------------------------------------------------------------------------
+
+def test_audit_entry_requires_an_actor():
+    """An audit entry with no attributable actor is not an audit entry."""
+    assert client.post("/audit", json={"event": "manual.check"}).status_code == 422
+    entry = client.post("/audit", json={"event": "manual.check", "actor": "officer@bank.test"})
+    assert entry.status_code == 200
+    assert entry.json()["actor"] == "officer@bank.test"
+
+
+def test_recorded_events_default_to_the_system_actor():
+    import ext_audit
+
+    assert ext_audit.record("machine.event", {"note": "no human involved"})["actor"] == "system"
+
+
+def test_workflow_start_and_tick_record_who_drove_the_run():
+    started = client.post(
+        "/workflows/deal-underwriting-lifecycle/start",
+        json={
+            "acting_user_email": "rm@bank.test",
+            "inputs": {
+                "borrower_name": "Workflow Actor Co",
+                "borrower_industry": "retail",
+                "requested_amount": 50000,
+                "exposure_amount": 50000,
+                "acting_user_email": "rm@bank.test",
+            },
+        },
+    )
+    assert started.status_code == 200
+    run_id = started.json()["run_id"]
+
+    state = client.get(f"/workflows/runs/{run_id}").json()
+    assert state["context"]["inputs"]["_started_by"] == "rm@bank.test"
+
+    # tick accepts an actor body...
+    ticked = client.post(f"/workflows/runs/{run_id}/tick", json={"acting_user_email": "analyst@bank.test"})
+    assert ticked.status_code == 200
+    assert any(
+        e["event"] == "workflow.ticked" and e["actor"] == "analyst@bank.test"
+        for e in client.get("/audit").json()
+    )
+    # ...and stays callable with no body at all (machine-driven ticks).
+    assert client.post(f"/workflows/runs/{run_id}/tick").status_code == 200
+
+
+def test_blob_and_upload_writes_require_a_known_identity():
+    for path in ("/files/note.txt", "/uploads/note.txt"):
+        assert client.put(path, content=b"hello").status_code == 401, path
+        denied = client.put(path, content=b"hello", headers={"x-user-email": "nobody@evil.test"})
+        assert denied.status_code == 403, path
+        assert "authority" in denied.json()["detail"]
+        allowed = client.put(path, content=b"hello", headers={"x-user-email": "analyst@bank.test"})
+        assert allowed.status_code == 200, path
+        assert allowed.json()["bytes"] == 5
+
+
+def test_upload_extension_guard_still_applies_to_identified_callers():
+    resp = client.put("/uploads/payload.exe", content=b"x", headers={"x-user-email": "analyst@bank.test"})
+    assert resp.status_code == 415
+
+
+def test_seed_endpoint_stays_hard_gated():
+    assert client.post("/admin/seed").status_code == 403

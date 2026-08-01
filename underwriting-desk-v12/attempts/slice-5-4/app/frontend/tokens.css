@@ -1,0 +1,44 @@
+/* ============================================================
+   Underwriting Command Center — Option 2 "Ledger Broadsheet"
+   Direction: editorial print. Manuscript desks, mastheads,
+   serif measure, generous whitespace. A page you read.
+   Palette: warm newsprint stock, oxblood rule, iron ink.
+   ============================================================ */
+
+:root {
+  /* --- required token contract --- */
+  --primary: #6b1d1d;          /* oxblood — masthead rules, editorial accent */
+  --on-primary: #faf7f0;       /* paper white sitting on oxblood */
+  --bg: #f4f0e6;               /* newsprint stock */
+  --fg: #1c1a17;               /* iron ink */
+  --surface: #fbf9f3;          /* trimmed sheet, laid over the stock */
+  --border: #cec6b2;           /* pressed rule */
+  --font: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua",
+          Georgia, "Times New Roman", serif;
+
+  /* --- extended editorial palette --- */
+  --ink-muted: #5c564a;        /* deck copy, bylines */
+  --ink-faint: #8b8371;        /* folios, captions, marginalia */
+  --rule-hair: #e0d9c7;        /* hairline between stories */
+  --rule-heavy: #1c1a17;       /* masthead bar */
+  --surface-sunken: #ece6d7;   /* pull-quote / sidebar tint */
+  --surface-raised: #ffffff;   /* proof sheet, manuscript desk */
+
+  /* editorial spot colours — used as flags, never as fills */
+  --spot-approve: #2f5d3f;     /* pressed green */
+  --spot-caution: #8a6212;     /* ochre */
+  --spot-alarm: #9c2b1e;       /* vermilion */
+  --spot-agent: #3f4a6b;       /* indigo — machine-set copy */
+
+  /* type scale — set on a 4pt measure */
+  --font-display: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+  --font-body: var(--font);
+  --font-meta: "Helvetica Neue", Helvetica, Arial, sans-serif; /* sans for folios/labels */
+  --font-mono: "SF Mono", "IBM Plex Mono", Menlo, Consolas, monospace;
+
+  --measure: 34rem;            /* the reading measure */
+  --gutter: 2.25rem;
+  --leading: 1.62;
+
+  --shadow-sheet: 0 1px 0 rgba(28,26,23,.05), 0 12px 28px -20px rgba(28,26,23,.5);
+}

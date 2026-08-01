@@ -1,0 +1,6 @@
+The user reviewed this step's previous output and requested changes:
+
+MERGE CONFLICT (stale foundation): your tree is based on an OUTDATED copy of the foundation — the foundation was revised (security hardening; its SLICES.md now contains a remediation note in the Slice 1 section) and your app/SLICES.md does not extend the current foundation ledger. Fix by REBASING: for every file you do not own (especially app/SLICES.md, frontend/app.js base portion, and any other foundation/shared files), copy the CURRENT foundation input's version over yours, then re-append YOUR Slice 3 section at the very end of SLICES.md and re-apply only your own additions elsewhere (your app.js block stays a pure append at the end). Keep your feature code (ext_memo_policy etc.) unchanged; all acceptance checks must keep passing.
+
+The previously committed output is at: /Users/nbalawat/development/harness/underwriting-desk-v12/artifacts/slice-3
+Start from it and apply ONLY the requested changes — keep everything else stable.

@@ -1210,3 +1210,22 @@ test("when.all: conjunction — every sub-clause must hold", async () => {
   assert.ok(state.committed.has("both"), "all clauses hold -> runs");
   assert.ok(state.skipped.has("neither"), "one failing clause -> skipped");
 });
+
+test("engine lock: a second engine cannot drive the same workspace concurrently", async () => {
+  const dir = writeFixture(tmpDir("lock-pt"), CONC_DAG, { "prompts/p.md": "x" });
+  const ws = tmpDir("lock-ws");
+  fs.writeFileSync(path.join(ws, "engine.lock"), String(process.pid)); // "another" live engine (this test process)
+  const ctx = makeCtx(ws, dir);
+  // Simulate a different process trying to take the same workspace.
+  const other = spawnSync(process.execPath, ["-e", `
+    const { runLoop, Journal, loadProjectType } = require(${JSON.stringify(path.join(REPO_ROOT, "packages/runner/dist/index.js"))});
+    runLoop({ workspace: ${JSON.stringify(ws)}, projectTypeDir: ${JSON.stringify(dir)}, def: loadProjectType(${JSON.stringify(dir)}),
+      journal: new Journal(${JSON.stringify(ws)}), mockAgents: true, acceptDefaults: true, interactive: false })
+      .then(() => { console.log("RAN"); }, (e) => { console.error(String(e)); process.exit(3); });
+  `], { encoding: "utf8" });
+  assert.equal(other.status, 3, other.stdout + other.stderr);
+  assert.match(other.stderr, /another engine \(pid \d+\) is driving this workspace/);
+  // A stale lock from a dead pid is taken over cleanly.
+  fs.writeFileSync(path.join(ws, "engine.lock"), "999999");
+  assert.equal((await runLoop(ctx)).status, "completed");
+});

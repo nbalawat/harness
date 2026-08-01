@@ -1,0 +1,12 @@
+INFO:     Started server process [44686]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:63001 (Press CTRL+C to quit)
+INFO:     127.0.0.1:63023 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63023 - "POST /api/deals/DEAL-1002/agents/financial-spreading/run HTTP/1.1" 422 Unprocessable Content
+INFO:     127.0.0.1:63032 - "POST /api/deals/DEAL-1002/agents/financial-spreading/run HTTP/1.1" 422 Unprocessable Content
+INFO:     127.0.0.1:63074 - "POST /api/deals HTTP/1.1" 201 Created
+INFO:     127.0.0.1:63075 - "POST /api/deals/DEAL-1002/agents/financial-spreading/run HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63076 - "POST /api/deals/DEAL-1002/spread/accept HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63077 - "GET /api/deals/DEAL-1002/ratios HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63078 - "GET /api/deals/DEAL-1002/risk-grade HTTP/1.1" 200 OK
