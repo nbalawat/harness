@@ -62,3 +62,46 @@ retry loop, at a fraction of the cost.
 
 That is the mechanism: **remediation is not waste when its lesson is promoted —
 it is how the factory pays tuition once on behalf of 50,000 users.**
+
+## The non-repeat guarantee (regression lock)
+
+Promotion alone is not enough — a gate can silently stop working. So every
+promoted lesson gets an **adversarial fixture** in
+`packages/runner/test/gate-regression.test.mjs`: a tiny app or plan that WOULD
+trigger the bug, asserted to be caught by its gate. This is the mechanical
+guarantee that the same class cannot recur:
+
+- If a future change weakens a gate, the regression test fails **in CI, not in
+  a $30 live wave.**
+- The test names the class, the fixture, the gate, and the stage it fires at —
+  so "we already learned this" is enforced, not remembered.
+
+Adding a lesson without its regression fixture is incomplete promotion. The
+suite currently locks: opt-out authorization, unauthenticated mutation, the
+generic-table-write hole, oversized slices, missing negative acceptance,
+merge same-line conflicts, and unwaived high audit findings — every class that
+cost a wave on the underwriting build.
+
+## Two failure modes remediation CANNOT fix (and what does)
+
+1. **Architectural gaps, not defects.** The underwriting build took four waves
+   trying to "add identity" and still had no real authentication, because the
+   fix is a missing *capability* — real credentials → verified principal — not
+   a patch to individual routes. No wave fixes a missing capability. The answer
+   is a **certified substrate module** (e.g. `auth-session`) that slices
+   compose, so identity is verified once, correctly, for every app. Routing the
+   same "add identity" feedback a fifth time is the foolishness; adding the
+   capability once is the fix.
+2. **Semantic completeness a regex can't judge.** "Does this redaction leak a
+   sensitive field?" is beyond deterministic scanning — that is the opus
+   audit's job, and its HIGH findings now **gate** (`audit-check`) rather than
+   sit advisory. The regex scan catches the cheap, syntactic 80%; the audit
+   gate catches the expensive, semantic 20%; together nothing reaches UAT
+   unexamined.
+
+**Shift-left is the whole game.** A wave is a failure that escaped every earlier
+gate. Push each class to the earliest gate it can be caught at — plan time
+(free, no build spend) > build time (the agent's own retry loop, no wave) >
+merge (deterministic) > audit (one agent pass) > human UAT (a wave). The
+underwriting waves were all caught late (merge/audit); the promoted gates now
+catch their classes early, so the next build of the same app starts correct.
