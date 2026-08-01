@@ -4,7 +4,7 @@ Composition contract: db (persistence-core), agent_runtime (agent-runtime),
 models.TABLES (generated from the approved data model).
 """
 from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from agent_runtime import mode, respond
 from db import store
@@ -35,8 +35,14 @@ for _ext in sorted(_glob.glob(_os.path.join(_os.path.dirname(__file__), "ext_*.p
         _mod.install(app)
 
 
+# An unbounded prompt is a denial-of-service and a prompt-injection surface, so
+# the chat message is length-bounded at the edge: anything outside the bound is
+# a 422 from FastAPI's validation before it ever reaches the model.
+MAX_CHAT_MESSAGE_CHARS = 4000
+
+
 class ChatRequest(BaseModel):
-    message: str
+    message: str = Field(min_length=1, max_length=MAX_CHAT_MESSAGE_CHARS)
 
 
 @app.get("/health")

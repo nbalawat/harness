@@ -1,32 +1,17 @@
-INFO:     Started server process [5867]
+INFO:     Started server process [6989]
 INFO:     Waiting for application startup.
 INFO:     Application startup complete.
-INFO:     Uvicorn running on http://127.0.0.1:55430 (Press CTRL+C to quit)
-INFO:     127.0.0.1:55434 - "GET /health HTTP/1.1" 200 OK
-INFO:     127.0.0.1:55439 - "POST /api/deals/DEAL-1003/agents/credit-memo/run HTTP/1.1" 422 Unprocessable Content
-INFO:     127.0.0.1:55440 - "POST /api/deals/DEAL-1003/agents/credit-memo/run HTTP/1.1" 422 Unprocessable Content
-INFO:     127.0.0.1:55457 - "GET /api/deals/DEAL-1003/audit HTTP/1.1" 200 OK
-INFO:     127.0.0.1:55459 - "POST /api/deals/DEAL-1003/agents/credit-memo/run HTTP/1.1" 200 OK
-INFO:     127.0.0.1:55460 - "POST /api/deals/DEAL-1003/agents/policy-compliance/run HTTP/1.1" 200 OK
-INFO:     127.0.0.1:55461 - "GET /api/deals/DEAL-1003/policy-exceptions HTTP/1.1" 200 OK
-INFO:     127.0.0.1:55462 - "GET /api/deals/DEAL-1003/audit HTTP/1.1" 200 OK
-INFO:     127.0.0.1:55473 - "GET /api/deals/DEAL-1003/memo HTTP/1.1" 401 Unauthorized
-INFO:     127.0.0.1:55474 - "GET /api/deals/DEAL-1003/memo?acting_user_email=analyst@bank.test HTTP/1.1" 200 OK
-INFO:     127.0.0.1:55475 - "GET /api/deals/DEAL-1003/memo HTTP/1.1" 200 OK
-INFO:     127.0.0.1:55476 - "GET /api/deals/DEAL-1003/memo?acting_user_email=nobody@evil.test HTTP/1.1" 403 Forbidden
-INFO:     127.0.0.1:55477 - "GET /api/deals/DEAL-1003/audit?acting_user_email=nobody@evil.test HTTP/1.1" 403 Forbidden
-INFO:     127.0.0.1:55478 - "GET /api/deals/DEAL-1003/audit?acting_user_email=rm2@bank.test HTTP/1.1" 403 Forbidden
-INFO:     127.0.0.1:55479 - "GET /api/deals/DEAL-1003/audit?acting_user_email=officer@bank.test HTTP/1.1" 200 OK
-INFO:     127.0.0.1:55480 - "GET /api/deals/DEAL-1003/policy-exceptions?acting_user_email=nobody@evil.test HTTP/1.1" 403 Forbidden
-INFO:     127.0.0.1:55481 - "POST /api/deals/DEAL-1003/memo/accept HTTP/1.1" 400 Bad Request
-INFO:     127.0.0.1:55482 - "POST /api/deals/DEAL-1003/memo/accept HTTP/1.1" 422 Unprocessable Content
-INFO:     127.0.0.1:55483 - "POST /api/deals/DEAL-1003/memo/accept HTTP/1.1" 400 Bad Request
-INFO:     127.0.0.1:55484 - "POST /api/deals/DEAL-1003/memo/accept HTTP/1.1" 401 Unauthorized
-INFO:     127.0.0.1:55485 - "GET /api/deals/DEAL-1003/audit?acting_user_email=officer@bank.test HTTP/1.1" 200 OK
-INFO:     127.0.0.1:55516 - "POST /api/deals/DEAL-1003/policy-review/accept HTTP/1.1" 200 OK
-INFO:     127.0.0.1:55517 - "GET /api/deals/DEAL-1003/policy-exceptions?acting_user_email=officer@bank.test HTTP/1.1" 200 OK
-INFO:     127.0.0.1:55518 - "POST /api/deals/DEAL-1003/policy-exceptions/resolve HTTP/1.1" 200 OK
-INFO:     127.0.0.1:55519 - "POST /api/deals/DEAL-1003/policy-exceptions/resolve HTTP/1.1" 409 Conflict
-INFO:     127.0.0.1:55520 - "POST /api/deals/DEAL-1003/policy-exceptions/resolve HTTP/1.1" 403 Forbidden
-INFO:     127.0.0.1:55521 - "POST /api/deals/DEAL-1003/policy-exceptions/resolve HTTP/1.1" 400 Bad Request
-INFO:     127.0.0.1:55522 - "POST /api/deals/DEAL-1003/memo/accept HTTP/1.1" 200 OK
+INFO:     Uvicorn running on http://127.0.0.1:55773 (Press CTRL+C to quit)
+INFO:     127.0.0.1:55777 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55790 - "POST /api/deals HTTP/1.1" 201 Created
+INFO:     127.0.0.1:55791 - "GET /api/pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55792 - "POST /api/deals/DEAL-1001/agents/intake-triage/run HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55793 - "POST /api/deals/DEAL-1001/triage/accept HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55794 - "POST /api/deals/DEAL-1003/agents/credit-memo/run HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55795 - "POST /api/deals/DEAL-1003/agents/policy-compliance/run HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55796 - "GET /api/deals/DEAL-1003/policy-exceptions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55797 - "GET /api/deals/DEAL-1003/audit HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [6989]

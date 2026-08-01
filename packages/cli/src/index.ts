@@ -235,6 +235,31 @@ async function main(): Promise<void> {
       code = ok ? 0 : 1;
       break;
     }
+    case "lessons": {
+      // The improvement loop's capture step: turn a run's remediation waves
+      // into classified promotion candidates for the certified layer.
+      const { positional, flags } = parseFlags(rest);
+      const ws = path.resolve(positional[0] ?? ".");
+      const { extractLessons } = await import("./lessons.js");
+      const { lessons, summary } = extractLessons(ws);
+      if (flags.json === true) {
+        console.log(JSON.stringify({ lessons, summary }, null, 2));
+      } else if (lessons.length === 0) {
+        console.log("no remediation waves in this run — nothing to promote (a clean build teaches nothing new).");
+      } else {
+        console.log(`${summary.total} lesson(s) from ${new Set(lessons.map((l) => l.wave)).size} remediation wave(s):\n`);
+        for (const l of lessons) {
+          console.log(`  wave ${l.wave} · ${l.source} → ${l.target_step}`);
+          console.log(`    finding: ${l.finding}`);
+          console.log(`    promote to: ${l.suggested_promotion.toUpperCase()} — ${l.rationale}\n`);
+        }
+        const counts = Object.entries(summary).filter(([k]) => k !== "total").map(([k, v]) => `${v} ${k}`).join(", ");
+        console.log(`promotion targets: ${counts}`);
+        console.log(`\nreview these, apply the winners to the certified layer, then: harness certify <project-type> --update-golden`);
+        console.log(`(see docs/IMPROVEMENT-LOOP.md)`);
+      }
+      break;
+    }
     case "telemetry": {
       const { flags } = parseFlags(rest);
       const { summarize, syncTelemetry } = await import("./telemetry.js");

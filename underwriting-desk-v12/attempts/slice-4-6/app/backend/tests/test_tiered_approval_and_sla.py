@@ -448,3 +448,225 @@ def test_workflow_definitions_still_validate():
     import workflow_engine
 
     assert workflow_engine.validate_definitions() == []
+
+
+# ---------------------------------------------------------------------------
+# Security remediation — the governance findings closed on this slice.
+# These are the NEGATIVE acceptance checks: what the desk must REFUSE.
+# ---------------------------------------------------------------------------
+
+def test_a_credit_decision_is_never_defaulted_to_approved():
+    """An omitted decision is a 422 — silence is not consent."""
+    code = _fresh_deal(60000)
+    omitted = client.post(
+        f"/api/deals/{code}/decision",
+        json={"acting_user_email": "officer@bank.test", "decision_notes": "…"},
+    )
+    assert omitted.status_code == 422
+    assert "explicit" in omitted.json()["detail"]
+
+    blank = client.post(
+        f"/api/deals/{code}/decision",
+        json={"acting_user_email": "officer@bank.test", "decision": "   "},
+    )
+    assert blank.status_code == 422
+
+    bogus = client.post(
+        f"/api/deals/{code}/decision",
+        json={"acting_user_email": "officer@bank.test", "decision": "maybe"},
+    )
+    assert bogus.status_code == 422
+
+    # ...and nothing was recorded by any of those attempts.
+    record = client.get(f"/api/deals/{code}/decisions?acting_user_email=officer@bank.test").json()
+    assert record["approvals"] == []
+
+    stated = client.post(
+        f"/api/deals/{code}/decision",
+        json={"acting_user_email": "officer@bank.test", "decision": "approved", "decision_notes": "ok"},
+    )
+    assert stated.status_code == 200
+    assert stated.json()["decision"] == "approved"
+
+
+def test_the_workflow_handler_itself_refuses_an_omitted_decision():
+    import pytest
+    from fastapi import HTTPException
+
+    code = _fresh_deal(60000)
+    with pytest.raises(HTTPException) as raised:
+        approvals.record_approval_decision({"inputs": {
+            "deal_id": code,
+            "acting_user_email": "officer@bank.test",
+        }})
+    assert raised.value.status_code == 422
+
+
+def test_approval_requires_the_deal_to_have_reached_the_approval_gate():
+    code = _fresh_deal(60000, stage="financial_spreading")
+    resp = client.post(
+        f"/api/deals/{code}/approve",
+        json={"acting_user_email": "officer@bank.test", "decision_notes": "rushing it"},
+    )
+    assert resp.status_code == 409
+    assert "tiered_approval" in resp.json()["detail"]
+
+
+def test_approval_is_blocked_by_an_open_policy_exception():
+    from db import store
+
+    code = _fresh_deal(60000)
+    store.insert("policy_exceptions", {
+        "deal_id": code,
+        "rule_reference": "LP-DSCR-01",
+        "rationale": "DSCR below the floor",
+        "status": "open",
+    })
+    blocked = client.post(
+        f"/api/deals/{code}/approve",
+        json={"acting_user_email": "officer@bank.test", "decision_notes": "waving it through"},
+    )
+    assert blocked.status_code == 409
+    assert "LP-DSCR-01" in blocked.json()["detail"]
+
+    # Once a human waives it, the same approval goes through.
+    store.insert("policy_exceptions", {
+        "deal_id": code,
+        "rule_reference": "LP-DSCR-01",
+        "rationale": "DSCR below the floor",
+        "status": "open",
+    })
+    for row in store.list("policy_exceptions"):
+        if row.get("deal_id") == code:
+            row["status"] = "waived"
+    assert client.post(
+        f"/api/deals/{code}/approve",
+        json={"acting_user_email": "officer@bank.test", "decision_notes": "exception waived"},
+    ).status_code == 200
+
+
+def test_a_settled_deal_cannot_be_returned():
+    code = _fresh_deal(90000)
+    client.post(f"/api/deals/{code}/approve", json={"acting_user_email": "officer@bank.test"})
+    resp = client.post(
+        f"/api/deals/{code}/return",
+        json={
+            "acting_user_email": "officer@bank.test",
+            "returned_to_stage": "financial_spreading",
+            "reason": "second thoughts",
+        },
+    )
+    assert resp.status_code == 409
+    assert "settled" in resp.json()["detail"]
+
+
+def test_scoped_reads_are_fail_closed_for_an_anonymous_or_forged_caller():
+    """401 with no identity, 403 with one that resolves to nobody."""
+    assert client.get("/api/approval-tiers").status_code == 401
+    assert client.get("/api/deals/DEAL-1004/decisions").status_code == 401
+    assert client.get("/api/approval-tiers?acting_user_email=%20").status_code == 401
+
+    assert client.get("/api/approval-tiers?acting_user_email=ghost@evil.test").status_code == 403
+    assert client.get("/api/deals/DEAL-1004/decisions?acting_user_email=ghost@evil.test").status_code == 403
+
+    # The desk UI's header identity is accepted by the same guard.
+    assert client.get(
+        "/api/approval-tiers", headers={"X-User-Email": "officer@bank.test"}
+    ).status_code == 200
+    assert client.get(
+        "/api/deals/DEAL-1004/decisions", headers={"X-User-Email": "ghost@evil.test"}
+    ).status_code == 403
+
+
+def test_the_idle_register_is_scoped_and_redacted_rather_than_opt_out():
+    """No `if acting_user_email:` opt-out: a forged reader is refused, and an
+    unidentified one gets the service line WITHOUT exposures or owning desks."""
+    assert client.get("/api/sla/idle?acting_user_email=ghost@evil.test").status_code == 403
+
+    anonymous = client.get("/api/sla/idle").json()
+    assert anonymous["deals"], "the service line itself is the desk's shared wall"
+    for row in anonymous["deals"]:
+        assert row["redacted"] is True
+        assert "exposure_amount" not in row
+        assert "owner_email" not in row
+        assert "blocking_items" not in row
+    assert anonymous["idle_exposure"] == 0
+    assert anonymous["by_owner"] == {}
+
+    identified = client.get("/api/sla/idle?acting_user_email=officer@bank.test").json()
+    assert identified["deals"][0]["owner_email"] is not None or identified["deals"][0]["owner"]
+    assert identified["idle_exposure"] > 0
+
+    # An RM sees only its own book, never the whole register.
+    rm = client.get("/api/sla/idle?acting_user_email=rm@bank.test").json()
+    assert len(rm["deals"]) <= len(identified["deals"])
+
+
+def test_an_adverse_action_needs_an_actor_and_a_controlled_stored_reason():
+    import pytest
+    from fastapi import HTTPException
+
+    code = _fresh_deal(75000)
+
+    with pytest.raises(HTTPException) as anonymous:
+        approvals.record_adverse_action_or_return({"inputs": {
+            "deal_id": code,
+            "outcome": "declined",
+            "adverse_action_reason_code": "INSUFFICIENT_DSCR",
+            "adverse_action_detail": "below the floor",
+        }})
+    assert anonymous.value.status_code == 401
+
+    with pytest.raises(HTTPException) as defaulted:
+        approvals.record_adverse_action_or_return({"inputs": {
+            "deal_id": code,
+            "acting_user_email": "officer@bank.test",
+        }})
+    assert defaulted.value.status_code == 422
+
+    with pytest.raises(HTTPException) as freetext:
+        approvals.record_adverse_action_or_return({"inputs": {
+            "deal_id": code,
+            "acting_user_email": "officer@bank.test",
+            "outcome": "declined",
+            "adverse_action_reason_code": "BECAUSE_I_SAID_SO",
+            "adverse_action_detail": "vibes",
+        }})
+    assert freetext.value.status_code == 422
+
+    with pytest.raises(HTTPException) as unpermitted:
+        approvals.record_adverse_action_or_return({"inputs": {
+            "deal_id": code,
+            "acting_user_email": "analyst@bank.test",
+            "outcome": "declined",
+            "adverse_action_reason_code": "INSUFFICIENT_DSCR",
+            "adverse_action_detail": "below the floor",
+        }})
+    assert unpermitted.value.status_code == 403
+
+    out = approvals.record_adverse_action_or_return({"inputs": {
+        "deal_id": code,
+        "acting_user_email": "officer@bank.test",
+        "outcome": "declined",
+        "adverse_action_reason_code": "EXCESSIVE_LEVERAGE",
+        "adverse_action_detail": "Leverage of 6.1x is above the 4.0x ceiling",
+    }})
+    assert out["adverse_action_reason_code"] == "EXCESSIVE_LEVERAGE"
+    # The reason is STORED, not merely echoed.
+    stored = deals_repo.get_deal(code)
+    assert stored["decline_reason_code"] == "EXCESSIVE_LEVERAGE"
+    assert "6.1x" in stored["decline_reason_detail"]
+
+
+def test_closing_a_deal_needs_authority_and_a_recorded_approval():
+    import pytest
+    from fastapi import HTTPException
+
+    code = _fresh_deal(65000)
+    with pytest.raises(HTTPException) as unapproved:
+        approvals.close_approved_deal({"inputs": {"deal_id": code, "acting_user_email": "officer@bank.test"}})
+    assert unapproved.value.status_code == 409
+
+    with pytest.raises(HTTPException) as anonymous:
+        approvals.close_approved_deal({"inputs": {"deal_id": code}})
+    assert anonymous.value.status_code == 401

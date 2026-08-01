@@ -748,14 +748,28 @@ def close_approved_deal(context):
     inputs = context.get("inputs", context) or {}
     deal_code = (context.get("intake") or {}).get("deal_id") or inputs.get("deal_id")
     deal = _deal_or_404(deal_code)
-    actor = identity.require_actor(
-        inputs.get("acting_user_email"), "deal.approve", "close an approved deal"
-    )
+    actor = identity.require_actor(inputs.get("acting_user_email"), action="close an approved deal")
     settled = _decided_approval(deal_code)
     if settled is None or settled.get("decision") != "approved":
         raise HTTPException(
             status_code=409,
             detail=f"{deal_code} has no recorded approval, so it cannot be closed as approved",
+        )
+    # Authority to close is derived from the recorded approval: the human who
+    # approved it, or anyone holding blanket approval authority. Note that the
+    # approver may be a credit analyst — the tier ladder grants authority
+    # BELOW the ceiling through `deal.recommend`, not `deal.approve` — so a
+    # flat `deal.approve` check here would refuse a legitimate close.
+    if (
+        settled.get("approved_by_user_id") != actor.get("id")
+        and not identity.has_permission(actor, "deal.approve")
+    ):
+        raise HTTPException(
+            status_code=403,
+            detail=(
+                f"role '{actor.get('role')}' did not approve {deal_code} and lacks the "
+                f"authority to close it"
+            ),
         )
     updated = deals_repo.update_deal(
         deal_code,
@@ -1010,11 +1024,16 @@ def approve_deal(deal_code: str, req: ApproveRequest):
     deal = _deal_or_404(deal_code)
     # 1. WHO: identity + the exposure-tier authority ladder, server-side.
     actor, tier = _approver_or_403(req.acting_user_email, deal, "approve this deal")
-    # 2. WHETHER: the deal has actually reached the approval gate and carries
-    #    no open policy exception.
-    _approval_preconditions_or_409(deal)
-    # 3. ONCE: a settled credit decision is never silently overwritten.
-    _already_decided(deal_code, "approved", actor)
+    # 2. ONCE: a settled credit decision is never silently overwritten. This
+    #    runs BEFORE the stage precondition, because approving an already
+    #    approved deal is a double-submit of the same form (an idempotent
+    #    replay), not a fresh approval of a deal that has since moved to
+    #    closing.
+    replay = _already_decided(deal_code, "approved", actor)
+    # 3. WHETHER: a FIRST approval also requires that the deal has reached the
+    #    approval gate and carries no open, unwaived policy exception.
+    if replay is None:
+        _approval_preconditions_or_409(deal)
 
     row, replayed = _record_decision(deal, actor, "approved", req.decision_notes, tier)
     close_approved_deal({"inputs": {"deal_id": deal_code, "acting_user_email": actor["email"]}})

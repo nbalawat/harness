@@ -131,7 +131,7 @@ def test_a_prohibited_industry_deal_raises_the_prohibited_industry_exception():
 
 def test_exceptions_are_recorded_only_after_a_human_accepts_the_review():
     client.post(f"/api/deals/{DEAL}/agents/policy-compliance/run", json=ANALYST)
-    before = client.get(f"/api/deals/{DEAL}/policy-exceptions").json()
+    before = client.get(f"/api/deals/{DEAL}/policy-exceptions", params=AS_ANALYST).json()
     assert all(e["origin"] == "pending_human_review" for e in before["proposed"])
 
     recorded = client.post(f"/api/deals/{DEAL}/policy-review/accept", json=ANALYST)
@@ -141,7 +141,7 @@ def test_exceptions_are_recorded_only_after_a_human_accepts_the_review():
     assert body["open_exception_count"] >= 2
     assert body["policy_version"] == "v4.2"
 
-    after = client.get(f"/api/deals/{DEAL}/policy-exceptions").json()
+    after = client.get(f"/api/deals/{DEAL}/policy-exceptions", params=AS_ANALYST).json()
     refs = {e["rule_reference"] for e in after["recorded"]}
     assert {"LTV-CAP-01", "DSCR-FLOOR-01"} <= refs
     for exception in after["recorded"]:
@@ -152,7 +152,7 @@ def test_exceptions_are_recorded_only_after_a_human_accepts_the_review():
 def test_only_an_officer_may_waive_an_exception_and_a_rationale_is_required():
     client.post(f"/api/deals/{DEAL}/agents/policy-compliance/run", json=ANALYST)
     client.post(f"/api/deals/{DEAL}/policy-review/accept", json=ANALYST)
-    listed = client.get(f"/api/deals/{DEAL}/policy-exceptions").json()["recorded"]
+    listed = client.get(f"/api/deals/{DEAL}/policy-exceptions", params=AS_ANALYST).json()["recorded"]
     ref = next(e["exception_ref"] for e in listed if e["status"] == "open")
 
     denied = client.post(
@@ -182,7 +182,7 @@ def test_only_an_officer_may_waive_an_exception_and_a_rationale_is_required():
     )
     assert waived.status_code == 200
     assert ref in waived.json()["resolved_exception_ids"]
-    current = {e["exception_ref"]: e for e in client.get(f"/api/deals/{DEAL}/policy-exceptions").json()["recorded"]}
+    current = {e["exception_ref"]: e for e in client.get(f"/api/deals/{DEAL}/policy-exceptions", params=AS_ANALYST).json()["recorded"]}
     assert current[ref]["status"] == "waived"
     assert current[ref]["resolved_by_user_id"] is not None
 
@@ -196,7 +196,7 @@ def test_audit_timeline_carries_actor_action_kind_and_timestamp_in_order():
     client.post(f"/api/deals/{DEAL}/memo/accept", json=ANALYST)
     client.post(f"/api/deals/{DEAL}/agents/policy-compliance/run", json=ANALYST)
 
-    resp = client.get(f"/api/deals/{DEAL}/audit")
+    resp = client.get(f"/api/deals/{DEAL}/audit", params=AS_ANALYST)
     assert resp.status_code == 200
     body = resp.json()
     entries = body["entries"]
@@ -223,7 +223,7 @@ def test_audit_timeline_carries_actor_action_kind_and_timestamp_in_order():
 
 def test_agent_draft_entries_name_the_agent_that_produced_them():
     client.post(f"/api/deals/{DEAL}/agents/credit-memo/run", json=ANALYST)
-    entries = client.get(f"/api/deals/{DEAL}/audit").json()["entries"]
+    entries = client.get(f"/api/deals/{DEAL}/audit", params=AS_ANALYST).json()["entries"]
     drafts = [e for e in entries if e["entry_kind"] == "agent_draft"]
     assert drafts
     assert any(e["agent_draft"] == "Credit Memo Agent" for e in drafts)
@@ -231,7 +231,7 @@ def test_agent_draft_entries_name_the_agent_that_produced_them():
 
 def test_timeline_can_be_filtered_by_entry_kind():
     client.post(f"/api/deals/{DEAL}/agents/credit-memo/run", json=ANALYST)
-    body = client.get(f"/api/deals/{DEAL}/audit", params={"kind": "agent_draft"}).json()
+    body = client.get(f"/api/deals/{DEAL}/audit", params={**AS_ANALYST, "kind": "agent_draft"}).json()
     assert body["entries"]
     assert all(e["entry_kind"] == "agent_draft" for e in body["entries"])
     assert body["counts"]["all"] > len(body["entries"])

@@ -1,0 +1,25 @@
+INFO:     Started server process [69405]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:51366 (Press CTRL+C to quit)
+INFO:     127.0.0.1:51372 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51392 - "POST /api/qa/ask HTTP/1.1" 422 Unprocessable Content
+INFO:     127.0.0.1:51400 - "POST /api/qa/ask HTTP/1.1" 422 Unprocessable Content
+INFO:     127.0.0.1:51400 - "GET /api/qa/sessions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51419 - "POST /api/qa/ask HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51420 - "POST /api/qa/ask HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51421 - "GET /api/qa/sessions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51422 - "POST /api/qa/ask HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51429 - "GET /api/pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51436 - "POST /api/deals HTTP/1.1" 201 Created
+INFO:     127.0.0.1:51437 - "GET /api/pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51438 - "POST /api/deals/DEAL-1001/agents/intake-triage/run HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51439 - "POST /api/deals/DEAL-1001/triage/accept HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51440 - "POST /api/qa/ask HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51441 - "POST /api/qa/ask HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51442 - "GET /api/qa/sessions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51443 - "POST /api/qa/ask HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [69405]
