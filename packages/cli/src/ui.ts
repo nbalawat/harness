@@ -1340,6 +1340,12 @@ body { font:14px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif; background:
 .remarrow { color:var(--accent, #3b5bdb); font-size:.72rem; letter-spacing:.08em; text-transform:uppercase; margin:.1rem 0 .3rem; }
 .remfb { padding:.25rem 0 .25rem .9rem; border-left:2px solid var(--border); margin:.2rem 0; font-size:.85rem; }
 .remprop { display:flex; flex-wrap:wrap; gap:.35rem .5rem; align-items:center; font-size:.8rem; }
+.subtabs { display:flex; gap:.35rem; flex-wrap:wrap; margin:.4rem 0 .6rem; }
+.subtabs button { font-size:.76rem; padding:.28rem .7rem; border:1px solid var(--border); background:var(--surface); border-radius:999px; cursor:pointer; color:inherit; }
+.subtabs button.active { border-color:var(--accent,#3b5bdb); color:var(--accent,#3b5bdb); font-weight:600; }
+#waveInfo { border:1px solid var(--accent,#3b5bdb); border-left-width:4px; border-radius:10px; padding:.55rem .8rem; margin-bottom:.6rem; font-size:.85rem; }
+.prow.dim { opacity:.32; }
+.prow .wavechip { margin-left:.4rem; }
 main { padding:1.2rem clamp(1rem,4vw,2.5rem); max-width:1420px; margin:0 auto; }
 .tabpane { display:none; }
 .tabpane.active { display:block; }
@@ -1672,7 +1678,10 @@ button.ghost { background:transparent; border:1px solid var(--border); color:var
   </div>
 </section>
 <section class="tabpane" id="tab-pipeline">
-  <div class="card"><h2>Pipeline <span class="hint">— grouped by phase; click any step to inspect it</span></h2><div id="nodes"></div></div>
+  <div class="card"><h2>Pipeline <span class="hint">— grouped by phase; click any step to inspect it</span></h2>
+    <div class="subtabs" id="waveTabs" style="display:none"></div>
+    <div id="waveInfo" style="display:none"></div>
+    <div id="nodes"></div></div>
 </section>
 <section class="tabpane" id="tab-documents">
   <div class="card"><h2>Documents <span class="hint">— what the run produced for you to read</span></h2>
@@ -1704,6 +1713,22 @@ button.ghost { background:transparent; border:1px solid var(--border); color:var
 <script>
 const STATUS_COLOR = { completed:'var(--good)', running:'var(--accent)', parked:'var(--warn)', failed:'var(--crit)', stopped:'var(--muted)', starting:'var(--warn)' };
 const STATE_ICON = { committed:'✓', failed:'✕', parked:'⏸', started:'●', skipped:'↷', pending:'○' };
+const REM_SRC_ICON = { 'merge conflict': '⛙', 'security scan': '🛡', 'code audit': '🔍', 'live verification': '⚡', 'user review': '👤', 'review feedback': '💬' };
+let waveSel = 'all'; // pipeline sub-view: 'all' or a remediation wave number
+function remHeadline(fb) {
+  if (!fb) return 'review feedback';
+  const head = fb.split(/[:.]/)[0].trim();
+  return (head.length >= 8 && head.length <= 90 ? head : fb.slice(0, 90)).toLowerCase();
+}
+function remOutcomeChip(a) {
+  return a.outcome === 'committed' ? (a.cached
+      ? '<span class="chip" title="inputs unchanged — previous result re-used">unchanged · reused</span>'
+      : '<span class="chip" style="background:var(--ok,#2b8a3e);color:#fff">rebuilt ✓' + (a.attempts > 1 ? ' (' + a.attempts + ' attempts)' : '') + (a.costUsd ? ' · $' + a.costUsd.toFixed(2) : '') + '</span>')
+    : a.outcome === 're-running' ? '<span class="chip remed">re-building now…</span>'
+    : a.outcome === 'failed' ? '<span class="chip" style="background:var(--bad,#c92a2a);color:#fff">failed — next wave fixes it</span>'
+    : a.outcome === 'skipped' ? '<span class="chip">skipped</span>'
+    : '<span class="chip">queued</span>';
+}
 const prevHtml = {};
 function setHTML(id, html) {
   if (prevHtml[id] === html) return false;
@@ -2060,11 +2085,6 @@ async function tick() {
   // Remediation: re-running steps must never look like the build mysteriously
   // repeating itself. The banner carries the headline + live progress; the
   // timeline card below keeps the full history of every wave and its outcome.
-  const remHeadline = (fb) => {
-    if (!fb) return 'review feedback';
-    const head = fb.split(/[:.]/)[0].trim();
-    return (head.length >= 8 && head.length <= 90 ? head : fb.slice(0, 90)).toLowerCase();
-  };
   const remB = document.getElementById('remBanner');
   const activeRems = (s.remediation || []).filter(r => r.remaining.length > 0);
   remB.style.display = activeRems.length ? 'flex' : 'none';
@@ -2078,15 +2098,8 @@ async function tick() {
   const remP = document.getElementById('remedPanel');
   if ((s.remediation || []).length) {
     remP.style.display = '';
-    const SRC_ICON = { 'merge conflict': '⛙', 'security scan': '🛡', 'code audit': '🔍', 'live verification': '⚡', 'user review': '👤', 'review feedback': '💬' };
-    const outcomeChip = (a) =>
-      a.outcome === 'committed' ? (a.cached
-        ? '<span class="chip" title="inputs unchanged — previous result re-used">unchanged · reused</span>'
-        : '<span class="chip" style="background:var(--ok,#2b8a3e);color:#fff">rebuilt ✓' + (a.attempts > 1 ? ' (' + a.attempts + ' attempts)' : '') + (a.costUsd ? ' · $' + a.costUsd.toFixed(2) : '') + '</span>')
-      : a.outcome === 're-running' ? '<span class="chip remed">re-building now…</span>'
-      : a.outcome === 'failed' ? '<span class="chip" style="background:var(--bad,#c92a2a);color:#fff">failed — next wave fixes it</span>'
-      : a.outcome === 'skipped' ? '<span class="chip">skipped</span>'
-      : '<span class="chip">queued</span>';
+    const SRC_ICON = REM_SRC_ICON;
+    const outcomeChip = remOutcomeChip;
     const origin = '<div class="remwave">' +
       '<div class="remhead"><b>Original build</b>' +
       (s.originalBuild && s.originalBuild.completedAt
@@ -2334,15 +2347,47 @@ async function tick() {
     byPhase[n.phase].push(n);
   }
   const header = '<div class="prow header"><span></span><span>Step</span><span>Kind / model</span><span>What it does</span><span class="num">Cost</span><span class="num">Tokens</span><span class="num">Time</span></div>';
+  // Wave sub-tabs: view the pipeline as the full build, or through the lens
+  // of one remediation wave — its feedback up top, its steps highlighted with
+  // outcomes, everything untouched dimmed. The flow becomes visible in place.
+  const wt = document.getElementById('waveTabs');
+  const wi = document.getElementById('waveInfo');
+  const waves = s.remediation || [];
+  if (waves.length) {
+    wt.style.display = '';
+    const tabHtml = '<button data-wave="all" class="' + (waveSel === 'all' ? 'active' : '') + '">Full build</button>' +
+      waves.map(r => '<button data-wave="' + r.wave + '" class="' + (String(waveSel) === String(r.wave) ? 'active' : '') + '">' +
+        (REM_SRC_ICON[r.feedbacks[0]?.source] || '💬') + ' Remediation ' + r.wave +
+        (r.remaining.length ? ' <span class="dot"></span>' : '') + '</button>').join('');
+    if (wt.innerHTML !== tabHtml) {
+      wt.innerHTML = tabHtml;
+      wt.querySelectorAll('button').forEach(b => b.onclick = () => { waveSel = b.dataset.wave; tick(); });
+    }
+  } else { wt.style.display = 'none'; waveSel = 'all'; }
+  const activeWave = waveSel === 'all' ? null : waves.find(r => String(r.wave) === String(waveSel));
+  if (activeWave) {
+    wi.style.display = '';
+    setHTML('waveInfo',
+      '<div style="margin-bottom:.3rem"><b>Remediation ' + activeWave.wave + '</b> <span class="hint">started ' + esc(String(activeWave.at||'').slice(11,19)) + '</span> ' +
+      (activeWave.remaining.length === 0 ? '<span class="chip" style="background:var(--ok,#2b8a3e);color:#fff">fixed &amp; re-verified ✓</span>'
+        : '<span class="chip remed">re-deriving · ' + (activeWave.reopened.length - activeWave.remaining.length) + '/' + activeWave.reopened.length + '</span>') + '</div>' +
+      activeWave.feedbacks.map(f =>
+        '<div class="remfb">' + (REM_SRC_ICON[f.source] || '💬') + ' <b>' + esc(f.source) + '</b> found the problem → feedback delivered to <span class="mono">' + esc(f.nodeId) + '</span>' +
+        (f.feedback ? '<details><summary class="hint">what it said</summary><div class="hint" style="white-space:pre-wrap;max-height:160px;overflow:auto">' + esc(f.feedback) + '</div></details>' : '') + '</div>').join('') +
+      '<div class="hint" style="margin-top:.25rem">Highlighted steps below are this wave\'s re-derivation, in place in the pipeline; dimmed steps were untouched.</div>');
+  } else wi.style.display = 'none';
+  const waveAction = (id) => activeWave ? activeWave.actions.find(a => a.nodeId === id) : null;
+
   setHTML('nodes', phases.map(ph => {
     const list = byPhase[ph];
     const phDone = list.filter(n => n.state === 'committed' || n.state === 'skipped').length;
     return '<div class="phase"><div class="phead"><b>' + esc(ph) + '</b><div class="bar"><div style="width:' + (100*phDone/list.length) + '%"></div></div><span class="stat">' + phDone + '/' + list.length + '</span></div>' + header +
       list.map(n =>
-        '<div class="prow ' + n.state + '" data-id="' + esc(n.id) + '"><span class="icon">' + (STATE_ICON[n.state]||'') + '</span>' +
+        '<div class="prow ' + n.state + (activeWave && !waveAction(n.id) ? ' dim' : '') + '" data-id="' + esc(n.id) + '"><span class="icon">' + (STATE_ICON[n.state]||'') + '</span>' +
         '<span class="id mono">' + esc(n.id) + (n.retries ? ' <span class="chip retry">retry ×' + n.retries + '</span>' : '') +
-        (n.revised ? ' <span class="chip" style="border:1px solid var(--accent,#3b5bdb);color:var(--accent,#3b5bdb)" title="remediation feedback was delivered to this step ' + n.revised + ' time(s) — see the Remediation panel on Overview">revised ×' + n.revised + '</span>' : '') +
-        ((s.remediation || []).some(r => r.remaining.includes(n.id)) ? ' <span class="chip remed" title="re-deriving from remediation feedback">remediating</span>' : '') + '</span>' +
+        (n.revised ? ' <span class="chip" style="border:1px solid var(--accent,#3b5bdb);color:var(--accent,#3b5bdb)" title="remediation feedback was delivered to this step ' + n.revised + ' time(s) — see the wave tabs above or the Remediation panel on Overview">revised ×' + n.revised + '</span>' : '') +
+        (activeWave && waveAction(n.id) ? ' <span class="wavechip">' + remOutcomeChip(waveAction(n.id)) + '</span>' : '') +
+        (!activeWave && (s.remediation || []).some(r => r.remaining.includes(n.id)) ? ' <span class="chip remed" title="re-deriving from remediation feedback">remediating</span>' : '') + '</span>' +
         (n.kind === 'agent' ? '<span class="chip model">' + esc(shortModel(n.model) || 'agent') + '</span>' : '<span class="chip">' + n.kind + '</span>') +
         '<span class="desc">' + esc(n.description ?? '') + '</span>' +
         '<span class="num">' + (n.cost && n.cost.costUsd ? '$' + n.cost.costUsd.toFixed(2) : '') + '</span>' +
