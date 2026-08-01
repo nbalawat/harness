@@ -14861,3 +14861,9 @@
 {"type":"node.running","nodeId":"uat","attempt":5,"ts":"2026-08-01T14:56:55.243Z"}
 {"type":"node.parked","nodeId":"uat","attempt":5,"ts":"2026-08-01T14:56:55.245Z"}
 {"type":"run.parked","nodeId":"uat","ts":"2026-08-01T14:56:55.245Z"}
+{"type":"node.running","nodeId":"uat","attempt":6,"ts":"2026-08-01T15:03:16.201Z"}
+{"type":"gate.answered","nodeId":"uat","answers":{"approved":"yes"},"source":"recorded","questionCount":1,"ts":"2026-08-01T15:03:16.205Z"}
+{"type":"cost.recorded","nodeId":"uat","attempt":6,"cost":{"nodeId":"uat","attempt":6,"inputTokens":0,"outputTokens":0,"cacheReadTokens":0,"cacheWriteTokens":0,"costUsd":0,"wallClockMs":36},"ts":"2026-08-01T15:03:16.237Z"}
+{"type":"node.committed","nodeId":"uat","artifacts":{"uat":"artifacts/uat/uat.json"},"inputsHash":"881de14020c203d10d05137662ffd515a6912eb15f25b7192388e131ff149294","ts":"2026-08-01T15:03:16.238Z"}
+{"type":"node.committed","nodeId":"deploy","artifacts":{"deploy_plan":"artifacts/deploy/deploy"},"inputsHash":"fc05aa58ff6d2cc99b81e9dc8728e49774a7e8d1c564eab0ed6429959c1e8804","cached":true,"ts":"2026-08-01T15:03:16.383Z"}
+{"type":"run.completed","ts":"2026-08-01T15:03:16.425Z"}

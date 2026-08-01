@@ -22,7 +22,7 @@
 # any slice-authored mutating route carrying no identity; live builds verify
 # agents with LIVE calls (stub only for mock/certification determinism).
 name: agentic-app
-version: 0.12.1
+version: 0.12.2
 description: Builds a working agentic AI application from your problem statement and documents — requirements with provenance, approvable designs, certified modules, parallel feature-slice build with deterministic merge and tests, security scan, and governance evidence.
 
 # Frontier concurrency: how many non-gate nodes may execute at once. Three
@@ -622,6 +622,15 @@ nodes:
     outputs:
       - { name: audit, file: audit.json, schema: schemas/audit.schema.json }
 
+  - id: audit-check
+    phase: Verification
+    description: "The code audit is a GATE, not advice: any unwaived high-severity finding (semantic authz, human-gate, or financial-integrity defect a regex scan cannot catch) blocks the build until fixed or a named human waives it."
+    kind: verifier
+    deps: [slice-audit]
+    command: node "$HARNESS_PROJECT_DIR/scripts/audit-check.cjs"
+    outputs:
+      - { name: audit_gate, file: audit_gate.json }
+
   - id: integrate
     phase: Verification
     description: "Runs the whole app: full test suite, agent evals, and container boot smoke."
@@ -654,7 +663,7 @@ nodes:
     phase: Verification
     description: "Generates the evidence pack: tests, evals, security, code audit, and requirement coverage with proof."
     kind: deterministic
-    deps: [security-scan, integrate, agent-design, traceability, slice-audit]
+    deps: [security-scan, integrate, agent-design, traceability, slice-audit, audit-check]
     command: node "$HARNESS_PROJECT_DIR/scripts/governance.cjs"
     outputs:
       - { name: governance, file: governance.json, schema: schemas/governance.schema.json }

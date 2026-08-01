@@ -511,6 +511,18 @@ export function buildState(workspace: string): Record<string, unknown> {
     // Remaining = not satisfied AT THE BOUNDARY (not current state — else a
     // later wave's fixes retroactively empty an earlier wave's remaining).
     const remaining = w.reopened.filter((id) => !atEnd.committed.has(id) && !atEnd.skipped.has(id));
+    // EVERY node's state at the boundary — so a wave lens can render even the
+    // steps this wave didn't reopen at their state WHEN THE WAVE RAN, not now.
+    // (This is the fix for "superseded wave shows the whole pipeline green":
+    // steps the wave never reached read pending, not their eventual commit.)
+    const nodeStates: Record<string, string> = {};
+    for (const n of def.nodes) {
+      nodeStates[n.id] = atEnd.committed.has(n.id) ? "committed"
+        : atEnd.failed.has(n.id) ? "failed"
+          : atEnd.skipped.has(n.id) ? "skipped"
+            : stillRunning(n.id) ? "re-running"
+              : "pending";
+    }
     // KIND: a wave that fixes a DEFECT is a remediation; a wave that adds/changes
     // a REQUIREMENT is an enhancement. The signal is the entry point — feedback
     // routed to the requirements node (the CR front door) is a change of intent,
@@ -529,6 +541,7 @@ export function buildState(workspace: string): Record<string, unknown> {
       actions,
       trigger,
       ended,
+      nodeStates,
       // legacy fields the banner uses
       nodeId: w.feedbacks[0]?.nodeId ?? w.reopened[0],
       feedback: w.feedbacks[0]?.feedback ?? null,
@@ -2614,9 +2627,16 @@ async function tick() {
     const phLabel = activeWave ? (inWave.length ? phDone + '/' + inWave.length + ' re-verified' : '—') : phDone + '/' + list.length;
     return '<div class="phase"><div class="phead"><b>' + esc(ph) + '</b><div class="bar"><div style="width:' + (100*phDone/denom) + '%"></div></div><span class="stat">' + phLabel + '</span></div>' + header +
       list.map(n =>
-        // Wave lens shows in-span state; live view shows current state.
-        (() => { const wa = activeWave ? waveAction(n.id) : null; const disp = wa ? waveRowState(wa.outcome) : { cls: n.state, icon: STATE_ICON[n.state]||'' };
-        return '<div class="prow ' + disp.cls + (activeWave ? (wa ? ' inwave' : ' dim') : '') + (wa && wa.outcome === 'failed' ? ' failhere' : '') + '" data-id="' + esc(n.id) + '"><span class="icon">' + disp.icon + '</span>'; })() +
+        // Wave lens shows BOUNDARY state for EVERY row (reopened or not) — a
+        // step the wave never reached reads pending, not its eventual commit,
+        // so a superseded wave can't look like the whole pipeline went green.
+        // Live view shows current state.
+        (() => {
+          const wa = activeWave ? waveAction(n.id) : null;
+          const bstate = activeWave ? (activeWave.nodeStates?.[n.id] ?? 'pending') : n.state;
+          const disp = { cls: bstate, icon: STATE_ICON[bstate]||'' };
+          return '<div class="prow ' + disp.cls + (activeWave ? (wa ? ' inwave' : ' dim') : '') + (wa && wa.outcome === 'failed' ? ' failhere' : '') + '" data-id="' + esc(n.id) + '"><span class="icon">' + disp.icon + '</span>';
+        })() +
         '<span class="id mono">' + esc(n.id) + (n.retries ? ' <span class="chip retry">retry ×' + n.retries + '</span>' : '') +
         // Wave lens: membership = accent bar + in-span icon; a chip when there's
         // news (built/reused/failed/queued-because-wave-stopped).

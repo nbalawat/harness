@@ -891,3 +891,28 @@ test("slice plan: an OVERSIZED slice is rejected before any build spend", () => 
   assert.match(out.stderr, /OVERSIZED/);
   assert.match(out.stderr, /Split it/);
 });
+
+test("audit-check: an unwaived HIGH audit finding BLOCKS; a named waiver clears it", () => {
+  const dir = tmpDir("auditgate");
+  fs.writeFileSync(path.join(dir, "inputs.json"), JSON.stringify({
+    audit: { data: { status: "findings", findings: [
+      { severity: "high", area: "fsi-authz", file: "backend/ext_x.py", line: 12, finding: "anonymous read leaks borrower identity" },
+      { severity: "medium", area: "fsi-validation", file: "backend/ext_x.py", finding: "unbounded field" },
+    ] } },
+  }));
+  // No waiver -> blocked.
+  const blocked = spawnSync("node", [path.join(PT_DIR, "scripts", "audit-check.cjs")], { cwd: dir, encoding: "utf8", env: { ...process.env, HARNESS_WORKSPACE: dir } });
+  assert.equal(blocked.status, 1, blocked.stdout + blocked.stderr);
+  assert.match(blocked.stderr, /audit gate BLOCKED/);
+  assert.match(blocked.stderr, /borrower identity/);
+
+  // Named waiver with rationale -> passes (medium/low never block).
+  fs.writeFileSync(path.join(dir, "audit-waivers.json"), JSON.stringify({ waivers: [
+    { file: "backend/ext_x.py", area: "fsi-authz", rationale: "public board is intentionally redacted; accepted by CISO", by: "ciso@bank" },
+  ] }));
+  const passed = spawnSync("node", [path.join(PT_DIR, "scripts", "audit-check.cjs")], { cwd: dir, encoding: "utf8", env: { ...process.env, HARNESS_WORKSPACE: dir } });
+  assert.equal(passed.status, 0, passed.stdout + passed.stderr);
+  const gate = readJson(path.join(dir, "audit_gate.json"));
+  assert.equal(gate.status, "pass");
+  assert.equal(gate.high_waived, 1);
+});

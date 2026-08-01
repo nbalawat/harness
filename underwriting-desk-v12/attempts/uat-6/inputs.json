@@ -1,0 +1,106 @@
+{
+  "governance": {
+    "path": "/Users/nbalawat/development/harness/underwriting-desk-v12/artifacts/governance-report/governance.json",
+    "data": {
+      "standards_profile": "firm-baseline-v0",
+      "security": {
+        "high_findings": 0,
+        "total_findings": 8,
+        "files_scanned": 206,
+        "evidence": "security_report.json"
+      },
+      "validation": {
+        "backend_tests": "pass",
+        "agent_evals": "pass",
+        "compose_config": "skipped",
+        "evidence": "integration_report.json"
+      },
+      "requirements": {
+        "total": 66,
+        "covered": 66,
+        "uncovered": 0,
+        "assumptions": 32,
+        "evidence": "rtm.json"
+      },
+      "agents": {
+        "count": 5,
+        "names": [
+          "Portfolio Q&A Agent",
+          "Intake Triage Agent",
+          "Financial Spreading Agent",
+          "Credit Memo Agent",
+          "Policy Compliance Agent"
+        ],
+        "eval_criteria_total": 35
+      },
+      "code_audit": {
+        "status": "findings",
+        "findings": 67,
+        "high_findings": 17,
+        "files_checked": 83,
+        "evidence": "audit.json"
+      }
+    }
+  },
+  "design_coverage": {
+    "path": "/Users/nbalawat/development/harness/underwriting-desk-v12/artifacts/design-coverage/design_coverage.json",
+    "data": {
+      "screens": [
+        {
+          "id": "screen-chat",
+          "title": "The Portfolio Desk",
+          "covered_by_slice": 5,
+          "present": true,
+          "elements_declared": 7,
+          "elements_present": 7,
+          "shot": "coverage/screen-chat.png"
+        },
+        {
+          "id": "screen-pipeline-board",
+          "title": "Pipeline Board",
+          "covered_by_slice": 1,
+          "present": true,
+          "elements_declared": 8,
+          "elements_present": 8,
+          "shot": "coverage/screen-pipeline-board.png"
+        },
+        {
+          "id": "screen-deal-detail",
+          "title": "Deal Dossier",
+          "covered_by_slice": 2,
+          "present": true,
+          "elements_declared": 8,
+          "elements_present": 8,
+          "shot": "coverage/screen-deal-detail.png"
+        },
+        {
+          "id": "screen-audit-timeline",
+          "title": "The Chronicle",
+          "covered_by_slice": 3,
+          "present": true,
+          "elements_declared": 1,
+          "elements_present": 1,
+          "shot": "coverage/screen-audit-timeline.png"
+        },
+        {
+          "id": "screen-sla-dashboard",
+          "title": "The Idle Register",
+          "covered_by_slice": 4,
+          "present": true,
+          "elements_declared": 2,
+          "elements_present": 2,
+          "shot": "coverage/screen-sla-dashboard.png"
+        }
+      ],
+      "totals": {
+        "screens": 5,
+        "screens_present": 5,
+        "elements_declared": 26,
+        "elements_present": 26
+      }
+    }
+  },
+  "coverage_shots": {
+    "path": "/Users/nbalawat/development/harness/underwriting-desk-v12/artifacts/design-coverage/coverage"
+  }
+}
