@@ -1,0 +1,432 @@
+{
+  "_params": {
+    "path": "",
+    "data": {
+      "slice": 2
+    }
+  },
+  "app": {
+    "path": "/Users/nbalawat/development/harness/underwriting-desk/artifacts/slice-1/app"
+  },
+  "review_slice_1": {
+    "path": "/Users/nbalawat/development/harness/underwriting-desk/artifacts/review-slice-1/review.json",
+    "data": {
+      "verdict": "yes"
+    }
+  },
+  "slice_plan": {
+    "path": "/Users/nbalawat/development/harness/underwriting-desk/artifacts/slice-plan/slice_plan.json",
+    "data": {
+      "slices": [
+        {
+          "id": "deal-intake-and-triage",
+          "name": "Deal intake, triage draft, and the pipeline board",
+          "story": "As a relationship manager I submit a borrower's loan request with its documents on the Deal Intake screen, and the deal is created at the intake stage with its exposure and approval tier derived deterministically; the intake triage agent then drafts a classification, a missing-document list, and a proposed analyst queue as a PENDING draft that no one can bypass, and every active deal with its current stage appears on the Pipeline Board. Canonical stage slugs used by the whole app, in order: intake, document_extraction, financial_spreading, risk_grading, memo_drafting, policy_compliance, tiered_approval, closing. Exposure = the requested facility amount alone; approval_tier is derived from it: <= $250,000 = analyst, $250,000-$1,000,000 = officer, > $1,000,000 = committee. Deals are addressed by their client-supplied deal_reference. Seeded role accounts identify actors: rm.rivera (relationship manager), an.chen (credit analyst), co.brennan (credit officer); HTTP callers name the actor with an explicit acting_user / submitted_by field in the body while the UI uses the signed-in identity, and every create and transition writes an append-only audit row.",
+          "addresses": [
+            "REQ-001",
+            "REQ-002",
+            "REQ-003",
+            "REQ-004",
+            "REQ-016",
+            "REQ-018",
+            "REQ-019",
+            "REQ-027",
+            "REQ-028",
+            "REQ-029",
+            "REQ-030",
+            "REQ-033",
+            "REQ-037",
+            "REQ-041",
+            "REQ-042",
+            "REQ-043",
+            "REQ-054",
+            "REQ-056"
+          ],
+          "covers": [
+            "screen-intake",
+            "screen-pipeline"
+          ],
+          "acceptance": [
+            {
+              "method": "POST",
+              "path": "/deals",
+              "body": {
+                "deal_reference": "DEAL-1001",
+                "borrower_name": "Piedmont Orthopedic Devices LLC",
+                "borrower_industry": "surgical instrument manufacturing",
+                "borrower_state": "North Carolina",
+                "facility_type": "term_loan",
+                "requested_amount": 780000,
+                "collateral_value": 1100000,
+                "purpose": "CNC line expansion and refinance",
+                "submitted_by": "rm.rivera",
+                "documents": [
+                  {
+                    "document_type": "financial_statements",
+                    "original_filename": "2025-FYE-Financials.pdf",
+                    "content_type": "application/pdf",
+                    "text": "FY2025 Audited Financial Statements - Piedmont Orthopedic Devices LLC. Income Statement: Revenue 12,400,000; Cost of Goods Sold 7,300,000; Operating Expenses 3,680,000; EBITDA 1,420,000; Interest Expense 310,000. Balance Sheet: Current Assets 3,300,000; Current Liabilities 1,650,000; Total Debt 5,600,000; Tangible Net Worth 2,800,000. Debt Service: Annual Principal and Interest 1,000,000."
+                  },
+                  {
+                    "document_type": "business_tax_return",
+                    "original_filename": "1120S-2025.pdf",
+                    "content_type": "application/pdf",
+                    "text": "Form 1120S tax year 2025 - Piedmont Orthopedic Devices LLC. Gross receipts 12,400,000. Ordinary business income 1,110,000. Depreciation 620,000."
+                  }
+                ]
+              },
+              "expect_status": 200,
+              "expect_contains": [
+                "DEAL-1001",
+                "intake",
+                "officer"
+              ]
+            },
+            {
+              "method": "POST",
+              "path": "/deals",
+              "body": {
+                "deal_reference": "DEAL-2001",
+                "borrower_name": "Blue Ridge Wellness Dispensary LLC",
+                "borrower_industry": "cannabis dispensary",
+                "borrower_state": "North Carolina",
+                "facility_type": "line_of_credit",
+                "requested_amount": 3100000,
+                "collateral_value": 3900000,
+                "purpose": "working capital line",
+                "submitted_by": "rm.rivera",
+                "documents": []
+              },
+              "expect_status": 200,
+              "expect_contains": [
+                "DEAL-2001",
+                "committee"
+              ]
+            },
+            {
+              "method": "POST",
+              "path": "/deals/DEAL-1001/triage",
+              "body": {
+                "acting_user": "an.chen"
+              },
+              "expect_status": 200,
+              "expect_contains": [
+                "classification",
+                "missing_documents",
+                "proposed_queue",
+                "pending"
+              ]
+            },
+            {
+              "method": "GET",
+              "path": "/deals",
+              "expect_status": 200,
+              "expect_contains": [
+                "DEAL-1001",
+                "DEAL-2001",
+                "current_stage"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "financial-spread-with-citations",
+          "name": "Financial spreading agent and the draft review workspace",
+          "story": "As a credit analyst I work a single Draft Review workspace that serves every agent draft in the app: I see the draft side by side with the evidence each figure cites, and I accept, edit, or reject it — a rejection without a written reason is refused, and only my acceptance promotes the draft into deal-of-record data. Accepting the triage draft assigns the analyst queue and advances the deal from intake to document_extraction; the financial spreading agent then reads only the extracted document locations for the deal and fills the standard spread template, attaching to every single figure a citation naming the document and the document location it came from, with 'not supported by the record' where the documents cannot support a template line. Accepting the spread persists it as structured spread line items with their citations and advances the deal to risk_grading. Every agent run records its model id, prompt version, inputs, raw output, latency, and token cost.",
+          "addresses": [
+            "REQ-005",
+            "REQ-016",
+            "REQ-020",
+            "REQ-024",
+            "REQ-030",
+            "REQ-031",
+            "REQ-032",
+            "REQ-037",
+            "REQ-038",
+            "REQ-039",
+            "REQ-046",
+            "REQ-056"
+          ],
+          "covers": [
+            "screen-review"
+          ],
+          "acceptance": [
+            {
+              "method": "POST",
+              "path": "/deals/DEAL-1001/drafts/triage/review",
+              "body": {
+                "action": "accepted",
+                "acting_user": "an.chen"
+              },
+              "expect_status": 200,
+              "expect_contains": [
+                "accepted",
+                "an.chen",
+                "document_extraction"
+              ]
+            },
+            {
+              "method": "POST",
+              "path": "/deals/DEAL-1001/spread",
+              "body": {
+                "acting_user": "an.chen"
+              },
+              "expect_status": 200,
+              "expect_contains": [
+                "spread_line_items",
+                "citations",
+                "pending"
+              ]
+            },
+            {
+              "method": "POST",
+              "path": "/deals/DEAL-1001/drafts/spread/review",
+              "body": {
+                "action": "rejected",
+                "acting_user": "an.chen"
+              },
+              "expect_status": 400,
+              "expect_contains": [
+                "reason"
+              ]
+            },
+            {
+              "method": "POST",
+              "path": "/deals/DEAL-1001/drafts/spread/review",
+              "body": {
+                "action": "accepted",
+                "acting_user": "an.chen"
+              },
+              "expect_status": 200,
+              "expect_contains": [
+                "accepted",
+                "spread_line_item",
+                "citation"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "ratios-grade-and-credit-memo",
+          "name": "Deterministic ratios and risk grade, then the cited credit memo",
+          "story": "As a credit analyst I open the Deal Desk and see the whole deal of record — the spread with clickable citation traces, the computed ratios, the risk grade with the rubric inputs that produced it, the memo, and the stage timeline. DSCR, leverage, and the current ratio are computed by deterministic code from the accepted spread and are never produced or overridden by an agent or by hand; the risk grade comes from a transparent inspectable rubric (1-5, where DSCR >= 1.50 = 1, 1.25-1.49 = 2, 1.00-1.24 = 3, 0.85-0.99 = 4, < 0.85 = 5; leverage <= 2.0x = -1 grade, 2.0-3.0x = base, > 3.0x = +1 grade; current ratio >= 2.0 = -0.5, 1.0-1.99 = base, < 1.0 = +0.5; clamped to 1-5), with unit tests over every ratio and every grading rule. The credit memo agent then drafts the memo strictly from those stored values, footnoting each assertion to the ratio id, spread line item id, or policy rule id it relied on and never recommending a decision; my acceptance of the memo advances the deal to policy_compliance.",
+          "addresses": [
+            "REQ-006",
+            "REQ-009",
+            "REQ-010",
+            "REQ-014",
+            "REQ-018",
+            "REQ-023",
+            "REQ-032",
+            "REQ-034",
+            "REQ-045",
+            "REQ-052"
+          ],
+          "covers": [
+            "screen-deal"
+          ],
+          "acceptance": [
+            {
+              "method": "POST",
+              "path": "/deals/DEAL-1001/underwriting/compute",
+              "body": {
+                "acting_user": "an.chen"
+              },
+              "expect_status": 200,
+              "expect_contains": [
+                "dscr",
+                "leverage",
+                "current_ratio",
+                "grade",
+                "rubric_inputs"
+              ]
+            },
+            {
+              "method": "POST",
+              "path": "/deals/DEAL-1001/risk-grade",
+              "body": {
+                "grade": "1",
+                "acting_user": "an.chen"
+              },
+              "expect_status": 403
+            },
+            {
+              "method": "POST",
+              "path": "/deals/DEAL-1001/memo",
+              "body": {
+                "acting_user": "an.chen"
+              },
+              "expect_status": 200,
+              "expect_contains": [
+                "memo",
+                "citations",
+                "pending"
+              ]
+            },
+            {
+              "method": "POST",
+              "path": "/deals/DEAL-1001/drafts/memo/review",
+              "body": {
+                "action": "accepted",
+                "acting_user": "an.chen"
+              },
+              "expect_status": 200,
+              "expect_contains": [
+                "accepted",
+                "memo",
+                "policy_compliance"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "policy-compliance-and-tiered-approval",
+          "name": "Policy exceptions and the named, tier-authorized credit decision",
+          "story": "As a credit officer I work the Approval Queue: the policy compliance agent has checked the accepted memo against the stored versioned lending policy (prohibited industries liquor/gaming, adult entertainment, cannabis, firearms; concentration limits of 15% by industry, 10% by state, 5% by single borrower; LTV caps of 80% term, 70% line of credit, 75% real-estate secured) and raised a written exception for every breach naming the rule id, breached value, threshold, and rationale — I disposition each one as accepted, waived-with-justification, or blocking, and a blocking exception returns the deal instead of advancing it. Only then can a decision be recorded, and it is always mine: no agent may approve, decline, or advance past approval; the approval tier is enforced server-side so an attempt above my authority is rejected (analyst <= $250k, officer <= $1M, above $1M a single recorded credit-committee decision entered by the chair), a decline is refused without a documented adverse-action reason, a return to an earlier stage requires a reason and is recorded as a transition, and an approval carries my named identity through to closing.",
+          "addresses": [
+            "REQ-007",
+            "REQ-011",
+            "REQ-012",
+            "REQ-013",
+            "REQ-014",
+            "REQ-015",
+            "REQ-017",
+            "REQ-021",
+            "REQ-024",
+            "REQ-034",
+            "REQ-035",
+            "REQ-036",
+            "REQ-043",
+            "REQ-048",
+            "REQ-053",
+            "REQ-055"
+          ],
+          "covers": [
+            "screen-approvals"
+          ],
+          "acceptance": [
+            {
+              "method": "POST",
+              "path": "/deals/DEAL-1001/compliance-check",
+              "body": {
+                "acting_user": "an.chen"
+              },
+              "expect_status": 200,
+              "expect_contains": [
+                "exceptions",
+                "policy_rule",
+                "pending"
+              ]
+            },
+            {
+              "method": "POST",
+              "path": "/deals/DEAL-1001/exceptions/disposition",
+              "body": {
+                "acting_user": "co.brennan",
+                "dispositions": []
+              },
+              "expect_status": 200,
+              "expect_contains": [
+                "compliance_cleared",
+                "co.brennan",
+                "tiered_approval"
+              ]
+            },
+            {
+              "method": "POST",
+              "path": "/decisions",
+              "body": {
+                "deal_reference": "DEAL-1001",
+                "decision": "approve",
+                "acting_user": "an.chen",
+                "rationale": "Cash flow supports the facility."
+              },
+              "expect_status": 403
+            },
+            {
+              "method": "POST",
+              "path": "/decisions",
+              "body": {
+                "deal_reference": "DEAL-1001",
+                "decision": "approve",
+                "acting_user": "co.brennan",
+                "rationale": "DSCR supports the request and no exception is open; within officer authority."
+              },
+              "expect_status": 200,
+              "expect_contains": [
+                "approve",
+                "co.brennan"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "sla-audit-and-portfolio-qa",
+          "name": "SLA watch, examinable audit trail, and portfolio Q&A",
+          "story": "As a credit officer I watch the portfolio from three cross-cutting surfaces: SLA Watch highlights in red every deal idle for more than 5 business days measured on a business-day calendar from its last meaningful activity and names the escalation owner; the Audit Trail screen filters the append-only record per deal, actor, role, action, and date range and exports it as CSV or JSONL for examiner review, with no application path that edits or deletes an entry; and the Portfolio Q&A screen lets me ask questions across active deals, answered by the Q&A agent strictly from stored deal facts pre-filtered to what my role entitles me to see, citing the deal id behind every fact and replying 'not supported by the record' rather than speculating. Every one of the five agents ships an eval suite of fixed inputs with scored expectations, and the app stays Cloud Run ready with structured logs carrying deal id and correlation id.",
+          "addresses": [
+            "REQ-008",
+            "REQ-018",
+            "REQ-022",
+            "REQ-025",
+            "REQ-026",
+            "REQ-040",
+            "REQ-044",
+            "REQ-047",
+            "REQ-049",
+            "REQ-050",
+            "REQ-051"
+          ],
+          "covers": [
+            "screen-sla",
+            "screen-audit",
+            "screen-chat"
+          ],
+          "acceptance": [
+            {
+              "method": "GET",
+              "path": "/sla/watchlist",
+              "expect_status": 200,
+              "expect_contains": [
+                "business_days_idle",
+                "escalation_owner"
+              ]
+            },
+            {
+              "method": "GET",
+              "path": "/audit/deals/DEAL-1001",
+              "expect_status": 200,
+              "expect_contains": [
+                "DEAL-1001",
+                "actor_user_id",
+                "event_type"
+              ]
+            },
+            {
+              "method": "GET",
+              "path": "/audit/export.csv?deal_reference=DEAL-1001",
+              "expect_status": 200,
+              "expect_contains": [
+                "DEAL-1001",
+                "event_type"
+              ]
+            },
+            {
+              "method": "POST",
+              "path": "/portfolio/ask",
+              "body": {
+                "question": "Which active deals sit at the committee approval tier?",
+                "acting_user": "co.brennan"
+              },
+              "expect_status": 200,
+              "expect_contains": [
+                "answer",
+                "cited_deal_ids"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

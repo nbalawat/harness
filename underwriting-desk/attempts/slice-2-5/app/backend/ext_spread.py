@@ -36,19 +36,34 @@ AGENT_LABELS = {
 }
 
 
-def _visible_deals(authorization: str | None) -> dict:
-    return {deal["id"]: deal for deal in uw.visible_deals(current_user(authorization))}
+def reader(authorization: str | None, acting_user: str | None) -> dict:
+    """Resolve the named human doing the reading.
+
+    A draft body carries the borrower's statement lines behind every figure —
+    `ext_guard` refuses to emit that text through the generic reader and the CSV
+    export, so the deal-scoped doors must not answer to nobody either. The actor
+    is named the same way every write in this app names one (signed-in identity,
+    or an explicit `acting_user`), it must hold a role, and the deals it can see
+    are then scoped to it.
+    """
+    try:
+        return uw.resolve_actor(current_user(authorization), acting_user, spreading.DRAFT_READ_ROLES)
+    except uw.DomainError as exc:
+        raise _fail(exc)
 
 
-def _require_visible(deal_reference: str, authorization: str | None) -> dict:
+def _visible_deals(username: str | None) -> dict:
+    return {deal["id"]: deal for deal in uw.visible_deals(username)}
+
+
+def _require_visible(deal_reference: str, username: str | None) -> dict:
     """Resolve a deal and hold row scoping on it — naming a reference must not
     walk around the scoping applied to the board."""
     try:
         deal = uw.require_deal(deal_reference)
     except uw.DomainError as exc:
         raise _fail(exc)
-    caller = current_user(authorization)
-    if caller and deal["id"] not in _visible_deals(authorization):
+    if username and deal["id"] not in _visible_deals(username):
         raise HTTPException(status_code=404, detail=f"no deal '{deal_reference}' in your scope")
     return deal
 
@@ -98,6 +113,7 @@ def _queue_row(draft: dict, deal: dict) -> dict:
 def list_all_drafts(
     status: str | None = Query(default=None),
     draft_type: str | None = Query(default=None),
+    acting_user: str | None = Query(default=None),
     authorization: str | None = Header(default=None),
 ):
     """Every agent draft the caller is entitled to see, newest last.
@@ -106,7 +122,8 @@ def list_all_drafts(
     time through /drafts/{id}, so a queue read never becomes a bulk dump of
     borrower document text.
     """
-    deals = _visible_deals(authorization)
+    actor = reader(authorization, acting_user)
+    deals = _visible_deals(actor["username"])
     rows = [d for d in uw.store.list("agent_drafts") if d.get("deal_id") in deals]
     if status:
         rows = [d for d in rows if d.get("review_status") == status]
@@ -125,9 +142,14 @@ def list_all_drafts(
 
 
 @router.get("/drafts/{draft_id}")
-def get_draft(draft_id: int, authorization: str | None = Header(default=None)):
+def get_draft(
+    draft_id: int,
+    acting_user: str | None = Query(default=None),
+    authorization: str | None = Header(default=None),
+):
     """One draft with its body and the evidence each figure cites."""
-    deals = _visible_deals(authorization)
+    actor = reader(authorization, acting_user)
+    deals = _visible_deals(actor["username"])
     draft = None
     for row in uw.store.list("agent_drafts"):
         if row["id"] == draft_id:
@@ -158,9 +180,12 @@ def run_spread(deal_reference: str, req: ActorRequest, authorization: str | None
     'not supported by the record' rather than carrying a number. Nothing is
     persisted as deal-of-record data here — a named human accepts first.
     """
-    deal = _require_visible(deal_reference, authorization)
     try:
         actor = uw.resolve_actor(current_user(authorization), req.acting_user, spreading.SPREAD_ROLES)
+    except uw.DomainError as exc:
+        raise _fail(exc)
+    deal = _require_visible(deal_reference, actor["username"])
+    try:
         outcome = spreading.start_spread(deal, actor)
     except uw.DomainError as exc:
         raise _fail(exc)
@@ -173,9 +198,14 @@ def run_spread(deal_reference: str, req: ActorRequest, authorization: str | None
 
 
 @router.get("/deals/{deal_reference}/spread")
-def get_spread(deal_reference: str, authorization: str | None = Header(default=None)):
+def get_spread(
+    deal_reference: str,
+    acting_user: str | None = Query(default=None),
+    authorization: str | None = Header(default=None),
+):
     """The deal's spread of record — accepted line items with their citations."""
-    deal = _require_visible(deal_reference, authorization)
+    actor = reader(authorization, acting_user)
+    deal = _require_visible(deal_reference, actor["username"])
     view = spreading.spread_view(deal)
     draft = uw.pending_draft(deal["id"], "spread")
     view["pending_draft_id"] = draft["id"] if draft else None

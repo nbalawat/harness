@@ -2096,6 +2096,11 @@ hr.sep { border: 0; border-top: 1px solid var(--border-soft); margin: var(--sp-2
                   <span class="db-label">Type for the next file</span>
                   <select class="sel" id="intake-doc-type" style="max-width:230px"></select>
                 </div>
+                <div class="field">
+                  <label for="intake-doc-text">Or paste the statement text <span class="dim">&mdash; stored as the document body, and the only thing the spreading agent may cite</span></label>
+                  <textarea class="ta" id="intake-doc-text" placeholder="Income Statement: Revenue 12,400,000; Cost of Goods Sold 7,300,000; EBITDA 1,420,000."></textarea>
+                  <div class="row" style="margin-top:4px"><button class="btn sm" type="button" id="intake-doc-attach">Attach pasted statement</button></div>
+                </div>
                 <div class="stack" style="gap:2px" id="intake-files">
                   <div class="filerow"><span class="chip ok">OK</span><span class="f-name">2024-FYE-Financials-Reviewed.pdf</span><span class="f-meta">2.4 MB</span><span class="f-meta">14:02</span></div>
                   <div class="filerow"><span class="chip ok">OK</span><span class="f-name">Business-Tax-Return-1120S-2024.pdf</span><span class="f-meta">1.1 MB</span><span class="f-meta">14:02</span></div>
@@ -2495,22 +2500,22 @@ hr.sep { border: 0; border-top: 1px solid var(--border-soft); margin: var(--sp-2
     <section class="screen" id="screen-review" data-title="Draft Review">
       <div class="scr-hd">
         <h2>Draft Review</h2>
-        <span class="scr-sub">Agent output vs. cited evidence &middot; 6 awaiting acceptance</span>
+        <span class="scr-sub" id="review-sub">Agent output vs. cited evidence</span>
         <div class="spacer"></div>
-        <span class="chip warn"><span class="dot pulse"></span>Unaccepted drafts block advancement</span>
-        <button class="btn ghost sm" type="button">&#8593; Prev <span class="k">K</span></button>
-        <button class="btn ghost sm" type="button">Next &#8595; <span class="k">J</span></button>
+        <span class="chip warn" id="review-gate-chip"><span class="dot pulse"></span>Unaccepted drafts block advancement</span>
+        <button class="btn ghost sm" type="button" id="review-prev">&#8593; Prev <span class="k">K</span></button>
+        <button class="btn ghost sm" type="button" id="review-next">Next &#8595; <span class="k">J</span></button>
       </div>
 
       <div class="scr-body stack">
 
         <!-- queue strip -->
         <div class="panel">
-          <div class="panel-hd"><h3>Acceptance Queue</h3><span class="hd-note">state chips: pending / accepted / edited / rejected</span></div>
+          <div class="panel-hd"><h3>Acceptance Queue</h3><span class="hd-note" id="review-queue-note">state chips: pending / accepted / edited / rejected</span><div class="spacer"></div><button class="btn sm" type="button" id="review-run-spread">Draft financial spread</button></div>
           <div class="panel-bd flush">
             <table class="tbl">
               <thead><tr><th style="width:112px">Deal</th><th>Borrower</th><th style="width:150px">Artifact</th><th style="width:130px">Agent</th><th style="width:96px">State</th><th style="width:150px">Model</th><th class="num" style="width:78px">Latency</th><th class="num" style="width:88px">Tokens</th><th class="num" style="width:70px">Cost</th><th class="num" style="width:64px">Age</th></tr></thead>
-              <tbody>
+              <tbody id="review-rows">
                 <tr class="sel"><td class="mono"><span class="tbl-id">UW-2026-0418</span></td><td>Harbor Point Marine Supply</td><td>Policy exception set</td><td>4 &middot; Policy compliance</td><td><span class="chip warn"><span class="dot pulse"></span>Pending</span></td><td class="mono dim">uw-policy-v2</td><td class="num mono">3,410ms</td><td class="num mono">18,204</td><td class="num mono">$0.094</td><td class="num mono crit-t">3 d</td></tr>
                 <tr><td class="mono"><span class="tbl-id">UW-2026-0466</span></td><td>Auburn Ridge Storage</td><td>Policy exception set</td><td>4 &middot; Policy compliance</td><td><span class="chip warn"><span class="dot pulse"></span>Pending</span></td><td class="mono dim">uw-policy-v2</td><td class="num mono">2,988ms</td><td class="num mono">15,881</td><td class="num mono">$0.081</td><td class="num mono warn-t">2 d</td></tr>
                 <tr><td class="mono"><span class="tbl-id">UW-2026-0431</span></td><td>Delgado Precision Machining</td><td>Financial spread</td><td>2 &middot; Spreading</td><td><span class="chip warn"><span class="dot pulse"></span>Pending</span></td><td class="mono dim">uw-spread-v5</td><td class="num mono">6,742ms</td><td class="num mono">31,470</td><td class="num mono">$0.158</td><td class="num mono warn-t">2 d</td></tr>
@@ -2526,7 +2531,7 @@ hr.sep { border: 0; border-top: 1px solid var(--border-soft); margin: var(--sp-2
         </div>
 
         <!-- run telemetry for the selected draft -->
-        <div class="telemetry">
+        <div class="telemetry" id="review-telemetry">
           <div class="t-cell"><span class="t-k">Deal</span><span class="t-v">UW-2026-0418</span></div>
           <div class="t-cell"><span class="t-k">Artifact</span><span class="t-v">Policy exception set</span></div>
           <div class="t-cell"><span class="t-k">Agent</span><span class="t-v">4 &middot; Policy compliance</span></div>
@@ -2543,8 +2548,8 @@ hr.sep { border: 0; border-top: 1px solid var(--border-soft); margin: var(--sp-2
         <!-- side-by-side: draft vs evidence -->
         <div class="grid g-2" style="align-items:start">
           <div class="panel">
-            <div class="panel-hd"><h3>Agent Draft</h3><span class="chip warn"><span class="dot pulse"></span>Pending acceptance</span><div class="spacer"></div><span class="hd-note">hover a claim to pin its evidence</span></div>
-            <div class="panel-bd stack">
+            <div class="panel-hd"><h3>Agent Draft</h3><span class="chip warn" id="review-draft-status"><span class="dot pulse"></span>Pending acceptance</span><div class="spacer"></div><span class="hd-note" id="review-draft-note">every figure carries the document location it was read from</span></div>
+            <div class="panel-bd stack" id="review-draft-body">
               <div class="draftbox">
                 <p><b class="crit-t">EXCEPTION 1 &mdash; POL-DSCR-02 (minimum debt service coverage).</b><br>
                 The computed debt service coverage ratio of <mark>1.18x</mark> falls below the policy minimum of <mark>1.25x</mark> stated in CLP-2026.2 &sect;4.1. Shortfall is 0.07x, or approximately <mark>$55,051</mark> of additional annual EBITDA. A written exception approved at committee level is required before Stage 07 may proceed.</p>
@@ -2563,8 +2568,8 @@ hr.sep { border: 0; border-top: 1px solid var(--border-soft); margin: var(--sp-2
           </div>
 
           <div class="panel">
-            <div class="panel-hd"><h3>Cited Evidence</h3><span class="hd-note">9 sources &middot; all claims grounded</span><div class="spacer"></div><span class="chip ok">0 uncited claims</span></div>
-            <div class="panel-bd stack" style="gap:5px">
+            <div class="panel-hd"><h3>Cited Evidence</h3><span class="hd-note" id="review-evidence-note">sources for the selected draft</span><div class="spacer"></div><span class="chip ok" id="review-uncited">0 uncited claims</span></div>
+            <div class="panel-bd stack" id="review-evidence" style="gap:5px">
               <div class="evidence-item"><span class="ev-src">calc-svc 2.4.1 &middot; dscr</span><div>DSCR = EBITDA 928,640 &divide; ADS 786,440 = <b class="mono">1.1808</b> &rarr; displayed 1.18x. <span class="det">computed by code, not by agent</span></div></div>
               <div class="evidence-item"><span class="ev-src">CLP-2026.2 &sect;4.1 &middot; POL-DSCR-02</span><div class="ev-quote">&ldquo;No credit exposure shall be approved with a debt service coverage ratio below 1.25x without a written exception approved at or above the exposure tier.&rdquo;</div></div>
               <div class="evidence-item"><span class="ev-src">Debt-Schedule-2026-06-30.xlsx &middot; Sh.1 B38</span><div>Annual debt service pro forma including the requested facility: <b class="mono">$786,440</b>.</div></div>
@@ -2580,32 +2585,38 @@ hr.sep { border: 0; border-top: 1px solid var(--border-soft); margin: var(--sp-2
 
         <!-- decision bar -->
         <div class="panel">
-          <div class="panel-hd"><h3>Human Disposition</h3><span class="hd-note">REQ-037 / REQ-038 &middot; required before advancement</span><div class="spacer"></div><span class="chip violet">Decider: M. Reyes &middot; Sr. Credit Officer</span></div>
+          <div class="panel-hd"><h3>Human Disposition</h3><span class="hd-note">REQ-037 / REQ-038 &middot; required before advancement</span><div class="spacer"></div><span class="chip violet" id="review-decider">Decider: &mdash;</span></div>
           <div class="panel-bd">
             <div class="grid" style="grid-template-columns: minmax(0,1fr) 300px; align-items:start">
               <div class="field">
                 <label for="rev-reason">Reason <span class="req">*</span> <span class="dim">&mdash; mandatory on reject, optional on accept, recorded verbatim in the audit trail</span></label>
-                <textarea class="ta" id="rev-reason" placeholder="e.g. Exception 2 understates segment balance — portfolio feed is stale as of 07-29; re-run against 07-30 close."></textarea>
+                <textarea class="ta" id="rev-reason" placeholder="e.g. EBITDA line reads the audited statement, not the tax return — re-spread against the FYE package."></textarea>
                 <div class="hint crit" id="rev-reason-hint" hidden>A written reason is required to reject an agent draft.</div>
+                <div class="row wrap" id="review-edit-row" hidden style="margin-top:6px">
+                  <div class="field" style="flex:1;min-width:190px"><label for="review-edit-line">Correct a spread line</label><select class="sel" id="review-edit-line"></select></div>
+                  <div class="field" style="flex:1;min-width:150px"><label for="review-edit-value">Corrected value <span class="dim">&mdash; blank withdraws the figure</span></label><input class="inp" id="review-edit-value" type="text" inputmode="decimal" placeholder="e.g. 1,420,000"></div>
+                  <div class="field" style="flex:0 0 auto;align-self:flex-end"><button class="btn ok sm" type="button" id="review-edit-confirm">Save edit &amp; accept</button></div>
+                </div>
               </div>
               <div class="stack">
                 <div class="row tight">
-                  <button class="btn ok block" type="button" data-disp="accept">Accept draft <span class="k">A</span></button>
+                  <button class="btn ok block" type="button" id="review-accept" data-disp="accept">Accept draft <span class="k">A</span></button>
                 </div>
                 <div class="row tight">
-                  <button class="btn block" type="button" data-disp="edit">Edit &amp; accept <span class="k">E</span></button>
+                  <button class="btn block" type="button" id="review-edit" data-disp="edit">Edit &amp; accept <span class="k">E</span></button>
                 </div>
                 <div class="row tight">
-                  <button class="btn crit block" type="button" data-disp="reject">Reject <span class="k">R</span></button>
+                  <button class="btn crit block" type="button" id="review-reject" data-disp="reject">Reject <span class="k">R</span></button>
                 </div>
-                <div class="banner"><span class="b-icon">&#9678;</span><span id="disp-readout">No disposition recorded. Draft remains <b class="warn-t">PENDING</b> and Stage 06 &rarr; 07 advancement is blocked.</span></div>
+                <div class="banner"><span class="b-icon">&#9678;</span><span id="disp-readout">No disposition recorded. Draft remains <b class="warn-t">PENDING</b> and stage advancement is blocked.</span></div>
+                <div class="stack" id="review-trail" hidden style="gap:3px;margin-top:6px"></div>
               </div>
             </div>
           </div>
           <div class="panel-ft">
             <span class="locked-tag">Dispositions are append-only &middot; edits store a diff against the agent original</span>
             <div class="spacer" style="flex:1"></div>
-            <button class="btn sm ghost" type="button" data-goto="audit">View trail entries for this run</button>
+            <button class="btn sm ghost" type="button" id="review-trail-btn">View trail entries for this run</button>
           </div>
         </div>
       </div>

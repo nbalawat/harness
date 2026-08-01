@@ -1,0 +1,129 @@
+INFO:     Started server process [37165]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:52711 (Press CTRL+C to quit)
+INFO:     127.0.0.1:52715 - "GET /health HTTP/1.1" 200 OK
+{"ts": "2026-07-31T07:51:58Z", "level": "info", "event": "audit.appended", "event_type": "deal.created", "audit_log_id": 7, "deal_reference": "DEAL-1001"}
+{"ts": "2026-07-31T07:51:58Z", "level": "info", "event": "audit.appended", "event_type": "stage.transition", "audit_log_id": 9, "deal_reference": "DEAL-1001"}
+{"ts": "2026-07-31T07:51:58Z", "level": "info", "event": "audit.appended", "event_type": "document.stored", "audit_log_id": 12, "deal_reference": "DEAL-1001"}
+{"ts": "2026-07-31T07:51:58Z", "level": "info", "event": "audit.appended", "event_type": "document.stored", "audit_log_id": 14, "deal_reference": "DEAL-1001"}
+{"ts": "2026-07-31T07:51:58Z", "level": "info", "event": "audit.appended", "event_type": "deal.documents_stored", "audit_log_id": 15, "deal_reference": "DEAL-1001"}
+{"ts": "2026-07-31T07:51:58Z", "level": "info", "event": "audit.appended", "event_type": "document.extracted", "audit_log_id": 32, "deal_reference": "DEAL-1001"}
+{"ts": "2026-07-31T07:51:58Z", "level": "info", "event": "agent.run", "agent": "intake_triage", "deal_reference": "DEAL-1001", "agent_run_id": 39, "source": "workflow"}
+{"ts": "2026-07-31T07:51:58Z", "level": "info", "event": "audit.appended", "event_type": "agent_draft.created", "audit_log_id": 41, "deal_reference": "DEAL-1001"}
+{"ts": "2026-07-31T07:51:58Z", "level": "info", "event": "deal.submitted", "deal_reference": "DEAL-1001", "correlation_id": "cid-9d4613a30509", "workflow_run_id": "wf-4"}
+INFO:     127.0.0.1:52716 - "POST /deals HTTP/1.1" 200 OK
+{"ts": "2026-07-31T07:51:58Z", "level": "info", "event": "audit.appended", "event_type": "deal.created", "audit_log_id": 45, "deal_reference": "DEAL-2001"}
+{"ts": "2026-07-31T07:51:58Z", "level": "info", "event": "audit.appended", "event_type": "stage.transition", "audit_log_id": 47, "deal_reference": "DEAL-2001"}
+{"ts": "2026-07-31T07:51:58Z", "level": "info", "event": "audit.appended", "event_type": "deal.documents_stored", "audit_log_id": 49, "deal_reference": "DEAL-2001"}
+{"ts": "2026-07-31T07:51:58Z", "level": "info", "event": "agent.run", "agent": "intake_triage", "deal_reference": "DEAL-2001", "agent_run_id": 57, "source": "workflow"}
+{"ts": "2026-07-31T07:51:58Z", "level": "info", "event": "audit.appended", "event_type": "agent_draft.created", "audit_log_id": 59, "deal_reference": "DEAL-2001"}
+{"ts": "2026-07-31T07:51:58Z", "level": "info", "event": "deal.submitted", "deal_reference": "DEAL-2001", "correlation_id": "cid-79e819b72942", "workflow_run_id": "wf-42"}
+INFO:     127.0.0.1:52717 - "POST /deals HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52716 - "POST /deals/DEAL-1001/triage HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52717 - "GET /deals HTTP/1.1" 200 OK
+{"ts": "2026-07-31T07:51:58Z", "level": "info", "event": "audit.appended", "event_type": "agent_draft.accepted", "audit_log_id": 61, "deal_reference": "DEAL-1001"}
+{"ts": "2026-07-31T07:51:58Z", "level": "info", "event": "audit.appended", "event_type": "deal.routed", "audit_log_id": 64, "deal_reference": "DEAL-1001"}
+{"ts": "2026-07-31T07:51:58Z", "level": "info", "event": "audit.appended", "event_type": "stage.transition", "audit_log_id": 67, "deal_reference": "DEAL-1001"}
+{"ts": "2026-07-31T07:51:58Z", "level": "info", "event": "audit.appended", "event_type": "deal.queue_assigned", "audit_log_id": 71, "deal_reference": "DEAL-1001"}
+INFO:     127.0.0.1:52716 - "POST /deals/DEAL-1001/drafts/triage/review HTTP/1.1" 200 OK
+{"ts": "2026-07-31T07:51:58Z", "level": "info", "event": "audit.appended", "event_type": "stage.transition", "audit_log_id": 79, "deal_reference": "DEAL-1001"}
+{"ts": "2026-07-31T07:51:58Z", "level": "info", "event": "agent.run", "agent": "financial_spreading", "deal_reference": "DEAL-1001", "agent_run_id": 81, "source": "workflow"}
+{"ts": "2026-07-31T07:51:58Z", "level": "info", "event": "audit.appended", "event_type": "agent_draft.created", "audit_log_id": 83, "deal_reference": "DEAL-1001"}
+INFO:     127.0.0.1:52717 - "POST /deals/DEAL-1001/spread HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52716 - "POST /deals/DEAL-1001/drafts/spread/review HTTP/1.1" 400 Bad Request
+{"ts": "2026-07-31T07:51:58Z", "level": "info", "event": "audit.appended", "event_type": "agent_draft.accepted", "audit_log_id": 85, "deal_reference": "DEAL-1001"}
+{"ts": "2026-07-31T07:51:58Z", "level": "info", "event": "audit.appended", "event_type": "spread.persisted", "audit_log_id": 109, "deal_reference": "DEAL-1001"}
+{"ts": "2026-07-31T07:51:58Z", "level": "info", "event": "spread.persisted", "deal_reference": "DEAL-1001", "spread_line_items": 12, "citations": 11}
+{"ts": "2026-07-31T07:51:58Z", "level": "info", "event": "audit.appended", "event_type": "stage.transition", "audit_log_id": 112, "deal_reference": "DEAL-1001"}
+{"ts": "2026-07-31T07:51:58Z", "level": "info", "event": "workflow.tick_deferred", "deal_reference": "DEAL-1001", "missing": "compute_financial_ratios,assign_risk_grade_from_rubric,record_stage_transition"}
+INFO:     127.0.0.1:52717 - "POST /deals/DEAL-1001/drafts/spread/review HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52723 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52723 - "GET /tokens.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52726 - "GET /mod_cards.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52725 - "GET /mod_datatable.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52727 - "GET /console.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52728 - "GET /app.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52727 - "GET /pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52728 - "GET /intake/config HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52725 - "GET /agent/mode HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52723 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52726 - "GET /agents HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52726 - "GET /favicon.ico HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:52726 - "GET /pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52726 - "GET /drafts HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52726 - "GET /drafts/58 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52726 - "GET /deals/DEAL-2001 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52744 - "GET /pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52744 - "GET / HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:52744 - "GET /console.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:52744 - "GET /pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52745 - "GET /intake/config HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52746 - "GET /agent/mode HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52748 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52747 - "GET /agents HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52747 - "GET /pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52747 - "GET /drafts HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52747 - "GET /drafts/58 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52747 - "GET /deals/DEAL-2001 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52747 - "GET /drafts HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52747 - "GET /drafts/58 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52747 - "GET /drafts/82 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52747 - "GET /drafts/82 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52770 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52770 - "GET /tokens.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52772 - "GET /mod_cards.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52774 - "GET /app.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52771 - "GET /mod_datatable.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52773 - "GET /console.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52773 - "GET /pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52774 - "GET /intake/config HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52771 - "GET /agent/mode HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52770 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52772 - "GET /agents HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52770 - "GET /pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52772 - "GET /favicon.ico HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:52772 - "GET /drafts HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52772 - "GET /drafts/58 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52772 - "GET /deals/DEAL-2001 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52772 - "GET /drafts HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52772 - "GET /drafts/58 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52772 - "GET /drafts/58 HTTP/1.1" 200 OK
+{"ts": "2026-07-31T07:52:48Z", "level": "info", "event": "audit.appended", "event_type": "agent_draft.accepted", "audit_log_id": 114, "deal_reference": "DEAL-2001"}
+{"ts": "2026-07-31T07:52:48Z", "level": "info", "event": "audit.appended", "event_type": "deal.routed", "audit_log_id": 117, "deal_reference": "DEAL-2001"}
+{"ts": "2026-07-31T07:52:48Z", "level": "info", "event": "audit.appended", "event_type": "stage.transition", "audit_log_id": 120, "deal_reference": "DEAL-2001"}
+{"ts": "2026-07-31T07:52:48Z", "level": "info", "event": "audit.appended", "event_type": "deal.queue_assigned", "audit_log_id": 124, "deal_reference": "DEAL-2001"}
+INFO:     127.0.0.1:52772 - "POST /deals/DEAL-2001/drafts/triage/review HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52772 - "GET /pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52772 - "GET /drafts HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52772 - "GET /drafts/58 HTTP/1.1" 200 OK
+{"ts": "2026-07-31T07:52:49Z", "level": "info", "event": "audit.appended", "event_type": "stage.transition", "audit_log_id": 132, "deal_reference": "DEAL-2001"}
+{"ts": "2026-07-31T07:52:49Z", "level": "info", "event": "agent.run", "agent": "financial_spreading", "deal_reference": "DEAL-2001", "agent_run_id": 134, "source": "workflow"}
+{"ts": "2026-07-31T07:52:49Z", "level": "info", "event": "audit.appended", "event_type": "agent_draft.created", "audit_log_id": 136, "deal_reference": "DEAL-2001"}
+INFO:     127.0.0.1:52772 - "POST /deals/DEAL-2001/spread HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52772 - "GET /pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52772 - "GET /drafts HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52772 - "GET /drafts/135 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52772 - "POST /deals/DEAL-2001/drafts/spread/review HTTP/1.1" 400 Bad Request
+{"ts": "2026-07-31T07:52:52Z", "level": "info", "event": "audit.appended", "event_type": "agent_draft.rejected", "audit_log_id": 138, "deal_reference": "DEAL-2001"}
+INFO:     127.0.0.1:52772 - "POST /deals/DEAL-2001/drafts/spread/review HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52772 - "GET /pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52772 - "GET /drafts HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52772 - "GET /drafts/135 HTTP/1.1" 200 OK
+{"ts": "2026-07-31T07:52:53Z", "level": "info", "event": "agent.run", "agent": "financial_spreading", "deal_reference": "DEAL-2001", "agent_run_id": 144, "latency_ms": 0}
+{"ts": "2026-07-31T07:52:53Z", "level": "info", "event": "audit.appended", "event_type": "agent_draft.created", "audit_log_id": 147, "deal_reference": "DEAL-2001"}
+INFO:     127.0.0.1:52772 - "POST /deals/DEAL-2001/spread HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52772 - "GET /pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52772 - "GET /drafts HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52772 - "GET /drafts/146 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52772 - "POST /deals/DEAL-2001/drafts/spread/review HTTP/1.1" 400 Bad Request
+{"ts": "2026-07-31T07:52:55Z", "level": "info", "event": "audit.appended", "event_type": "agent_draft.edited", "audit_log_id": 149, "deal_reference": "DEAL-2001"}
+{"ts": "2026-07-31T07:52:55Z", "level": "info", "event": "audit.appended", "event_type": "spread.persisted", "audit_log_id": 163, "deal_reference": "DEAL-2001"}
+{"ts": "2026-07-31T07:52:55Z", "level": "info", "event": "spread.persisted", "deal_reference": "DEAL-2001", "spread_line_items": 12, "citations": 1}
+{"ts": "2026-07-31T07:52:55Z", "level": "info", "event": "audit.appended", "event_type": "stage.transition", "audit_log_id": 166, "deal_reference": "DEAL-2001"}
+INFO:     127.0.0.1:52772 - "POST /deals/DEAL-2001/drafts/spread/review HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52772 - "GET /pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52772 - "GET /drafts HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52772 - "GET /drafts/146 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52772 - "GET /drafts/135 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52772 - "GET /drafts/146 HTTP/1.1" 200 OK

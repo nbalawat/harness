@@ -188,6 +188,30 @@
       var index = "12345678".indexOf(event.key);
       if (index !== -1) { showScreen(SCREENS[index]); return; }
       var key = String(event.key || "").toLowerCase();
+      // The Draft Review workspace advertises K/J to walk the queue and
+      // A/E/R to disposition (index.html), so those keys must actually work
+      // there — not only on the intake screen.
+      if ($("screen-review") && $("screen-review").classList.contains("active")) {
+        if (key === "k") { selectAdjacentDraft(-1); return; }
+        if (key === "j") { selectAdjacentDraft(1); return; }
+        var draft = state.selectedDraft;
+        if (!draft || draft.review_status !== "pending") return;
+        if (key === "a" && window.confirm("Accept this " + (draft.artifact_label || "draft") + "? Acceptance is what promotes the drafted figures into deal-of-record data and advances the deal a stage.")) {
+          decideDraft("accepted");
+        }
+        if (key === "e") {
+          toggleReviewEdit(true, draft);
+          setText("review-edit-btn-label", "Confirm edit");
+        }
+        if (key === "r") {
+          // A rejection needs a written reason, so R puts the cursor in the
+          // reason box rather than firing a rejection the app would refuse.
+          var reasonBox = $("rev-reason");
+          if (reasonBox && !reasonBox.value.trim()) { reasonBox.focus(); }
+          else { decideDraft("rejected"); }
+        }
+        return;
+      }
       if (!$("screen-intake").classList.contains("active") || !state.triage) return;
       // Accepting promotes an agent draft into deal-of-record data and moves
       // the deal a stage — too consequential for one unconfirmed keystroke.
@@ -455,7 +479,7 @@
 
   async function refreshBoard() {
     try {
-      state.board = await api("/pipeline");
+      state.board = await api("/pipeline?acting_user=" + encodeURIComponent(OPERATOR));
       renderBoard();
     } catch (err) {
       setText("pipeline-footnote", "Pipeline unavailable: " + err.message);
@@ -1144,6 +1168,16 @@
       state.reviewQueue = [];
     }
     renderReviewQueue();
+    // This screen is an acceptance seat, not a list: landing on it with the
+    // draft/evidence panels empty until someone guesses to click a row makes
+    // the whole workspace read as inert. Open the newest item awaiting
+    // acceptance (falling back to the newest row) unless a selection stands.
+    var rows = state.reviewQueue || [];
+    var stillListed = state.selectedDraft && rows.some(function (r) { return r.id === state.selectedDraft.id; });
+    if (!stillListed && rows.length) {
+      var pendingRows = rows.filter(function (r) { return r.review_status === "pending"; });
+      selectDraftById((pendingRows[0] || rows[0]).id);
+    }
   }
 
   function toggleReviewEdit(show, draft) {
@@ -1523,7 +1557,7 @@
     });
 
     try {
-      state.config = await api("/intake/config");
+      state.config = await api("/intake/config?acting_user=" + encodeURIComponent(OPERATOR));
     } catch (err) {
       state.config = null;
     }

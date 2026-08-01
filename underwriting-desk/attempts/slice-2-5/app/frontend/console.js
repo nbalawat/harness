@@ -19,6 +19,9 @@
     intakeRef: null,
     stagedDocs: [],
     triage: null,
+    // Draft Review workspace (slice 2): the acceptance queue, the draft the
+    // reviewer has open, and the spread template the agent must fill.
+    review: { drafts: [], selectedId: null, detail: null, template: null, loaded: false },
   };
 
   // ---------------------------------------------------------------- helpers
@@ -96,21 +99,25 @@
     setText("crumb", "/ " + name);
     if (name === "pipeline") refreshBoard();
     if (name === "intake") refreshIntake();
+    if (name === "review") refreshReview();
   }
 
-  // The design's five-agent switch shipped inert. Only the intake triage agent
-  // runs in this release, so it is the one that can be selected; the rest are
-  // marked unavailable rather than left as toggles that quietly do nothing.
-  var SHIPPED_AGENTS = { triage: true };
+  // The design's five-agent switch shipped inert. Only the agents this release
+  // actually runs can be selected; the rest are marked unavailable rather than
+  // left as toggles that quietly do nothing.
+  var SHIPPED_AGENTS = {
+    triage: "runs at intake; its draft is accepted in Draft Review",
+    spreading: "runs on Draft Review; fills the standard spread from cited document locations",
+  };
 
   function wireAgentSwitch() {
     qsa("#agent-mode .agent-btn").forEach(function (button) {
       var slug = button.getAttribute("data-agent");
-      var shipped = SHIPPED_AGENTS[slug] === true;
+      var shipped = typeof SHIPPED_AGENTS[slug] === "string";
       button.disabled = !shipped;
-      button.setAttribute("aria-pressed", shipped ? "true" : "false");
+      button.setAttribute("aria-pressed", shipped && slug === "triage" ? "true" : "false");
       button.title = shipped
-        ? button.getAttribute("data-agent-name") + " — runs at intake"
+        ? button.getAttribute("data-agent-name") + " — " + SHIPPED_AGENTS[slug]
         : button.getAttribute("data-agent-name") + " — not in this release";
       if (!shipped) return;
       button.addEventListener("click", function () {
@@ -153,7 +160,7 @@
   // Screens this slice does not deliver still carry the design's example
   // figures. A live deal id on the board now navigates to them, so each one
   // says plainly that it is a design preview and not this deal's record.
-  var UNDELIVERED_SCREENS = ["deal", "review", "approvals", "sla", "audit"];
+  var UNDELIVERED_SCREENS = ["deal", "approvals", "sla", "audit"];
 
   function markUndeliveredScreens() {
     UNDELIVERED_SCREENS.forEach(function (name) {
@@ -184,6 +191,20 @@
       var index = "12345678".indexOf(event.key);
       if (index !== -1) { showScreen(SCREENS[index]); return; }
       var key = String(event.key || "").toLowerCase();
+      if ($("screen-review").classList.contains("active")) {
+        if (key === "j") { moveReviewSelection(1); return; }
+        if (key === "k") { moveReviewSelection(-1); return; }
+        // Accepting promotes agent output into deal-of-record data and moves the
+        // deal a stage — never on one unconfirmed keystroke.
+        if (key === "a") {
+          var open = selectedDraft();
+          var what = open ? open.artifact_label + " on " + open.deal_reference : "this draft";
+          if (window.confirm("Accept the " + what + "? Acceptance promotes it into deal-of-record data and advances the deal.")) reviewDisposition("accepted");
+        }
+        if (key === "e") toggleReviewEditRow(true);
+        if (key === "r") reviewDisposition("rejected");
+        return;
+      }
       if (!$("screen-intake").classList.contains("active") || !state.triage) return;
       // Accepting promotes an agent draft into deal-of-record data and moves
       // the deal a stage — too consequential for one unconfirmed keystroke.
@@ -1035,12 +1056,535 @@
     if (state.intakeRef) hydrateDeal(state.intakeRef).catch(function () {});
   }
 
+  // ---------------------------------------------------------------- draft review workspace
+  //
+  // One queue and one gate for every agent draft in the app (triage today, the
+  // financial spread this slice, memo/compliance in later releases): the draft
+  // on the left, the evidence each figure cites on the right, and a named human
+  // disposition below. Only acceptance promotes a draft into deal-of-record data.
+
+  var DRAFT_STATE_CHIP = {
+    pending: ["warn", "Pending"],
+    accepted: ["ok", "Accepted"],
+    edited: ["info", "Edited"],
+    rejected: ["crit", "Rejected"],
+  };
+
+  var STAGES_ALLOWING_SPREAD = ["document_extraction", "financial_spreading"];
+
+  function reviewErrorBox(message) {
+    var box = $("rv-error");
+    if (!box) return;
+    if (!message) { box.hidden = true; box.textContent = ""; return; }
+    box.hidden = false;
+    box.textContent = message;
+  }
+
+  function selectedDraft() {
+    var id = state.review.selectedId;
+    return (state.review.drafts || []).filter(function (d) { return d.id === id; })[0] || null;
+  }
+
+  function pendingDrafts() {
+    return (state.review.drafts || []).filter(function (d) { return d.review_status === "pending"; });
+  }
+
+  // The draft a disposition applies to is the draft ON SCREEN — never a
+  // different one. Falling back to "some other pending draft" would let Accept
+  // promote a draft (and advance a deal) the reviewer is not looking at, which
+  // is exactly the claim this gate exists to make. Only when nothing is open at
+  // all — the queue has not been touched yet — does the oldest pending draft
+  // stand in, and the disposition then re-renders onto it before acting.
+  function dispositionTarget() {
+    var open = selectedDraft();
+    if (open) return open.review_status === "pending" ? open : null;
+    return pendingDrafts()[0] || null;
+  }
+
+  async function refreshReview(selectId) {
+    try {
+      var data = await api("/drafts");
+      state.review.drafts = data.drafts || [];
+      state.review.loaded = true;
+      reviewErrorBox("");
+    } catch (err) {
+      state.review.drafts = [];
+      reviewErrorBox("Acceptance queue unavailable: " + err.message);
+    }
+    var ids = state.review.drafts.map(function (d) { return d.id; });
+    var wanted = selectId != null && ids.indexOf(selectId) !== -1 ? selectId : null;
+    if (wanted == null && ids.indexOf(state.review.selectedId) !== -1) wanted = state.review.selectedId;
+    if (wanted == null) {
+      // A row action on the board carries a deal — open that deal's draft rather
+      // than whatever happens to be newest in the queue.
+      var candidates = state.selectedRef
+        ? state.review.drafts.filter(function (d) { return d.deal_reference === state.selectedRef; })
+        : [];
+      if (!candidates.length) candidates = state.review.drafts;
+      var pending = candidates.filter(function (d) { return d.review_status === "pending"; });
+      var pool = pending.length ? pending : candidates;
+      wanted = pool.length ? pool[pool.length - 1].id : null;
+    }
+    state.review.selectedId = wanted;
+    renderReviewQueue();
+    if (wanted != null) await loadDraftDetail(wanted);
+    else renderReviewDetail(null);
+  }
+
+  function renderReviewQueue() {
+    var body = $("review-rows");
+    if (!body) return;
+    var rows = (state.review.drafts || []).slice().reverse();
+    body.replaceChildren();
+    if (!rows.length) {
+      var empty = el("tr");
+      var cell = el("td", "dim", "No agent drafts yet — submit a deal on Deal Intake to run the triage agent.");
+      cell.setAttribute("colspan", "10");
+      empty.appendChild(cell);
+      body.appendChild(empty);
+    }
+    rows.forEach(function (draft) {
+      var tr = el("tr");
+      if (draft.id === state.review.selectedId) tr.className = "sel";
+      tr.setAttribute("data-draft-id", String(draft.id));
+      tr.setAttribute("data-draft-type", draft.draft_type || "");
+      tr.setAttribute("data-deal-ref", draft.deal_reference || "");
+      tr.addEventListener("click", function () { selectDraft(draft.id); });
+
+      var refCell = el("td", "mono");
+      refCell.appendChild(el("span", "tbl-id", draft.deal_reference));
+      tr.appendChild(refCell);
+      tr.appendChild(el("td", null, draft.borrower_name || "—"));
+      tr.appendChild(el("td", null, draft.artifact_label || draft.draft_type));
+      tr.appendChild(el("td", null, draft.agent_label || "—"));
+
+      var chip = DRAFT_STATE_CHIP[draft.review_status] || ["", titleize(draft.review_status)];
+      var stateCell = el("td");
+      var chipNode = el("span", "chip " + chip[0]);
+      if (draft.review_status === "pending") chipNode.appendChild(el("span", "dot pulse"));
+      chipNode.appendChild(document.createTextNode(chip[1]));
+      stateCell.appendChild(chipNode);
+      tr.appendChild(stateCell);
+
+      tr.appendChild(el("td", "mono dim", draft.model_id || "—"));
+      tr.appendChild(el("td", "num mono", draft.latency_ms == null ? "—" : Number(draft.latency_ms).toLocaleString("en-US") + "ms"));
+      var tokens = (Number(draft.prompt_tokens) || 0) + (Number(draft.completion_tokens) || 0);
+      tr.appendChild(el("td", "num mono", tokens ? tokens.toLocaleString("en-US") : "—"));
+      tr.appendChild(el("td", "num mono", draft.token_cost == null ? "—" : "$" + Number(draft.token_cost).toFixed(3)));
+      var age = Number(draft.business_days_idle || 0);
+      tr.appendChild(el("td", "num mono" + (age > 5 ? " crit-t" : age >= 2 ? " warn-t" : ""), age + " d"));
+      body.appendChild(tr);
+    });
+
+    var pending = pendingDrafts().length;
+    setText("rv-sub", "Agent output vs. cited evidence · " + pending + " awaiting acceptance");
+    setText("rv-queue-note", state.review.drafts.length + " drafts in scope · state chips: pending / accepted / edited / rejected");
+  }
+
+  async function loadDraftDetail(draftId) {
+    try {
+      state.review.detail = await api("/drafts/" + encodeURIComponent(draftId));
+      reviewErrorBox("");
+    } catch (err) {
+      state.review.detail = null;
+      reviewErrorBox("Draft unavailable: " + err.message);
+    }
+    renderReviewDetail(state.review.detail);
+  }
+
+  async function selectDraft(draftId) {
+    state.review.selectedId = draftId;
+    toggleReviewEditRow(false);
+    renderReviewQueue();
+    await loadDraftDetail(draftId);
+  }
+
+  function moveReviewSelection(step) {
+    var ids = (state.review.drafts || []).slice().reverse().map(function (d) { return d.id; });
+    if (!ids.length) return;
+    var index = ids.indexOf(state.review.selectedId);
+    var next = ids[Math.max(0, Math.min(ids.length - 1, (index === -1 ? 0 : index) + step))];
+    if (next != null && next !== state.review.selectedId) selectDraft(next);
+  }
+
+  function renderTelemetry(detail) {
+    var queue = (detail && detail.queue) || {};
+    setText("rv-t-deal", queue.deal_reference || "—");
+    setText("rv-t-artifact", queue.artifact_label || "—");
+    setText("rv-t-agent", queue.agent_name || queue.agent_label || "—");
+    setText("rv-t-model", queue.model_id || "—");
+    setText("rv-t-prompt", queue.prompt_template_version || "—");
+    // The versioned lending-policy pack is the policy-compliance slice's record;
+    // this release has none, and the cell says so instead of naming one.
+    setText("rv-t-pack", "not in this release");
+    setText("rv-t-latency", queue.latency_ms == null ? "—" : Number(queue.latency_ms).toLocaleString("en-US") + " ms");
+    setText(
+      "rv-t-tokens",
+      queue.prompt_tokens == null
+        ? "—"
+        : Number(queue.prompt_tokens).toLocaleString("en-US") + " / " + Number(queue.completion_tokens || 0).toLocaleString("en-US") + " (est.)"
+    );
+    setText("rv-t-cost", queue.token_cost == null ? "—" : "$" + Number(queue.token_cost).toFixed(4));
+    setText("rv-t-run", queue.agent_run_id == null ? "—" : "run " + queue.agent_run_id + " · draft " + queue.id);
+    // The agent runtime does not expose a sampling temperature, so the cell
+    // reports that rather than asserting a setting nothing recorded.
+    setText("rv-t-temp", "not recorded");
+  }
+
+  function spreadLine(item) {
+    var row = el("div", "evidence-item");
+    row.appendChild(el("span", "ev-src", item.label));
+    var body = el("div");
+    var provenance = el("div", "dim txt-tiny");
+    if (item.supported && item.value != null) {
+      body.appendChild(el("b", "mono", money(item.value)));
+      body.appendChild(document.createTextNode(" " + (item.unit || "USD") + " · " + (item.period || "period not stated in the record")));
+      var citation = item.citation || {};
+      provenance.textContent =
+        "spread line " + item.line_item_key + " · " +
+        (citation.source_reference ? "cites " + citation.source_reference : "no citation") +
+        (item.source === "human-edited" ? " (corrected at the gate by a named human)" : "");
+    } else {
+      body.appendChild(el("b", "warn-t", item.statement || "not supported by the record"));
+      provenance.textContent = "spread line " + item.line_item_key + " · the documents on file carry no such line, so no figure is entered";
+    }
+    row.appendChild(body);
+    row.appendChild(provenance);
+    return row;
+  }
+
+  function renderSpreadDraft(box, detail) {
+    var items = detail.spread_line_items || [];
+    var coverage = detail.coverage || {};
+    var intro = el("p");
+    intro.appendChild(el("b", null, "STANDARD SPREAD — " + (detail.template_version || "template")));
+    intro.appendChild(document.createTextNode(
+      " · " + (coverage.supported || 0) + " of " + (coverage.template_lines || items.length) + " template lines supported by the record; every figure below names the document and document location it was read from."
+    ));
+    box.appendChild(intro);
+    var categories = [];
+    items.forEach(function (item) { if (categories.indexOf(item.category_label) === -1) categories.push(item.category_label); });
+    categories.forEach(function (category) {
+      box.appendChild(el("hr", "sep"));
+      box.appendChild(el("p", null, category));
+      items
+        .filter(function (item) { return item.category_label === category; })
+        .forEach(function (item) { box.appendChild(spreadLine(item)); });
+    });
+    if (detail.rationale) {
+      box.appendChild(el("hr", "sep"));
+      box.appendChild(el("p", "dim", detail.rationale));
+    }
+  }
+
+  function renderTriageDraft(box, detail) {
+    var head = el("p");
+    head.appendChild(el("b", null, "TRIAGE CLASSIFICATION — " + (detail.classification_label || detail.classification || "—")));
+    box.appendChild(head);
+    var queue = el("p");
+    queue.appendChild(document.createTextNode("Proposed analyst queue: "));
+    queue.appendChild(el("b", null, detail.proposed_queue_label || detail.proposed_queue || "—"));
+    queue.appendChild(document.createTextNode(" (" + (detail.proposed_analyst_user_id || "—") + ") — a proposal until accepted here."));
+    box.appendChild(queue);
+    box.appendChild(el("hr", "sep"));
+    var missing = detail.missing_documents || [];
+    var missingLine = el("p");
+    if (missing.length) {
+      missingLine.appendChild(el("b", "crit-t", "MISSING DOCUMENTS — "));
+      missingLine.appendChild(document.createTextNode((detail.missing_document_labels || missing).join(", ")));
+    } else {
+      missingLine.appendChild(el("b", "ok-t", "No required document is missing for this request type."));
+    }
+    box.appendChild(missingLine);
+    if (detail.rationale) {
+      box.appendChild(el("hr", "sep"));
+      box.appendChild(el("p", "dim", detail.rationale));
+    }
+  }
+
+  function renderEvidence(detail) {
+    var list = $("rv-evidence");
+    if (!list) return;
+    list.replaceChildren();
+    var citations = (detail && detail.citations) || [];
+    var chip = $("rv-uncited");
+    if (!detail) {
+      setText("rv-evidence-note", "no draft selected");
+      if (chip) { chip.className = "chip"; chip.textContent = "—"; }
+      return;
+    }
+    var coverage = detail.coverage || {};
+    setText(
+      "rv-evidence-note",
+      citations.length + " cited source" + (citations.length === 1 ? "" : "s") +
+        (coverage.human_entered ? " · " + coverage.human_entered + " human-entered" : "") +
+        (coverage.document_cited != null ? " · " + coverage.document_cited + " document-cited" : "")
+    );
+    var uncited = coverage.uncited_figures;
+    if (chip) {
+      chip.className = "chip " + (uncited ? "crit" : "ok");
+      chip.textContent = uncited == null ? "citations shown below" : uncited + " uncited figures";
+    }
+    if (!citations.length) {
+      var note = el("div", "evidence-item");
+      note.appendChild(el("span", "ev-src", "no citations on this draft"));
+      note.appendChild(el("div", null, detail.draft_type === "spread"
+        ? "The documents on file carry no extractable figure for any template line — every line reads 'not supported by the record'."
+        : "This draft type cites the deal record itself; figures with document citations appear on the financial spread."));
+      list.appendChild(note);
+      return;
+    }
+    citations.forEach(function (citation) {
+      var item = el("div", "evidence-item");
+      item.appendChild(el("span", "ev-src", citation.source_reference || "—"));
+      var body = el("div");
+      body.appendChild(document.createTextNode((citation.line_item_key || "figure") + " = "));
+      body.appendChild(el("b", "mono", String(citation.cited_value)));
+      item.appendChild(body);
+      if (citation.excerpt) item.appendChild(el("div", "ev-quote", "“" + citation.excerpt + "”"));
+      list.appendChild(item);
+    });
+  }
+
+  function renderDisposition(detail) {
+    var readout = $("disp-readout");
+    var decider = $("rv-decider");
+    if (decider) decider.textContent = "Decider: " + OPERATOR + " · " + (state.operatorRole || "—");
+    if (!readout) return;
+    readout.replaceChildren();
+    if (!detail) {
+      readout.textContent = "No draft selected. Submit a deal on Deal Intake to put an agent draft in this queue.";
+      return;
+    }
+    if (detail.review_status === "pending") {
+      readout.appendChild(document.createTextNode("No disposition recorded. The draft stays "));
+      readout.appendChild(el("b", "warn-t", "PENDING"));
+      readout.appendChild(document.createTextNode(
+        " and " + (detail.deal ? detail.deal.stage_label : "the deal") + " cannot advance."
+      ));
+    } else {
+      readout.appendChild(document.createTextNode("Draft " + detail.review_status + " by "));
+      readout.appendChild(el("b", null, detail.reviewed_by_user_id || "—"));
+      readout.appendChild(document.createTextNode(
+        " at " + (detail.reviewed_at || "") + (detail.review_reason ? " — " + detail.review_reason : "") +
+        (detail.deal ? " · deal now at " + detail.deal.stage_label : "")
+      ));
+    }
+  }
+
+  function renderReviewDetail(detail) {
+    var box = $("rv-draft");
+    var stateChip = $("rv-draft-state");
+    renderTelemetry(detail);
+    if (box) {
+      box.replaceChildren();
+      if (!detail) {
+        box.appendChild(el("p", "dim", "No draft selected. Every agent draft in the app lands in the queue above; open one to review it beside the evidence it cites."));
+      } else if (detail.draft_type === "spread") {
+        renderSpreadDraft(box, detail);
+      } else if (detail.draft_type === "triage") {
+        renderTriageDraft(box, detail);
+      } else {
+        box.appendChild(el("p", null, detail.rationale || "This draft type is delivered by a later release."));
+      }
+    }
+    if (stateChip) {
+      var chip = detail ? DRAFT_STATE_CHIP[detail.review_status] || ["", titleize(detail.review_status)] : ["", "No draft"];
+      stateChip.replaceChildren();
+      stateChip.className = "chip " + chip[0];
+      if (detail && detail.review_status === "pending") stateChip.appendChild(el("span", "dot pulse"));
+      stateChip.appendChild(document.createTextNode(detail ? (detail.review_status === "pending" ? "Pending acceptance" : chip[1]) : "No draft"));
+    }
+    setText(
+      "rv-draft-note",
+      detail
+        ? (detail.queue ? detail.queue.artifact_label + " · " + detail.deal_reference : detail.deal_reference)
+        : "select a draft in the queue above"
+    );
+    renderEvidence(detail);
+    renderDisposition(detail);
+    renderSpreadButton();
+  }
+
+  // Which deal the spreading agent would run on: the deal open in the workspace
+  // when its stage allows it, otherwise the most recent deal whose triage draft
+  // a human has already accepted.
+  function spreadTargetRef() {
+    var detail = state.review.detail;
+    if (detail && detail.deal && STAGES_ALLOWING_SPREAD.indexOf(detail.deal.current_stage) !== -1) return detail.deal.deal_reference;
+    var open = selectedDraft();
+    if (open && STAGES_ALLOWING_SPREAD.indexOf(open.current_stage) !== -1) return open.deal_reference;
+    var deals = (state.board.deals || []).filter(function (d) {
+      return !d.is_closed && STAGES_ALLOWING_SPREAD.indexOf(d.current_stage) !== -1;
+    });
+    return deals.length ? deals[deals.length - 1].deal_reference : null;
+  }
+
+  function renderSpreadButton() {
+    var button = $("btn-rv-spread");
+    if (!button) return;
+    var ref = spreadTargetRef();
+    button.title = ref
+      ? "Run the financial spreading agent on " + ref
+      : "Accept a triage draft first — spreading starts once a deal reaches Document Extraction";
+  }
+
+  async function runSpread() {
+    reviewErrorBox("");
+    var button = $("btn-rv-spread");
+    if (button) button.disabled = true;
+    try {
+      if (!state.review.loaded) await refreshReview();
+      if (!(state.board.deals || []).length) await refreshBoard();
+      var ref = spreadTargetRef();
+      if (!ref) {
+        reviewErrorBox("No deal is ready for spreading — accept a triage draft first so a deal reaches Document Extraction.");
+        return;
+      }
+      var draft = await postJson("/deals/" + encodeURIComponent(ref) + "/spread", { acting_user: OPERATOR });
+      await refreshBoard();
+      await refreshReview(draft.id);
+    } catch (err) {
+      reviewErrorBox(err.message);
+    } finally {
+      if (button) button.disabled = false;
+    }
+  }
+
+  function toggleReviewEditRow(show) {
+    var row = $("rv-edit-row");
+    if (!row) return;
+    var detail = state.review.detail;
+    if (show && (!detail || detail.review_status !== "pending")) return;
+    row.hidden = !show;
+    if (!show) return;
+    var keySelect = $("rv-edit-key");
+    var choiceField = $("rv-edit-choice-field");
+    var valueField = $("rv-edit-value-field");
+    keySelect.replaceChildren();
+    if (detail.draft_type === "spread") {
+      if (choiceField) choiceField.hidden = true;
+      if (valueField) valueField.hidden = false;
+      (detail.spread_line_items || []).forEach(function (item) {
+        var option = el("option", null, item.label + (item.supported ? " — " + money(item.value) : " — not supported"));
+        option.value = item.line_item_key;
+        keySelect.appendChild(option);
+      });
+    } else {
+      if (choiceField) choiceField.hidden = false;
+      if (valueField) valueField.hidden = true;
+      [["classification", "Classification"], ["proposed_queue", "Analyst queue"]].forEach(function (pair) {
+        var option = el("option", null, pair[1]);
+        option.value = pair[0];
+        keySelect.appendChild(option);
+      });
+      renderEditChoices();
+    }
+  }
+
+  function renderEditChoices() {
+    var keySelect = $("rv-edit-key");
+    var choice = $("rv-edit-choice");
+    if (!keySelect || !choice) return;
+    choice.replaceChildren();
+    var config = state.config || {};
+    var options = keySelect.value === "proposed_queue"
+      ? (config.analyst_queues || []).map(function (q) { return [q.queue_id, q.label]; })
+      : (config.facility_types || []).map(function (t) { return [t.slug, t.label]; });
+    options.forEach(function (pair) {
+      var option = el("option", null, pair[1]);
+      option.value = pair[0];
+      choice.appendChild(option);
+    });
+  }
+
+  async function reviewDisposition(action, extra) {
+    reviewErrorBox("");
+    var hint = $("rev-reason-hint");
+    if (hint) hint.hidden = true;
+    if (!state.review.loaded) await refreshReview();
+    var target = dispositionTarget();
+    if (!target) {
+      var open = selectedDraft();
+      reviewErrorBox(
+        open
+          ? "This draft was already " + open.review_status + " by " + (open.reviewed_by_user_id || "a reviewer") +
+            " — select a pending draft in the queue to disposition it."
+          : "No draft is awaiting a disposition."
+      );
+      return;
+    }
+    // Act on the draft the reviewer can see: if the stand-in was used, bring it
+    // on screen first.
+    if (target.id !== state.review.selectedId) await selectDraft(target.id);
+    var reason = ($("rev-reason") && $("rev-reason").value || "").trim();
+    var payload = Object.assign({ action: action, acting_user: OPERATOR }, extra || {});
+    if (reason) payload.reason = reason;
+    try {
+      var result = await postJson(
+        "/deals/" + encodeURIComponent(target.deal_reference) + "/drafts/" + encodeURIComponent(target.draft_type) + "/review",
+        payload
+      );
+      if ($("rev-reason")) $("rev-reason").value = "";
+      toggleReviewEditRow(false);
+      await refreshBoard();
+      await refreshReview(result.draft ? result.draft.id : target.id);
+    } catch (err) {
+      if (action === "rejected" && hint) { hint.hidden = false; hint.textContent = err.message; }
+      reviewErrorBox(err.message);
+    }
+  }
+
+  function reviewEditPayload() {
+    var detail = state.review.detail;
+    if (!detail) return null;
+    var key = $("rv-edit-key") ? $("rv-edit-key").value : "";
+    if (!key) return null;
+    if (detail.draft_type === "spread") {
+      var raw = ($("rv-edit-value") && $("rv-edit-value").value || "").trim();
+      if (!raw) { reviewErrorBox("Enter the corrected value for " + key + "."); return null; }
+      var edits = { line_items: {} };
+      edits.line_items[key] = parseMoney(raw);
+      return { edits: edits };
+    }
+    var choice = $("rv-edit-choice") ? $("rv-edit-choice").value : "";
+    if (!choice) return null;
+    var triageEdits = {};
+    triageEdits[key] = choice;
+    return { edits: triageEdits };
+  }
+
+  function wireReview() {
+    var spread = $("btn-rv-spread");
+    if (spread) spread.addEventListener("click", runSpread);
+    var accept = $("btn-rv-accept");
+    if (accept) accept.addEventListener("click", function () { reviewDisposition("accepted"); });
+    var reject = $("btn-rv-reject");
+    if (reject) reject.addEventListener("click", function () { reviewDisposition("rejected"); });
+    var edit = $("btn-rv-edit");
+    if (edit) edit.addEventListener("click", function () { toggleReviewEditRow($("rv-edit-row").hidden); });
+    var editConfirm = $("btn-rv-edit-confirm");
+    if (editConfirm) {
+      editConfirm.addEventListener("click", function () {
+        var payload = reviewEditPayload();
+        if (payload) reviewDisposition("edited", payload);
+      });
+    }
+    var keySelect = $("rv-edit-key");
+    if (keySelect) keySelect.addEventListener("change", renderEditChoices);
+    var prev = $("btn-rv-prev");
+    if (prev) prev.addEventListener("click", function () { moveReviewSelection(-1); });
+    var next = $("btn-rv-next");
+    if (next) next.addEventListener("click", function () { moveReviewSelection(1); });
+  }
+
   // ---------------------------------------------------------------- boot
 
   async function boot() {
     wireNavigation();
     wirePipeline();
     wireIntake();
+    wireReview();
     wireAgentSwitch();
     startClock();
     clearIntakeForm();

@@ -4,9 +4,16 @@ You are a slice-build step. inputs.json gives: the current app (copy it to ./app
 
 Implement THAT slice end to end across every layer it needs (backend endpoints, agent behavior, frontend UI) — consult the composed modules' agent-guide files; use db.store and agent_runtime.respond; never hand-roll storage or LLM calls. Append a line describing your slice to app/SLICES.md.
 
+PARALLEL BUILD DISCIPLINE (when _params.parallel is true): sibling slices are being built CONCURRENTLY on the same foundation app you received, and a deterministic line-level merge unions all the trees afterward — a conflict fails the whole wave. To merge cleanly:
+- Your backend logic goes in a NEW file: `backend/ext_<your-slice-id>.py` (registered from main.py with a single one-line import/include near the existing ext registrations). Never rewrite shared modules.
+- Your frontend behavior goes inside YOUR covered screens' containers only (`id="screen-<name>"` sections). Do not restructure shared chrome, other screens, or shared CSS.
+- SLICES.md is append-only: add your lines at the END; never edit or reorder existing entries.
+- Tests go in a new file `backend/tests/test_<your-slice-id>.py`.
+- Verification here proves the FOUNDATION plus YOUR slice; the merge step re-proves every slice against the unioned app.
+
 USE THE SANDBOX, NOT RAW SHELL: the app-sandbox MCP tools (start_app, request, logs, run_tests, stop_app) boot and probe your app with structured results. Probe every acceptance path with `request` and run `run_tests` BEFORE finishing — a sandbox probe costs nothing; a failed verification costs a full boot cycle and a retry. Do not hand-roll uvicorn/curl in Bash.
 
-Done means: your slice's acceptance checks pass against the running app, ALL previous slices' acceptance still passes, and the backend test suite stays green — the verifier runs exactly that.
+Done means: your slice's acceptance checks pass against the running app, the foundation's (and, for the foundation slice itself, ALL previous slices') acceptance still passes, and the backend test suite stays green — the verifier runs exactly that. The verifier also executes your demo declaration and takes the screenshot itself — do NOT spend turns driving a browser.
 
 Route-ordering caution: main.py ends with a generic /api/{table} catch-all — routes appended after it under /api/... will be shadowed. Register new specific endpoints outside /api/ (e.g. /approvals) or restructure registration order.
 
@@ -35,4 +42,4 @@ screens. A screenshot byte-identical to a previous slice's FAILS verification �
 stage real data through your steps so the shot visibly shows what this slice
 added. There is no fallback: a demo that cannot run is a failed slice.
 
-REVIEW BEFORE DONE (mandatory): after implementing, invoke BOTH reviewer subagents (Task tool) on your work — slice-reviewer (contracts/fidelity) and security-reviewer (FSI hardening: validation, audit rows, human gates, RBAC, no LLM-computed money). Address every finding it reports — fidelity breaks, shadowed routes, module bypasses, cumulative-acceptance risks — then re-run it until it replies NO FINDINGS. The verifier boots the app after you; the reviewer is how you avoid paying for a failed boot.
+SELF-CHECK BEFORE DONE: before finishing, sweep your own diff against the certified conventions — design-shell fidelity intact, no routes registered after the /api/{table} catch-all, storage via db.store, LLM calls via agent_runtime.respond, every mutation writing an audit row, server-side role checks on every route, no financial math delegated to an LLM. A dedicated audit agent reviews the merged app after the build; findings there land in the governance pack, so violations are caught — write it right the first time. The verifier boots the app after you; a sandbox probe now is how you avoid paying for a failed boot.

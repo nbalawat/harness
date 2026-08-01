@@ -12,8 +12,10 @@ Composition contract honoured here:
 """
 from __future__ import annotations
 
+import copy
 import datetime
 import json
+import math
 import re
 import time
 import uuid
@@ -464,8 +466,15 @@ def visible_deals(username: str | None) -> list[dict]:
     is no identity to scope by until a bearer token is presented.
     """
     rows = all_deals()
-    user = get_user(username) if username else None
-    if user is None or user.get("role") in PORTFOLIO_WIDE_ROLES:
+    if not username:
+        return rows
+    user = get_user(username)
+    if user is None or not user.get("is_active"):
+        # Signed in as somebody this app does not know. /auth/login will mint a
+        # token for any name, so treating that as "unscoped" would hand the
+        # whole book to anyone who asked for a token. Deny by default.
+        return []
+    if user.get("role") in PORTFOLIO_WIDE_ROLES:
         return rows
     return rls.scope(
         rows,
@@ -992,10 +1001,13 @@ def run_agent(*, agent_name: str, prompt: str, deal: dict, agent_type: str, run_
         reply, error = "", str(exc)[:200]
     latency_ms = int((time.perf_counter() - started) * 1000)
     model = model_id()
-    cost_row = costmeter.record(model, _estimate_tokens(prompt), _estimate_tokens(reply))
+    in_tokens, out_tokens = _estimate_tokens(prompt), _estimate_tokens(reply)
+    cost_row = costmeter.record(model, in_tokens, out_tokens)
     run = store.insert(
         "agent_runs",
         {
+            "input_tokens": in_tokens,
+            "output_tokens": out_tokens,
             "deal_id": deal["id"],
             "deal_reference": deal.get("deal_reference"),
             "agent_type": agent_type,
@@ -1235,10 +1247,13 @@ def adopt_workflow_triage(deal: dict, run_id: str | None, elapsed_ms: int, actor
 
     facts = triage_prompt_inputs(deal)
     model = model_id()
-    cost_row = costmeter.record(model, _estimate_tokens(build_triage_prompt(deal, facts)), _estimate_tokens(reply))
+    in_tokens, out_tokens = _estimate_tokens(build_triage_prompt(deal, facts)), _estimate_tokens(reply)
+    cost_row = costmeter.record(model, in_tokens, out_tokens)
     run = store.insert(
         "agent_runs",
         {
+            "input_tokens": in_tokens,
+            "output_tokens": out_tokens,
             "deal_id": deal["id"],
             "deal_reference": deal["deal_reference"],
             "agent_type": "intake_triage",
@@ -1299,6 +1314,15 @@ def _human_gate_for(deal: dict, draft_type: str, content: dict) -> dict:
             item = approval_flow._find(approval_id)
             parked_node = (item or {}).get("payload", {}).get("node")
             if item is not None and item["status"] == "pending" and parked_node == DRAFT_REVIEW_NODE.get(draft_type):
+                # A gate left open by a rejection is being reused for the
+                # re-draft, so its payload must describe THIS draft — a stale
+                # summary would show the superseded draft in
+                # GET /workflow/submissions/pending.
+                payload = dict(item.get("payload") or {})
+                payload["draft_type"] = draft_type
+                payload["summary"] = str(content.get("rationale", ""))[:200]
+                item["payload"] = payload
+                store.save("_approvals_queue", item)
                 return item
     return approval_flow.submit(
         f"agent_draft:{draft_type}",
@@ -1376,12 +1400,16 @@ def review_draft(*, deal: dict, draft_type: str, action: str, actor: dict, reaso
     if draft is None:
         raise DomainError(409, f"no pending '{draft_type}' draft on deal {deal['deal_reference']}")
 
-    content = dict(draft["draft_content"])
+    # Deep copies on purpose: an editor mutates the nested line dicts in place,
+    # and a shallow copy would let those mutations reach through into `before`
+    # — leaving the row-history "from" side showing the post-edit figures, so
+    # nobody could reconstruct what the agent originally said.
+    content = copy.deepcopy(draft["draft_content"])
+    before = copy.deepcopy(draft)
     applied_edits = None
     if action == "edited":
         applied_edits = _apply_edits(draft_type, content, edits or {})
 
-    before = dict(draft)
     draft["review_status"] = action
     draft["review_action"] = action
     draft["reviewed_by_user_id"] = actor["username"]
@@ -1392,12 +1420,24 @@ def review_draft(*, deal: dict, draft_type: str, action: str, actor: dict, reaso
     save_row("agent_drafts", draft, actor_user_id=actor["username"], before=before)
 
     item_id = draft.get("approval_item_id")
+    gate_left_open = False
     if item_id is not None:
         try:
-            if action == "rejected":
-                approval_flow.reject(item_id, actor["username"], reason_text)
-            else:
+            if action != "rejected":
                 approval_flow.approve(item_id, actor["username"], reason_text or f"{draft_type} draft {action}")
+            elif _is_process_gate(item_id):
+                # The approved process models a rejection as a loop BACK to the
+                # drafting node (workflows.json: triage_accepted / spread_accepted
+                # carry `on_false`), not as a terminal failure — but the engine
+                # fails a run the moment it resumes past a rejected gate. So the
+                # process's human node stays open: this DRAFT was rejected (the
+                # draft row and the audit row below name the human and the
+                # reason), and the node is satisfied when a re-drafted artefact
+                # is accepted. Without this the run dies here and no later
+                # acceptance can ever resume it.
+                gate_left_open = True
+            else:
+                approval_flow.reject(item_id, actor["username"], reason_text)
         except (approval_flow.IllegalTransition, KeyError):
             pass  # already dispositioned; the draft row remains the record
 
@@ -1411,7 +1451,13 @@ def review_draft(*, deal: dict, draft_type: str, action: str, actor: dict, reaso
         entity_id=draft["id"],
         old_values={"review_status": "pending"},
         new_values={"review_status": action, "reviewed_by_user_id": actor["username"]},
-        details={"reason": reason_text} if reason_text else {},
+        details={
+            **({"reason": reason_text} if reason_text else {}),
+            **({"process_gate": "left open for a re-draft"} if gate_left_open else {}),
+            # The append-only trail has to say WHICH figures a human overrode
+            # and to what — "edited" alone is not an examinable record.
+            **({"human_edits": applied_edits} if applied_edits else {}),
+        },
     )
 
     promoted: dict = {}
@@ -1459,6 +1505,12 @@ def workflow_resume_blocked_by(run_id: str) -> str | None:
     return None
 
 
+def _is_process_gate(item_id) -> bool:
+    """Is this approval item the workflow run's own parked human node?"""
+    item = approval_flow._find(item_id)
+    return bool(item) and str(item.get("kind") or "").startswith("workflow:")
+
+
 def resume_workflow(deal: dict) -> dict | None:
     run_id = deal.get("workflow_run_id")
     if not run_id:
@@ -1467,12 +1519,34 @@ def resume_workflow(deal: dict) -> dict | None:
     if awaiting:
         _log("workflow.resume_deferred", deal_reference=deal.get("deal_reference"), awaiting_handler=awaiting)
         return {"run_id": run_id, "status": "deferred", "awaiting_handler": awaiting}
+    started = time.perf_counter()
     try:
         state = workflow_engine.tick(run_id)
     except Exception as exc:
         _log("workflow.tick_failed", deal_reference=deal.get("deal_reference"), error=str(exc)[:120])
         return {"run_id": run_id, "status": "error"}
+    record_tick_duration(run_id, (time.perf_counter() - started) * 1_000_000)
     return {"run_id": run_id, "status": state.get("status"), "approval_id": state.get("approval_id")}
+
+
+def record_tick_duration(run_id: str, elapsed_us: float) -> None:
+    """Wall clock of one workflow tick, in microseconds.
+
+    The engine exposes no per-node timing, so an agent node's run record takes
+    the wall clock of the tick that produced it (the same convention slice 1
+    used for the intake run). Held in microseconds so a fast tick reports as
+    1 ms rather than a zero that would read as fabricated telemetry. Kept in a
+    private `_`-prefixed table (absent from models.TABLES), so it is never part
+    of the deal of record or the generic table API.
+    """
+    store.insert("_wf_tick_timings", {"run_id": run_id, "elapsed_us": max(0.0, float(elapsed_us)), "at": now_iso()})
+
+
+def last_tick_ms(run_id: str | None) -> int:
+    rows = [r for r in store.list("_wf_tick_timings") if r.get("run_id") == run_id]
+    if not rows:
+        return 0
+    return max(1, math.ceil(rows[-1]["elapsed_us"] / 1000))
 
 
 def _apply_edits(draft_type: str, content: dict, edits: dict) -> dict:
@@ -1548,6 +1622,15 @@ def deal_view(deal: dict) -> dict:
     view["required_documents"] = required_documents_for(deal.get("facility_type", ""))
     view["facility_label"] = FACILITY_TYPES.get(deal.get("facility_type"), {}).get("label", deal.get("facility_type"))
     view["submitter_role"] = (get_user(deal.get("submitted_by_user_id")) or {}).get("role")
+    # Spread of record (slice 2): only human-accepted line items ever count.
+    spread_rows = [
+        row
+        for row in store.list("spread_line_items")
+        if row.get("deal_id") == deal["id"] and row.get("is_current") is not False
+    ]
+    view["spread_line_item_count"] = len(spread_rows)
+    view["spread_accepted"] = bool(spread_rows)
+    view["spread_period"] = spread_rows[0].get("period") if spread_rows else None
     return view
 
 

@@ -52,12 +52,14 @@ export interface QuestionsFrom {
 
 /** Conditional enablement: a pure predicate over a committed artifact field. */
 export interface WhenClause {
-  artifact: string;
-  path: string;
+  artifact?: string;
+  path?: string;
   /** Satisfied when the value strictly equals this. */
   equals?: unknown;
   /** Satisfied when the value's existence matches (for data-driven fan-out). */
   exists?: boolean;
+  /** Conjunction: satisfied only when every sub-clause is satisfied. */
+  all?: WhenClause[];
 }
 
 /** Interaction budgets — user attention is enforced like dollars. */
@@ -173,6 +175,11 @@ export interface ProjectTypeDef {
   version: string;
   /** Plain-language description of what this project type builds. */
   description?: string;
+  /**
+   * Max non-gate nodes executed concurrently per frontier round (default 4;
+   * HARNESS_CONCURRENCY overrides). Gates always run one at a time.
+   */
+  concurrency?: number;
   cost?: CostSpec;
   interaction?: InteractionSpec;
   preview?: PreviewSpec;

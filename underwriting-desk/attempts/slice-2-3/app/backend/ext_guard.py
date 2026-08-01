@@ -77,10 +77,46 @@ def scrub(value):
 
 
 def _table_of(path: str) -> str | None:
-    if not path.startswith("/api/"):
-        return None
-    rest = path[len("/api/") :].strip("/")
-    return rest if rest and "/" not in rest else None
+    if path.startswith("/api/"):
+        rest = path[len("/api/") :].strip("/")
+        return rest if rest and "/" not in rest else None
+    # The generic CSV exporter reaches the same rows by another door, so it is
+    # governed by the same rule — otherwise /export/agent_drafts.csv is a
+    # whole-portfolio dump of every spread and its citations.
+    if path.startswith("/export/") and path.endswith(".csv"):
+        rest = path[len("/export/") : -len(".csv")].strip("/")
+        return rest if rest and "/" not in rest else None
+    return None
+
+
+def _reader_is_entitled(request) -> bool:
+    """A generic read of the deal of record needs the same named, active,
+    internal seat the guarded endpoints demand.
+
+    Imported lazily: this middleware installs before the domain module is
+    fully wired, and a module-level import would be a cycle.
+    """
+    try:
+        import underwriting as uw
+        from ext_auth import current_user
+    except Exception:
+        # FAIL CLOSED. Returning True here would silently reopen the whole
+        # deal of record to anonymous callers on any import hiccup — and
+        # because the refusal branch is skipped, nothing would even record
+        # that the control was off. A control that disables itself quietly is
+        # worse than no control.
+        return False
+    named = request.query_params.get("acting_user")
+    try:
+        # The generic reader hands back the WHOLE table — it has no way to
+        # apply the row scoping /deals and /drafts apply (a relationship
+        # manager sees only the deals they submitted). So it is limited to the
+        # seats that are entitled to the whole book anyway; a row-scoped seat
+        # reads through the endpoints that scope it, not around them.
+        uw.resolve_actor(current_user(request.headers.get("authorization")), named, uw.PORTFOLIO_WIDE_ROLES)
+    except Exception:
+        return False
+    return True
 
 
 def install(app):
@@ -140,8 +176,40 @@ def install(app):
                 },
             )
 
+        # Sealing only the WRITE side left the whole gate walkable from the
+        # other direction: GET /api/agent_drafts hands back draft_content —
+        # every deal's spread and its citations — and /api/spread_line_items
+        # the promoted figures themselves. A generic read of the deal of
+        # record is deny-by-default, exactly like the Draft Review queue.
+        if request.method == "GET" and not _reader_is_entitled(request):
+            ext_audit.record(
+                "api.generic_read_refused",
+                {
+                    "table": table,
+                    "method": request.method,
+                    "reason": "the deal of record is read only by a named, active internal seat",
+                },
+            )
+            return JSONResponse(
+                status_code=403,
+                content={
+                    "detail": (
+                        f"'{table}' is part of the deal of record; name yourself (sign in or send "
+                        "acting_user) and read it through the endpoint that scopes it to your role"
+                    )
+                },
+            )
+
         response = await call_next(request)
         if request.method != "GET" or response.status_code != 200:
+            return response
+
+        # The scrub below is a JSON transform. /export/{table}.csv is now
+        # governed by the same rule, and running its CSV through json.loads
+        # would replace the examiner's export with {"detail": "unreadable"} —
+        # so hand non-JSON responses straight back. The exporter already drops
+        # credential and document-content columns at the source.
+        if not str(response.headers.get("content-type", "")).startswith("application/json"):
             return response
 
         body = b"".join([chunk async for chunk in response.body_iterator])

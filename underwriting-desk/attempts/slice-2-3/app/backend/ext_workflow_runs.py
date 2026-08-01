@@ -1,14 +1,31 @@
 """workflow-engine endpoints: start, tick, inspect."""
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Header, HTTPException, Query
 from pydantic import BaseModel
 
+import ext_audit
+import underwriting as uw
 import workflow_engine
+from ext_auth import current_user
 
 router = APIRouter(prefix="/workflows")
 
 
 class StartRequest(BaseModel):
     inputs: dict = {}
+    acting_user: str | None = None
+
+
+def _named_actor(authenticated, named):
+    """Starting or ticking a run MUTATES the deal of record — the start route
+    reaches `create_deal_at_intake` with caller-supplied inputs, exactly what
+    POST /deals resolves an actor before doing. These are writes, so the
+    "un-identified reads still answer" contract does not cover them, and an
+    engine re-entry that records no caller is an unaudited mutation.
+    """
+    try:
+        return uw.resolve_actor(authenticated, named, uw.DRAFT_QUEUE_ROLES)
+    except uw.DomainError as exc:
+        raise HTTPException(status_code=exc.status, detail=exc.detail)
 
 
 @router.get("")
@@ -17,16 +34,30 @@ def list_definitions():
 
 
 @router.post("/{name}/start")
-def start(name: str, req: StartRequest):
+def start(name: str, req: StartRequest, authorization: str | None = Header(default=None)):
+    actor = _named_actor(current_user(authorization), req.acting_user)
     try:
         run_id = workflow_engine.start(name, req.inputs)
     except workflow_engine.WorkflowError as e:
         raise HTTPException(status_code=404, detail=str(e))
+    ext_audit.record(
+        "workflow.started",
+        {"workflow": name, "run_id": run_id, "actor_user_id": actor["username"], "role": actor["role"]},
+    )
     return workflow_engine.tick(run_id) | {"run_id": run_id}
 
 
 @router.post("/runs/{run_id}/tick")
-def tick(run_id: str):
+def tick(
+    run_id: str,
+    acting_user: str | None = Query(default=None),
+    authorization: str | None = Header(default=None),
+):
+    actor = _named_actor(current_user(authorization), acting_user)
+    ext_audit.record(
+        "workflow.ticked",
+        {"run_id": run_id, "actor_user_id": actor["username"], "role": actor["role"]},
+    )
     return workflow_engine.tick(run_id)
 
 

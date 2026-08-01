@@ -60,7 +60,13 @@ SENSITIVE_FIELDS = frozenset(
 #: Borrower document bodies. Confidential to the borrower and only ever needed
 #: through a deal-scoped endpoint — a generic table reader or a whole-table CSV
 #: dump has no business emitting them.
-DOCUMENT_CONTENT_FIELDS = frozenset({"extracted_text"})
+#:
+#: `excerpt` is the quoted document line a spread figure cites, `raw_output` is
+#: an agent's verbatim reply (which quotes the statements it was given), and
+#: `draft_content` is the whole agent draft body including both. All three are
+#: read through the deal-scoped draft endpoints (/drafts/{id},
+#: /deals/{ref}/spread), which apply row scoping; the generic reader does not.
+DOCUMENT_CONTENT_FIELDS = frozenset({"extracted_text", "excerpt", "raw_output", "draft_content"})
 
 
 def scrub(value):

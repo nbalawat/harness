@@ -150,7 +150,7 @@ test("ui: launch-the-app lifecycle against a built agentic-app workspace", async
       if (state.app.status === "running" || state.app.status === "failed") break;
     }
     assert.equal(state.app.status, "running", state.app.error);
-    assert.equal(state.app.node, "slice-3", "latest built slice wins");
+    assert.equal(state.app.node, "merge-slices", "the merged app wins");
 
     // The real generated app answers through the preview port.
     const health = await (await fetch(`http://127.0.0.1:${state.app.port}/health`)).json();

@@ -1,0 +1,18 @@
+{
+  "screen": "screen-review",
+  "caption": "The Draft Review workspace — one queue for every agent draft in the app — opens the financial spreading agent's spread for DEAL-1001 beside the evidence behind it: 12 of the 14 standard template lines carry a figure read from the deal's own documents, and clicking TOTAL REVENUE pins the citation that backs it (2025-FYE-Financials.pdf · p.1 · Income Statement, quoting \"Revenue 12,400,000\"), while Gross profit reads \"not supported by the record\" because the statements carry no such line. The run's model id and prompt version sit above the accept / edit / reject gate, and the ACCEPTED chip is an.chen's acceptance — the only thing that promoted this draft into deal-of-record spread line items with their citations and moved DEAL-1001 on to risk grading. Latency reads \"—\" because this spread was produced inside the approved process run, which the engine does not time per node.",
+  "steps": [
+    {
+      "action": "click",
+      "selector": ".navitem[data-screen=\"review\"]"
+    },
+    {
+      "action": "click",
+      "selector": "#review-rows tr[data-draft-type=\"spread\"]"
+    },
+    {
+      "action": "click",
+      "selector": "#review-draft [data-line-item=\"revenue\"]"
+    }
+  ]
+}

@@ -487,11 +487,26 @@ def run_triage(deal_reference: str, req: ActorRequest, authorization: str | None
 
 
 @router.get("/deals/{deal_reference}/drafts")
-def list_drafts(deal_reference: str, draft_type: str | None = Query(default=None)):
+def list_drafts(
+    deal_reference: str,
+    draft_type: str | None = Query(default=None),
+    acting_user: str | None = Query(default=None),
+    authorization: str | None = Header(default=None),
+):
+    # A draft body now carries the borrower statement lines its figures cite, so
+    # this read names its actor and is scoped to them, exactly like the board
+    # and the single-deal read: nobody reads a draft anonymously, and a
+    # relationship manager cannot walk to another manager's deal by naming its
+    # reference. (ext_spread.reader is the one definition of that rule.)
+    import ext_spread
+
+    actor = ext_spread.reader(authorization, acting_user)
     try:
         deal = uw.require_deal(deal_reference)
     except uw.DomainError as exc:
         raise _fail(exc)
+    if deal["id"] not in {d["id"] for d in uw.visible_deals(actor["username"])}:
+        raise HTTPException(status_code=404, detail=f"no deal '{deal_reference}' in your scope")
     return [_draft_view(d) for d in uw.drafts_for(deal["id"], draft_type)]
 
 

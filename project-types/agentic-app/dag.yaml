@@ -2,16 +2,28 @@
 # v0.3.0: VERTICAL SLICES — after the walking-skeleton scaffold, the app is
 # built feature-by-feature (slice-plan derives 1-6 end-to-end slices from the
 # requirements; each slice node activates only if its slice exists, carries
-# its own cumulative acceptance verification, and commits a launchable app).
+# its own acceptance verification, and commits a launchable app).
+# v0.12.0: PARALLEL BUILD — slice-1 is the foundation; slices 2..6 build
+# CONCURRENTLY on top of it (engine runs the whole ready frontier in
+# parallel), then merge-slices unions the trees deterministically (line-level
+# three-way merge; conflicts fail loudly, never LLM-resolved) and
+# verify-merged re-proves every slice's acceptance cumulatively. Design
+# options are three concurrent nodes off a shared screen inventory. A single
+# post-merge slice-audit replaces the per-slice reviewer subagents.
 # Model tiering (certified pins, sized from real run cost data 2026-07-26):
-#   haiku  — structured, bounded outputs (gap-questions, data-design)
-#   sonnet — mainstream coding/extraction (ingest, agent-design, build-*)
-#   opus   — reasoning + user-facing creative quality (requirements, architecture, design-options)
+#   haiku  — structured, bounded outputs (gap-questions, data-design, screen-inventory)
+#   sonnet — mainstream coding/extraction (ingest, agent-design, build-*, slice-audit)
+#   opus   — reasoning + user-facing creative quality (requirements, architecture, design options)
 # escalateModel: retries run one tier up with the failure feedback.
 # See docs/DESIGN.md §7/§7b for the design rationale per node.
 name: agentic-app
-version: 0.11.0
-description: Builds a working agentic AI application from your problem statement and documents — requirements with provenance, approvable designs, certified modules, feature-by-feature build with tests, security scan, and governance evidence.
+version: 0.12.0
+description: Builds a working agentic AI application from your problem statement and documents — requirements with provenance, approvable designs, certified modules, parallel feature-slice build with deterministic merge and tests, security scan, and governance evidence.
+
+# Frontier concurrency: how many non-gate nodes may execute at once. Three
+# keeps parallel slices (and the three design options) genuinely concurrent
+# without saturating API limits. HARNESS_CONCURRENCY overrides per machine.
+concurrency: 3
 
 cost:
   # PHILOSOPHY: budgets are RUNAWAY GUARDS, not cost targets — set ~3x the
@@ -24,7 +36,10 @@ cost:
     requirements-synthesis: { budget_usd: 9.00 }
     gap-questions: { budget_usd: 3.00 }
     architecture: { budget_usd: 6.00 }
-    design-options: { budget_usd: 36.00 }
+    screen-inventory: { budget_usd: 2.00 }
+    design-option-1: { budget_usd: 12.00 }
+    design-option-2: { budget_usd: 12.00 }
+    design-option-3: { budget_usd: 12.00 }
     data-design: { budget_usd: 5.00 }
     agent-design: { budget_usd: 5.00 }
     workflow-design: { budget_usd: 6.00 }
@@ -35,6 +50,7 @@ cost:
     slice-4: { budget_usd: 30.00 }
     slice-5: { budget_usd: 30.00 }
     slice-6: { budget_usd: 30.00 }
+    slice-audit: { budget_usd: 8.00 }
 
 interaction:
   max_questions_per_gate: 6
@@ -94,7 +110,7 @@ nodes:
         type: choice
         default: "every-slice"
         options:
-          - { value: "every-slice", label: "Checkpoint every slice (recommended)", hint: "After each delivered feature: a 5-minute review window with its evidence and screenshot. Answer to decide; walk away and it proceeds on approval-by-default, recorded as an assumption." }
+          - { value: "every-slice", label: "Checkpoint every slice (recommended)", hint: "After each delivered feature: a short review window (90 seconds) with its evidence and screenshot. Answer to decide; walk away and it proceeds on approval-by-default, recorded as an assumption." }
           - { value: "gates-only", label: "Five decisions only", hint: "You're asked at intake, clarify, design pick, design review, and final sign-off. Slices build straight through with no pauses." }
     outputs:
       - { name: intake, file: intake.json, schema: schemas/intake.schema.json }
@@ -167,77 +183,69 @@ nodes:
     command: node "$HARNESS_PROJECT_DIR/scripts/budget-check.cjs"
 
   # -- Design options (challenge c) -----------------------------------------
-  - id: design-options
+  # The shared screen inventory makes the three concurrent options COMPARABLE:
+  # every option builds the same screens, so design-select is a real choice.
+  - id: screen-inventory
     phase: Design
-    description: "A team of four design-director subagents each creates a complete buildable direction in parallel; the lead agent verifies and indexes them."
+    description: "Derives the screen inventory every design option must cover — the shared contract that keeps concurrent options comparable."
+    kind: agent
+    model: claude-haiku-4-5
+    escalateModel: claude-sonnet-5
+    deps: [requirements-synthesis, intake]
+    prompt: prompts/screen-inventory.md
+    mock: node "$HARNESS_PROJECT_DIR/mocks/screen-inventory.cjs"
+    retries: 2
+    outputs:
+      - { name: screen_inventory, file: screen_inventory.json, schema: schemas/screen_inventory.schema.json }
+
+  - id: design-option-1
+    phase: Design
+    description: "Design direction 1 — operational console: dense sidebar, panels, status chips. Built concurrently with the other directions."
     kind: agent
     model: claude-opus-5
-    maxTurns: 90
-    allowedTools: [Read, Write, Edit, Bash, Glob, Grep, Task]
-    agents:
-      editorial-director:
-        description: "Creates ONE complete, buildable design option in the editorial print direction when given the app context and an option number."
-        prompt: |
-          You are a editorial print design director. Create EXACTLY ONE design option:
-          the buildable application shell at designs/option-<N>/index.html plus
-          designs/option-<N>/tokens.css (N is given to you). Think manuscript desks, mastheads, serif measure, generous whitespace — a page you read.
-          The shell MUST include: id="agent-mode"; a chat screen id="screen-chat"
-          containing ul id="messages" and form id="composer" with input id="input"
-          and a submit button; one container per required screen (id="screen-<name>");
-          <link rel="stylesheet" href="tokens.css"> plus your own structural CSS
-          carrying the full richness of this direction; the real application name
-          in the visible header. tokens.css defines --primary, --on-primary, --bg,
-          --fg, --surface, --border, --font. Work only inside the current directory.
-        tools: [Read, Write, Edit, Glob, Grep]
-        model: inherit
-      console-director:
-        description: "Creates ONE complete, buildable design option in the operational console direction when given the app context and an option number."
-        prompt: |
-          You are a operational console design director. Create EXACTLY ONE design option:
-          the buildable application shell at designs/option-<N>/index.html plus
-          designs/option-<N>/tokens.css (N is given to you). Think dense sidebars, panels, status chips, keyboard-first ergonomics — a cockpit for daily work.
-          The shell MUST include: id="agent-mode"; a chat screen id="screen-chat"
-          containing ul id="messages" and form id="composer" with input id="input"
-          and a submit button; one container per required screen (id="screen-<name>");
-          <link rel="stylesheet" href="tokens.css"> plus your own structural CSS
-          carrying the full richness of this direction; the real application name
-          in the visible header. tokens.css defines --primary, --on-primary, --bg,
-          --fg, --surface, --border, --font. Work only inside the current directory.
-        tools: [Read, Write, Edit, Glob, Grep]
-        model: inherit
-      board-director:
-        description: "Creates ONE complete, buildable design option in the data board direction when given the app context and an option number."
-        prompt: |
-          You are a data board design director. Create EXACTLY ONE design option:
-          the buildable application shell at designs/option-<N>/index.html plus
-          designs/option-<N>/tokens.css (N is given to you). Think cards, columns, at-a-glance counts, strong grid — a wall of work you scan.
-          The shell MUST include: id="agent-mode"; a chat screen id="screen-chat"
-          containing ul id="messages" and form id="composer" with input id="input"
-          and a submit button; one container per required screen (id="screen-<name>");
-          <link rel="stylesheet" href="tokens.css"> plus your own structural CSS
-          carrying the full richness of this direction; the real application name
-          in the visible header. tokens.css defines --primary, --on-primary, --bg,
-          --fg, --surface, --border, --font. Work only inside the current directory.
-        tools: [Read, Write, Edit, Glob, Grep]
-        model: inherit
-      terminal-director:
-        description: "Creates ONE complete, buildable design option in the minimal terminal direction when given the app context and an option number."
-        prompt: |
-          You are a minimal terminal design director. Create EXACTLY ONE design option:
-          the buildable application shell at designs/option-<N>/index.html plus
-          designs/option-<N>/tokens.css (N is given to you). Think monospace, high contrast, zero chrome, brutal clarity — an instrument, not a brochure.
-          The shell MUST include: id="agent-mode"; a chat screen id="screen-chat"
-          containing ul id="messages" and form id="composer" with input id="input"
-          and a submit button; one container per required screen (id="screen-<name>");
-          <link rel="stylesheet" href="tokens.css"> plus your own structural CSS
-          carrying the full richness of this direction; the real application name
-          in the visible header. tokens.css defines --primary, --on-primary, --bg,
-          --fg, --surface, --border, --font. Work only inside the current directory.
-        tools: [Read, Write, Edit, Glob, Grep]
-        model: inherit
-    deps: [requirements-synthesis, intake]
-    prompt: prompts/design-options.md
-    mock: node "$HARNESS_PROJECT_DIR/mocks/design-options.cjs"
+    maxTurns: 45
+    params: { option: 1, direction: "operational console — dense sidebars, panels, status chips, keyboard-first ergonomics; a cockpit for daily work" }
+    deps: [screen-inventory, requirements-synthesis, intake]
+    prompt: prompts/design-option.md
+    mock: node "$HARNESS_PROJECT_DIR/mocks/design-option.cjs"
+    retries: 2
+    outputs:
+      - { name: option_1_dir, file: designs, dir: true }
+
+  - id: design-option-2
+    phase: Design
+    description: "Design direction 2 — editorial print: masthead, serif measure, generous whitespace. Built concurrently with the other directions."
+    kind: agent
+    model: claude-opus-5
+    maxTurns: 45
+    params: { option: 2, direction: "editorial print — manuscript desks, mastheads, serif measure, generous whitespace; a page you read" }
+    deps: [screen-inventory, requirements-synthesis, intake]
+    prompt: prompts/design-option.md
+    mock: node "$HARNESS_PROJECT_DIR/mocks/design-option.cjs"
+    retries: 2
+    outputs:
+      - { name: option_2_dir, file: designs, dir: true }
+
+  - id: design-option-3
+    phase: Design
+    description: "Design direction 3 — minimal terminal: monospace, high contrast, zero chrome. Built concurrently with the other directions."
+    kind: agent
+    model: claude-opus-5
+    maxTurns: 45
+    params: { option: 3, direction: "minimal terminal — monospace, high contrast, zero chrome, brutal clarity; an instrument, not a brochure" }
+    deps: [screen-inventory, requirements-synthesis, intake]
+    prompt: prompts/design-option.md
+    mock: node "$HARNESS_PROJECT_DIR/mocks/design-option.cjs"
+    retries: 2
+    outputs:
+      - { name: option_3_dir, file: designs, dir: true }
+
+  - id: design-assemble
+    phase: Design
+    description: "Collects the three concurrently-built design options into one comparable set with a verified index."
+    kind: deterministic
+    deps: [design-option-1, design-option-2, design-option-3]
+    command: node "$HARNESS_PROJECT_DIR/scripts/design-assemble.cjs"
     outputs:
       - { name: designs_dir, file: designs, dir: true }
       - { name: designs, file: designs.json, schema: schemas/designs.schema.json }
@@ -246,14 +254,14 @@ nodes:
     phase: Design
     description: "Verifies the design options are complete and comparable."
     kind: verifier
-    deps: [design-options]
+    deps: [design-assemble]
     command: node "$HARNESS_PROJECT_DIR/scripts/design-check.cjs"
 
   - id: design-select
     phase: Design
     description: "You pick the design direction for your app."
     kind: gate
-    deps: [design-options, design-check]
+    deps: [design-assemble, design-check]
     questions:
       - { id: chosen_option, prompt: "Which design option? (option-1 / option-2 / option-3)", default: "option-1", why: "Selected tokens configure the app shell." }
     outputs:
@@ -263,7 +271,7 @@ nodes:
     phase: Design
     description: "Turns your chosen design into an enforceable promise: every screen and interactive element it contains, inventoried for delivery tracking."
     kind: deterministic
-    deps: [design-select, design-options]
+    deps: [design-select, design-assemble]
     command: node "$HARNESS_PROJECT_DIR/scripts/design-contract.cjs"
     outputs:
       - { name: design_contract, file: design_contract.json, schema: schemas/design_contract.schema.json }
@@ -310,7 +318,7 @@ nodes:
     phase: Confirmation
     description: "Builds the requirements traceability matrix — proof that every requirement is addressed somewhere."
     kind: deterministic
-    deps: [requirements-synthesis, architecture, data-design, agent-design, design-options, gap-questions, clarify, workflow-design]
+    deps: [requirements-synthesis, architecture, data-design, agent-design, design-assemble, gap-questions, clarify, workflow-design]
     command: node "$HARNESS_PROJECT_DIR/scripts/traceability.cjs"
     outputs:
       - { name: rtm, file: rtm.json, schema: schemas/rtm.schema.json }
@@ -330,14 +338,14 @@ nodes:
     phase: Build
     description: "Assembles the working skeleton: certified modules composed, your design applied, tests included. Zero AI cost."
     kind: deterministic
-    deps: [architecture, design-review, design-select, design-options, data-design, agent-design, workflow-design, intake]
+    deps: [architecture, design-review, design-select, design-assemble, data-design, agent-design, workflow-design, intake]
     command: node "$HARNESS_PROJECT_DIR/scripts/scaffold.cjs"
     outputs:
       - { name: app, file: app, dir: true }
 
   - id: slice-plan
     phase: Build
-    description: "Plans the build as vertical slices — each one a user-visible feature delivered end to end."
+    description: "Plans the build as vertical slices — each one a user-visible feature delivered end to end, sized to fit one build attempt."
     kind: agent
     model: claude-opus-5
     deps: [requirements-synthesis, architecture, data-design, agent-design, workflow-design, design-review, design-contract]
@@ -347,9 +355,11 @@ nodes:
     outputs:
       - { name: slice_plan, file: slice_plan.json, schema: schemas/slice_plan.schema.json }
 
+  # Slice 1 is the FOUNDATION: core plumbing plus its own covered screens,
+  # verified cumulatively. Slices 2..6 then build CONCURRENTLY on top of it.
   - id: slice-1
     phase: Build
-    description: "Builds feature slice 1 across every layer, then proves it: this slice's acceptance checks, all previous slices', and the test suite."
+    description: "Builds the foundation slice across every layer, then proves it: acceptance checks and the test suite. Slices 2+ build on this in parallel."
     kind: agent
     model: claude-sonnet-5
     escalateModel: claude-opus-5
@@ -358,41 +368,12 @@ nodes:
     params: { slice: 1 }
     when: { artifact: slice_plan, path: "slices.0", exists: true }
     deps: [scaffold, slice-plan]
-    allowedTools: [Read, Write, Edit, Bash, Glob, Grep, Task, Skill,
+    allowedTools: [Read, Write, Edit, Bash, Glob, Grep, Skill,
                    mcp__app-sandbox__start_app, mcp__app-sandbox__request,
                    mcp__app-sandbox__logs, mcp__app-sandbox__run_tests,
                    mcp__app-sandbox__stop_app]
     mcp: [app-sandbox]
     skills: [app-conventions, workflow-authoring, fsi-hardening]
-    agents:
-      security-reviewer:
-        description: "Read-only security reviewer: checks a slice against the certified FSI hardening conventions before verification runs."
-        prompt: |
-          You are the security reviewer for a regulated financial-services app.
-          Inspect ./app and report violations ONLY (no fixes): unvalidated
-          endpoint payloads; mutations without audit rows; agent output that
-          auto-advances a workflow past a human gate; routes without server-side
-          role checks; PII or payload bodies in logs; declines without stored
-          reasons; financial calculations delegated to an LLM. Reply NO FINDINGS
-          when clean.
-        tools: [Read, Glob, Grep]
-      slice-reviewer:
-        description: "Read-only reviewer: checks a slice implementation against the harness contracts before verification runs."
-        prompt: |
-          You are the slice reviewer. Inspect ./app and report problems ONLY (no fixes):
-          1. Design fidelity: frontend/index.html must keep the chosen design shell and
-             every canonical mount point (id="agent-mode", "screen-chat", "messages",
-             "composer", "input") and still load app.js.
-          2. Route shadowing: new /api/... routes registered after the /api/{table}
-             catch-all in main.py are dead — flag them.
-          3. Module bypasses: storage not via db.store, LLM calls not via
-             agent_runtime.respond, identity not via ext_auth, files not via blob_store.
-          4. Cumulative acceptance risk: changes that could break EARLIER slices'
-             acceptance checks in the slice plan.
-          Reply with a numbered list of findings (file:line where possible), or
-          exactly "NO FINDINGS" if clean.
-        tools: [Read, Glob, Grep]
-        model: inherit
     prompt: prompts/build-slice.md
     mock: node "$HARNESS_PROJECT_DIR/mocks/build-slice.cjs"
     verify: node "$HARNESS_PROJECT_DIR/scripts/verify-slice.cjs"
@@ -401,271 +382,131 @@ nodes:
 
   - id: slice-2
     phase: Build
-    description: "Builds feature slice 2 across every layer, then proves it: this slice's acceptance checks, all previous slices', and the test suite."
+    description: "Builds feature slice 2 on the foundation, in parallel with its sibling slices, then proves it: its acceptance checks, the foundation's, and the test suite."
     kind: agent
     model: claude-sonnet-5
     escalateModel: claude-opus-5
     maxTurns: 120
     retries: 2
-    params: { slice: 2 }
+    params: { slice: 2, parallel: true }
     when: { artifact: slice_plan, path: "slices.1", exists: true }
     deps: [slice-1, review-slice-1, slice-plan]
-    allowedTools: [Read, Write, Edit, Bash, Glob, Grep, Task, Skill,
+    allowedTools: [Read, Write, Edit, Bash, Glob, Grep, Skill,
                    mcp__app-sandbox__start_app, mcp__app-sandbox__request,
                    mcp__app-sandbox__logs, mcp__app-sandbox__run_tests,
                    mcp__app-sandbox__stop_app]
     mcp: [app-sandbox]
     skills: [app-conventions, workflow-authoring, fsi-hardening]
-    agents:
-      security-reviewer:
-        description: "Read-only security reviewer: checks a slice against the certified FSI hardening conventions before verification runs."
-        prompt: |
-          You are the security reviewer for a regulated financial-services app.
-          Inspect ./app and report violations ONLY (no fixes): unvalidated
-          endpoint payloads; mutations without audit rows; agent output that
-          auto-advances a workflow past a human gate; routes without server-side
-          role checks; PII or payload bodies in logs; declines without stored
-          reasons; financial calculations delegated to an LLM. Reply NO FINDINGS
-          when clean.
-        tools: [Read, Glob, Grep]
-      slice-reviewer:
-        description: "Read-only reviewer: checks a slice implementation against the harness contracts before verification runs."
-        prompt: |
-          You are the slice reviewer. Inspect ./app and report problems ONLY (no fixes):
-          1. Design fidelity: frontend/index.html must keep the chosen design shell and
-             every canonical mount point (id="agent-mode", "screen-chat", "messages",
-             "composer", "input") and still load app.js.
-          2. Route shadowing: new /api/... routes registered after the /api/{table}
-             catch-all in main.py are dead — flag them.
-          3. Module bypasses: storage not via db.store, LLM calls not via
-             agent_runtime.respond, identity not via ext_auth, files not via blob_store.
-          4. Cumulative acceptance risk: changes that could break EARLIER slices'
-             acceptance checks in the slice plan.
-          Reply with a numbered list of findings (file:line where possible), or
-          exactly "NO FINDINGS" if clean.
-        tools: [Read, Glob, Grep]
-        model: inherit
     prompt: prompts/build-slice.md
     mock: node "$HARNESS_PROJECT_DIR/mocks/build-slice.cjs"
     verify: node "$HARNESS_PROJECT_DIR/scripts/verify-slice.cjs"
     outputs:
-      - { name: app, file: app, dir: true }
+      - { name: app_2, file: app, dir: true }
 
   - id: slice-3
     phase: Build
-    description: "Builds feature slice 3 across every layer, then proves it: this slice's acceptance checks, all previous slices', and the test suite."
+    description: "Builds feature slice 3 on the foundation, in parallel with its sibling slices, then proves it: its acceptance checks, the foundation's, and the test suite."
     kind: agent
     model: claude-sonnet-5
     escalateModel: claude-opus-5
     maxTurns: 120
     retries: 2
-    params: { slice: 3 }
+    params: { slice: 3, parallel: true }
     when: { artifact: slice_plan, path: "slices.2", exists: true }
-    deps: [slice-2, review-slice-2, slice-plan]
-    allowedTools: [Read, Write, Edit, Bash, Glob, Grep, Task, Skill,
+    deps: [slice-1, review-slice-1, slice-plan]
+    allowedTools: [Read, Write, Edit, Bash, Glob, Grep, Skill,
                    mcp__app-sandbox__start_app, mcp__app-sandbox__request,
                    mcp__app-sandbox__logs, mcp__app-sandbox__run_tests,
                    mcp__app-sandbox__stop_app]
     mcp: [app-sandbox]
     skills: [app-conventions, workflow-authoring, fsi-hardening]
-    agents:
-      security-reviewer:
-        description: "Read-only security reviewer: checks a slice against the certified FSI hardening conventions before verification runs."
-        prompt: |
-          You are the security reviewer for a regulated financial-services app.
-          Inspect ./app and report violations ONLY (no fixes): unvalidated
-          endpoint payloads; mutations without audit rows; agent output that
-          auto-advances a workflow past a human gate; routes without server-side
-          role checks; PII or payload bodies in logs; declines without stored
-          reasons; financial calculations delegated to an LLM. Reply NO FINDINGS
-          when clean.
-        tools: [Read, Glob, Grep]
-      slice-reviewer:
-        description: "Read-only reviewer: checks a slice implementation against the harness contracts before verification runs."
-        prompt: |
-          You are the slice reviewer. Inspect ./app and report problems ONLY (no fixes):
-          1. Design fidelity: frontend/index.html must keep the chosen design shell and
-             every canonical mount point (id="agent-mode", "screen-chat", "messages",
-             "composer", "input") and still load app.js.
-          2. Route shadowing: new /api/... routes registered after the /api/{table}
-             catch-all in main.py are dead — flag them.
-          3. Module bypasses: storage not via db.store, LLM calls not via
-             agent_runtime.respond, identity not via ext_auth, files not via blob_store.
-          4. Cumulative acceptance risk: changes that could break EARLIER slices'
-             acceptance checks in the slice plan.
-          Reply with a numbered list of findings (file:line where possible), or
-          exactly "NO FINDINGS" if clean.
-        tools: [Read, Glob, Grep]
-        model: inherit
     prompt: prompts/build-slice.md
     mock: node "$HARNESS_PROJECT_DIR/mocks/build-slice.cjs"
     verify: node "$HARNESS_PROJECT_DIR/scripts/verify-slice.cjs"
     outputs:
-      - { name: app, file: app, dir: true }
+      - { name: app_3, file: app, dir: true }
 
   - id: slice-4
     phase: Build
-    description: "Builds feature slice 4 across every layer, then proves it: this slice's acceptance checks, all previous slices', and the test suite."
+    description: "Builds feature slice 4 on the foundation, in parallel with its sibling slices, then proves it: its acceptance checks, the foundation's, and the test suite."
     kind: agent
     model: claude-sonnet-5
     escalateModel: claude-opus-5
     maxTurns: 120
     retries: 2
-    params: { slice: 4 }
+    params: { slice: 4, parallel: true }
     when: { artifact: slice_plan, path: "slices.3", exists: true }
-    deps: [slice-3, review-slice-3, slice-plan]
-    allowedTools: [Read, Write, Edit, Bash, Glob, Grep, Task, Skill,
+    deps: [slice-1, review-slice-1, slice-plan]
+    allowedTools: [Read, Write, Edit, Bash, Glob, Grep, Skill,
                    mcp__app-sandbox__start_app, mcp__app-sandbox__request,
                    mcp__app-sandbox__logs, mcp__app-sandbox__run_tests,
                    mcp__app-sandbox__stop_app]
     mcp: [app-sandbox]
     skills: [app-conventions, workflow-authoring, fsi-hardening]
-    agents:
-      security-reviewer:
-        description: "Read-only security reviewer: checks a slice against the certified FSI hardening conventions before verification runs."
-        prompt: |
-          You are the security reviewer for a regulated financial-services app.
-          Inspect ./app and report violations ONLY (no fixes): unvalidated
-          endpoint payloads; mutations without audit rows; agent output that
-          auto-advances a workflow past a human gate; routes without server-side
-          role checks; PII or payload bodies in logs; declines without stored
-          reasons; financial calculations delegated to an LLM. Reply NO FINDINGS
-          when clean.
-        tools: [Read, Glob, Grep]
-      slice-reviewer:
-        description: "Read-only reviewer: checks a slice implementation against the harness contracts before verification runs."
-        prompt: |
-          You are the slice reviewer. Inspect ./app and report problems ONLY (no fixes):
-          1. Design fidelity: frontend/index.html must keep the chosen design shell and
-             every canonical mount point (id="agent-mode", "screen-chat", "messages",
-             "composer", "input") and still load app.js.
-          2. Route shadowing: new /api/... routes registered after the /api/{table}
-             catch-all in main.py are dead — flag them.
-          3. Module bypasses: storage not via db.store, LLM calls not via
-             agent_runtime.respond, identity not via ext_auth, files not via blob_store.
-          4. Cumulative acceptance risk: changes that could break EARLIER slices'
-             acceptance checks in the slice plan.
-          Reply with a numbered list of findings (file:line where possible), or
-          exactly "NO FINDINGS" if clean.
-        tools: [Read, Glob, Grep]
-        model: inherit
     prompt: prompts/build-slice.md
     mock: node "$HARNESS_PROJECT_DIR/mocks/build-slice.cjs"
     verify: node "$HARNESS_PROJECT_DIR/scripts/verify-slice.cjs"
     outputs:
-      - { name: app, file: app, dir: true }
+      - { name: app_4, file: app, dir: true }
 
   - id: slice-5
     phase: Build
-    description: "Builds feature slice 5 across every layer, then proves it: this slice's acceptance checks, all previous slices', and the test suite."
+    description: "Builds feature slice 5 on the foundation, in parallel with its sibling slices, then proves it: its acceptance checks, the foundation's, and the test suite."
     kind: agent
     model: claude-sonnet-5
     escalateModel: claude-opus-5
     maxTurns: 120
     retries: 2
-    params: { slice: 5 }
+    params: { slice: 5, parallel: true }
     when: { artifact: slice_plan, path: "slices.4", exists: true }
-    deps: [slice-4, review-slice-4, slice-plan]
-    allowedTools: [Read, Write, Edit, Bash, Glob, Grep, Task, Skill,
+    deps: [slice-1, review-slice-1, slice-plan]
+    allowedTools: [Read, Write, Edit, Bash, Glob, Grep, Skill,
                    mcp__app-sandbox__start_app, mcp__app-sandbox__request,
                    mcp__app-sandbox__logs, mcp__app-sandbox__run_tests,
                    mcp__app-sandbox__stop_app]
     mcp: [app-sandbox]
     skills: [app-conventions, workflow-authoring, fsi-hardening]
-    agents:
-      security-reviewer:
-        description: "Read-only security reviewer: checks a slice against the certified FSI hardening conventions before verification runs."
-        prompt: |
-          You are the security reviewer for a regulated financial-services app.
-          Inspect ./app and report violations ONLY (no fixes): unvalidated
-          endpoint payloads; mutations without audit rows; agent output that
-          auto-advances a workflow past a human gate; routes without server-side
-          role checks; PII or payload bodies in logs; declines without stored
-          reasons; financial calculations delegated to an LLM. Reply NO FINDINGS
-          when clean.
-        tools: [Read, Glob, Grep]
-      slice-reviewer:
-        description: "Read-only reviewer: checks a slice implementation against the harness contracts before verification runs."
-        prompt: |
-          You are the slice reviewer. Inspect ./app and report problems ONLY (no fixes):
-          1. Design fidelity: frontend/index.html must keep the chosen design shell and
-             every canonical mount point (id="agent-mode", "screen-chat", "messages",
-             "composer", "input") and still load app.js.
-          2. Route shadowing: new /api/... routes registered after the /api/{table}
-             catch-all in main.py are dead — flag them.
-          3. Module bypasses: storage not via db.store, LLM calls not via
-             agent_runtime.respond, identity not via ext_auth, files not via blob_store.
-          4. Cumulative acceptance risk: changes that could break EARLIER slices'
-             acceptance checks in the slice plan.
-          Reply with a numbered list of findings (file:line where possible), or
-          exactly "NO FINDINGS" if clean.
-        tools: [Read, Glob, Grep]
-        model: inherit
     prompt: prompts/build-slice.md
     mock: node "$HARNESS_PROJECT_DIR/mocks/build-slice.cjs"
     verify: node "$HARNESS_PROJECT_DIR/scripts/verify-slice.cjs"
     outputs:
-      - { name: app, file: app, dir: true }
+      - { name: app_5, file: app, dir: true }
 
   - id: slice-6
     phase: Build
-    description: "Builds feature slice 6 across every layer, then proves it: this slice's acceptance checks, all previous slices', and the test suite."
+    description: "Builds feature slice 6 on the foundation, in parallel with its sibling slices, then proves it: its acceptance checks, the foundation's, and the test suite."
     kind: agent
     model: claude-sonnet-5
     escalateModel: claude-opus-5
     maxTurns: 120
     retries: 2
-    params: { slice: 6 }
+    params: { slice: 6, parallel: true }
     when: { artifact: slice_plan, path: "slices.5", exists: true }
-    deps: [slice-5, review-slice-5, slice-plan]
-    allowedTools: [Read, Write, Edit, Bash, Glob, Grep, Task, Skill,
+    deps: [slice-1, review-slice-1, slice-plan]
+    allowedTools: [Read, Write, Edit, Bash, Glob, Grep, Skill,
                    mcp__app-sandbox__start_app, mcp__app-sandbox__request,
                    mcp__app-sandbox__logs, mcp__app-sandbox__run_tests,
                    mcp__app-sandbox__stop_app]
     mcp: [app-sandbox]
     skills: [app-conventions, workflow-authoring, fsi-hardening]
-    agents:
-      security-reviewer:
-        description: "Read-only security reviewer: checks a slice against the certified FSI hardening conventions before verification runs."
-        prompt: |
-          You are the security reviewer for a regulated financial-services app.
-          Inspect ./app and report violations ONLY (no fixes): unvalidated
-          endpoint payloads; mutations without audit rows; agent output that
-          auto-advances a workflow past a human gate; routes without server-side
-          role checks; PII or payload bodies in logs; declines without stored
-          reasons; financial calculations delegated to an LLM. Reply NO FINDINGS
-          when clean.
-        tools: [Read, Glob, Grep]
-      slice-reviewer:
-        description: "Read-only reviewer: checks a slice implementation against the harness contracts before verification runs."
-        prompt: |
-          You are the slice reviewer. Inspect ./app and report problems ONLY (no fixes):
-          1. Design fidelity: frontend/index.html must keep the chosen design shell and
-             every canonical mount point (id="agent-mode", "screen-chat", "messages",
-             "composer", "input") and still load app.js.
-          2. Route shadowing: new /api/... routes registered after the /api/{table}
-             catch-all in main.py are dead — flag them.
-          3. Module bypasses: storage not via db.store, LLM calls not via
-             agent_runtime.respond, identity not via ext_auth, files not via blob_store.
-          4. Cumulative acceptance risk: changes that could break EARLIER slices'
-             acceptance checks in the slice plan.
-          Reply with a numbered list of findings (file:line where possible), or
-          exactly "NO FINDINGS" if clean.
-        tools: [Read, Glob, Grep]
-        model: inherit
     prompt: prompts/build-slice.md
     mock: node "$HARNESS_PROJECT_DIR/mocks/build-slice.cjs"
     verify: node "$HARNESS_PROJECT_DIR/scripts/verify-slice.cjs"
     outputs:
-      - { name: app, file: app, dir: true }
+      - { name: app_6, file: app, dir: true }
 
-  # -- Validate + secure (challenges e + f) ---------------------------------
+  # -- Slice checkpoints (every-slice supervision) --------------------------
+  # `when.all` keeps phantom checkpoints out: a review only exists when its
+  # slice exists in the plan AND every-slice supervision was chosen.
   - id: review-slice-1
     phase: Build
-    description: "Checkpoint: slice 1 is delivered and verified — you approve it (or request changes) before the build continues."
+    description: "Checkpoint: the foundation slice is delivered and verified — you approve it (or request changes) before the parallel build wave starts."
     kind: gate
-    window: 300
-    when: { artifact: intake, path: supervision, equals: "every-slice" }
+    window: 90
+    when:
+      all:
+        - { artifact: intake, path: supervision, equals: "every-slice" }
+        - { artifact: slice_plan, path: "slices.0", exists: true }
     deps: [slice-1]
     questions:
       - { id: verdict, prompt: "Slice 1 is delivered and verified — continue the build?", type: boolean, default: "yes", why: "Your checkpoint. Review its screenshot and evidence first; use Request changes on the slice if you want it revised before continuing." }
@@ -674,10 +515,13 @@ nodes:
 
   - id: review-slice-2
     phase: Build
-    description: "Checkpoint: slice 2 is delivered and verified — you approve it (or request changes) before the build continues."
+    description: "Checkpoint: slice 2 is delivered and verified — you approve it (or request changes) before the merge."
     kind: gate
-    window: 300
-    when: { artifact: intake, path: supervision, equals: "every-slice" }
+    window: 90
+    when:
+      all:
+        - { artifact: intake, path: supervision, equals: "every-slice" }
+        - { artifact: slice_plan, path: "slices.1", exists: true }
     deps: [slice-2]
     questions:
       - { id: verdict, prompt: "Slice 2 is delivered and verified — continue the build?", type: boolean, default: "yes", why: "Your checkpoint. Review its screenshot and evidence first; use Request changes on the slice if you want it revised before continuing." }
@@ -686,10 +530,13 @@ nodes:
 
   - id: review-slice-3
     phase: Build
-    description: "Checkpoint: slice 3 is delivered and verified — you approve it (or request changes) before the build continues."
+    description: "Checkpoint: slice 3 is delivered and verified — you approve it (or request changes) before the merge."
     kind: gate
-    window: 300
-    when: { artifact: intake, path: supervision, equals: "every-slice" }
+    window: 90
+    when:
+      all:
+        - { artifact: intake, path: supervision, equals: "every-slice" }
+        - { artifact: slice_plan, path: "slices.2", exists: true }
     deps: [slice-3]
     questions:
       - { id: verdict, prompt: "Slice 3 is delivered and verified — continue the build?", type: boolean, default: "yes", why: "Your checkpoint. Review its screenshot and evidence first; use Request changes on the slice if you want it revised before continuing." }
@@ -698,10 +545,13 @@ nodes:
 
   - id: review-slice-4
     phase: Build
-    description: "Checkpoint: slice 4 is delivered and verified — you approve it (or request changes) before the build continues."
+    description: "Checkpoint: slice 4 is delivered and verified — you approve it (or request changes) before the merge."
     kind: gate
-    window: 300
-    when: { artifact: intake, path: supervision, equals: "every-slice" }
+    window: 90
+    when:
+      all:
+        - { artifact: intake, path: supervision, equals: "every-slice" }
+        - { artifact: slice_plan, path: "slices.3", exists: true }
     deps: [slice-4]
     questions:
       - { id: verdict, prompt: "Slice 4 is delivered and verified — continue the build?", type: boolean, default: "yes", why: "Your checkpoint. Review its screenshot and evidence first; use Request changes on the slice if you want it revised before continuing." }
@@ -710,10 +560,13 @@ nodes:
 
   - id: review-slice-5
     phase: Build
-    description: "Checkpoint: slice 5 is delivered and verified — you approve it (or request changes) before the build continues."
+    description: "Checkpoint: slice 5 is delivered and verified — you approve it (or request changes) before the merge."
     kind: gate
-    window: 300
-    when: { artifact: intake, path: supervision, equals: "every-slice" }
+    window: 90
+    when:
+      all:
+        - { artifact: intake, path: supervision, equals: "every-slice" }
+        - { artifact: slice_plan, path: "slices.4", exists: true }
     deps: [slice-5]
     questions:
       - { id: verdict, prompt: "Slice 5 is delivered and verified — continue the build?", type: boolean, default: "yes", why: "Your checkpoint. Review its screenshot and evidence first; use Request changes on the slice if you want it revised before continuing." }
@@ -722,21 +575,53 @@ nodes:
 
   - id: review-slice-6
     phase: Build
-    description: "Checkpoint: slice 6 is delivered and verified — you approve it (or request changes) before the build continues."
+    description: "Checkpoint: slice 6 is delivered and verified — you approve it (or request changes) before the merge."
     kind: gate
-    window: 300
-    when: { artifact: intake, path: supervision, equals: "every-slice" }
+    window: 90
+    when:
+      all:
+        - { artifact: intake, path: supervision, equals: "every-slice" }
+        - { artifact: slice_plan, path: "slices.5", exists: true }
     deps: [slice-6]
     questions:
       - { id: verdict, prompt: "Slice 6 is delivered and verified — continue the build?", type: boolean, default: "yes", why: "Your checkpoint. Review its screenshot and evidence first; use Request changes on the slice if you want it revised before continuing." }
     outputs:
       - { name: review_slice_6, file: review.json }
 
+  # -- Deterministic merge of the parallel slice wave -----------------------
+  - id: merge-slices
+    phase: Build
+    description: "Unions the parallel slices into one app — line-level three-way merge against the foundation; a genuine conflict fails loudly (never LLM-resolved) — then re-proves EVERY slice's acceptance cumulatively."
+    kind: deterministic
+    deps: [slice-1, slice-2, slice-3, slice-4, slice-5, slice-6,
+           review-slice-1, review-slice-2, review-slice-3, review-slice-4, review-slice-5, review-slice-6,
+           slice-plan]
+    command: node "$HARNESS_PROJECT_DIR/scripts/merge-slices.cjs"
+    verify: node "$HARNESS_PROJECT_DIR/scripts/verify-merged.cjs"
+    outputs:
+      - { name: app, file: app, dir: true }
+
+  # -- Validate + secure (challenges e + f) ---------------------------------
+  - id: slice-audit
+    phase: Verification
+    description: "One read-only audit of the merged app — harness contracts (design fidelity, route shadowing, module bypasses) and FSI hardening (validation, audit rows, human gates, RBAC) — replacing per-slice reviewer subagents."
+    kind: agent
+    model: claude-sonnet-5
+    escalateModel: claude-opus-5
+    maxTurns: 50
+    retries: 2
+    deps: [merge-slices, slice-plan]
+    allowedTools: [Read, Glob, Grep]
+    prompt: prompts/slice-audit.md
+    mock: node "$HARNESS_PROJECT_DIR/mocks/slice-audit.cjs"
+    outputs:
+      - { name: audit, file: audit.json, schema: schemas/audit.schema.json }
+
   - id: integrate
     phase: Verification
     description: "Runs the whole app: full test suite, agent evals, and container boot smoke."
     kind: verifier
-    deps: [slice-1, slice-2, slice-3, slice-4, slice-5, slice-6, review-slice-1, review-slice-2, review-slice-3, review-slice-4, review-slice-5, review-slice-6]
+    deps: [merge-slices]
     command: node "$HARNESS_PROJECT_DIR/scripts/verify-integrate.cjs"
     outputs:
       - { name: integration_report, file: integration_report.json, schema: schemas/integration_report.schema.json }
@@ -745,7 +630,7 @@ nodes:
     phase: Verification
     description: "Proves design delivery: boots the finished app, visits every screen you approved, verifies its elements exist, and screenshots each one live. An approved screen missing from the app fails the build."
     kind: deterministic
-    deps: [slice-1, slice-2, slice-3, slice-4, slice-5, slice-6, integrate, design-contract, slice-plan]
+    deps: [merge-slices, integrate, design-contract, slice-plan]
     command: node "$HARNESS_PROJECT_DIR/scripts/design-coverage.cjs"
     outputs:
       - { name: design_coverage, file: design_coverage.json, schema: schemas/design_coverage.schema.json }
@@ -755,16 +640,16 @@ nodes:
     phase: Verification
     description: "Deterministic security scan — secrets, dynamic code, unsafe patterns. High findings block."
     kind: verifier
-    deps: [slice-1, slice-2, slice-3, slice-4, slice-5, slice-6, review-slice-1, review-slice-2, review-slice-3, review-slice-4, review-slice-5, review-slice-6]
+    deps: [merge-slices]
     command: node "$HARNESS_PROJECT_DIR/scripts/security-scan.cjs"
     outputs:
       - { name: security_report, file: security_report.json, schema: schemas/security_report.schema.json }
 
   - id: governance-report
     phase: Verification
-    description: "Generates the evidence pack: tests, evals, security, and requirement coverage with proof."
+    description: "Generates the evidence pack: tests, evals, security, code audit, and requirement coverage with proof."
     kind: deterministic
-    deps: [security-scan, integrate, agent-design, traceability]
+    deps: [security-scan, integrate, agent-design, traceability, slice-audit]
     command: node "$HARNESS_PROJECT_DIR/scripts/governance.cjs"
     outputs:
       - { name: governance, file: governance.json, schema: schemas/governance.schema.json }

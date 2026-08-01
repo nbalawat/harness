@@ -104,7 +104,7 @@ def test_a_submission_cannot_pull_in_another_deals_stored_document():
             }
         ],
     )
-    victim_blob = client.get("/deals/T-HARD-OWNER").json()["documents"][0]["storage_path"]
+    victim_blob = client.get("/deals/T-HARD-OWNER", params={"acting_user": "an.chen"}).json()["documents"][0]["storage_path"]
     assert victim_blob and "T-HARD-OWNER" in victim_blob
 
     _submit(
@@ -117,7 +117,7 @@ def test_a_submission_cannot_pull_in_another_deals_stored_document():
             }
         ],
     )
-    thief = client.get("/deals/T-HARD-THIEF").json()
+    thief = client.get("/deals/T-HARD-THIEF", params={"acting_user": "an.chen"}).json()
     assert thief["documents"][0]["storage_path"] is None  # nothing was copied across
     assert not uw.locations_for([thief["documents"][0]["id"]])
 
@@ -172,8 +172,16 @@ def test_pipeline_totals_never_count_drafts_the_caller_cannot_see():
     assert board["totals"]["active_deals"] == len([d for d in board["deals"] if not d["is_closed"]])
 
 
-def test_generic_read_of_a_governed_table_is_scrubbed_but_still_readable():
-    rows = client.get("/api/deals").json()
+def test_generic_read_of_a_governed_table_is_scrubbed_and_needs_a_named_seat():
+    """Tightened in slice 2: sealing only the WRITE side of /api/{table} left
+    the deal of record readable by anyone — GET /api/agent_drafts hands back
+    draft_content, i.e. every borrower's spread and citations. The generic
+    reader now demands the same named, active internal seat the guarded
+    endpoints do, and still scrubs what it returns."""
+    assert client.get("/api/deals").status_code == 403
+    assert client.get("/api/deals", params={"acting_user": "nobody.at.all"}).status_code == 403
+
+    rows = client.get("/api/deals", headers=_login("co.brennan")).json()
     assert isinstance(rows, list) and rows
     assert all("borrower_tin" not in row for row in rows)
 
@@ -300,11 +308,16 @@ def test_borrower_document_text_is_not_reachable_through_generic_surfaces():
     secret = "CONFIDENTIAL LEDGER 553311"
     client.post("/deals", json={**BASE, "deal_reference": ref, "borrower_name": "Leak LLC", "submitted_by": "rm.rivera",
                                 "documents": [{"document_type": "financial_statements", "original_filename": "f.pdf", "text": secret}]})
-    blob = client.get(f"/deals/{ref}").json()["documents"][0]["storage_path"]
+    blob = client.get(f"/deals/{ref}", params={"acting_user": "an.chen"}).json()["documents"][0]["storage_path"]
     assert blob
     assert client.get(f"/files/{blob}").status_code == 403
-    assert secret not in json.dumps(client.get("/api/document_locations").json())
-    assert secret not in client.get("/export/document_locations.csv").text
+    assert client.get("/api/document_locations").status_code == 403
+    assert secret not in json.dumps(
+        client.get("/api/document_locations", params={"acting_user": "co.brennan"}).json()
+    )
+    assert secret not in client.get(
+        "/export/document_locations.csv", params={"acting_user": "co.brennan"}
+    ).text
 
 
 def test_the_audit_trail_cannot_be_posted_to_directly():

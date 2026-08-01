@@ -2495,22 +2495,22 @@ hr.sep { border: 0; border-top: 1px solid var(--border-soft); margin: var(--sp-2
     <section class="screen" id="screen-review" data-title="Draft Review">
       <div class="scr-hd">
         <h2>Draft Review</h2>
-        <span class="scr-sub">Agent output vs. cited evidence &middot; 6 awaiting acceptance</span>
+        <span class="scr-sub" id="review-sub">Agent output vs. cited evidence</span>
         <div class="spacer"></div>
-        <span class="chip warn"><span class="dot pulse"></span>Unaccepted drafts block advancement</span>
-        <button class="btn ghost sm" type="button">&#8593; Prev <span class="k">K</span></button>
-        <button class="btn ghost sm" type="button">Next &#8595; <span class="k">J</span></button>
+        <span class="chip warn" id="review-gate-chip"><span class="dot pulse"></span>Unaccepted drafts block advancement</span>
+        <button class="btn ghost sm" type="button" id="review-prev">&#8593; Prev <span class="k">K</span></button>
+        <button class="btn ghost sm" type="button" id="review-next">Next &#8595; <span class="k">J</span></button>
       </div>
 
       <div class="scr-body stack">
 
         <!-- queue strip -->
         <div class="panel">
-          <div class="panel-hd"><h3>Acceptance Queue</h3><span class="hd-note">state chips: pending / accepted / edited / rejected</span></div>
+          <div class="panel-hd"><h3>Acceptance Queue</h3><span class="hd-note" id="review-queue-note">state chips: pending / accepted / edited / rejected</span></div>
           <div class="panel-bd flush">
             <table class="tbl">
               <thead><tr><th style="width:112px">Deal</th><th>Borrower</th><th style="width:150px">Artifact</th><th style="width:130px">Agent</th><th style="width:96px">State</th><th style="width:150px">Model</th><th class="num" style="width:78px">Latency</th><th class="num" style="width:88px">Tokens</th><th class="num" style="width:70px">Cost</th><th class="num" style="width:64px">Age</th></tr></thead>
-              <tbody>
+              <tbody id="review-rows">
                 <tr class="sel"><td class="mono"><span class="tbl-id">UW-2026-0418</span></td><td>Harbor Point Marine Supply</td><td>Policy exception set</td><td>4 &middot; Policy compliance</td><td><span class="chip warn"><span class="dot pulse"></span>Pending</span></td><td class="mono dim">uw-policy-v2</td><td class="num mono">3,410ms</td><td class="num mono">18,204</td><td class="num mono">$0.094</td><td class="num mono crit-t">3 d</td></tr>
                 <tr><td class="mono"><span class="tbl-id">UW-2026-0466</span></td><td>Auburn Ridge Storage</td><td>Policy exception set</td><td>4 &middot; Policy compliance</td><td><span class="chip warn"><span class="dot pulse"></span>Pending</span></td><td class="mono dim">uw-policy-v2</td><td class="num mono">2,988ms</td><td class="num mono">15,881</td><td class="num mono">$0.081</td><td class="num mono warn-t">2 d</td></tr>
                 <tr><td class="mono"><span class="tbl-id">UW-2026-0431</span></td><td>Delgado Precision Machining</td><td>Financial spread</td><td>2 &middot; Spreading</td><td><span class="chip warn"><span class="dot pulse"></span>Pending</span></td><td class="mono dim">uw-spread-v5</td><td class="num mono">6,742ms</td><td class="num mono">31,470</td><td class="num mono">$0.158</td><td class="num mono warn-t">2 d</td></tr>
@@ -2523,29 +2523,35 @@ hr.sep { border: 0; border-top: 1px solid var(--border-soft); margin: var(--sp-2
               </tbody>
             </table>
           </div>
+          <div class="panel-ft">
+            <span class="locked-tag" id="review-queue-foot">Every draft in the queue is an agent proposal awaiting a named human</span>
+            <div class="spacer" style="flex:1"></div>
+            <button class="btn sm ghost" type="button" id="review-filter" aria-pressed="false">Spreads only</button>
+            <button class="btn sm" type="button" id="review-run-spread">Run spreading agent</button>
+          </div>
         </div>
 
         <!-- run telemetry for the selected draft -->
         <div class="telemetry">
-          <div class="t-cell"><span class="t-k">Deal</span><span class="t-v">UW-2026-0418</span></div>
-          <div class="t-cell"><span class="t-k">Artifact</span><span class="t-v">Policy exception set</span></div>
-          <div class="t-cell"><span class="t-k">Agent</span><span class="t-v">4 &middot; Policy compliance</span></div>
-          <div class="t-cell"><span class="t-k">Model id</span><span class="t-v">uw-policy-v2 / claude-sonnet-4-6-20260514</span></div>
-          <div class="t-cell"><span class="t-k">Prompt version</span><span class="t-v">policy-review@2026.07.1</span></div>
-          <div class="t-cell"><span class="t-k">Policy pack</span><span class="t-v">CLP-2026.2</span></div>
-          <div class="t-cell"><span class="t-k">Latency</span><span class="t-v">3,410 ms</span></div>
-          <div class="t-cell"><span class="t-k">Tokens in/out</span><span class="t-v">14,880 / 3,324</span></div>
-          <div class="t-cell"><span class="t-k">Cost</span><span class="t-v">$0.094</span></div>
-          <div class="t-cell"><span class="t-k">Run id</span><span class="t-v">run_01JT7QF3K2</span></div>
-          <div class="t-cell"><span class="t-k">Temp</span><span class="t-v">0.0</span></div>
+          <div class="t-cell"><span class="t-k">Deal</span><span class="t-v" id="rev-t-deal">&mdash;</span></div>
+          <div class="t-cell"><span class="t-k">Artifact</span><span class="t-v" id="rev-t-artifact">&mdash;</span></div>
+          <div class="t-cell"><span class="t-k">Agent</span><span class="t-v" id="rev-t-agent">&mdash;</span></div>
+          <div class="t-cell"><span class="t-k">Model id</span><span class="t-v" id="rev-t-model">&mdash;</span></div>
+          <div class="t-cell"><span class="t-k">Prompt version</span><span class="t-v" id="rev-t-prompt">&mdash;</span></div>
+          <div class="t-cell"><span class="t-k" id="rev-t-packk">Template</span><span class="t-v" id="rev-t-pack">&mdash;</span></div>
+          <div class="t-cell"><span class="t-k">Latency</span><span class="t-v" id="rev-t-latency">&mdash;</span></div>
+          <div class="t-cell"><span class="t-k">Tokens in/out</span><span class="t-v" id="rev-t-tokens">&mdash;</span></div>
+          <div class="t-cell"><span class="t-k">Cost</span><span class="t-v" id="rev-t-cost">&mdash;</span></div>
+          <div class="t-cell"><span class="t-k">Run id</span><span class="t-v" id="rev-t-run">&mdash;</span></div>
+          <div class="t-cell"><span class="t-k">Source</span><span class="t-v" id="rev-t-source">&mdash;</span></div>
         </div>
 
         <!-- side-by-side: draft vs evidence -->
         <div class="grid g-2" style="align-items:start">
           <div class="panel">
-            <div class="panel-hd"><h3>Agent Draft</h3><span class="chip warn"><span class="dot pulse"></span>Pending acceptance</span><div class="spacer"></div><span class="hd-note">hover a claim to pin its evidence</span></div>
+            <div class="panel-hd"><h3>Agent Draft</h3><span class="chip warn" id="review-draft-status"><span class="dot pulse"></span>Pending acceptance</span><div class="spacer"></div><span class="hd-note" id="review-draft-note">select a draft in the queue above</span></div>
             <div class="panel-bd stack">
-              <div class="draftbox">
+              <div class="draftbox" id="review-draft">
                 <p><b class="crit-t">EXCEPTION 1 &mdash; POL-DSCR-02 (minimum debt service coverage).</b><br>
                 The computed debt service coverage ratio of <mark>1.18x</mark> falls below the policy minimum of <mark>1.25x</mark> stated in CLP-2026.2 &sect;4.1. Shortfall is 0.07x, or approximately <mark>$55,051</mark> of additional annual EBITDA. A written exception approved at committee level is required before Stage 07 may proceed.</p>
                 <hr class="sep">
@@ -2558,13 +2564,13 @@ hr.sep { border: 0; border-top: 1px solid var(--border-soft); margin: var(--sp-2
                 <p><b class="ok-t">CLEAR &mdash; POL-IND-11, POL-GUAR-01, POL-LEV-05.</b><br>
                 Prohibited-industry screen returns no match for NAICS 441222. Unlimited personal guaranty of R. Alvarez is on file. Leverage of <mark>3.89x</mark> is inside the 4.00x ceiling.</p>
               </div>
-              <div class="banner info"><span class="b-icon">i</span><span>The agent may only <b>raise</b> written exceptions. It cannot waive, approve, or clear one &mdash; waivers are captured on the Approvals screen against a named human.</span></div>
+              <div class="banner info" id="review-draft-banner"><span class="b-icon">i</span><span>Agent output is a draft. It becomes deal-of-record data only when a named human accepts it here &mdash; no agent writes a figure, moves a stage, or clears a gate.</span></div>
             </div>
           </div>
 
           <div class="panel">
-            <div class="panel-hd"><h3>Cited Evidence</h3><span class="hd-note">9 sources &middot; all claims grounded</span><div class="spacer"></div><span class="chip ok">0 uncited claims</span></div>
-            <div class="panel-bd stack" style="gap:5px">
+            <div class="panel-hd"><h3>Cited Evidence</h3><span class="hd-note" id="review-evidence-note">no draft selected</span><div class="spacer"></div><span class="chip ok" id="review-evidence-chip">&mdash;</span></div>
+            <div class="panel-bd stack" style="gap:5px" id="review-evidence">
               <div class="evidence-item"><span class="ev-src">calc-svc 2.4.1 &middot; dscr</span><div>DSCR = EBITDA 928,640 &divide; ADS 786,440 = <b class="mono">1.1808</b> &rarr; displayed 1.18x. <span class="det">computed by code, not by agent</span></div></div>
               <div class="evidence-item"><span class="ev-src">CLP-2026.2 &sect;4.1 &middot; POL-DSCR-02</span><div class="ev-quote">&ldquo;No credit exposure shall be approved with a debt service coverage ratio below 1.25x without a written exception approved at or above the exposure tier.&rdquo;</div></div>
               <div class="evidence-item"><span class="ev-src">Debt-Schedule-2026-06-30.xlsx &middot; Sh.1 B38</span><div>Annual debt service pro forma including the requested facility: <b class="mono">$786,440</b>.</div></div>
@@ -2580,32 +2586,45 @@ hr.sep { border: 0; border-top: 1px solid var(--border-soft); margin: var(--sp-2
 
         <!-- decision bar -->
         <div class="panel">
-          <div class="panel-hd"><h3>Human Disposition</h3><span class="hd-note">REQ-037 / REQ-038 &middot; required before advancement</span><div class="spacer"></div><span class="chip violet">Decider: M. Reyes &middot; Sr. Credit Officer</span></div>
+          <div class="panel-hd"><h3>Human Disposition</h3><span class="hd-note">REQ-037 / REQ-038 &middot; required before advancement</span><div class="spacer"></div><span class="chip violet" id="review-decider">Decider: &mdash;</span></div>
           <div class="panel-bd">
             <div class="grid" style="grid-template-columns: minmax(0,1fr) 300px; align-items:start">
               <div class="field">
-                <label for="rev-reason">Reason <span class="req">*</span> <span class="dim">&mdash; mandatory on reject, optional on accept, recorded verbatim in the audit trail</span></label>
+                <label for="rev-reason">Reason <span class="req">*</span> <span class="dim">&mdash; mandatory on reject and on a corrected figure, optional on accept, recorded verbatim in the audit trail</span></label>
                 <textarea class="ta" id="rev-reason" placeholder="e.g. Exception 2 understates segment balance — portfolio feed is stale as of 07-29; re-run against 07-30 close."></textarea>
                 <div class="hint crit" id="rev-reason-hint" hidden>A written reason is required to reject an agent draft.</div>
               </div>
               <div class="stack">
                 <div class="row tight">
-                  <button class="btn ok block" type="button" data-disp="accept">Accept draft <span class="k">A</span></button>
+                  <button class="btn ok block" type="button" data-disp="accept" id="rev-accept">Accept draft <span class="k">A</span></button>
                 </div>
                 <div class="row tight">
-                  <button class="btn block" type="button" data-disp="edit">Edit &amp; accept <span class="k">E</span></button>
+                  <button class="btn block" type="button" data-disp="edit" id="rev-edit">Edit &amp; accept <span class="k">E</span></button>
                 </div>
                 <div class="row tight">
-                  <button class="btn crit block" type="button" data-disp="reject">Reject <span class="k">R</span></button>
+                  <button class="btn crit block" type="button" data-disp="reject" id="rev-reject">Reject <span class="k">R</span></button>
                 </div>
-                <div class="banner"><span class="b-icon">&#9678;</span><span id="disp-readout">No disposition recorded. Draft remains <b class="warn-t">PENDING</b> and Stage 06 &rarr; 07 advancement is blocked.</span></div>
+                <div class="banner"><span class="b-icon">&#9678;</span><span id="disp-readout">No draft selected. Nothing is dispositioned until a named human acts here.</span></div>
               </div>
+            </div>
+            <!-- correction row: shown when the reviewer chooses "Edit & accept" -->
+            <div class="row tight" id="review-edit-row" hidden style="margin-top:10px">
+              <div class="field" style="flex:1">
+                <label for="review-edit-key">Correct a template line</label>
+                <select class="sel" id="review-edit-key"></select>
+              </div>
+              <div class="field" style="flex:1">
+                <label for="review-edit-value">Corrected value</label>
+                <input class="inp" id="review-edit-value" type="text" placeholder="e.g. 1,420,000">
+                <select class="sel" id="review-edit-choice" hidden></select>
+              </div>
+              <button class="btn ok sm" type="button" id="review-edit-confirm">Apply edit &amp; accept</button>
             </div>
           </div>
           <div class="panel-ft">
             <span class="locked-tag">Dispositions are append-only &middot; edits store a diff against the agent original</span>
             <div class="spacer" style="flex:1"></div>
-            <button class="btn sm ghost" type="button" data-goto="audit">View trail entries for this run</button>
+            <button class="btn sm ghost" type="button" data-goto="audit" id="review-trail" title="Opens the Audit Trail screen — every action on this run is already appended to the trail; the filterable trail view itself ships in a later release">View trail entries for this run</button>
           </div>
         </div>
       </div>

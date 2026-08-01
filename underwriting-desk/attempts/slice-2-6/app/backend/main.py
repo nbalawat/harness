@@ -62,26 +62,15 @@ def chat(req: ChatRequest):
 
 # Rows carrying the deal of record, its human gates, its money or its
 # append-only trail are writable ONLY through their guarded endpoints
-# (/deals, /deals/{ref}/triage, /deals/{ref}/drafts/{type}/review), which
+# (/deals, /deals/{ref}/triage, /deals/{ref}/spread,
+# /deals/{ref}/drafts/{type}/review), which
 # resolve a named identity, check the role grant, derive tier and exposure in
 # deterministic Python and append an audit row. The generic table API is a
 # scaffold convenience and must never become a path around those controls.
-GUARDED_TABLES = {
-    "deals",
-    "documents",
-    "document_locations",
-    "agent_runs",
-    "agent_drafts",
-    "approvals",
-    "declines",
-    "stage_transitions",
-    "audit_log",
-    "users",
-    "analyst_queues",
-    "policy_exceptions",
-    "risk_grades",
-    "ratios",
-}
+# One definition, not two: ext_guard owns the list of governed tables (its
+# middleware refuses generic writes to them and audits the refusal), and this
+# route reuses it so the two can never drift apart as slices add tables.
+from ext_guard import GOVERNED_TABLES as GUARDED_TABLES  # noqa: E402
 
 # Columns never returned over a generic read.
 SECRET_COLUMNS = {"password_hash"}

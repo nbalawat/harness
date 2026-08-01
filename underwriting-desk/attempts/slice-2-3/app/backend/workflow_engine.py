@@ -79,6 +79,10 @@ def state(run_id):
             st["context"][e["node"]] = e["output"]
             st["cursor"] = e["cursor"] + 1
             st.pop("blocked_on", None)
+        elif e["type"] == "run.jumped":
+            # A condition routed back to an earlier node (a re-draft loop).
+            st["cursor"] = e["cursor"]
+            st.pop("blocked_on", None)
         elif e["type"] == "run.blocked":
             # Still running, just waiting on a handler a later slice registers.
             st["blocked_on"] = {"node": e.get("node"), "handler": e.get("handler")}
@@ -148,9 +152,15 @@ def tick(run_id):
             {"approved": approved, "action": "accepted" if approved else "rejected", "by": decided.get("decided_by")},
         )
         if decided["status"] != "approved":
-            _append(run_id, "run.failed", error=f"rejected at '{node['id']}' by {decided.get('decided_by')}")
-            audit("workflow.rejected", {"run": run_id, "node": node["id"]})
-            return state(run_id)
+            # A rejection is a REVIEW OUTCOME, not a process crash. Failing
+            # the run here made the definition's own re-draft loops
+            # (triage_accepted.on_false, spread_accepted.on_false) unreachable
+            # and left the deal with a dead run that can never be resumed, so
+            # a re-spread could only re-serve the stale reply. The node's
+            # output already records action="rejected"; let the condition node
+            # that reads it route back to the drafting node.
+            audit("workflow.rejected", {"run": run_id, "node": node["id"], "by": decided.get("decided_by")})
+            st = state(run_id)
         st = state(run_id)
     while st["status"] == "running":
         wf = next(w for w in definitions() if w["name"] == st["workflow"])
@@ -208,9 +218,23 @@ def tick(run_id):
                         _append(run_id, "run.completed")
                         audit("workflow.completed", {"run": run_id, "workflow": st["workflow"], "short_circuit": node["id"]})
                         break
-                    while state(run_id)["cursor"] < len(wf["nodes"]) and wf["nodes"][state(run_id)["cursor"]]["id"] != target:
-                        skip = wf["nodes"][state(run_id)["cursor"]]
-                        _append(run_id, "node.completed", node=skip["id"], output={"skipped": True}, cursor=state(run_id)["cursor"])
+                    target_index = next(
+                        (i for i, n in enumerate(wf["nodes"]) if n["id"] == target), None
+                    )
+                    if target_index is None:
+                        raise KeyError(f"condition '{node['id']}' routes to unknown node '{target}'")
+                    if target_index <= state(run_id)["cursor"]:
+                        # Backward target = a re-draft loop. Scanning FORWARD
+                        # for it would run off the end, marking every
+                        # remaining node (persist, ratios, grading) "skipped"
+                        # and then completing the run — a fully underwritten
+                        # deal that underwrote nothing. Rewind instead.
+                        _append(run_id, "run.jumped", node=target, cursor=target_index)
+                        audit("workflow.looped", {"run": run_id, "from": node["id"], "to": target})
+                    else:
+                        while state(run_id)["cursor"] < target_index:
+                            skip = wf["nodes"][state(run_id)["cursor"]]
+                            _append(run_id, "node.completed", node=skip["id"], output={"skipped": True}, cursor=state(run_id)["cursor"])
         except Exception as e:
             _append(run_id, "run.failed", error=str(e)[:300])
             audit("workflow.failed", {"run": run_id, "node": node["id"], "error": str(e)[:120]})

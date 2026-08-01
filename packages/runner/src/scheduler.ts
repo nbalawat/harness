@@ -1,6 +1,6 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
-import type { LedgerEvent, RunResult, WhenClause } from "@harness/spec";
+import type { LedgerEvent, NodeDef, RunResult, WhenClause } from "@harness/spec";
 import type { RunContext } from "./context.js";
 import { executeNode } from "./envelope.js";
 
@@ -80,15 +80,17 @@ function satisfied(state: RunState, id: string): boolean {
 /**
  * Evaluate a `when` clause against committed artifact data. Pure function of
  * the ledger — never a model call. Missing artifact/path -> not satisfied.
+ * `all` conjoins sub-clauses (e.g. "supervision on AND this slice exists").
  */
 function whenSatisfied(ctx: RunContext, when: WhenClause, state: RunState): boolean {
+  if (when.all) return when.all.every((sub) => whenSatisfied(ctx, sub, state));
   for (const artifacts of Object.values(state.artifacts)) {
-    const rel = artifacts[when.artifact];
+    const rel = artifacts[when.artifact!];
     if (rel === undefined) continue;
     const abs = path.join(ctx.workspace, rel);
     if (!fs.existsSync(abs) || !abs.endsWith(".json")) return false;
     let value: unknown = JSON.parse(fs.readFileSync(abs, "utf8"));
-    for (const seg of when.path.split(".")) {
+    for (const seg of (when.path ?? "").split(".")) {
       if (value === null || typeof value !== "object") {
         value = undefined;
         break;
@@ -105,6 +107,13 @@ function whenSatisfied(ctx: RunContext, when: WhenClause, state: RunState): bool
  * The deterministic frontier loop. No model anywhere in the control plane:
  * ready = deps committed; execute; fold; repeat. Parking (a gate awaiting a
  * human) exits cleanly — `resume` re-enters and skips committed nodes.
+ *
+ * CONCURRENCY: within a frontier round, non-gate nodes with no dependency on
+ * each other run in parallel (bounded pool) — this is what makes parallel
+ * slice builds wall-clock = max(slice), not sum. Gates still run one at a
+ * time (stdin, park semantics). Determinism holds because each node's inputs
+ * are its deps' committed artifacts, all sealed before the round starts; the
+ * journal is append-only and state is an order-insensitive fold per node.
  */
 export async function runLoop(ctx: RunContext): Promise<RunResult> {
   for (;;) {
@@ -127,39 +136,69 @@ export async function runLoop(ctx: RunContext): Promise<RunResult> {
       return { status: "failed" };
     }
 
+    // Conditional enablement: unmet `when` -> the node is skipped, and the
+    // frontier recomputes. Flow stays a pure function of committed data.
+    const runnable: NodeDef[] = [];
     for (const node of ready) {
-      // Conditional enablement: unmet `when` -> the node is skipped, and the
-      // frontier recomputes. Flow stays a pure function of committed data.
       if (node.when && !whenSatisfied(ctx, node.when, foldState(ctx.journal.read()))) {
         ctx.journal.append({ type: "node.skipped", nodeId: node.id, when: node.when });
         continue;
       }
-      // Run-budget gate: once cumulative spend reaches the certified run
-      // budget, no further node is dispatched.
-      const runBudget = ctx.def.cost?.run_budget_usd;
-      if (runBudget !== undefined) {
-        const spent = foldState(ctx.journal.read()).totalCostUsd;
-        if (spent >= runBudget) {
-          ctx.journal.append({
-            type: "budget.exceeded",
-            scope: "run",
-            budgetUsd: runBudget,
-            spentUsd: spent,
-            blockedNodeId: node.id,
-          });
-          ctx.journal.append({ type: "run.failed" });
-          return { status: "failed", failedNodeId: node.id };
-        }
+      runnable.push(node);
+    }
+    if (runnable.length === 0) continue; // skips changed the frontier — recompute
+
+    // Run-budget gate: once cumulative spend reaches the certified run
+    // budget, no further round is dispatched.
+    const runBudget = ctx.def.cost?.run_budget_usd;
+    if (runBudget !== undefined) {
+      const spent = foldState(ctx.journal.read()).totalCostUsd;
+      if (spent >= runBudget) {
+        ctx.journal.append({
+          type: "budget.exceeded",
+          scope: "run",
+          budgetUsd: runBudget,
+          spentUsd: spent,
+          blockedNodeId: runnable[0].id,
+        });
+        ctx.journal.append({ type: "run.failed" });
+        return { status: "failed", failedNodeId: runnable[0].id };
       }
-      const outcome = await executeNode(ctx, node, foldState(ctx.journal.read()));
-      if (outcome === "parked") {
-        ctx.journal.append({ type: "run.parked", nodeId: node.id });
-        return { status: "parked", parkedNodeId: node.id };
+    }
+
+    const gates = runnable.filter((n) => n.kind === "gate");
+    const workers = runnable.filter((n) => n.kind !== "gate");
+    const outcomes: Array<{ node: NodeDef; outcome: "committed" | "failed" | "parked" }> = [];
+
+    // Bounded worker pool. Every worker's inputs were committed before this
+    // round, so execution order within the round cannot change any output.
+    const limit = Math.max(
+      1,
+      Number(process.env.HARNESS_CONCURRENCY ?? ctx.def.concurrency ?? 4) || 1,
+    );
+    const queue = [...workers];
+    const pool = Array.from({ length: Math.min(limit, queue.length) }, async () => {
+      for (let node = queue.shift(); node; node = queue.shift()) {
+        outcomes.push({ node, outcome: await executeNode(ctx, node, state) });
       }
-      if (outcome === "failed") {
-        ctx.journal.append({ type: "run.failed", nodeId: node.id });
-        return { status: "failed", failedNodeId: node.id };
-      }
+    });
+
+    // Gates run sequentially while workers proceed — a park never strands
+    // sibling work: everything dispatched this round finishes and commits.
+    for (const gate of gates) {
+      outcomes.push({ node: gate, outcome: await executeNode(ctx, gate, state) });
+    }
+    await Promise.all(pool);
+
+    const failed = outcomes.find((o) => o.outcome === "failed");
+    if (failed) {
+      ctx.journal.append({ type: "run.failed", nodeId: failed.node.id });
+      return { status: "failed", failedNodeId: failed.node.id };
+    }
+    const parked = outcomes.find((o) => o.outcome === "parked");
+    if (parked) {
+      ctx.journal.append({ type: "run.parked", nodeId: parked.node.id });
+      return { status: "parked", parkedNodeId: parked.node.id };
     }
   }
 }

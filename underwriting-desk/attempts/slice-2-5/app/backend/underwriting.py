@@ -212,8 +212,10 @@ TRIAGE_AGENT_NAME = "Intake Triage Agent"
 DRAFT_STAGE_ADVANCE = {"triage": ("intake", "document_extraction")}
 
 #: Extension points so a slice can own its draft type end to end without
-#: forking the single human gate every draft passes through.
-#: draft_type -> fn(deal, content, actor) -> dict  (runs on acceptance only)
+#: forking the single human gate every draft passes through. The helpers a
+#: draft-type module needs are re-exported publicly at the end of this file
+#: (json_candidates, human_gate_for, workflow_deal).
+#: draft_type -> fn(deal, content, actor, draft) -> dict (runs on acceptance only)
 DRAFT_PROMOTERS: dict = {}
 #: draft_type -> fn(content, edits) -> dict of applied diffs (mutates content)
 DRAFT_EDITORS: dict = {}
@@ -983,6 +985,7 @@ def record_agent_run(
     inputs: dict,
     latency_ms: int,
     error: str | None = None,
+    prompt_source: str | None = None,
 ) -> dict:
     """Append the REQ-038 telemetry row for one agent run: model id, prompt
     version, inputs, raw output, latency and token cost. Every agent surface in
@@ -1002,6 +1005,11 @@ def record_agent_run(
             "prompt_template_version": prompt_version(prompt_name),
             "inputs": inputs,
             "raw_output": pii.redact(reply)[:4000],
+            # Which prompt actually produced this reply. An agent node inside the
+            # approved workflow is prompted by the process definition, not by the
+            # app's own template, and the run record has to say so rather than
+            # imply an evidence chain it does not have.
+            "prompt_source": prompt_source or f"app prompt {prompt_version(prompt_name)}",
             "prompt_tokens": _estimate_tokens(prompt),
             "completion_tokens": _estimate_tokens(reply),
             "latency_ms": int(latency_ms),
@@ -1256,6 +1264,7 @@ def adopt_workflow_triage(deal: dict, run_id: str | None, elapsed_ms: int, actor
         # wall clock of the workflow run's intake phase, which this agent node
         # dominates — the engine does not expose a per-node timing.
         latency_ms=int(elapsed_ms),
+        prompt_source="workflow node deal-underwriting/triage (see workflows/workflows.json)",
     )
     return _park_triage_draft(deal, _triage_content(deal, reply, facts), run["id"], actor_user_id)
 
@@ -1379,7 +1388,11 @@ def review_draft(*, deal: dict, draft_type: str, action: str, actor: dict, reaso
     content = dict(draft["draft_content"])
     applied_edits = None
     if action == "edited":
-        applied_edits = _apply_edits(draft_type, content, edits or {})
+        if len(json.dumps(edits or {}, default=str)) > MAX_EDITS_BYTES:
+            raise DomainError(400, "the edits object is too large")
+        # The editor is whoever is at the gate, never a name the caller supplied:
+        # a corrected figure is re-cited to the human who corrected it.
+        applied_edits = _apply_edits(draft_type, content, dict(edits or {}, edited_by=actor["username"]))
 
     before = dict(draft)
     draft["review_status"] = action
@@ -1410,20 +1423,29 @@ def review_draft(*, deal: dict, draft_type: str, action: str, actor: dict, reaso
         entity_type="agent_drafts",
         entity_id=draft["id"],
         old_values={"review_status": "pending"},
-        new_values={"review_status": action, "reviewed_by_user_id": actor["username"]},
+        new_values={
+            "review_status": action,
+            "reviewed_by_user_id": actor["username"],
+            # the from/to of every figure a human changed at the gate belongs in
+            # the examiner's trail, not only on the (mutable) draft row
+            "human_edits": applied_edits,
+        },
         details={"reason": reason_text} if reason_text else {},
     )
 
     promoted: dict = {}
     if action in ("accepted", "edited"):
-        promoted = promote_draft(deal, draft_type, content, actor)
+        promoted = promote_draft(deal, draft_type, content, actor, draft)
     else:
         touch_deal(deal)
 
     # The human decision was recorded on the approval item above; now let the
     # approved process resume from its parked human node. tick() is
     # deterministic and re-entrant, and every handler it reaches is idempotent.
-    promoted["workflow"] = resume_workflow(deal)
+    # A REJECTION is never deferred: the engine has to record that the gate was
+    # refused (it ends the run at that node), or the run would sit parked
+    # claiming a decision that went the other way.
+    promoted["workflow"] = resume_workflow(deal, allow_defer=action != "rejected")
     return {"draft": draft, "promoted": promoted}
 
 
@@ -1454,11 +1476,11 @@ def undelivered_handler(run_id: str) -> str | None:
     return None
 
 
-def resume_workflow(deal: dict) -> dict | None:
+def resume_workflow(deal: dict, *, allow_defer: bool = True) -> dict | None:
     run_id = deal.get("workflow_run_id")
     if not run_id:
         return None
-    deferred = undelivered_handler(run_id)
+    deferred = undelivered_handler(run_id) if allow_defer else None
     if deferred:
         _log("workflow.tick_deferred", deal_reference=deal.get("deal_reference"), handler=deferred)
         state = workflow_engine.state(run_id)
@@ -1518,7 +1540,7 @@ def _apply_edits(draft_type: str, content: dict, edits: dict) -> dict:
     return applied
 
 
-def promote_draft(deal: dict, draft_type: str, content: dict, actor: dict) -> dict:
+def promote_draft(deal: dict, draft_type: str, content: dict, actor: dict, draft: dict | None = None) -> dict:
     """Human acceptance is the act that turns a draft into deal-of-record data."""
     promoted: dict = {}
     if draft_type == "triage":
@@ -1527,7 +1549,7 @@ def promote_draft(deal: dict, draft_type: str, content: dict, actor: dict) -> di
         promoted["assigned_analyst_id"] = queue_row["analyst_user_id"]
     promoter = DRAFT_PROMOTERS.get(draft_type)
     if promoter is not None:
-        promoted.update(promoter(deal, content, actor) or {})
+        promoted.update(promoter(deal, content, actor, draft) or {})
     stages = DRAFT_STAGE_ADVANCE.get(draft_type)
     if stages and deal.get("current_stage") == stages[0]:
         transition = record_transition(deal, stages[1], actor["username"])
@@ -1790,6 +1812,19 @@ DELIVERED_HANDLERS: set[str] = set()
 def register_workflow_handler(name: str, fn) -> None:
     workflow_engine.register_handler(name, fn)
     DELIVERED_HANDLERS.add(name)
+
+
+#: Public aliases for the helpers a slice's draft-type module (spreading, and
+#: the memo/compliance modules to come) legitimately needs — so a sibling module
+#: never has to reach into this one's privates.
+json_candidates = _json_candidates
+human_gate_for = _human_gate_for
+workflow_deal = _wf_deal
+log = _log
+
+#: Serialised bound on a review's free-form `edits` object (FSI rule 1: bound
+#: every stored input at the edge). The per-field checks still apply after it.
+MAX_EDITS_BYTES = 20_000
 
 
 def register_handlers() -> None:

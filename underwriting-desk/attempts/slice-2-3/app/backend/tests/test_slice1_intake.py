@@ -297,7 +297,13 @@ def test_intake_config_exposes_the_vocabulary_the_ui_binds_to():
     config = client.get("/intake/config").json()
     assert {f["slug"] for f in config["facility_types"]} == set(uw.FACILITY_TYPES)
     assert config["approval_tiers"]["officer_ceiling"] == 1_000_000
-    assert {u["username"] for u in config["users"]} >= {"rm.rivera", "an.chen", "co.brennan"}
+
+    # Tightened in slice 2: the vocabulary stays public, but the staff ROSTER
+    # does not — handing every username and role to an anonymous caller is
+    # what turns "callers name themselves" into a one-request attack.
+    assert config["users"] == []
+    named = client.get("/intake/config", params={"acting_user": "an.chen"}).json()
+    assert {u["username"] for u in named["users"]} >= {"rm.rivera", "an.chen", "co.brennan"}
 
 
 # ---------------------------------------------------------------- review findings

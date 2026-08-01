@@ -1,0 +1,8 @@
+{
+  "screen": "screen-review",
+  "caption": "The Draft Review workspace this slice delivers: every agent draft in the app queues here with its run telemetry, and opening the financial spread for DEAL-1001 shows the standard template filled line by line beside the cited evidence — each figure naming the document, page and section it was read from, 'not supported by the record' where the statements carry no such line, 0 uncited figures, and the named human disposition that alone promoted it into deal-of-record data and moved the deal to Risk Grading.",
+  "steps": [
+    { "action": "click", "selector": ".navitem[data-screen=\"review\"]" },
+    { "action": "click", "selector": "#review-rows tr[data-draft-type=\"spread\"]" }
+  ]
+}

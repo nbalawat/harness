@@ -6,7 +6,7 @@ from fastapi import APIRouter, HTTPException
 from fastapi.responses import PlainTextResponse
 
 from db import store
-from ext_guard import DOCUMENT_CONTENT_FIELDS, SENSITIVE_FIELDS
+from ext_guard import DOCUMENT_CONTENT_FIELDS, SENSITIVE_FIELDS, scrub
 from models import TABLES
 
 router = APIRouter()
@@ -40,5 +40,12 @@ def export_table(table: str):
     writer = csv.DictWriter(out, fieldnames=columns, extrasaction="ignore")
     writer.writeheader()
     for row in store.list(table):
-        writer.writerow({key: _cell(row.get(key)) for key in columns})
+        # The column allowlist above only filters at the TOP level, so a
+        # nested blob (agent_drafts.draft_content, agent_runs.inputs /
+        # raw_output) leaves whole. The JSON reader recurses through scrub().
+        # Running the same scrub here keeps both doors on ONE policy: the
+        # moment a later slice nests source text or a credential inside one of
+        # those blobs, the CSV strips it too instead of silently diverging.
+        clean = scrub(row)
+        writer.writerow({key: _cell(clean.get(key)) for key in columns})
     return PlainTextResponse(out.getvalue(), media_type="text/csv")

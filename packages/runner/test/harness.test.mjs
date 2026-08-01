@@ -1131,3 +1131,82 @@ test("retry policy: a retry projected to blow the node budget fails fast instead
   assert.match(String(blocks.at(-1).reason ?? ""), /retry blocked: projected/);
   assert.equal(events(ctx, "node.running").length, 1, "only ONE attempt ever ran — no blind re-attempts");
 });
+
+// ---------------------------------------------------------------------------
+// Frontier concurrency: independent ready nodes run in PARALLEL
+// ---------------------------------------------------------------------------
+
+const CONC_DAG = [
+  "name: conc",
+  "version: 0.0.1",
+  "nodes:",
+  '  - { id: a, kind: agent, prompt: prompts/p.md, mock: "sleep 0.8 && echo x > a.txt", outputs: [{name: a, file: a.txt}] }',
+  '  - { id: b, kind: agent, prompt: prompts/p.md, mock: "sleep 0.8 && echo x > b.txt", outputs: [{name: b, file: b.txt}] }',
+  '  - { id: c, kind: agent, prompt: prompts/p.md, mock: "sleep 0.8 && echo x > c.txt", outputs: [{name: c, file: c.txt}] }',
+  '  - { id: join, kind: verifier, command: "test -f ../../artifacts/a/a.txt", deps: [a, b, c] }',
+].join("\n");
+
+test("concurrency: three independent nodes run in parallel — wall clock = max, not sum", async () => {
+  const dir = writeFixture(tmpDir("conc-pt"), CONC_DAG, { "prompts/p.md": "x" });
+  const ctx = makeCtx(tmpDir("conc-ws"), dir);
+  const t0 = Date.now();
+  const result = await runLoop(ctx);
+  const elapsed = Date.now() - t0;
+  assert.equal(result.status, "completed");
+  assert.ok(elapsed < 2000, `three 0.8s nodes finished in ${elapsed}ms — they overlapped (serial would be >2400ms)`);
+});
+
+test("concurrency: HARNESS_CONCURRENCY=1 forces the old serial behavior", async () => {
+  const dir = writeFixture(tmpDir("ser-pt"), CONC_DAG, { "prompts/p.md": "x" });
+  const ctx = makeCtx(tmpDir("ser-ws"), dir);
+  process.env.HARNESS_CONCURRENCY = "1";
+  const t0 = Date.now();
+  try {
+    assert.equal((await runLoop(ctx)).status, "completed");
+  } finally {
+    delete process.env.HARNESS_CONCURRENCY;
+  }
+  assert.ok(Date.now() - t0 >= 2400, "serial: the three 0.8s nodes ran one after another");
+});
+
+test("concurrency: a failing sibling never strands the others — finished work still commits", async () => {
+  const dag = [
+    "name: concfail",
+    "version: 0.0.1",
+    "nodes:",
+    '  - { id: good, kind: agent, prompt: prompts/p.md, mock: "sleep 0.3 && echo x > good.txt", outputs: [{name: good, file: good.txt}] }',
+    '  - { id: bad, kind: agent, prompt: prompts/p.md, mock: "exit 1", outputs: [{name: bad, file: bad.txt}] }',
+  ].join("\n");
+  const dir = writeFixture(tmpDir("cf-pt"), dag, { "prompts/p.md": "x" });
+  const ctx = makeCtx(tmpDir("cf-ws"), dir);
+  const result = await runLoop(ctx);
+  assert.equal(result.status, "failed");
+  assert.equal(result.failedNodeId, "bad");
+  const state = foldState(ctx.journal.read());
+  assert.ok(state.committed.has("good"), "the concurrent sibling's finished work committed");
+});
+
+test("when.all: conjunction — every sub-clause must hold", async () => {
+  const dag = [
+    "name: whenall",
+    "version: 0.0.1",
+    "nodes:",
+    '  - { id: intake, kind: gate, questions: [{id: mode, prompt: m, default: "on"}, {id: level, prompt: l, default: "hi"}], outputs: [{name: intake, file: intake.json}] }',
+    "  - id: both",
+    "    kind: verifier",
+    '    command: "true"',
+    "    deps: [intake]",
+    "    when: { all: [{artifact: intake, path: mode, equals: on}, {artifact: intake, path: level, equals: hi}] }",
+    "  - id: neither",
+    "    kind: verifier",
+    '    command: "true"',
+    "    deps: [intake]",
+    "    when: { all: [{artifact: intake, path: mode, equals: on}, {artifact: intake, path: level, equals: LOW}] }",
+  ].join("\n");
+  const dir = writeFixture(tmpDir("wa-pt"), dag);
+  const ctx = makeCtx(tmpDir("wa-ws"), dir);
+  assert.equal((await runLoop(ctx)).status, "completed");
+  const state = foldState(ctx.journal.read());
+  assert.ok(state.committed.has("both"), "all clauses hold -> runs");
+  assert.ok(state.skipped.has("neither"), "one failing clause -> skipped");
+});

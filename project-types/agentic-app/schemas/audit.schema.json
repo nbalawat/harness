@@ -1,0 +1,29 @@
+{
+  "type": "object",
+  "properties": {
+    "status": { "enum": ["clean", "findings"] },
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "severity": { "enum": ["high", "medium", "low"] },
+          "area": { "type": "string" },
+          "file": { "type": "string" },
+          "line": { "type": "integer" },
+          "finding": { "type": "string", "minLength": 10 }
+        },
+        "required": ["severity", "area", "file", "finding"]
+      }
+    },
+    "checked": {
+      "type": "object",
+      "properties": {
+        "files": { "type": "integer", "minimum": 1 },
+        "axes": { "type": "array", "items": { "type": "string" } }
+      },
+      "required": ["files", "axes"]
+    }
+  },
+  "required": ["status", "findings", "checked"]
+}

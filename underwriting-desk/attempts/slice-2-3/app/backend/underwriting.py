@@ -1303,7 +1303,7 @@ SPREAD_TEMPLATE = (
     {"line_item_key": "current_liabilities", "category": "balance_sheet", "label": "Current Liabilities", "unit": "usd", "period": "as_of", "match": ("current liabilities",)},
     {"line_item_key": "total_debt", "category": "balance_sheet", "label": "Total Debt", "unit": "usd", "period": "as_of", "match": ("total debt",)},
     {"line_item_key": "tangible_net_worth", "category": "balance_sheet", "label": "Tangible Net Worth", "unit": "usd", "period": "as_of", "match": ("tangible net worth",)},
-    {"line_item_key": "annual_debt_service", "category": "debt_service", "label": "Annual Debt Service (Principal & Interest)", "unit": "usd", "period": "annual", "match": ("annual principal and interest", "debt service")},
+    {"line_item_key": "annual_debt_service", "category": "debt_service", "label": "Annual Debt Service (Principal & Interest)", "unit": "usd", "period": "annual", "match": ("annual principal and interest", "total debt service", "annual debt service", "debt service")},
 )
 SPREAD_TEMPLATE_VERSION = "spread-template@2026.1"
 SPREAD_TEMPLATE_KEYS = {spec["line_item_key"] for spec in SPREAD_TEMPLATE}
@@ -1383,7 +1383,10 @@ def _extract_amount(text: str) -> float | None:
     for _money, year_shaped, value in candidates:
         if not year_shaped:
             return value
-    return candidates[0][2]
+    # Every candidate looks like a year ("EBITDA 2024: 2023"): there is no
+    # figure here to stand behind, and guessing one would put a period label
+    # on the deal of record as money. Say so instead.
+    return None
 
 
 def _binds_to_spec(text: str, spec: dict) -> bool:
@@ -1899,7 +1902,15 @@ def handler_persist_spread_line_items(context: dict) -> dict:
         return {
             "deal_id": deal["deal_reference"],
             "spread_line_item_ids": [r["id"] for r in existing],
-            "citation_ids": [c["id"] for c in citations_for(deal["id"])],
+            # Only the citations hanging off THIS spread's line items: the
+            # citations table is shared with ratio and memo footnotes from
+            # slice 3 on, so reporting every citation on the deal would make
+            # the node's contract grow silently under later slices.
+            "citation_ids": [
+                c["id"]
+                for c in citations_for(deal["id"])
+                if c.get("spread_line_item_id") in {r["id"] for r in existing}
+            ],
             "reviewed_by_user_id": reviewer,
             "audit_log_id": audit["id"],
         }
@@ -2267,6 +2278,49 @@ def deal_view(deal: dict) -> dict:
     view["facility_label"] = FACILITY_TYPES.get(deal.get("facility_type"), {}).get("label", deal.get("facility_type"))
     view["submitter_role"] = (get_user(deal.get("submitted_by_user_id")) or {}).get("role")
     return view
+
+
+# The columns the Pipeline Board and the deal list actually render. An
+# un-identified caller gets these and nothing else: slice 1's acceptance
+# constrains which DEALS come back, never which columns, so borrower contact
+# details, masked TIN, stated purpose, collateral description and the internal
+# correlation/fingerprint fields have no reason to travel to a caller who has
+# not named a seat.
+PUBLIC_DEAL_FIELDS = (
+    "id",
+    "deal_reference",
+    "borrower_name",
+    "borrower_industry",
+    "borrower_state",
+    "facility_type",
+    "facility_label",
+    "requested_amount",
+    "exposure_amount",
+    "approval_tier",
+    "tier_rule_version",
+    "current_stage",
+    "stage_index",
+    "stage_label",
+    "assigned_analyst_id",
+    "submitted_by_user_id",
+    "submitter_role",
+    "analyst_queue",
+    "analyst_queue_label",
+    "document_count",
+    "document_types",
+    "pending_draft_types",
+    "required_documents",
+    "created_at",
+    "last_activity_at",
+    "closed_at",
+    "is_closed",
+    "business_days_idle",
+)
+
+
+def public_deal_view(view: dict) -> dict:
+    """Board-column projection of a deal for an un-entitled caller."""
+    return {k: v for k, v in view.items() if k in PUBLIC_DEAL_FIELDS}
 
 
 def pipeline_board(username: str | None = None) -> dict:

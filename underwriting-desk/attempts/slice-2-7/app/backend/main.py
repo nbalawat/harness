@@ -66,22 +66,11 @@ def chat(req: ChatRequest):
 # resolve a named identity, check the role grant, derive tier and exposure in
 # deterministic Python and append an audit row. The generic table API is a
 # scaffold convenience and must never become a path around those controls.
-GUARDED_TABLES = {
-    "deals",
-    "documents",
-    "document_locations",
-    "agent_runs",
-    "agent_drafts",
-    "approvals",
-    "declines",
-    "stage_transitions",
-    "audit_log",
-    "users",
-    "analyst_queues",
-    "policy_exceptions",
-    "risk_grades",
-    "ratios",
-}
+# Single source of truth: ext_guard's middleware and this catch-all must never
+# drift apart, or a table added to one stays writable through the other.
+import ext_guard as _ext_guard  # noqa: E402
+
+GUARDED_TABLES = _ext_guard.GOVERNED_TABLES
 
 # Columns never returned over a generic read.
 SECRET_COLUMNS = {"password_hash"}

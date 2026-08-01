@@ -2,7 +2,7 @@ import * as crypto from "node:crypto";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { spawnSync } from "node:child_process";
+import { spawn } from "node:child_process";
 import AjvNS from "ajv";
 
 // NodeNext/CJS interop: at runtime the constructor is the module itself,
@@ -146,7 +146,7 @@ export async function executeNode(
         }
         case "deterministic":
         case "verifier":
-          runCommand(ctx, node.command!, attemptDir);
+          await runCommand(ctx, node.command!, attemptDir);
           break;
         case "agent":
           await runAgent(ctx, node, attemptDir, attempt);
@@ -161,7 +161,7 @@ export async function executeNode(
     // Per-node verification: executable exit criteria inside the retry loop.
     if (!error && node.verify) {
       try {
-        runCommand(ctx, node.verify, attemptDir);
+        await runCommand(ctx, node.verify, attemptDir);
       } catch (e) {
         error = `verification failed:\n${e instanceof Error ? e.message : String(e)}`;
       }
@@ -227,24 +227,47 @@ function buildInputs(
   return inputs;
 }
 
-function runCommand(ctx: RunContext, command: string, attemptDir: string): void {
-  const result = spawnSync(command, {
-    shell: true,
-    cwd: attemptDir,
-    env: {
-      ...process.env,
-      HARNESS_PROJECT_DIR: ctx.projectTypeDir,
-      HARNESS_WORKSPACE: ctx.workspace,
-    },
-    encoding: "utf8",
-    timeout: 10 * 60 * 1000,
+/**
+ * Async so concurrent nodes keep breathing: a synchronous 10-minute verify
+ * (spawnSync) would freeze the event loop and stall every sibling agent
+ * session the scheduler is running in parallel.
+ */
+function runCommand(ctx: RunContext, command: string, attemptDir: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const child = spawn(command, {
+      shell: true,
+      cwd: attemptDir,
+      env: {
+        ...process.env,
+        HARNESS_PROJECT_DIR: ctx.projectTypeDir,
+        HARNESS_WORKSPACE: ctx.workspace,
+      },
+    });
+    let stdout = "";
+    let stderr = "";
+    child.stdout.on("data", (d: Buffer) => (stdout += d.toString()));
+    child.stderr.on("data", (d: Buffer) => (stderr += d.toString()));
+    let timedOut = false;
+    const timer = setTimeout(() => {
+      timedOut = true;
+      child.kill("SIGKILL");
+    }, 10 * 60 * 1000);
+    const tail = (s: string) => s.split("\n").slice(-20).join("\n");
+    child.on("error", (e) => {
+      clearTimeout(timer);
+      reject(e);
+    });
+    child.on("close", (code) => {
+      clearTimeout(timer);
+      if (timedOut) {
+        reject(new Error(`command timed out after 10 minutes:\n${command}\nstdout:\n${tail(stdout)}\nstderr:\n${tail(stderr)}`));
+      } else if (code !== 0) {
+        reject(new Error(`command exited with ${code}:\n${command}\nstdout:\n${tail(stdout)}\nstderr:\n${tail(stderr)}`));
+      } else {
+        resolve();
+      }
+    });
   });
-  if (result.status !== 0) {
-    const tail = (s: string | null) => (s ?? "").split("\n").slice(-20).join("\n");
-    throw new Error(
-      `command exited with ${result.status}:\n${command}\nstdout:\n${tail(result.stdout)}\nstderr:\n${tail(result.stderr)}`,
-    );
-  }
 }
 
 /** Resolve a gate's question list: static from the DAG, or dynamic from an upstream artifact. */
@@ -486,7 +509,7 @@ async function runAgent(
 ): Promise<void> {
   if (ctx.mockAgents) {
     if (!node.mock) throw new Error(`agent node '${node.id}' has no mock command for --mock-agents mode`);
-    runCommand(ctx, node.mock, attemptDir);
+    await runCommand(ctx, node.mock, attemptDir);
     return;
   }
 

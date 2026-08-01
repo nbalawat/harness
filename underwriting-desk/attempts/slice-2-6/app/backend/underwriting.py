@@ -12,6 +12,7 @@ Composition contract honoured here:
 """
 from __future__ import annotations
 
+import copy
 import datetime
 import json
 import re
@@ -207,8 +208,37 @@ TRIAGE_PROMPT_NAME = "intake_triage"
 TRIAGE_PROMPT_VERSION = 1
 TRIAGE_AGENT_NAME = "Intake Triage Agent"
 
-# Draft type -> (stage the deal must be in, stage acceptance moves it to).
-DRAFT_STAGE_ADVANCE = {"triage": ("intake", "document_extraction")}
+# Draft type -> (stages the deal may advance FROM, stage acceptance moves it to).
+DRAFT_STAGE_ADVANCE = {"triage": (("intake",), "document_extraction")}
+
+#: Artefacts other slices add (the financial spread, the memo, ...) register
+#: how their acceptance promotes them and how a reviewer may edit them, rather
+#: than this module growing a branch per artefact. Keys are draft types.
+DRAFT_PROMOTERS: dict = {}
+DRAFT_EDITORS: dict = {}
+#: Draft types where a reviewer's edit is itself an adverse action on the
+#: record — changing a figure away from the evidence that cites it — and so
+#: carries the same written-reason requirement a rejection does.
+DRAFT_EDIT_NEEDS_REASON: set = set()
+
+
+def register_draft_type(
+    draft_type: str, *, promoter=None, editor=None, advances=None, edit_requires_reason: bool = False
+) -> None:
+    """Register a draft type's promotion / edit / stage-advance rules.
+
+    `promoter(deal, content, actor) -> dict` performs the deal-of-record write
+    that human acceptance authorises; `editor(content, edits) -> dict` applies
+    a reviewer's corrections; `advances` is ((from stages...), to stage).
+    """
+    if promoter is not None:
+        DRAFT_PROMOTERS[draft_type] = promoter
+    if editor is not None:
+        DRAFT_EDITORS[draft_type] = editor
+    if advances is not None:
+        DRAFT_STAGE_ADVANCE[draft_type] = (tuple(advances[0]), advances[1])
+    if edit_requires_reason:
+        DRAFT_EDIT_NEEDS_REASON.add(draft_type)
 
 
 class DomainError(Exception):
@@ -973,10 +1003,15 @@ def run_agent(*, agent_name: str, prompt: str, deal: dict, agent_type: str, run_
         reply, error = "", str(exc)[:200]
     latency_ms = int((time.perf_counter() - started) * 1000)
     model = model_id()
-    cost_row = costmeter.record(model, _estimate_tokens(prompt), _estimate_tokens(reply))
+    tokens_in, tokens_out = _estimate_tokens(prompt), _estimate_tokens(reply)
+    cost_row = costmeter.record(model, tokens_in, tokens_out)
     run = store.insert(
         "agent_runs",
         {
+            # Estimated from prompt/reply length — the runtime reports no usage
+            # figures, so they are labelled as estimates wherever they surface.
+            "tokens_in_estimated": tokens_in,
+            "tokens_out_estimated": tokens_out,
             "deal_id": deal["id"],
             "deal_reference": deal.get("deal_reference"),
             "agent_type": agent_type,
@@ -1197,10 +1232,13 @@ def adopt_workflow_triage(deal: dict, run_id: str | None, elapsed_ms: int, actor
 
     facts = triage_prompt_inputs(deal)
     model = model_id()
-    cost_row = costmeter.record(model, _estimate_tokens(build_triage_prompt(deal, facts)), _estimate_tokens(reply))
+    tokens_in, tokens_out = _estimate_tokens(build_triage_prompt(deal, facts)), _estimate_tokens(reply)
+    cost_row = costmeter.record(model, tokens_in, tokens_out)
     run = store.insert(
         "agent_runs",
         {
+            "tokens_in_estimated": tokens_in,
+            "tokens_out_estimated": tokens_out,
             "deal_id": deal["id"],
             "deal_reference": deal["deal_reference"],
             "agent_type": "intake_triage",
@@ -1213,6 +1251,7 @@ def adopt_workflow_triage(deal: dict, run_id: str | None, elapsed_ms: int, actor
             # wall clock of the workflow run's intake phase, which this agent
             # node dominates — the engine does not expose a per-node timing.
             "latency_ms": int(elapsed_ms),
+            "latency_basis": "intake workflow run wall clock (upper bound — the run also performed the deterministic intake writes)",
             "token_cost": cost_row["usd"],
             "ran_at": now_iso(),
             "error": None,
@@ -1322,6 +1361,12 @@ def review_draft(*, deal: dict, draft_type: str, action: str, actor: dict, reaso
     reason_text = (reason or "").strip()
     if action == "rejected" and not reason_text:
         raise DomainError(400, "a written reason is required to reject an agent draft")
+    if action == "edited" and draft_type in DRAFT_EDIT_NEEDS_REASON and not reason_text:
+        raise DomainError(
+            400,
+            f"a written reason is required to edit the {draft_type} draft: the corrected figure leaves the "
+            "evidence that cited it, so the record has to say why",
+        )
     # Separation of duties (FSI hardening rule 3): the human gate on an agent
     # draft is not load-bearing if the person who originated the deal can also
     # be the one who accepts the draft on it. Roles alone do not prevent that —
@@ -1338,7 +1383,10 @@ def review_draft(*, deal: dict, draft_type: str, action: str, actor: dict, reaso
     if draft is None:
         raise DomainError(409, f"no pending '{draft_type}' draft on deal {deal['deal_reference']}")
 
-    content = dict(draft["draft_content"])
+    # Deep copy, not a shallow one: an edit that fails validation half way
+    # through must leave the stored draft exactly as the agent produced it,
+    # never carrying an unrecorded human change into a later acceptance.
+    content = copy.deepcopy(draft["draft_content"])
     applied_edits = None
     if action == "edited":
         applied_edits = _apply_edits(draft_type, content, edits or {})
@@ -1386,19 +1434,129 @@ def review_draft(*, deal: dict, draft_type: str, action: str, actor: dict, reaso
     # approved process resume from its parked human node. tick() is
     # deterministic and re-entrant, and every handler it reaches is idempotent.
     promoted["workflow"] = resume_workflow(deal)
+    # That tick may have executed an agent node. Its output is recorded as an
+    # agent run (REQ-038) and parked as a PENDING draft NOW, not whenever
+    # somebody next asks for it — an LLM call with no run record and no cost
+    # entry is exactly what the telemetry requirement exists to prevent.
+    adopt_workflow_output(deal, actor["username"])
     return {"draft": draft, "promoted": promoted}
+
+
+#: Adopters contributed by the modules that own each agent node's artefact.
+#: Each is `fn(deal, actor_user_id) -> draft | None` and must be idempotent.
+WORKFLOW_OUTPUT_ADOPTERS: list = []
+
+
+def register_workflow_adopter(fn) -> None:
+    WORKFLOW_OUTPUT_ADOPTERS.append(fn)
+
+
+def adopt_workflow_output(deal: dict, actor_user_id: str) -> list:
+    adopted = []
+    for adopter in WORKFLOW_OUTPUT_ADOPTERS:
+        try:
+            draft = adopter(deal, actor_user_id)
+        except Exception as exc:  # an adoption failure must not undo a decision
+            _log("workflow.adoption_failed", deal_reference=deal.get("deal_reference"), error=str(exc)[:120])
+            continue
+        if draft is not None:
+            adopted.append(draft)
+    return adopted
+
+
+def resume_workflow_if_ready(deal: dict) -> dict | None:
+    """Re-attempt a tick that was deferred while a later slice's nodes were
+    undelivered. The slice that registers those handlers calls this on the deal
+    it is working, and the run walks on from the gate it parked at."""
+    if not deal.get("workflow_run_id"):
+        return None
+    return resume_workflow(deal)
+
+
+def pending_handler_gaps(run_id: str) -> list[str]:
+    """Deterministic nodes between here and the next human gate whose handler
+    no shipped slice registers yet.
+
+    The engine fails a run permanently when it reaches an unregistered handler,
+    so a partially delivered process would turn a perfectly good human decision
+    into a dead run. The decision is still recorded on the approval item; the
+    run simply stays parked until the slice that owns those nodes ships and the
+    next tick walks straight through them.
+    """
+    try:
+        state = workflow_engine.state(run_id)
+        definition = next((w for w in workflow_engine.definitions() if w["name"] == state.get("workflow")), None)
+    except Exception:
+        return []
+    if definition is None:
+        return []
+    # Only an APPROVED gate may be deferred. A rejection has to reach the
+    # engine now: the engine records it against this node and stops there,
+    # never touching the nodes ahead — deferring it instead would leave the run
+    # parked on a decided item that a later tick would resolve as a failure
+    # long after a re-draft had been accepted.
+    item = approval_flow._find(state.get("approval_id")) if state.get("status") == "parked" else None
+    if item is None or item.get("status") != "approved":
+        return []
+    nodes = definition["nodes"][state.get("cursor", 0) :]
+    if nodes and nodes[0].get("kind") == "human":
+        nodes = nodes[1:]  # the gate we are resuming from
+    registered = getattr(workflow_engine, "_handlers", None)
+    if not isinstance(registered, dict):
+        # The engine exposes no handler-introspection API. If that internal
+        # ever moves, fail towards the pre-existing behaviour (tick) rather
+        # than towards never advancing a run again.
+        return []
+    missing: list[str] = []
+    for node in nodes:
+        if node.get("kind") == "human":
+            break
+        if node.get("kind") == "deterministic" and node.get("handler") not in registered:
+            missing.append(node["handler"])
+    return missing
 
 
 def resume_workflow(deal: dict) -> dict | None:
     run_id = deal.get("workflow_run_id")
     if not run_id:
         return None
+    gaps = pending_handler_gaps(run_id)
+    if gaps:
+        _log("workflow.tick_deferred", deal_reference=deal.get("deal_reference"), missing=",".join(gaps))
+        try:
+            state = workflow_engine.state(run_id)
+        except Exception:
+            state = {}
+        return {
+            "run_id": run_id,
+            "status": state.get("status"),
+            "approval_id": state.get("approval_id"),
+            "deferred_nodes": gaps,
+            "detail": (
+                "the human decision is recorded; the approved process continues at nodes a later release "
+                "delivers, and the run resumes from this gate when they ship"
+            ),
+        }
+    started = time.perf_counter()
     try:
         state = workflow_engine.tick(run_id)
     except Exception as exc:
         _log("workflow.tick_failed", deal_reference=deal.get("deal_reference"), error=str(exc)[:120])
         return {"run_id": run_id, "status": "error"}
+    elapsed_ms = int((time.perf_counter() - started) * 1000)
+    # The engine exposes no per-node timing, so the tick's wall clock is kept:
+    # an agent node reached inside it dominates the elapsed time, and the run
+    # record it later lands on (REQ-038) has to state where the number is from.
+    store.insert(
+        "_workflow_ticks",
+        {"run_id": run_id, "elapsed_ms": elapsed_ms, "status": state.get("status"), "at": now_iso()},
+    )
     return {"run_id": run_id, "status": state.get("status"), "approval_id": state.get("approval_id")}
+
+
+def last_tick_ms(run_id: str) -> int | None:
+    rows = [row for row in store.list("_workflow_ticks") if row.get("run_id") == run_id]
+    return rows[-1]["elapsed_ms"] if rows else None
 
 
 def _apply_edits(draft_type: str, content: dict, edits: dict) -> dict:
@@ -1426,6 +1584,9 @@ def _apply_edits(draft_type: str, content: dict, edits: dict) -> dict:
             applied["missing_documents"] = {"from": content.get("missing_documents"), "to": values}
             content["missing_documents"] = list(values)
             content["missing_document_labels"] = [DOCUMENT_TYPE_LABELS.get(v, v) for v in values]
+    editor = DRAFT_EDITORS.get(draft_type)
+    if editor is not None:
+        applied.update(editor(content, edits) or {})
     if not applied:
         raise DomainError(400, "an edited review must supply at least one recognised edit")
     content["source"] = "human-edited"
@@ -1439,8 +1600,11 @@ def promote_draft(deal: dict, draft_type: str, content: dict, actor: dict) -> di
         queue_row = assign_to_queue(deal, content["proposed_queue"], actor["username"])
         promoted["analyst_queue_id"] = queue_row["id"]
         promoted["assigned_analyst_id"] = queue_row["analyst_user_id"]
+    promoter = DRAFT_PROMOTERS.get(draft_type)
+    if promoter is not None:
+        promoted.update(promoter(deal, content, actor) or {})
     stages = DRAFT_STAGE_ADVANCE.get(draft_type)
-    if stages and deal.get("current_stage") == stages[0]:
+    if stages and deal.get("current_stage") in stages[0]:
         transition = record_transition(deal, stages[1], actor["username"])
         promoted["stage_transition_id"] = transition["id"]
     promoted["current_stage"] = deal.get("current_stage")
@@ -1721,6 +1885,17 @@ def start_intake_workflow(payload: dict) -> tuple[str | None, int]:
         _log("workflow.start_failed", workflow="deal-underwriting", error=str(exc)[:120])
         run_id = None
     return run_id, int((time.perf_counter() - started) * 1000)
+
+
+#: Public names for the helpers other slice modules (spreading, and the memo /
+#: compliance modules to come) legitimately need. The underscore originals stay
+#: for this module's own call sites; a sibling module should not have to reach
+#: into a private to run an agent or park a draft behind the human gate.
+json_candidates = _json_candidates
+estimate_tokens = _estimate_tokens
+human_gate_for = _human_gate_for
+workflow_deal = _wf_deal
+log_event = _log
 
 
 seed_users()

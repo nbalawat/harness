@@ -1,6 +1,8 @@
-// A slice's exit criteria: boot the app and run CUMULATIVE acceptance — this
-// slice's checks plus every previous slice's (features never regress) — then
-// the backend test suite. Runs inside the slice node's retry loop.
+// A slice's exit criteria: boot the app and run acceptance, then the backend
+// test suite. Runs inside the slice node's retry loop.
+//   sequential (foundation) slice: CUMULATIVE — this slice plus every previous.
+//   parallel slice (built concurrently on the foundation): foundation + self —
+//   sibling slices don't exist in this tree; verify-merged re-proves the union.
 const crypto = require("node:crypto");
 const fs = require("node:fs");
 const net = require("node:net");
@@ -9,7 +11,9 @@ const { spawn, spawnSync } = require("node:child_process");
 
 const inputs = JSON.parse(fs.readFileSync("inputs.json", "utf8"));
 const sliceIndex = inputs._params.data.slice;
-const slices = inputs.slice_plan.data.slices.slice(0, sliceIndex);
+const parallel = inputs._params.data.parallel === true;
+const plan = inputs.slice_plan.data.slices;
+const slices = parallel ? [plan[0], plan[sliceIndex - 1]] : plan.slice(0, sliceIndex);
 const app = path.resolve("app");
 
 function fail(msg) {
@@ -32,7 +36,7 @@ async function main() {
   // Fast static checks first.
   // The slice's demo declaration is a CONTRACT, not a nicety: without it the
   // user cannot see what this slice added. Missing demo = failed slice.
-  const thisSlice = slices[sliceIndex - 1];
+  const thisSlice = plan[sliceIndex - 1];
   const demoFile = path.join(app, "demo", `slice-${sliceIndex}.json`);
   if (!fs.existsSync(demoFile)) {
     fail(`app/demo/slice-${sliceIndex}.json missing — declare how to DEMONSTRATE this slice (screen + steps + caption); the user sees your slice through it`);
@@ -116,7 +120,10 @@ async function main() {
       report.push({ slice: slice.id, name: slice.name, objective: slice.story, addresses: slice.addresses, checks });
       console.log(`acceptance passed: ${slice.id}`);
     }
-    fs.writeFileSync(path.join(app, "acceptance_report.json"), JSON.stringify({ proven_through_slice: sliceIndex, slices: report }, null, 2));
+    fs.writeFileSync(
+      path.join(app, "acceptance_report.json"),
+      JSON.stringify({ proven_through_slice: sliceIndex, ...(parallel ? { scope: "foundation+self" } : {}), slices: report }, null, 2),
+    );
 
     // Progress screenshot (best-effort): ships inside the app artifact so the
     // dashboard can show the app evolving slice by slice. FULL PAGE, after a

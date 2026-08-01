@@ -108,22 +108,22 @@ test("golden run: architecture stays inside the certified catalog and envelope",
 });
 
 test("golden run: design options are comparable; the CHOSEN DESIGN IS the app frontend", () => {
-  const { options } = readJson(artifact(golden, "design-options", "designs.json"));
+  const { options } = readJson(artifact(golden, "design-assemble", "designs.json"));
   assert.equal(options.length, 3);
   const screens = JSON.stringify(options[0].screens);
   for (const o of options) assert.equal(JSON.stringify(o.screens), screens);
 
   // answers.json chose option-2 ("Forest") — its primary color must be live in the app.
   const tokens = fs.readFileSync(
-    path.join(golden.workspace, "artifacts/slice-3/app/frontend/tokens.css"),
+    path.join(golden.workspace, "artifacts/merge-slices/app/frontend/tokens.css"),
     "utf8",
   );
   assert.match(tokens, /#2b8a3e/, "Forest primary token composed into the app");
 
   // Design SANCTITY: not just tokens — the chosen option's full shell ships.
-  const appIndex = fs.readFileSync(path.join(golden.workspace, "artifacts/slice-3/app/frontend/index.html"), "utf8");
+  const appIndex = fs.readFileSync(path.join(golden.workspace, "artifacts/merge-slices/app/frontend/index.html"), "utf8");
   const chosenPreview = fs.readFileSync(
-    path.join(golden.workspace, "artifacts/design-options/designs/option-2/index.html"),
+    path.join(golden.workspace, "artifacts/design-assemble/designs/option-2/index.html"),
     "utf8",
   );
   assert.match(appIndex, /masthead/, "Forest's editorial masthead layout survives into the built app");
@@ -133,7 +133,7 @@ test("golden run: design options are comparable; the CHOSEN DESIGN IS the app fr
   }
   assert.match(appIndex, /app\.js/, "behavior module wired onto the design shell");
   // Provenance is recorded so any later stage can assert fidelity.
-  const provenance = readJson(path.join(golden.workspace, "artifacts/slice-3/app/design.json"));
+  const provenance = readJson(path.join(golden.workspace, "artifacts/merge-slices/app/design.json"));
   assert.equal(provenance.chosen_option, "option-2");
   assert.equal(provenance.name, "Forest");
 });
@@ -203,13 +203,22 @@ test("golden run: vertical slices trace to requirements and the app evolves per 
     assert.ok(slice.acceptance.length >= 1);
   }
 
-  // Every built slice commits a launchable app; features accumulate.
+  // Parallel wave: each slice builds ONLY its feature on the foundation;
+  // the deterministic merge unions them all into the shipped app.
   const slice1Main = fs.readFileSync(path.join(golden.workspace, "artifacts/slice-1/app/backend/main.py"), "utf8");
+  const slice2Index = fs.readFileSync(path.join(golden.workspace, "artifacts/slice-2/app/frontend/index.html"), "utf8");
   const slice3Main = fs.readFileSync(path.join(golden.workspace, "artifacts/slice-3/app/backend/main.py"), "utf8");
-  assert.ok(!slice1Main.includes("/approvals"), "slice-1 predates the approval feature");
+  const slice3Index = fs.readFileSync(path.join(golden.workspace, "artifacts/slice-3/app/frontend/index.html"), "utf8");
+  assert.ok(!slice1Main.includes("/approvals"), "the foundation predates the approval feature");
+  assert.ok(slice2Index.includes("Conversation history"), "slice-2 delivers the history surface");
   assert.ok(slice3Main.includes("/approvals"), "slice-3 delivers the approval feature");
+  assert.ok(!slice3Index.includes("Conversation history"), "parallel slices are isolated — slice-3 never saw slice-2's work");
 
-  const slices = fs.readFileSync(path.join(golden.workspace, "artifacts/slice-3/app/SLICES.md"), "utf8");
+  const mergedMain = fs.readFileSync(path.join(golden.workspace, "artifacts/merge-slices/app/backend/main.py"), "utf8");
+  const mergedIndex = fs.readFileSync(path.join(golden.workspace, "artifacts/merge-slices/app/frontend/index.html"), "utf8");
+  assert.ok(mergedMain.includes("/approvals") && mergedIndex.includes("Conversation history"), "the merge unions every slice's feature");
+
+  const slices = fs.readFileSync(path.join(golden.workspace, "artifacts/merge-slices/app/SLICES.md"), "utf8");
   assert.equal((slices.match(/^- slice /gm) ?? []).length, 3, "SLICES.md records each delivered slice");
 
   // The walking skeleton is already branded and testable at scaffold.
@@ -484,10 +493,10 @@ test("revision: a change request becomes a requirement with provenance and re-de
   assert.ok(!fix.reopened.includes("slice-1"), "earlier slices untouched");
   assert.equal((await runLoop(ctx)).status, "completed");
 
-  // The fix is visibly applied and carried through to the final app.
-  const finalIndex = fs.readFileSync(path.join(ctx.workspace, "artifacts/slice-3/app/frontend/index.html"), "utf8");
+  // The fix is visibly applied and carried through the merge into the final app.
+  const finalIndex = fs.readFileSync(path.join(ctx.workspace, "artifacts/merge-slices/app/frontend/index.html"), "utf8");
   assert.match(finalIndex, /revised per user feedback/);
-  const slicesMd = fs.readFileSync(path.join(ctx.workspace, "artifacts/slice-3/app/SLICES.md"), "utf8");
+  const slicesMd = fs.readFileSync(path.join(ctx.workspace, "artifacts/merge-slices/app/SLICES.md"), "utf8");
   assert.match(slicesMd, /revised per user feedback/);
 
   // Revisions are auditable history, not silent edits.
@@ -495,25 +504,38 @@ test("revision: a change request becomes a requirement with provenance and re-de
   assert.deepEqual(revisions.map((e) => e.nodeId), ["requirements-synthesis", "slice-2"]);
 });
 
-test("certified subagent teams: design directors + slice reviewer are declared and reachable", () => {
+test("parallel topology: concurrent design directions, isolated slices, one post-merge audit", () => {
   const def = loadProjectType(PT_DIR);
-  const design = def.nodes.find((n) => n.id === "design-options");
-  assert.deepEqual(
-    Object.keys(design.agents).sort(),
-    ["board-director", "console-director", "editorial-director", "terminal-director"],
-    "four genuinely distinct design directors",
-  );
-  assert.ok(design.allowedTools.includes("Task"));
-  for (const [name, sub] of Object.entries(design.agents)) {
-    assert.match(sub.prompt, /screen-chat/, `${name} carries the buildable-shell contract`);
-    assert.ok(!sub.tools.includes("Task"), "directors do not sub-delegate");
+
+  // Three CONCURRENT design-option nodes, each committed to a distinct direction.
+  const options = def.nodes.filter((n) => /^design-option-\d$/.test(n.id));
+  assert.equal(options.length, 3, "three genuinely distinct design directions");
+  const directions = options.map((o) => o.params.direction);
+  assert.equal(new Set(directions).size, 3, "directions are distinct");
+  for (const o of options) {
+    assert.deepEqual(o.deps, ["screen-inventory", "requirements-synthesis", "intake"], `${o.id} shares the inventory but not siblings`);
+  }
+  assert.ok(def.nodes.some((n) => n.id === "screen-inventory"), "shared inventory keeps concurrent options comparable");
+
+  // Slices 2..6 depend ONLY on the foundation — this is what makes them parallel.
+  for (const n of def.nodes.filter((x) => /^slice-[2-6]$/.test(x.id))) {
+    assert.deepEqual(n.deps, ["slice-1", "review-slice-1", "slice-plan"], `${n.id} builds on the foundation, not its sibling`);
+    assert.equal(n.params.parallel, true);
+    assert.ok(n.skills.includes("fsi-hardening"), `${n.id} carries the certified skills`);
+    assert.ok(!n.allowedTools.includes("Task"), "slice agents build; the audit reviews");
   }
 
-  for (const n of def.nodes.filter((x) => /^slice-\d$/.test(x.id))) {
-    assert.ok(n.agents["slice-reviewer"], `${n.id} has the reviewer`);
-    assert.deepEqual(n.agents["slice-reviewer"].tools, ["Read", "Glob", "Grep"], "reviewer is read-only");
-    assert.ok(n.allowedTools.includes("Task"));
-  }
+  // One read-only audit of the merged app replaces per-slice reviewer subagents.
+  const audit = def.nodes.find((n) => n.id === "slice-audit");
+  assert.ok(audit, "post-merge audit exists");
+  assert.deepEqual(audit.allowedTools, ["Read", "Glob", "Grep"], "auditor is read-only");
+  assert.ok(audit.deps.includes("merge-slices"), "audits the union, not the parts");
+
+  // The merge itself is deterministic and self-verifying.
+  const merge = def.nodes.find((n) => n.id === "merge-slices");
+  assert.equal(merge.kind, "deterministic");
+  assert.match(merge.verify, /verify-merged/);
+  assert.ok(def.concurrency >= 2, "the engine is allowed to actually run the wave concurrently");
 });
 
 // ---------------------------------------------------------------------------
@@ -633,14 +655,19 @@ test("agent design sweeps every workflow slot: included agents + excluded-with-c
 });
 
 test("slice objectives carry executable evidence: the acceptance report in the app artifact", () => {
-  const report = readJson(path.join(golden.workspace, "artifacts/slice-3/app/acceptance_report.json"));
+  const report = readJson(path.join(golden.workspace, "artifacts/merge-slices/app/acceptance_report.json"));
   assert.equal(report.proven_through_slice, 3);
-  assert.equal(report.slices.length, 3, "cumulative — every prior slice re-proven");
+  assert.equal(report.merged, true, "the union itself was re-proven, not assumed");
+  assert.equal(report.slices.length, 3, "cumulative — every slice re-proven against the merged app");
   for (const sl of report.slices) {
     assert.ok(sl.objective && sl.objective.length > 10, `${sl.slice} carries its objective (story)`);
     assert.ok(sl.checks.length >= 1 && sl.checks.every((c) => c.ok), `${sl.slice} checks all proven`);
     assert.ok(Array.isArray(sl.addresses) && sl.addresses.length >= 1, "objective traces to requirements");
   }
+  // Each parallel slice's own tree proved foundation + itself before merging.
+  const parallelReport = readJson(path.join(golden.workspace, "artifacts/slice-3/app/acceptance_report.json"));
+  assert.equal(parallelReport.scope, "foundation+self");
+  assert.deepEqual(parallelReport.slices.map((s) => s.slice), ["core-chat", "reply-approval"]);
 });
 
 test("every-slice supervision: each slice ends in a review window — pause, then proceed on the default", async () => {
@@ -783,4 +810,84 @@ test("intake questions are typed: choices visible, documents droppable, every-sl
   assert.equal(byId.supervision.default, "every-slice", "checkpoints are the default — the build waits for you by default");
   const uat = def.nodes.find((n) => n.id === "uat");
   assert.equal(uat.questions[0].type, "boolean", "UAT approval is a yes/no");
+});
+
+// ---------------------------------------------------------------------------
+// Parallel-slice merge: deterministic union, loud conflicts, sized slices
+// ---------------------------------------------------------------------------
+
+function makeTree(root, files) {
+  for (const [rel, content] of Object.entries(files)) {
+    const p = path.join(root, rel);
+    fs.mkdirSync(path.dirname(p), { recursive: true });
+    fs.writeFileSync(p, content);
+  }
+  return root;
+}
+
+test("merge-slices: disjoint parallel edits union cleanly; same-line edits FAIL LOUDLY", () => {
+  const base = { "backend/main.py": "line1\nline2\nline3\n", "SLICES.md": "# t\n- slice 1: core\n" };
+
+  // Clean case: slice-2 adds a file + appends SLICES; slice-3 edits a different region.
+  const clean = tmpDir("merge-ok");
+  const foundation = makeTree(path.join(clean, "f"), base);
+  const s2 = makeTree(path.join(clean, "s2"), { ...base, "backend/ext_history.py": "history\n", "SLICES.md": base["SLICES.md"] + "- slice 2: history\n" });
+  const s3 = makeTree(path.join(clean, "s3"), { ...base, "backend/main.py": "line1\nline2\nline3\napprovals\n", "SLICES.md": base["SLICES.md"] + "- slice 3: approvals\n" });
+  fs.writeFileSync(path.join(clean, "inputs.json"), JSON.stringify({
+    app: { path: foundation }, app_2: { path: s2 }, app_3: { path: s3 }, slice_plan: { data: { slices: [] } },
+  }));
+  const ok = runScript("merge-slices.cjs", clean);
+  assert.equal(ok.status, 0, ok.stdout + ok.stderr);
+  const mergedMain = fs.readFileSync(path.join(clean, "app/backend/main.py"), "utf8");
+  assert.ok(mergedMain.includes("approvals"), "slice-3's edit survives");
+  assert.ok(fs.existsSync(path.join(clean, "app/backend/ext_history.py")), "slice-2's file survives");
+  const slicesMd = fs.readFileSync(path.join(clean, "app/SLICES.md"), "utf8");
+  assert.ok(slicesMd.includes("- slice 2: history") && slicesMd.includes("- slice 3: approvals"), "SLICES.md entries concatenate in order");
+
+  // Conflict case: both slices rewrite the SAME line differently.
+  const bad = tmpDir("merge-bad");
+  const f2 = makeTree(path.join(bad, "f"), base);
+  const c2 = makeTree(path.join(bad, "s2"), { ...base, "backend/main.py": "line1\nSLICE2 OWNS THIS\nline3\n" });
+  const c3 = makeTree(path.join(bad, "s3"), { ...base, "backend/main.py": "line1\nSLICE3 OWNS THIS\nline3\n" });
+  fs.writeFileSync(path.join(bad, "inputs.json"), JSON.stringify({
+    app: { path: f2 }, app_2: { path: c2 }, app_3: { path: c3 }, slice_plan: { data: { slices: [] } },
+  }));
+  const conflict = runScript("merge-slices.cjs", bad);
+  assert.equal(conflict.status, 1, "overlapping line edits must fail the merge");
+  assert.match(conflict.stderr, /MERGE CONFLICT/);
+  assert.match(conflict.stderr, /never auto-resolved/);
+});
+
+test("merge-slices: a slice that REWRITES the slice ledger (instead of appending) is rejected", () => {
+  const base = { "SLICES.md": "# t\n- slice 1: core\n" };
+  const dir = tmpDir("merge-ledger");
+  const f = makeTree(path.join(dir, "f"), base);
+  const s2 = makeTree(path.join(dir, "s2"), { "SLICES.md": "- slice 2: I rewrote everything\n" });
+  const s3 = makeTree(path.join(dir, "s3"), { "SLICES.md": base["SLICES.md"] + "- slice 3: ok\n" });
+  fs.writeFileSync(path.join(dir, "inputs.json"), JSON.stringify({
+    app: { path: f }, app_2: { path: s2 }, app_3: { path: s3 }, slice_plan: { data: { slices: [] } },
+  }));
+  const out = runScript("merge-slices.cjs", dir);
+  assert.equal(out.status, 1);
+  assert.match(out.stderr, /rewrote the ledger/);
+});
+
+test("slice plan: an OVERSIZED slice is rejected before any build spend", () => {
+  const dir = tmpDir("oversize");
+  const screens = ["screen-a", "screen-b", "screen-c", "screen-d"].map((id) => ({ id, title: id, elements: [], element_count: 5 }));
+  fs.writeFileSync(path.join(dir, "inputs.json"), JSON.stringify({
+    requirements: { data: { requirements: [{ id: "REQ-001" }] } },
+    design_contract: { data: { screens } },
+  }));
+  fs.writeFileSync(path.join(dir, "slice_plan.json"), JSON.stringify({
+    slices: [{
+      id: "everything", name: "Everything", story: "One slice that tries to deliver the entire application at once.",
+      addresses: ["REQ-001"], covers: ["screen-a", "screen-b", "screen-c", "screen-d"],
+      acceptance: [{ method: "GET", path: "/health" }],
+    }],
+  }));
+  const out = runScript("check-slice-plan.cjs", dir);
+  assert.equal(out.status, 1, "4 screens in one slice exceeds the sizing cap");
+  assert.match(out.stderr, /OVERSIZED/);
+  assert.match(out.stderr, /Split it/);
 });

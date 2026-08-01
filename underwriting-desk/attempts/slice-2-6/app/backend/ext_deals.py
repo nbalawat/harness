@@ -109,6 +109,10 @@ def _fail(exc: uw.DomainError) -> HTTPException:
     return HTTPException(status_code=exc.status, detail=exc.detail)
 
 
+#: Public name for the sibling routers that raise the same domain errors.
+fail = _fail
+
+
 def _run_view(run: dict | None) -> dict | None:
     if run is None:
         return None
@@ -119,7 +123,14 @@ def _run_view(run: dict | None) -> dict | None:
         "model_id": run.get("model_id"),
         "prompt_template_version": run.get("prompt_template_version"),
         "latency_ms": run.get("latency_ms"),
+        # Only a run whose timing is NOT a direct measurement carries a basis;
+        # never label an unqualified number as measured on its behalf.
+        "latency_basis": run.get("latency_basis"),
         "token_cost": run.get("token_cost"),
+        # Estimated from prompt/reply length; surfaced as estimates, never as
+        # a usage figure the runtime reported.
+        "tokens_in_estimated": run.get("tokens_in_estimated"),
+        "tokens_out_estimated": run.get("tokens_out_estimated"),
         "ran_at": run.get("ran_at"),
     }
 
@@ -131,12 +142,26 @@ def _agent_run(run_id) -> dict | None:
     return None
 
 
-def _draft_view(draft: dict) -> dict:
+#: Artefact labels shown on the Draft Review queue — the agent number is the
+#: roster position, so the design's "2 · Spreading" column stays truthful.
+DRAFT_LABELS = {
+    "triage": {"artifact": "Triage classification", "agent": "1 · Intake triage", "agent_name": "Intake Triage Agent"},
+    "spread": {"artifact": "Financial spread", "agent": "2 · Spreading", "agent_name": "Financial Spreading Agent"},
+}
+
+
+def draft_view(draft: dict) -> dict:
+    """One view for every agent draft: the common gate fields plus whatever the
+    artefact itself carries."""
     content = draft.get("draft_content") or {}
-    return {
+    draft_type = draft.get("draft_type")
+    labels = DRAFT_LABELS.get(draft_type, {"artifact": str(draft_type or "draft"), "agent": "—", "agent_name": None})
+    view = {
         "id": draft["id"],
         "deal_reference": draft.get("deal_reference"),
-        "draft_type": draft.get("draft_type"),
+        "draft_type": draft_type,
+        "artifact_label": labels["artifact"],
+        "agent_label": labels["agent"],
         "review_status": draft.get("review_status"),
         "review_action": draft.get("review_action"),
         "review_reason": draft.get("review_reason"),
@@ -146,16 +171,39 @@ def _draft_view(draft: dict) -> dict:
         "created_at": draft.get("created_at"),
         "agent_run_id": draft.get("agent_run_id"),
         "approval_item_id": draft.get("approval_item_id"),
-        "classification": content.get("classification"),
-        "classification_label": content.get("classification_label"),
-        "missing_documents": content.get("missing_documents", []),
-        "missing_document_labels": content.get("missing_document_labels", []),
-        "proposed_queue": content.get("proposed_queue"),
-        "proposed_queue_label": content.get("proposed_queue_label"),
-        "proposed_analyst_user_id": content.get("proposed_analyst_user_id"),
+        "source": content.get("source"),
         "draft_content": content,
         "agent_run": _run_view(_agent_run(draft.get("agent_run_id"))),
     }
+    if draft_type == "spread":
+        view.update(
+            {
+                "template_version": content.get("template_version"),
+                "spread_line_items": content.get("spread_line_items", []),
+                "citations": content.get("citations", []),
+                "unsupported_line_keys": content.get("unsupported_line_keys", []),
+                "supported_line_count": content.get("supported_line_count"),
+                "uncited_figure_count": content.get("uncited_figure_count"),
+                "summary": content.get("summary"),
+            }
+        )
+    else:
+        view.update(
+            {
+                "classification": content.get("classification"),
+                "classification_label": content.get("classification_label"),
+                "missing_documents": content.get("missing_documents", []),
+                "missing_document_labels": content.get("missing_document_labels", []),
+                "proposed_queue": content.get("proposed_queue"),
+                "proposed_queue_label": content.get("proposed_queue_label"),
+                "proposed_analyst_user_id": content.get("proposed_analyst_user_id"),
+            }
+        )
+    return view
+
+
+#: Historical private name kept for the slice-1 call sites in this module.
+_draft_view = draft_view
 
 
 # --------------------------------------------------------------------------
@@ -386,7 +434,7 @@ def submit_deal(req: DealSubmission, authorization: str | None = Header(default=
     # The run already executed the triage agent node; adopt that output as the
     # pending draft rather than prompting the same agent a second time.
     uw.adopt_workflow_triage(deal, run_id, elapsed_ms, actor["username"])
-    uw._log("deal.submitted", deal_reference=deal["deal_reference"], correlation_id=correlation, workflow_run_id=run_id)
+    uw.log_event("deal.submitted", deal_reference=deal["deal_reference"], correlation_id=correlation, workflow_run_id=run_id)
     return _deal_response(deal, replayed=False)
 
 

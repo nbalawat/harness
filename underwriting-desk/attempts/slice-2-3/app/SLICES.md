@@ -141,6 +141,102 @@ acceptance through to the slice that registers `compute_financial_ratios`.
 - Agent-run telemetry now records `tokens_in` / `tokens_out` alongside cost, so
   the design's Tokens column and "Tokens in/out" telemetry cell on
   `screen-review` show real numbers rather than being dropped from the shell.
+- Post-review hardening (second pass):
+  - **`NaN` can no longer become money.** `json.loads` parses a bare `NaN`
+    literal into a float and *every* comparison against `NaN` is false, so the
+    "is this the number the cited text actually says" check silently PASSED
+    it. An agent figure now clears the same finite + bounded gate a
+    human-keyed override always did.
+  - **A figure binds only to the template line its label states.** A prefix
+    test alone spread `Total Debt Service: 905,000` as `total_debt`; the label
+    must now run straight into its number. And `_extract_amount` no longer
+    takes the first number blindly — `Revenue 2024: 4,200,000` used to ground
+    revenue to `2024`, a deterministic, cited, wrong figure on the record.
+  - **Generic READS of the deal of record are deny-by-default.** Sealing only
+    the write side of `/api/{table}` left the whole draft gate walkable from
+    the other direction: `GET /api/agent_drafts` returned `draft_content` —
+    every borrower's spread and citations — and `/export/{table}.csv` was the
+    same rows by another door. Both now demand the named, active internal seat
+    the guarded endpoints do (slice 1's scrubbing contract kept, its test
+    tightened to match).
+  - **A rejection no longer kills the deal's workflow run.** Failing the run
+    on a rejected human node made the approved definition's own re-draft loops
+    (`triage_accepted.on_false`, `spread_accepted.on_false`) unreachable and
+    left a dead run that could only re-serve its stale reply, so a rejected
+    spread was re-drafted byte-identical. A rejection is now a review outcome:
+    the condition node routes back to the drafting node and the reviewer gets
+    a fresh draft. The backward jump is a real rewind — resolving `on_false`
+    by scanning forward would have marked `persist_spread`, `compute_ratios`
+    and grading "skipped" and completed the run: a fully underwritten deal
+    that underwrote nothing.
+  - **`screen-review`'s advertised shortcuts work.** K/J walk the queue and
+    A/E/R disposition, matching the labels the design prints on those buttons;
+    the workspace also opens the newest draft awaiting acceptance instead of
+    landing with empty panels until someone guesses to click a row.
+  - Export columns restored on `spread_line_items`, `agent_drafts` and
+    `agent_runs` (a column missing from `models.TABLES` is a column missing
+    from the examiner's CSV), and the `persist_spread` node reports only the
+    citations belonging to that spread, not every citation on the deal.
+- Second review round closed these too:
+  - The new read guard **failed open** — any import error in the entitlement
+    check silently reopened the deal of record *and* skipped the refusal
+    audit, so nothing would record that the control was off. It fails closed.
+  - The generic reader is limited to the seats entitled to the whole book: it
+    returns whole tables and cannot apply the row scoping `/deals` and
+    `/drafts` apply, so a row-scoped relationship manager reads through the
+    endpoints that scope them, not around them.
+  - Governing `/export/*.csv` initially broke it — the guard's JSON scrub
+    turned the examiner's CSV into `{"detail": "unreadable"}`. Non-JSON
+    responses now pass through (the exporter drops credential and
+    document-content columns at the source), and `deals` regained
+    `deal_reference` so the exports can actually be joined.
+  - `/intake/config` no longer hands the **staff roster** to anonymous
+    callers: that directory is what turns "callers name themselves" into a
+    one-request attack. The vocabulary the UI binds to stays public and the
+    console now names its seat when fetching it.
+  - `POST /workflows/{name}/start` and `/runs/{id}/tick` require a named
+    actor and write an audit row. These are **mutations** — start reaches
+    `create_deal_at_intake` with caller-supplied inputs — so the
+    "un-identified reads still answer" contract never covered them.
+  - Un-identified deal reads get the **board columns**, not the borrower
+    file. Slice 1's acceptance fixes which *deals* come back, never which
+    *columns*, so `borrower_address`, `borrower_tin_masked`, `purpose`,
+    `collateral_description`, `submission_fingerprint` and the document
+    inventory now need a named seat, while `GET /deals` still returns every
+    deal with its stage exactly as slice 1 requires.
+  - `GET /pipeline` was the third door onto the same rows — projecting
+    `/deals` and `/deals/{ref}` but not the board would only have moved the
+    disclosure. It projects too (every column the board renders is a public
+    field, so the UI is untouched); `totals.live_exposure` deliberately stays,
+    since `exposure_amount` is a public per-deal column and the aggregate is
+    derivable anyway.
+  - The CSV and JSON export doors now enforce **one** policy: the column
+    allowlist filters only at the top level while the JSON reader recurses, so
+    the moment a later slice nests source text inside `draft_content` or a
+    memo citation, the CSV would have kept what the JSON stripped — silently,
+    with no test failing. `ext_export` scrubs each row at the source now.
+- **ACCEPTED RISK — open, needs a named owner (raised in slice 2, 2026-07-31).**
+  Identity is caller-asserted: `acting_user` is taken on trust and
+  `POST /auth/login` mints a bearer token for any username with no
+  credential. The consequence is not an over-broad read — it is that an
+  anonymous caller can accept a financial spread as `an.chen`, promote
+  LLM-derived figures to the deal of record, pass the segregation-of-duties
+  check, and **the audit trail will name `an.chen` and be wrong**. A
+  forged-but-plausible audit trail is a different class of risk from a leak,
+  and a regulated app needs a named risk owner and a review date against it —
+  this entry is deliberately not a closed item.
+  A fix that keeps both approved contracts intact exists and was NOT taken at
+  slice level: require a credential and assert `acting_user` matches it,
+  behind a deployment-mode flag (permissive in dev/test so the acceptance
+  contract and the suite stay green, strict when deployed). Inventing that
+  posture here would have shipped an unexercised strict branch that looks like
+  a control, so it belongs to the auth/design owner, not to slice 2.
+  *Owner: UNASSIGNED — assign at the next design review.*
+- Note on identity: the slice plan fixes the actor model — HTTP callers name
+  themselves with `submitted_by` / `acting_user` and the UI uses the signed-in
+  identity — so a caller-asserted name is the approved contract here, not an
+  oversight; `GET /deals` answering unauthenticated is likewise slice 1's
+  acceptance contract. Everything above hardens what sits *behind* that model.
 - Final hardening: the un-identified deal read (`GET /deals/{ref}` with no
   resolved actor) no longer carries the preflight *portfolio* facts —
   `existing_relationship`, `aggregate_exposure` and `duplicate_request` report

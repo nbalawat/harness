@@ -43,6 +43,26 @@ if (unassigned.length) {
   );
   process.exit(1);
 }
+// SLICE SIZING: a slice that covers too much predictably dies of turn
+// exhaustion mid-build (observed: an oversized slice burned 3 attempts and
+// $41 before this gate existed). Caps are enforced HERE, before any build
+// spend — an oversized plan is a planning failure, not a build failure.
+const MAX_SCREENS_PER_SLICE = 3;
+const MAX_ELEMENTS_PER_SLICE = 40;
+const elementsByScreen = new Map(inputs.design_contract.data.screens.map((s) => [s.id, s.element_count ?? 0]));
+for (const slice of slices) {
+  const covers = slice.covers ?? [];
+  const elements = covers.reduce((sum, s) => sum + (elementsByScreen.get(s) ?? 0), 0);
+  if (covers.length > MAX_SCREENS_PER_SLICE || elements > MAX_ELEMENTS_PER_SLICE) {
+    console.error(
+      `slice '${slice.id}' is OVERSIZED: covers ${covers.length} screen(s) / ${elements} interactive element(s) ` +
+      `(caps: ${MAX_SCREENS_PER_SLICE} screens, ${MAX_ELEMENTS_PER_SLICE} elements). ` +
+      "Split it: one slice per cohesive feature, each buildable in a single attempt. " +
+      "Move shared plumbing into slice 1 (the foundation) and give each remaining screen its own slice.",
+    );
+    process.exit(1);
+  }
+}
 
 console.log(
   `slice plan verified: ${slices.length} slice(s), all traced to requirements; ` +

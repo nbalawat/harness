@@ -2,7 +2,7 @@
 // Parks -> answers substantively; review windows -> approves within seconds;
 // logs every decision it makes on the user's behalf.
 import * as fs from "node:fs";
-import { execFileSync, spawnSync } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 const WS = process.argv[2];
 const CLI = "packages/cli/dist/index.js";
 const log = (m) => console.log(new Date().toISOString().slice(11, 19), m);
@@ -12,11 +12,24 @@ const events = () => fs.existsSync(`${WS}/journal.jsonl`)
   : [];
 const answered = new Set();
 
-function resumeWith(nodeId, answers) {
+// DETACHED, never spawnSync: a synchronous resume blocks this polling loop
+// for the entire remainder of the run — which is exactly how a review window
+// once expired unanswered while the driver sat inside spawnSync. The resume
+// runs on its own; the loop keeps watching the journal and answering windows.
+let resuming = false;
+function resumeWith(nodeId, answers, extraArgs = []) {
+  if (resuming) { log(`resume already in flight — skipping duplicate for ${nodeId}`); return; }
+  resuming = true;
   fs.writeFileSync(`.drive/ans-${nodeId}.json`, JSON.stringify({ [nodeId]: answers }));
   log(`answering ${nodeId}: ${JSON.stringify(answers).slice(0, 140)}`);
-  const r = spawnSync(process.execPath, [CLI, "resume", WS, "--answers", `.drive/ans-${nodeId}.json`], { encoding: "utf8" });
-  log(`resume(${nodeId}) exited ${r.status}`);
+  const out = fs.openSync(`.drive/resume-${nodeId}.log`, "a");
+  const child = spawn(
+    process.execPath,
+    [CLI, "resume", WS, ...(answers ? ["--answers", `.drive/ans-${nodeId}.json`] : []), ...extraArgs],
+    { detached: true, stdio: ["ignore", out, out] },
+  );
+  child.on("exit", (code) => { resuming = false; log(`resume(${nodeId}) exited ${code}`); });
+  child.unref();
 }
 
 function artifact(name) {
@@ -41,8 +54,14 @@ for (let i = 0; i < 4000; i++) {
     continue;
   }
 
-  const parked = [...ev].reverse().find((e) => e.type === "run.parked");
-  if (!parked) continue;
+  // A park is only ACTIVE if it's the latest run-lifecycle event — stale
+  // parks from earlier gates must not trigger duplicate resumes.
+  const lastLifecycle = [...ev].reverse().find((e) => ["run.parked", "run.completed", "run.failed", "run.created"].includes(e.type));
+  const running = ev.filter((e) => e.type === "node.running").length > ev.filter((e) => e.type === "node.committed" || e.type === "node.failed" || e.type === "node.parked").length;
+  if (!lastLifecycle || lastLifecycle.type !== "run.parked") continue;
+  // and nothing may have started since the park
+  const parkIdx = ev.lastIndexOf(lastLifecycle);
+  if (ev.slice(parkIdx).some((e) => e.type === "node.running" || e.type === "agent.message")) continue;
   const lastPark = [...ev].reverse().find((e) => e.type === "node.parked");
   const nodeId = lastPark?.nodeId;
   if (!nodeId || answered.has(nodeId + ":" + ev.length)) continue;
@@ -65,7 +84,6 @@ for (let i = 0; i < 4000; i++) {
     resumeWith("uat", { approved: "yes" });
   } else if (nodeId) {
     // generic: accept defaults for anything unforeseen
-    const r = spawnSync(process.execPath, [CLI, "resume", WS, "--accept-defaults"], { encoding: "utf8" });
-    log(`generic resume(${nodeId}) exited ${r.status}`);
+    resumeWith(nodeId, null, ["--accept-defaults"]);
   }
 }

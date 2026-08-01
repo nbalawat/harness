@@ -6,6 +6,46 @@ to https://github.com/nbalawat/harness.
 
 ## Platform
 
+### Parallel slice builds + deterministic merge — engine concurrency, agentic-app 0.12.0 (2026-08-01)
+Why: journal analysis of the live underwriting build showed a clean slice
+takes ~25-30 min but slices ran strictly sequentially, review windows burned
+a fixed 5 minutes each even when nobody intervened, and one oversized slice
+predictably died of turn exhaustion twice. Wall-clock is now max(slice), not
+sum(slices):
+- **Engine concurrency** — the frontier loop executes all dependency-ready
+  non-gate nodes in parallel (bounded pool; `concurrency:` in the DAG,
+  `HARNESS_CONCURRENCY` override; gates stay sequential). Deterministic
+  because every node's inputs are sealed before its round; a failing sibling
+  never strands the others (finished work still commits). `runCommand` is
+  async now — a 10-minute verify no longer freezes concurrent agent sessions.
+- **Parallel slices** — slice-1 is the foundation; slices 2..6 depend only on
+  it, build concurrently in isolated attempt trees, and verify foundation +
+  self. `merge-slices` (deterministic) unions the trees: line-level three-way
+  merge against the foundation (git merge-file), SLICES.md append-only
+  concatenation, binary/delete/same-line collisions FAIL LOUDLY with
+  repartition guidance — never LLM-resolved. `verify-merged` then re-proves
+  EVERY slice's acceptance + the full test suite against the union.
+- **Slice sizing enforced at plan time** — `check-slice-plan` rejects a slice
+  covering >3 screens or >40 interactive elements before any build spend
+  (the $41 slice-1 failure mode, killed at the source).
+- **Design options in parallel** — `screen-inventory` (haiku) derives the
+  shared screen list once; three `design-option-N` nodes (opus, distinct
+  committed directions) run concurrently; `design-assemble` (deterministic)
+  collects them into the comparable set design-check always enforced. ~24 min
+  → roughly the cost of one option.
+- **One post-merge audit instead of 2 reviewers × N slices** — `slice-audit`
+  (read-only sonnet) sweeps the merged app for contract + FSI-hardening
+  violations once; findings land in governance (`code_audit`). Slice agents
+  lose the Task tool and the in-session review mandate.
+- **Windows that don't waste time** — review windows 300s → 90s; `when.all`
+  conjunctions kill phantom checkpoints (a review gate now requires its slice
+  to exist in the plan, not just every-slice supervision); the auto-driver
+  resumes detached instead of spawnSync (which had blocked its own polling
+  loop — the reason a live window once expired unanswered).
+42 nodes; goldens re-certified byte-deterministic (three scenarios + revision
+drill, 5 cached re-uses); 136/136 tests including engine-concurrency,
+merge-conflict, ledger-rewrite, and oversized-slice negatives.
+
 ### Design delivery is now an enforced promise — agentic-app 0.10.0 (2026-07-30)
 The gap: users approved a rich multi-screen design, then couldn't tell how
 much of it actually got built; slice screenshots looked identical. Now the

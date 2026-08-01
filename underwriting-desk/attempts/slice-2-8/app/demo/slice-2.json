@@ -1,0 +1,18 @@
+{
+  "screen": "screen-review",
+  "caption": "The Draft Review workspace opens the financial spreading agent's spread for DEAL-1001 beside the evidence behind it: each filled template line names the document, page and section its figure was read from (EBITDA is pinned to the audited statement location stating 1,420,000), the two lines the documents cannot support read \"not supported by the record\", and the run's model id, prompt version and cost sit above the analyst's accept / edit / reject gate \u2014 the acceptance that persisted these 14 spread line items with their citations. Latency reads \"\u2014\" because this spread was produced inside the approved process run, which the engine does not time per node.",
+  "steps": [
+    {
+      "action": "click",
+      "selector": ".navitem[data-screen=\"review\"]"
+    },
+    {
+      "action": "click",
+      "selector": "#review-rows tr[data-draft-type=\"spread\"]"
+    },
+    {
+      "action": "click",
+      "selector": "#review-draft [data-line-item=\"ebitda\"]"
+    }
+  ]
+}

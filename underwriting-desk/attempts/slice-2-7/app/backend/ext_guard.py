@@ -59,8 +59,10 @@ SENSITIVE_FIELDS = frozenset(
 
 #: Borrower document bodies. Confidential to the borrower and only ever needed
 #: through a deal-scoped endpoint — a generic table reader or a whole-table CSV
-#: dump has no business emitting them.
-DOCUMENT_CONTENT_FIELDS = frozenset({"extracted_text"})
+#: dump has no business emitting them. `extracted_text` is the location body,
+#: `excerpt` is the slice a citation quotes, and `raw_output` is the model reply,
+#: which for a spreading run quotes the statements it was handed.
+DOCUMENT_CONTENT_FIELDS = frozenset({"extracted_text", "excerpt", "raw_output"})
 
 
 def scrub(value):

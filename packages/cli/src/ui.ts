@@ -2159,7 +2159,7 @@ async function tick() {
   // designs (locked once chosen)
   const meta = {};
   for (const o of (s.designOptions || [])) meta[o.id] = o;
-  const previews = s.rawArtifacts.filter(a => a.startsWith('design-options/') && a.endsWith('/index.html'));
+  const previews = s.rawArtifacts.filter(a => (a.startsWith('design-assemble/') || a.startsWith('design-options/')) && a.endsWith('/index.html'));
   document.getElementById('designPanel').style.display = previews.length ? '' : 'none';
   setText('designHead', s.designChoice ? 'Design — ' + s.designChoice + ' chosen and locked' : 'Design options — pick one');
   const designsChanged = setHTML('designs', previews.map(p => {

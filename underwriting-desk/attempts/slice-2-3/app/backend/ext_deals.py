@@ -193,7 +193,23 @@ def _draft_view(draft: dict, *, include_evidence: bool = False, include_figures:
 
 
 @router.get("/intake/config")
-def intake_config():
+def intake_config(
+    acting_user: str | None = Query(default=None),
+    authorization: str | None = Header(default=None),
+):
+    """Vocabulary the intake screen binds to.
+
+    The stage/facility/document/tier vocabularies are legitimately public, but
+    the staff ROSTER is not: handing every username and role to an anonymous
+    caller is what turns "callers name themselves" into a one-request attack —
+    read the directory, then act as a credit analyst. It needs the same named
+    seat the generic reader now demands (GET /api/users is already refused).
+    """
+    try:
+        uw.resolve_actor(current_user(authorization), acting_user, uw.DRAFT_QUEUE_ROLES)
+        roster_visible = True
+    except uw.DomainError:
+        roster_visible = False
     return {
         "stages": [{"index": i + 1, "slug": s, "label": uw.STAGE_LABELS[s]} for i, s in enumerate(uw.STAGES)],
         "facility_types": [
@@ -223,7 +239,7 @@ def intake_config():
                 "role_label": uw.ROLE_LABELS.get(u["role"], u["role"]),
                 "display_name": u.get("display_name"),
             }
-            for u in uw.store.list("users")
+            for u in (uw.store.list("users") if roster_visible else [])
         ],
     }
 
@@ -351,11 +367,19 @@ def export_board_csv(
 def list_deals(
     stage: str | None = Query(default=None),
     tier: str | None = Query(default=None),
+    acting_user: str | None = Query(default=None),
     authorization: str | None = Header(default=None),
 ):
     # Row-level scoping: a signed-in relationship manager sees only the deals
     # they submitted (REQ-019).
-    deals = [uw.deal_view(d) for d in uw.visible_deals(current_user(authorization))]
+    caller = current_user(authorization)
+    deals = [uw.deal_view(d) for d in uw.visible_deals(caller)]
+    # Which DEALS come back is slice 1's acceptance contract; which COLUMNS do
+    # is not. A caller who has not named a seat gets the board projection.
+    try:
+        uw.resolve_actor(caller, acting_user, uw.DRAFT_QUEUE_ROLES)
+    except uw.DomainError:
+        deals = [uw.public_deal_view(d) for d in deals]
     if stage:
         deals = [d for d in deals if d.get("current_stage") == stage]
     if tier:
@@ -506,7 +530,16 @@ def get_deal(
     response = _deal_response(
         deal, replayed=False, include_evidence=entitled, include_portfolio=entitled
     )
-    response["documents"] = uw.documents_for(deal["id"])
+    if not entitled:
+        # Same rule as the list: the record still answers, with the board
+        # columns. Borrower contact details, masked TIN, stated purpose and
+        # collateral description are not board columns, and the document
+        # inventory names the borrower's own filings (and their storage
+        # paths), so it needs a named seat too.
+        response["deal"] = uw.public_deal_view(response["deal"])
+        response["documents"] = []
+    else:
+        response["documents"] = uw.documents_for(deal["id"])
     response["drafts"] = [
         _draft_view(d, include_evidence=entitled, include_figures=entitled)
         for d in uw.drafts_for(deal["id"])
@@ -695,8 +728,23 @@ def get_draft(
 
 
 @router.get("/pipeline")
-def pipeline(authorization: str | None = Header(default=None)):
-    board = uw.pipeline_board(current_user(authorization))
+def pipeline(
+    acting_user: str | None = Query(default=None),
+    authorization: str | None = Header(default=None),
+):
+    caller = current_user(authorization)
+    board = uw.pipeline_board(caller)
     for deal in board["deals"]:
         deal["business_days_idle"] = uw.business_days_idle(deal.get("last_activity_at"))
+    # The board is the third door onto the same rows: projecting /deals and
+    # /deals/{ref} but not this one would just move the disclosure. Every
+    # column the board actually renders is inside PUBLIC_DEAL_FIELDS, so the
+    # projection costs the UI nothing.
+    try:
+        uw.resolve_actor(caller, acting_user, uw.DRAFT_QUEUE_ROLES)
+    except uw.DomainError:
+        board["deals"] = [uw.public_deal_view(d) for d in board["deals"]]
+        # totals.live_exposure stays: exposure_amount is a public board column
+        # per deal, so the aggregate is derivable anyway and withholding the
+        # sum alone would buy nothing.
     return board

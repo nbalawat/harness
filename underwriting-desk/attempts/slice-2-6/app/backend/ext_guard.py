@@ -60,7 +60,15 @@ SENSITIVE_FIELDS = frozenset(
 #: Borrower document bodies. Confidential to the borrower and only ever needed
 #: through a deal-scoped endpoint — a generic table reader or a whole-table CSV
 #: dump has no business emitting them.
-DOCUMENT_CONTENT_FIELDS = frozenset({"extracted_text"})
+#:
+#: The text does not only live in `document_locations.extracted_text`: an agent
+#: draft quotes it back as the citation excerpt behind every figure it read, and
+#: an agent run keeps its prompt inputs and raw output. Those carriers are
+#: dropped here too, or the generic reader would route around the control by
+#: reading the copy instead of the original.
+DOCUMENT_CONTENT_FIELDS = frozenset(
+    {"extracted_text", "draft_content", "excerpt", "evidence", "raw_output", "inputs"}
+)
 
 
 def scrub(value):

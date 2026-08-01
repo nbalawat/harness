@@ -1,118 +1,143 @@
-INFO:     Started server process [20230]
+INFO:     Started server process [35324]
 INFO:     Waiting for application startup.
 INFO:     Application startup complete.
-INFO:     Uvicorn running on http://127.0.0.1:50438 (Press CTRL+C to quit)
-INFO:     127.0.0.1:50443 - "GET /health HTTP/1.1" 200 OK
-{"ts": "2026-07-31T07:10:39Z", "level": "info", "event": "audit.appended", "event_type": "deal.created", "audit_log_id": 7, "deal_reference": "T-Q1"}
-{"ts": "2026-07-31T07:10:39Z", "level": "info", "event": "audit.appended", "event_type": "stage.transition", "audit_log_id": 9, "deal_reference": "T-Q1"}
-{"ts": "2026-07-31T07:10:39Z", "level": "info", "event": "audit.appended", "event_type": "document.stored", "audit_log_id": 12, "deal_reference": "T-Q1"}
-{"ts": "2026-07-31T07:10:39Z", "level": "info", "event": "audit.appended", "event_type": "deal.documents_stored", "audit_log_id": 13, "deal_reference": "T-Q1"}
-{"ts": "2026-07-31T07:10:39Z", "level": "info", "event": "audit.appended", "event_type": "document.extracted", "audit_log_id": 26, "deal_reference": "T-Q1"}
-{"ts": "2026-07-31T07:10:39Z", "level": "info", "event": "agent.run", "agent": "intake_triage", "deal_reference": "T-Q1", "agent_run_id": 33, "source": "workflow"}
-{"ts": "2026-07-31T07:10:39Z", "level": "info", "event": "audit.appended", "event_type": "agent_draft.created", "audit_log_id": 35, "deal_reference": "T-Q1"}
-{"ts": "2026-07-31T07:10:39Z", "level": "info", "event": "deal.submitted", "deal_reference": "T-Q1", "correlation_id": "cid-3ebd724676a6", "workflow_run_id": "wf-4"}
-INFO:     127.0.0.1:50459 - "POST /deals HTTP/1.1" 200 OK
-{"ts": "2026-07-31T07:10:39Z", "level": "info", "event": "audit.appended", "event_type": "deal.submission_replayed", "audit_log_id": 36, "deal_reference": "T-Q1"}
-INFO:     127.0.0.1:50460 - "POST /deals HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50461 - "GET /deals/T-Q1 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50462 - "GET /deals/T-Q1 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50463 - "GET /deals/T-Q1?acting_user=an.chen HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50464 - "GET /deals/T-Q1?acting_user=an.chen HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50544 - "GET / HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50544 - "GET /tokens.css HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50545 - "GET /mod_datatable.js HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50546 - "GET /mod_cards.js HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50548 - "GET /app.js HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50547 - "GET /console.js HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50547 - "GET /pipeline HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50545 - "GET /intake/config HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50548 - "GET /agent/mode HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50544 - "GET /api/conversations HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50546 - "GET /agents HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50546 - "GET /pipeline HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50544 - "GET /favicon.ico HTTP/1.1" 404 Not Found
-INFO:     127.0.0.1:50546 - "GET /drafts?acting_user=co.brennan HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50546 - "GET /deals/T-Q1?acting_user=co.brennan HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50638 - "GET /pipeline HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50638 - "GET / HTTP/1.1" 304 Not Modified
-INFO:     127.0.0.1:50638 - "GET /tokens.css HTTP/1.1" 304 Not Modified
-INFO:     127.0.0.1:50647 - "GET /mod_datatable.js HTTP/1.1" 304 Not Modified
-INFO:     127.0.0.1:50648 - "GET /mod_cards.js HTTP/1.1" 304 Not Modified
-INFO:     127.0.0.1:50649 - "GET /console.js HTTP/1.1" 304 Not Modified
-INFO:     127.0.0.1:50650 - "GET /app.js HTTP/1.1" 304 Not Modified
-INFO:     127.0.0.1:50650 - "GET /pipeline HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50649 - "GET /intake/config HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50648 - "GET /agent/mode HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50638 - "GET /api/conversations HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50647 - "GET /agents HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50648 - "GET /pipeline HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50648 - "GET /drafts?acting_user=co.brennan HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50648 - "GET /deals/T-Q1?acting_user=co.brennan HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50648 - "GET /deals/T-Q1?acting_user=co.brennan HTTP/1.1" 200 OK
-{"ts": "2026-07-31T07:11:52Z", "level": "info", "event": "audit.appended", "event_type": "deal.created", "audit_log_id": 40, "deal_reference": "UW-2026-0793"}
-{"ts": "2026-07-31T07:11:52Z", "level": "info", "event": "audit.appended", "event_type": "stage.transition", "audit_log_id": 42, "deal_reference": "UW-2026-0793"}
-{"ts": "2026-07-31T07:11:52Z", "level": "info", "event": "audit.appended", "event_type": "document.stored", "audit_log_id": 45, "deal_reference": "UW-2026-0793"}
-{"ts": "2026-07-31T07:11:52Z", "level": "info", "event": "audit.appended", "event_type": "deal.documents_stored", "audit_log_id": 46, "deal_reference": "UW-2026-0793"}
-{"ts": "2026-07-31T07:11:52Z", "level": "info", "event": "audit.appended", "event_type": "document.extracted", "audit_log_id": 59, "deal_reference": "UW-2026-0793"}
-{"ts": "2026-07-31T07:11:52Z", "level": "info", "event": "agent.run", "agent": "intake_triage", "deal_reference": "UW-2026-0793", "agent_run_id": 66, "source": "workflow"}
-{"ts": "2026-07-31T07:11:52Z", "level": "info", "event": "audit.appended", "event_type": "agent_draft.created", "audit_log_id": 68, "deal_reference": "UW-2026-0793"}
-{"ts": "2026-07-31T07:11:52Z", "level": "info", "event": "deal.submitted", "deal_reference": "UW-2026-0793", "correlation_id": "cid-8457e77df6a1", "workflow_run_id": "wf-37"}
-INFO:     127.0.0.1:50665 - "POST /deals HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50665 - "POST /deals/UW-2026-0793/triage HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50665 - "GET /pipeline HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50665 - "GET /drafts?acting_user=co.brennan HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50665 - "GET /drafts/67?acting_user=co.brennan HTTP/1.1" 200 OK
-{"ts": "2026-07-31T07:11:54Z", "level": "info", "event": "audit.appended", "event_type": "agent_draft.accepted", "audit_log_id": 70, "deal_reference": "UW-2026-0793"}
-{"ts": "2026-07-31T07:11:54Z", "level": "info", "event": "audit.appended", "event_type": "deal.routed", "audit_log_id": 73, "deal_reference": "UW-2026-0793"}
-{"ts": "2026-07-31T07:11:54Z", "level": "info", "event": "audit.appended", "event_type": "stage.transition", "audit_log_id": 76, "deal_reference": "UW-2026-0793"}
-{"ts": "2026-07-31T07:11:54Z", "level": "info", "event": "audit.appended", "event_type": "deal.queue_assigned", "audit_log_id": 80, "deal_reference": "UW-2026-0793"}
-INFO:     127.0.0.1:50665 - "POST /deals/UW-2026-0793/drafts/triage/review HTTP/1.1" 200 OK
-{"ts": "2026-07-31T07:11:54Z", "level": "info", "event": "agent.run", "agent": "financial_spreading", "deal_reference": "UW-2026-0793", "agent_run_id": 86, "source": "workflow"}
-{"ts": "2026-07-31T07:11:54Z", "level": "info", "event": "audit.appended", "event_type": "stage.transition", "audit_log_id": 89, "deal_reference": "UW-2026-0793"}
-{"ts": "2026-07-31T07:11:54Z", "level": "info", "event": "audit.appended", "event_type": "agent_draft.created", "audit_log_id": 91, "deal_reference": "UW-2026-0793"}
-INFO:     127.0.0.1:50665 - "POST /deals/UW-2026-0793/spread HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50665 - "GET /drafts?acting_user=co.brennan HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50665 - "GET /drafts/90?acting_user=co.brennan HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50665 - "GET /pipeline HTTP/1.1" 200 OK
-{"ts": "2026-07-31T07:12:52Z", "level": "info", "event": "audit.appended", "event_type": "deal.created", "audit_log_id": 95, "deal_reference": "DEAL-1001"}
-{"ts": "2026-07-31T07:12:52Z", "level": "info", "event": "audit.appended", "event_type": "stage.transition", "audit_log_id": 97, "deal_reference": "DEAL-1001"}
-{"ts": "2026-07-31T07:12:52Z", "level": "info", "event": "audit.appended", "event_type": "document.stored", "audit_log_id": 100, "deal_reference": "DEAL-1001"}
-{"ts": "2026-07-31T07:12:52Z", "level": "info", "event": "audit.appended", "event_type": "document.stored", "audit_log_id": 102, "deal_reference": "DEAL-1001"}
-{"ts": "2026-07-31T07:12:52Z", "level": "info", "event": "audit.appended", "event_type": "deal.documents_stored", "audit_log_id": 103, "deal_reference": "DEAL-1001"}
-{"ts": "2026-07-31T07:12:52Z", "level": "info", "event": "audit.appended", "event_type": "document.extracted", "audit_log_id": 120, "deal_reference": "DEAL-1001"}
-{"ts": "2026-07-31T07:12:52Z", "level": "info", "event": "agent.run", "agent": "intake_triage", "deal_reference": "DEAL-1001", "agent_run_id": 127, "source": "workflow"}
-{"ts": "2026-07-31T07:12:52Z", "level": "info", "event": "audit.appended", "event_type": "agent_draft.created", "audit_log_id": 129, "deal_reference": "DEAL-1001"}
-{"ts": "2026-07-31T07:12:52Z", "level": "info", "event": "deal.submitted", "deal_reference": "DEAL-1001", "correlation_id": "cid-151f92e670b3", "workflow_run_id": "wf-92"}
-INFO:     127.0.0.1:50907 - "POST /deals HTTP/1.1" 200 OK
-{"ts": "2026-07-31T07:12:52Z", "level": "info", "event": "audit.appended", "event_type": "deal.created", "audit_log_id": 133, "deal_reference": "DEAL-2001"}
-{"ts": "2026-07-31T07:12:52Z", "level": "info", "event": "audit.appended", "event_type": "stage.transition", "audit_log_id": 135, "deal_reference": "DEAL-2001"}
-{"ts": "2026-07-31T07:12:52Z", "level": "info", "event": "audit.appended", "event_type": "deal.documents_stored", "audit_log_id": 137, "deal_reference": "DEAL-2001"}
-{"ts": "2026-07-31T07:12:52Z", "level": "info", "event": "agent.run", "agent": "intake_triage", "deal_reference": "DEAL-2001", "agent_run_id": 145, "source": "workflow"}
-{"ts": "2026-07-31T07:12:52Z", "level": "info", "event": "audit.appended", "event_type": "agent_draft.created", "audit_log_id": 147, "deal_reference": "DEAL-2001"}
-{"ts": "2026-07-31T07:12:52Z", "level": "info", "event": "deal.submitted", "deal_reference": "DEAL-2001", "correlation_id": "cid-4bd3bd162940", "workflow_run_id": "wf-130"}
-INFO:     127.0.0.1:50908 - "POST /deals HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50909 - "POST /deals/DEAL-1001/triage HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50910 - "GET /deals HTTP/1.1" 200 OK
-{"ts": "2026-07-31T07:12:52Z", "level": "info", "event": "audit.appended", "event_type": "agent_draft.accepted", "audit_log_id": 149, "deal_reference": "DEAL-1001"}
-{"ts": "2026-07-31T07:12:52Z", "level": "info", "event": "audit.appended", "event_type": "deal.routed", "audit_log_id": 152, "deal_reference": "DEAL-1001"}
-{"ts": "2026-07-31T07:12:52Z", "level": "info", "event": "audit.appended", "event_type": "stage.transition", "audit_log_id": 155, "deal_reference": "DEAL-1001"}
-{"ts": "2026-07-31T07:12:52Z", "level": "info", "event": "audit.appended", "event_type": "deal.queue_assigned", "audit_log_id": 159, "deal_reference": "DEAL-1001"}
-INFO:     127.0.0.1:50911 - "POST /deals/DEAL-1001/drafts/triage/review HTTP/1.1" 200 OK
-{"ts": "2026-07-31T07:12:52Z", "level": "info", "event": "agent.run", "agent": "financial_spreading", "deal_reference": "DEAL-1001", "agent_run_id": 165, "source": "workflow"}
-{"ts": "2026-07-31T07:12:52Z", "level": "info", "event": "audit.appended", "event_type": "stage.transition", "audit_log_id": 168, "deal_reference": "DEAL-1001"}
-{"ts": "2026-07-31T07:12:52Z", "level": "info", "event": "audit.appended", "event_type": "agent_draft.created", "audit_log_id": 170, "deal_reference": "DEAL-1001"}
-INFO:     127.0.0.1:50912 - "POST /deals/DEAL-1001/spread HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50913 - "POST /deals/DEAL-1001/drafts/spread/review HTTP/1.1" 400 Bad Request
-{"ts": "2026-07-31T07:12:52Z", "level": "info", "event": "audit.appended", "event_type": "agent_draft.accepted", "audit_log_id": 172, "deal_reference": "DEAL-1001"}
-{"ts": "2026-07-31T07:12:52Z", "level": "info", "event": "audit.appended", "event_type": "spread.persisted", "audit_log_id": 193, "deal_reference": "DEAL-1001"}
-{"ts": "2026-07-31T07:12:52Z", "level": "info", "event": "audit.appended", "event_type": "stage.transition", "audit_log_id": 196, "deal_reference": "DEAL-1001"}
-{"ts": "2026-07-31T07:12:52Z", "level": "info", "event": "audit.appended", "event_type": "spread.persist_confirmed", "audit_log_id": 200, "deal_reference": "DEAL-1001"}
-INFO:     127.0.0.1:50914 - "POST /deals/DEAL-1001/drafts/spread/review HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51022 - "GET /drafts HTTP/1.1" 401 Unauthorized
-INFO:     127.0.0.1:51023 - "GET /drafts?acting_user=nobody.at.all HTTP/1.1" 403 Forbidden
-INFO:     127.0.0.1:51024 - "GET /drafts?acting_user=co.brennan HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51025 - "GET /deals/DEAL-1001/drafts HTTP/1.1" 401 Unauthorized
-INFO:     127.0.0.1:51026 - "GET /deals/DEAL-1001/drafts?acting_user=an.chen HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51027 - "GET /drafts?acting_user=rm.rivera HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51028 - "POST /api/spread_line_items HTTP/1.1" 403 Forbidden
-INFO:     127.0.0.1:51029 - "POST /api/citations HTTP/1.1" 403 Forbidden
+INFO:     Uvicorn running on http://127.0.0.1:52323 (Press CTRL+C to quit)
+INFO:     127.0.0.1:52326 - "GET /health HTTP/1.1" 200 OK
+{"ts": "2026-07-31T07:36:22Z", "level": "info", "event": "audit.appended", "event_type": "deal.created", "audit_log_id": 7, "deal_reference": "DEAL-1001"}
+{"ts": "2026-07-31T07:36:22Z", "level": "info", "event": "audit.appended", "event_type": "stage.transition", "audit_log_id": 9, "deal_reference": "DEAL-1001"}
+{"ts": "2026-07-31T07:36:22Z", "level": "info", "event": "audit.appended", "event_type": "document.stored", "audit_log_id": 12, "deal_reference": "DEAL-1001"}
+{"ts": "2026-07-31T07:36:22Z", "level": "info", "event": "audit.appended", "event_type": "document.stored", "audit_log_id": 14, "deal_reference": "DEAL-1001"}
+{"ts": "2026-07-31T07:36:22Z", "level": "info", "event": "audit.appended", "event_type": "deal.documents_stored", "audit_log_id": 15, "deal_reference": "DEAL-1001"}
+{"ts": "2026-07-31T07:36:22Z", "level": "info", "event": "audit.appended", "event_type": "document.extracted", "audit_log_id": 32, "deal_reference": "DEAL-1001"}
+{"ts": "2026-07-31T07:36:22Z", "level": "info", "event": "agent.run", "agent": "intake_triage", "deal_reference": "DEAL-1001", "agent_run_id": 39, "source": "workflow"}
+{"ts": "2026-07-31T07:36:22Z", "level": "info", "event": "audit.appended", "event_type": "agent_draft.created", "audit_log_id": 41, "deal_reference": "DEAL-1001"}
+{"ts": "2026-07-31T07:36:22Z", "level": "info", "event": "deal.submitted", "deal_reference": "DEAL-1001", "correlation_id": "cid-8af43d5c8e02", "workflow_run_id": "wf-4"}
+INFO:     127.0.0.1:52328 - "POST /deals HTTP/1.1" 200 OK
+{"ts": "2026-07-31T07:36:22Z", "level": "info", "event": "audit.appended", "event_type": "deal.created", "audit_log_id": 45, "deal_reference": "DEAL-2001"}
+{"ts": "2026-07-31T07:36:22Z", "level": "info", "event": "audit.appended", "event_type": "stage.transition", "audit_log_id": 47, "deal_reference": "DEAL-2001"}
+{"ts": "2026-07-31T07:36:22Z", "level": "info", "event": "audit.appended", "event_type": "deal.documents_stored", "audit_log_id": 49, "deal_reference": "DEAL-2001"}
+{"ts": "2026-07-31T07:36:22Z", "level": "info", "event": "agent.run", "agent": "intake_triage", "deal_reference": "DEAL-2001", "agent_run_id": 57, "source": "workflow"}
+{"ts": "2026-07-31T07:36:22Z", "level": "info", "event": "audit.appended", "event_type": "agent_draft.created", "audit_log_id": 59, "deal_reference": "DEAL-2001"}
+{"ts": "2026-07-31T07:36:22Z", "level": "info", "event": "deal.submitted", "deal_reference": "DEAL-2001", "correlation_id": "cid-04f1ee89b15e", "workflow_run_id": "wf-42"}
+INFO:     127.0.0.1:52329 - "POST /deals HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52330 - "POST /deals/DEAL-1001/triage HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52331 - "GET /deals HTTP/1.1" 200 OK
+{"ts": "2026-07-31T07:36:22Z", "level": "info", "event": "audit.appended", "event_type": "agent_draft.accepted", "audit_log_id": 61, "deal_reference": "DEAL-1001"}
+{"ts": "2026-07-31T07:36:22Z", "level": "info", "event": "audit.appended", "event_type": "deal.routed", "audit_log_id": 64, "deal_reference": "DEAL-1001"}
+{"ts": "2026-07-31T07:36:22Z", "level": "info", "event": "audit.appended", "event_type": "stage.transition", "audit_log_id": 67, "deal_reference": "DEAL-1001"}
+{"ts": "2026-07-31T07:36:22Z", "level": "info", "event": "audit.appended", "event_type": "deal.queue_assigned", "audit_log_id": 71, "deal_reference": "DEAL-1001"}
+INFO:     127.0.0.1:52332 - "POST /deals/DEAL-1001/drafts/triage/review HTTP/1.1" 200 OK
+{"ts": "2026-07-31T07:36:22Z", "level": "info", "event": "agent.run", "agent": "financial_spreading", "deal_reference": "DEAL-1001", "agent_run_id": 77, "source": "workflow"}
+{"ts": "2026-07-31T07:36:22Z", "level": "info", "event": "audit.appended", "event_type": "stage.transition", "audit_log_id": 80, "deal_reference": "DEAL-1001"}
+{"ts": "2026-07-31T07:36:22Z", "level": "info", "event": "audit.appended", "event_type": "agent_draft.created", "audit_log_id": 82, "deal_reference": "DEAL-1001"}
+INFO:     127.0.0.1:52333 - "POST /deals/DEAL-1001/spread HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52334 - "POST /deals/DEAL-1001/drafts/spread/review HTTP/1.1" 400 Bad Request
+{"ts": "2026-07-31T07:36:22Z", "level": "info", "event": "audit.appended", "event_type": "agent_draft.accepted", "audit_log_id": 84, "deal_reference": "DEAL-1001"}
+{"ts": "2026-07-31T07:36:22Z", "level": "info", "event": "audit.appended", "event_type": "spread.persisted", "audit_log_id": 105, "deal_reference": "DEAL-1001"}
+{"ts": "2026-07-31T07:36:22Z", "level": "info", "event": "audit.appended", "event_type": "stage.transition", "audit_log_id": 108, "deal_reference": "DEAL-1001"}
+{"ts": "2026-07-31T07:36:22Z", "level": "info", "event": "audit.appended", "event_type": "spread.persist_confirmed", "audit_log_id": 112, "deal_reference": "DEAL-1001"}
+INFO:     127.0.0.1:52335 - "POST /deals/DEAL-1001/drafts/spread/review HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52336 - "GET /pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52337 - "GET /pipeline?acting_user=an.chen HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52338 - "GET /export/agent_drafts.csv?acting_user=co.brennan HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52346 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52346 - "GET /tokens.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52348 - "GET /mod_datatable.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52350 - "GET /console.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52349 - "GET /mod_cards.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52351 - "GET /app.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52350 - "GET /pipeline?acting_user=co.brennan HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52351 - "GET /intake/config?acting_user=co.brennan HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52346 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52348 - "GET /agent/mode HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52349 - "GET /agents HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52349 - "GET /favicon.ico HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:52349 - "GET /pipeline?acting_user=co.brennan HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52349 - "GET /drafts?acting_user=co.brennan HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52349 - "GET /drafts/58?acting_user=co.brennan HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52348 - "GET /deals/DEAL-2001?acting_user=co.brennan HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52362 - "GET /pipeline?acting_user=co.brennan HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52362 - "GET / HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:52362 - "GET /console.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:52362 - "GET /pipeline?acting_user=co.brennan HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52363 - "GET /intake/config?acting_user=co.brennan HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52364 - "GET /agent/mode HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52365 - "GET /agents HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52366 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52363 - "GET /pipeline?acting_user=co.brennan HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52363 - "GET /drafts?acting_user=co.brennan HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52363 - "GET /drafts/58?acting_user=co.brennan HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52366 - "GET /deals/DEAL-2001?acting_user=co.brennan HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52366 - "GET /deals/DEAL-2001?acting_user=co.brennan HTTP/1.1" 200 OK
+{"ts": "2026-07-31T07:37:05Z", "level": "info", "event": "audit.appended", "event_type": "deal.created", "audit_log_id": 118, "deal_reference": "UW-2026-0793"}
+{"ts": "2026-07-31T07:37:05Z", "level": "info", "event": "audit.appended", "event_type": "stage.transition", "audit_log_id": 120, "deal_reference": "UW-2026-0793"}
+{"ts": "2026-07-31T07:37:05Z", "level": "info", "event": "audit.appended", "event_type": "document.stored", "audit_log_id": 123, "deal_reference": "UW-2026-0793"}
+{"ts": "2026-07-31T07:37:05Z", "level": "info", "event": "audit.appended", "event_type": "deal.documents_stored", "audit_log_id": 124, "deal_reference": "UW-2026-0793"}
+{"ts": "2026-07-31T07:37:05Z", "level": "info", "event": "audit.appended", "event_type": "document.extracted", "audit_log_id": 137, "deal_reference": "UW-2026-0793"}
+{"ts": "2026-07-31T07:37:05Z", "level": "info", "event": "agent.run", "agent": "intake_triage", "deal_reference": "UW-2026-0793", "agent_run_id": 144, "source": "workflow"}
+{"ts": "2026-07-31T07:37:05Z", "level": "info", "event": "audit.appended", "event_type": "agent_draft.created", "audit_log_id": 146, "deal_reference": "UW-2026-0793"}
+{"ts": "2026-07-31T07:37:05Z", "level": "info", "event": "deal.submitted", "deal_reference": "UW-2026-0793", "correlation_id": "cid-2b1308759e16", "workflow_run_id": "wf-115"}
+INFO:     127.0.0.1:52381 - "POST /deals HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52381 - "POST /deals/UW-2026-0793/triage HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52381 - "GET /pipeline?acting_user=co.brennan HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52381 - "GET /drafts?acting_user=co.brennan HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52381 - "GET /drafts/145?acting_user=co.brennan HTTP/1.1" 200 OK
+{"ts": "2026-07-31T07:37:07Z", "level": "info", "event": "audit.appended", "event_type": "agent_draft.accepted", "audit_log_id": 148, "deal_reference": "UW-2026-0793"}
+{"ts": "2026-07-31T07:37:07Z", "level": "info", "event": "audit.appended", "event_type": "deal.routed", "audit_log_id": 151, "deal_reference": "UW-2026-0793"}
+{"ts": "2026-07-31T07:37:07Z", "level": "info", "event": "audit.appended", "event_type": "stage.transition", "audit_log_id": 154, "deal_reference": "UW-2026-0793"}
+{"ts": "2026-07-31T07:37:07Z", "level": "info", "event": "audit.appended", "event_type": "deal.queue_assigned", "audit_log_id": 158, "deal_reference": "UW-2026-0793"}
+INFO:     127.0.0.1:52381 - "POST /deals/UW-2026-0793/drafts/triage/review HTTP/1.1" 200 OK
+{"ts": "2026-07-31T07:37:07Z", "level": "info", "event": "agent.run", "agent": "financial_spreading", "deal_reference": "UW-2026-0793", "agent_run_id": 164, "source": "workflow"}
+{"ts": "2026-07-31T07:37:07Z", "level": "info", "event": "audit.appended", "event_type": "stage.transition", "audit_log_id": 167, "deal_reference": "UW-2026-0793"}
+{"ts": "2026-07-31T07:37:07Z", "level": "info", "event": "audit.appended", "event_type": "agent_draft.created", "audit_log_id": 169, "deal_reference": "UW-2026-0793"}
+INFO:     127.0.0.1:52381 - "POST /deals/UW-2026-0793/spread HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52381 - "GET /drafts?acting_user=co.brennan HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52381 - "GET /drafts/168?acting_user=co.brennan HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52381 - "GET /pipeline?acting_user=co.brennan HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52398 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52398 - "GET /tokens.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52399 - "GET /mod_datatable.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52401 - "GET /console.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52402 - "GET /app.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52400 - "GET /mod_cards.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52401 - "GET /pipeline?acting_user=co.brennan HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52400 - "GET /intake/config?acting_user=co.brennan HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52402 - "GET /agent/mode HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52398 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52399 - "GET /agents HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52399 - "GET /pipeline?acting_user=co.brennan HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52398 - "GET /favicon.ico HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:52399 - "GET /drafts?acting_user=co.brennan HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52399 - "GET /drafts/168?acting_user=co.brennan HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52398 - "GET /deals/DEAL-2001?acting_user=co.brennan HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52409 - "GET /pipeline?acting_user=co.brennan HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52409 - "GET / HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:52409 - "GET /console.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:52409 - "GET /pipeline?acting_user=co.brennan HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52410 - "GET /intake/config?acting_user=co.brennan HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52411 - "GET /agent/mode HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52413 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52412 - "GET /agents HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52412 - "GET /pipeline?acting_user=co.brennan HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52412 - "GET /drafts?acting_user=co.brennan HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52412 - "GET /drafts/168?acting_user=co.brennan HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52413 - "GET /deals/DEAL-2001?acting_user=co.brennan HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52413 - "GET /deals/DEAL-2001?acting_user=co.brennan HTTP/1.1" 200 OK
+{"ts": "2026-07-31T07:38:11Z", "level": "info", "event": "audit.appended", "event_type": "deal.submission_replayed", "audit_log_id": 170, "deal_reference": "UW-2026-0793"}
+INFO:     127.0.0.1:52426 - "POST /deals HTTP/1.1" 200 OK
+{"ts": "2026-07-31T07:38:11Z", "level": "info", "event": "agent.run", "agent": "intake_triage", "deal_reference": "UW-2026-0793", "agent_run_id": 172, "latency_ms": 0}
+{"ts": "2026-07-31T07:38:11Z", "level": "info", "event": "audit.appended", "event_type": "agent_draft.created", "audit_log_id": 175, "deal_reference": "UW-2026-0793"}
+INFO:     127.0.0.1:52426 - "POST /deals/UW-2026-0793/triage HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52426 - "GET /pipeline?acting_user=co.brennan HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52426 - "GET /drafts?acting_user=co.brennan HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52426 - "GET /drafts/174?acting_user=co.brennan HTTP/1.1" 200 OK
+{"ts": "2026-07-31T07:38:13Z", "level": "info", "event": "audit.appended", "event_type": "agent_draft.accepted", "audit_log_id": 177, "deal_reference": "UW-2026-0793"}
+INFO:     127.0.0.1:52426 - "POST /deals/UW-2026-0793/drafts/triage/review HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52426 - "POST /deals/UW-2026-0793/spread HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52426 - "GET /drafts?acting_user=co.brennan HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52426 - "GET /drafts/168?acting_user=co.brennan HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52426 - "GET /pipeline?acting_user=co.brennan HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [35324]

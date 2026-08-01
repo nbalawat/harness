@@ -1,0 +1,100 @@
+INFO:     Started server process [42051]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:54158 (Press CTRL+C to quit)
+INFO:     127.0.0.1:54165 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54167 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54167 - "GET /tokens.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54169 - "GET /mod_datatable.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54167 - "GET /console.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54169 - "GET /mod_cards.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54171 - "GET /app.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54169 - "GET /pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54171 - "GET /intake/config HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54167 - "GET /agent/mode HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54176 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54175 - "GET /agents HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54175 - "GET /pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54175 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54175 - "GET /tokens.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:54175 - "GET /mod_datatable.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:54175 - "GET /mod_cards.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:54167 - "GET /console.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:54176 - "GET /app.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:54176 - "GET /pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54167 - "GET /intake/config HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54169 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54175 - "GET /agent/mode HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54171 - "GET /agents HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54171 - "GET /pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54175 - "GET /favicon.ico HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:54179 - "GET /pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54184 - "GET /pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54186 - "GET /pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54186 - "POST /deals HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:54186 - "POST /deals HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:54191 - "GET /pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54197 - "GET /pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54206 - "GET /pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54211 - "GET /pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54217 - "GET /pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54223 - "GET /pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54231 - "GET /pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54238 - "GET /pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54246 - "GET /pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54257 - "GET /pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54264 - "GET /pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54273 - "GET /pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54280 - "GET /pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54287 - "GET /pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54306 - "GET /pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54320 - "GET /pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54338 - "GET /pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54350 - "GET /pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54363 - "GET /pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54374 - "GET /pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54383 - "GET /pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54394 - "GET /pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54402 - "GET /pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54409 - "GET /pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54420 - "GET /pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54464 - "GET /pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54485 - "GET /pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54492 - "GET /pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54501 - "GET /pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54523 - "GET /pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54544 - "GET /pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54553 - "GET /pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54560 - "GET /pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54570 - "GET /pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54580 - "GET /pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54592 - "GET /pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54606 - "GET /pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54615 - "GET /pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54626 - "GET /pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54636 - "GET /pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54648 - "GET /pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54657 - "GET /pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54716 - "GET /pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54750 - "GET /pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54822 - "GET /pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54865 - "GET /pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54878 - "GET /pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54952 - "GET /pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54987 - "GET /pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55008 - "GET /pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55016 - "GET /pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55027 - "GET /pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55038 - "GET /pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55062 - "GET /pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55071 - "GET /pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55080 - "GET /pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55089 - "GET /pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55116 - "GET /pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55131 - "GET /pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55148 - "GET /pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55184 - "GET /pipeline HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [42051]

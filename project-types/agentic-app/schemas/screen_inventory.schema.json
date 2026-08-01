@@ -1,0 +1,23 @@
+{
+  "type": "object",
+  "properties": {
+    "screens": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 6,
+      "items": { "type": "string", "pattern": "^[a-z0-9-]+$" }
+    },
+    "rationale": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "screen": { "type": "string" },
+          "because": { "type": "string", "minLength": 5 }
+        },
+        "required": ["screen", "because"]
+      }
+    }
+  },
+  "required": ["screens", "rationale"]
+}

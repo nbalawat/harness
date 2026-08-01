@@ -7,6 +7,8 @@ const integration = inputs.integration_report.data;
 const roster = inputs.agent_roster.data;
 // rtm is absent on pre-0.2.0 runs still in flight — tolerate it.
 const rtm = inputs.rtm?.data ?? null;
+// audit is absent on pre-0.12.0 runs — tolerate it.
+const audit = inputs.audit?.data ?? null;
 
 fs.writeFileSync(
   "governance.json",
@@ -39,6 +41,15 @@ fs.writeFileSync(
         names: roster.agents.map((a) => a.name),
         eval_criteria_total: roster.agents.reduce((n, a) => n + a.eval_criteria.length, 0),
       },
+      code_audit: audit
+        ? {
+            status: audit.status,
+            findings: audit.findings.length,
+            high_findings: audit.findings.filter((f) => f.severity === "high").length,
+            files_checked: audit.checked.files,
+            evidence: "audit.json",
+          }
+        : null,
     },
     null,
     2,

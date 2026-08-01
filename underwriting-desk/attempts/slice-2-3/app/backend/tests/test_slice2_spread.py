@@ -594,3 +594,216 @@ def test_workflow_run_survives_a_node_a_later_slice_implements():
         assert resumed["cursor"] > state["cursor"]
     finally:
         workflow_engine._handlers.pop("compute_financial_ratios", None)
+
+
+# ------------------------------------------------- post-review hardening (slice 2)
+
+
+def test_nan_from_the_agent_never_reaches_the_deal_of_record():
+    """`json.loads` turns a bare NaN literal into a float, and EVERY
+    comparison against NaN is False — so the "does the cited text actually say
+    this number" check would silently PASS and land NaN in
+    spread_line_items.value. An agent figure gets the same finite + bounded
+    gate a human-keyed override does."""
+    locations = _locations_from(FINANCIALS_TEXT)
+    derived_items, _ = uw.derive_spread(locations)
+    revenue = next(i for i in derived_items if i["line_item_key"] == "revenue")
+
+    def _payload(revenue_value):
+        items = {}
+        for item in derived_items:
+            if item["line_item_key"] == "revenue":
+                items[item["line_item_key"]] = {
+                    "value": revenue_value,
+                    "document_id": revenue["citation"]["document_id"],
+                    "document_location_id": revenue["citation"]["document_location_id"],
+                }
+            elif item["supported"]:
+                items[item["line_item_key"]] = {
+                    "value": item["value"],
+                    "document_id": item["citation"]["document_id"],
+                    "document_location_id": item["citation"]["document_location_id"],
+                }
+            else:
+                items[item["line_item_key"]] = "not supported by the record"
+        return json.dumps({"line_items": items})
+
+    # the same payload with the real figure is accepted, so only the value differs
+    assert uw.parse_spread_reply(_payload(revenue["value"]), locations=locations) is not None
+    assert uw.parse_spread_reply(_payload(float("nan")), locations=locations) is None
+    assert uw.parse_spread_reply(_payload(float("inf")), locations=locations) is None
+    assert uw.parse_spread_reply(_payload(uw.MAX_SPREAD_LINE_VALUE * 10), locations=locations) is None
+
+
+def test_a_figure_binds_only_to_the_template_line_its_label_states():
+    """"Total Debt Service: 905,000" starts with "total debt", so a prefix
+    test alone spreads the debt-service payment as total debt."""
+    total_debt = next(s for s in uw.SPREAD_TEMPLATE if s["line_item_key"] == "total_debt")
+    assert uw._binds_to_spec("total debt 5,600,000;", total_debt)
+    assert not uw._binds_to_spec("total debt service: 905,000", total_debt)
+
+
+def test_a_period_label_never_becomes_the_figure():
+    """"Revenue 2024: 4,200,000" must not ground revenue to 2024 — that would
+    be a deterministic, cited, WRONG number on the deal of record."""
+    assert uw._extract_amount("Revenue 2024: 4,200,000") == 4_200_000.0
+    assert uw._extract_amount("Revenue 12,400,000;") == 12_400_000.0
+    assert uw._extract_amount("Interest Expense 310,000.") == 310_000.0
+    assert uw._extract_amount("nothing here") is None
+
+
+def test_generic_reads_of_the_deal_of_record_need_a_named_seat():
+    """Sealing only the write side of /api/{table} left the whole draft gate
+    walkable from the other direction — and /export/{table}.csv is the same
+    rows by another door."""
+    ref = "T-SPREAD-GENREAD"
+    _advance_to_document_extraction(ref)
+    client.post(f"/deals/{ref}/spread", json={"acting_user": "an.chen"})
+
+    for table in ("agent_drafts", "spread_line_items", "citations", "deals"):
+        assert client.get(f"/api/{table}").status_code == 403, table
+        assert client.get(f"/export/{table}.csv").status_code == 403, table
+
+    # The generic reader returns the WHOLE table and cannot apply the row
+    # scoping /deals and /drafts apply, so it is limited to the seats already
+    # entitled to the whole book. A relationship manager — row-scoped to the
+    # deals they submitted — must read through the endpoints that scope them.
+    assert client.get("/api/deals", params={"acting_user": "rm.rivera"}).status_code == 403
+    scoped = client.get("/drafts", params={"acting_user": "rm.rivera"})
+    assert scoped.status_code == 200
+
+    named = client.get("/api/agent_drafts", params={"acting_user": "an.chen"})
+    assert named.status_code == 200
+    assert any(row.get("draft_type") == "spread" for row in named.json())
+
+    # every export the examiner joins on carries the deal reference
+    for table in ("deals", "spread_line_items", "agent_drafts", "agent_runs"):
+        header = client.get(
+            f"/export/{table}.csv", params={"acting_user": "co.brennan"}
+        ).text.splitlines()[0]
+        assert "deal_reference" in header, table
+
+
+def test_rejecting_a_spread_loops_the_run_back_instead_of_killing_it():
+    """A rejection is a review outcome, not a process crash: the approved
+    definition's own re-draft loop (spread_accepted.on_false) must be
+    reachable, and the reviewer must get a FRESH draft rather than the stale
+    reply the dead run kept re-serving."""
+    ref = "T-SPREAD-REJECT-LOOP"
+    _advance_to_document_extraction(ref)
+    first = client.post(f"/deals/{ref}/spread", json={"acting_user": "an.chen"}).json()
+
+    rejected = client.post(
+        f"/deals/{ref}/drafts/spread/review",
+        json={"action": "rejected", "acting_user": "an.chen", "reason": "tie EBITDA to the audited statement"},
+    )
+    assert rejected.status_code == 200
+
+    run_id = uw.require_deal(ref)["workflow_run_id"]
+    state = workflow_engine.state(run_id)
+    assert state["status"] != "failed", state
+    # a fresh draft is parked for the reviewer, not the same row again
+    second = client.post(f"/deals/{ref}/spread", json={"acting_user": "an.chen"}).json()
+    assert second["id"] != first["id"]
+    assert second["review_status"] == "pending"
+    # ...and the re-accepted spread still becomes deal of record exactly once
+    accepted = client.post(
+        f"/deals/{ref}/drafts/spread/review", json={"action": "accepted", "acting_user": "an.chen"}
+    )
+    assert accepted.status_code == 200
+    assert accepted.json()["current_stage"] == "risk_grading"
+
+
+def test_a_condition_never_completes_a_run_by_skipping_past_the_end():
+    """A backward on_false target scanned FORWARD runs off the end, marking
+    persist/ratios/grading "skipped" and completing the run — a fully
+    underwritten deal that underwrote nothing."""
+    wf = next(w for w in workflow_engine.definitions() if w["name"] == "deal-underwriting")
+    ids = [n["id"] for n in wf["nodes"]]
+    for node in wf["nodes"]:
+        if node.get("kind") == "condition":
+            target = node.get("on_false", "end")
+            assert target == "end" or target in ids, (node["id"], target)
+
+
+def test_the_workflow_write_routes_require_a_named_actor():
+    """start reaches create_deal_at_intake with caller-supplied inputs, and a
+    tick re-enters the engine — both are mutations, so neither may be
+    anonymous just because un-identified READS still answer."""
+    assert client.post("/workflows/deal-underwriting/start", json={"inputs": {}}).status_code in (401, 403)
+    assert client.post(
+        "/workflows/deal-underwriting/start",
+        json={"inputs": {}, "acting_user": "nobody.at.all"},
+    ).status_code == 403
+
+    ref = "T-SPREAD-WFAUTH"
+    _advance_to_document_extraction(ref)
+    run_id = uw.require_deal(ref)["workflow_run_id"]
+    assert client.post(f"/workflows/runs/{run_id}/tick").status_code in (401, 403)
+    assert client.post(f"/workflows/runs/{run_id}/tick", params={"acting_user": "an.chen"}).status_code == 200
+
+
+def test_the_roster_is_not_an_anonymous_directory():
+    """Handing every username and role to an anonymous caller is what turns
+    "callers name themselves" into a one-request attack."""
+    public = client.get("/intake/config").json()
+    assert public["users"] == []
+    assert public["facility_types"], "the vocabulary the UI binds to stays public"
+    named = client.get("/intake/config", params={"acting_user": "an.chen"}).json()
+    assert {u["username"] for u in named["users"]} >= {"rm.rivera", "an.chen", "co.brennan"}
+
+
+def test_an_unidentified_deal_read_gets_board_columns_not_the_borrower_file():
+    """Slice 1's acceptance fixes which DEALS come back, never which COLUMNS."""
+    ref = "T-SPREAD-COLS"
+    _advance_to_document_extraction(ref)
+
+    open_view = client.get(f"/deals/{ref}").json()
+    assert open_view["deal"]["deal_reference"] == ref  # still answers
+    assert open_view["deal"]["current_stage"]
+    for withheld in ("borrower_address", "borrower_tin_masked", "purpose", "collateral_description", "submission_fingerprint"):
+        assert withheld not in open_view["deal"], withheld
+    assert open_view["documents"] == []
+
+    listed = [d for d in client.get("/deals").json() if d["deal_reference"] == ref][0]
+    assert "purpose" not in listed and "borrower_address" not in listed
+
+    named = client.get(f"/deals/{ref}", params={"acting_user": "an.chen"}).json()
+    assert "purpose" in named["deal"] and named["documents"]
+
+
+def test_the_pipeline_board_is_projected_for_an_unnamed_caller_too():
+    """Projecting /deals and /deals/{ref} but not the board would just move
+    the disclosure to the third door onto the same rows."""
+    ref = "T-SPREAD-BOARD"
+    _advance_to_document_extraction(ref)
+
+    board = client.get("/pipeline").json()
+    row = [d for d in board["deals"] if d["deal_reference"] == ref][0]
+    for withheld in ("borrower_address", "purpose", "collateral_description", "submission_fingerprint"):
+        assert withheld not in row, withheld
+    # everything the board actually renders survives the projection
+    for rendered in ("deal_reference", "borrower_name", "current_stage", "stage_label", "approval_tier", "exposure_amount", "business_days_idle"):
+        assert rendered in row, rendered
+
+    named = client.get("/pipeline", params={"acting_user": "an.chen"}).json()
+    assert "purpose" in [d for d in named["deals"] if d["deal_reference"] == ref][0]
+
+
+def test_both_export_doors_enforce_the_same_scrub_policy():
+    """The CSV column allowlist filters only at the top level; the JSON reader
+    recurses. A nested secret must not survive one door and die in the other."""
+    ref = "T-SPREAD-NESTED"
+    _advance_to_document_extraction(ref)
+    client.post(f"/deals/{ref}/spread", json={"acting_user": "an.chen"})
+
+    deal = uw.require_deal(ref)
+    draft = [d for d in uw.store.list("agent_drafts") if d.get("deal_id") == deal["id"]][0]
+    content = dict(draft.get("draft_content") or {})
+    content["extracted_text"] = "CONFIDENTIAL NESTED LEDGER 99117"
+    uw.store.save("agent_drafts", dict(draft, draft_content=content))
+
+    csv_text = client.get("/export/agent_drafts.csv", params={"acting_user": "co.brennan"}).text
+    json_text = json.dumps(client.get("/api/agent_drafts", params={"acting_user": "co.brennan"}).json())
+    assert "99117" not in json_text
+    assert "99117" not in csv_text

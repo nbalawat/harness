@@ -16,6 +16,7 @@ from models import TABLES
 ADDITIONS = {
     "deals": [
         "deal_reference",          # slice contract: deals are addressed by this
+        "last_workflow_tick_ms",   # REQ-038 timing an adopted agent node reports
         "borrower_state",          # REQ-035 geographic concentration limit
         "borrower_dba",
         "borrower_tin_masked",     # stored masked — never the full TIN/EIN
@@ -32,10 +33,30 @@ ADDITIONS = {
     ],
     "documents": ["deal_reference", "character_count"],
     "document_locations": ["deal_id"],
-    "agent_runs": ["deal_reference", "agent_name", "error"],
+    "agent_runs": [
+        "deal_reference",
+        "agent_name",
+        "error",
+        "prompt_source",           # REQ-038 which prompt produced this reply
+        "prompt_tokens",
+        "completion_tokens",
+    ],
     "agent_drafts": ["deal_reference", "approval_item_id"],
     "analyst_queues": ["deal_reference", "queue_id", "queue_label"],
     "audit_log": ["deal_reference", "actor_role"],
+    # slice 2: the accepted financial spread and the citation behind every figure
+    "spread_line_items": [
+        "deal_reference",
+        "template_version",        # REQ-005 which spread template was filled
+        "value_source",            # agent / deterministic-fallback / human-edited
+        "source_draft_id",         # the accepted draft this figure came from
+        "accepted_by_user_id",     # REQ-037 the named human who accepted it
+        "accepted_at",
+        "superseded_at",           # nothing is deleted; a later spread supersedes
+        "superseded_by_user_id",
+        "superseded_by_draft_id",
+    ],
+    "citations": ["deal_reference"],
     "stage_transitions": ["deal_reference"],
     "users": ["display_name"],
 }

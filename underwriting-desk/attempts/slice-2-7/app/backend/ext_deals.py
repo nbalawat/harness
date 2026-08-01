@@ -120,6 +120,8 @@ def _run_view(run: dict | None) -> dict | None:
         "prompt_template_version": run.get("prompt_template_version"),
         "latency_ms": run.get("latency_ms"),
         "token_cost": run.get("token_cost"),
+        "input_tokens": run.get("input_tokens"),
+        "output_tokens": run.get("output_tokens"),
         "ran_at": run.get("ran_at"),
     }
 
@@ -153,6 +155,18 @@ def _draft_view(draft: dict) -> dict:
         "proposed_queue": content.get("proposed_queue"),
         "proposed_queue_label": content.get("proposed_queue_label"),
         "proposed_analyst_user_id": content.get("proposed_analyst_user_id"),
+        # Financial spread (slice 2). Present on spread drafts, empty elsewhere —
+        # one draft shape so the Draft Review workspace serves every agent draft.
+        "template_version": content.get("template_version"),
+        "period": content.get("period"),
+        "spread_line_items": content.get("spread_line_items", []),
+        "citations": content.get("citations", []),
+        "unsupported_lines": content.get("unsupported_lines", []),
+        "supported_line_count": content.get("supported_line_count"),
+        "template_line_count": content.get("template_line_count"),
+        "uncited_value_count": content.get("uncited_value_count"),
+        "rationale": content.get("rationale"),
+        "source": content.get("source"),
         "draft_content": content,
         "agent_run": _run_view(_agent_run(draft.get("agent_run_id"))),
     }
@@ -452,6 +466,12 @@ def run_triage(deal_reference: str, req: ActorRequest, authorization: str | None
         actor = uw.resolve_actor(current_user(authorization), req.acting_user, uw.TRIAGE_ROLES)
     except uw.DomainError as exc:
         raise _fail(exc)
+    # Same scope check as every other deal-addressed route: without it a
+    # signed-in caller could run a billable agent on a deal they may not see,
+    # and read the draft back, while GET /deals/{ref} would 404 for them.
+    caller = current_user(authorization)
+    if caller and deal["id"] not in {d["id"] for d in uw.visible_deals(caller)}:
+        raise HTTPException(status_code=404, detail=f"no deal '{deal_reference}' in your scope")
 
     draft = uw.pending_draft(deal["id"], "triage")
     created = False
@@ -465,11 +485,20 @@ def run_triage(deal_reference: str, req: ActorRequest, authorization: str | None
 
 
 @router.get("/deals/{deal_reference}/drafts")
-def list_drafts(deal_reference: str, draft_type: str | None = Query(default=None)):
+def list_drafts(
+    deal_reference: str,
+    draft_type: str | None = Query(default=None),
+    authorization: str | None = Header(default=None),
+):
     try:
         deal = uw.require_deal(deal_reference)
     except uw.DomainError as exc:
         raise _fail(exc)
+    # A draft carries the deal's figures and its cited document text, so this
+    # read is scoped exactly like /deals and /deals/{ref}.
+    caller = current_user(authorization)
+    if caller and deal["id"] not in {d["id"] for d in uw.visible_deals(caller)}:
+        raise HTTPException(status_code=404, detail=f"no deal '{deal_reference}' in your scope")
     return [_draft_view(d) for d in uw.drafts_for(deal["id"], draft_type)]
 
 

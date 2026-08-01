@@ -1,0 +1,9 @@
+{
+  "screen": "screen-review",
+  "caption": "The Draft Review workspace now serves the financial spreading agent: DEAL-1001's spread sits beside the evidence for every figure — each template line shows the amount, the document, page and section it was read from, and the lines the statements do not state read 'not supported by the record' instead of carrying an invented number — with the run's model, prompt version and cost above it and the named human's acceptance recorded below.",
+  "steps": [
+    { "action": "click", "selector": ".navitem[data-screen=\"review\"]" },
+    { "action": "click", "selector": "#review-filter" },
+    { "action": "click", "selector": "#review-rows tr" }
+  ]
+}

@@ -187,6 +187,30 @@ def parse_number(token: str) -> float | None:
     return -abs(value) if negative else value
 
 
+_INFINITIES = (float("inf"), float("-inf"))
+
+
+def coerce_money(raw) -> float | None:
+    """Parse a money value supplied by a model OR by a human edit.
+
+    ONE gate for both, so the two paths cannot drift: a bool, a NaN, an
+    infinity, an int literal big enough to overflow float(), or anything past
+    the app's magnitude bound is refused rather than written to the record.
+    """
+    try:
+        if isinstance(raw, str):
+            value = parse_number(raw)
+        elif isinstance(raw, bool) or not isinstance(raw, (int, float)):
+            value = None
+        else:
+            value = float(raw)
+    except (TypeError, ValueError, OverflowError):
+        return None
+    if value is None or value != value or value in _INFINITIES or abs(value) > MAX_ABS_VALUE:
+        return None
+    return value
+
+
 def numbers_in(text: str) -> list[float]:
     values = []
     for token in _NUMBER_RE.findall(str(text or "")):
@@ -293,6 +317,27 @@ def _citation_for(facts: dict, location: dict, cited_value: str) -> dict:
     }
 
 
+def uncited_count(lines) -> int:
+    """Figures on the spread that name no source at all.
+
+    ONE definition, used by the agent path, the human-edit path and the
+    promotion record — the roster holds this agent to zero. A figure is cited
+    when it names the document location it was read from, or when a named human
+    corrected it at acceptance (their own citation, not the agent's).
+    """
+    uncited = 0
+    for line in lines or []:
+        if not line.get("supported"):
+            continue
+        citation = line.get("citation") or {}
+        if citation.get("document_location_id"):
+            continue
+        if citation.get("source_type") == "human_correction":
+            continue
+        uncited += 1
+    return uncited
+
+
 def _unsupported_line(line: dict, period: str | None) -> dict:
     return {
         "line_item_key": line["line_item_key"],
@@ -367,38 +412,57 @@ def parse_spread_reply(reply: str, facts: dict) -> dict | None:
             continue
         proposal: dict = {}
         valid = True
-        for item in items:
-            if not isinstance(item, dict):
-                valid = False
-                break
-            key = item.get("line_item_key")
-            if key not in TEMPLATE_BY_KEY or key in proposal:
-                valid = False
-                break
-            raw_value = item.get("value")
-            if raw_value is None or (isinstance(raw_value, str) and NOT_SUPPORTED in raw_value.lower()):
-                proposal[key] = None
-                continue
-            value = parse_number(raw_value) if isinstance(raw_value, str) else (
-                float(raw_value) if isinstance(raw_value, (int, float)) and not isinstance(raw_value, bool) else None
-            )
-            location = locations.get(item.get("document_location_id"))
-            if value is None or location is None:
-                valid = False  # an uncited or unparseable figure is invalid output
-                break
-            if item.get("document_id") is not None and item.get("document_id") != location["document_id"]:
-                valid = False
-                break
-            if not value_supported_by(location.get("extracted_text"), value):
-                valid = False  # the cited location does not state this figure
-                break
-            proposal[key] = {"value": value, "location": location}
-        # An all-null proposal claims the record supports nothing. With document
-        # locations on file that is a claim the deterministic extractor can
-        # check, so it is not taken on the model's word.
+        # A live model can return anything at all — a list where an id belongs,
+        # say. A malformed proposal is refused (and the deterministic extractor
+        # takes over); it never becomes a 500 on the analyst's screen.
+        try:
+            valid, proposal = _read_proposal(items, locations)
+        except (TypeError, ValueError, OverflowError):
+            continue
         if valid and any(proposal.values()):
             return proposal
     return None
+
+
+def _read_proposal(items, locations) -> tuple[bool, dict]:
+    """Validate the model's line items. Returns (valid, proposal).
+
+    One invalid figure invalidates the whole proposal — a spread is not a place
+    for partial credit.
+    """
+    proposal: dict = {}
+    for item in items:
+        if not isinstance(item, dict):
+            return False, proposal
+        key = item.get("line_item_key")
+        if not isinstance(key, str) or key not in TEMPLATE_BY_KEY or key in proposal:
+            return False, proposal
+        raw_value = item.get("value")
+        if raw_value is None or (isinstance(raw_value, str) and NOT_SUPPORTED in raw_value.lower()):
+            proposal[key] = None
+            continue
+        value = coerce_money(raw_value)
+        location_id = item.get("document_location_id")
+        location = locations.get(location_id) if isinstance(location_id, (int, str)) else None
+        if value is None or location is None:
+            return False, proposal  # an uncited or unusable figure is invalid output
+        document_id = item.get("document_id")
+        if document_id is not None and document_id != location["document_id"]:
+            return False, proposal
+        if not value_supported_by(location.get("extracted_text"), value):
+            return False, proposal  # the cited location does not state this figure
+        # Checking the digits is not enough: without this, the model could point
+        # the Revenue line at the "Cost of Goods Sold 7,300,000" location, or at
+        # the year in a statement header, and the number would validate. The
+        # cited location must itself READ as this template line under the same
+        # anchored caption rules the deterministic extractor uses, and state the
+        # same figure. The model may choose WHICH evidence to cite; it may not
+        # decide what a number means.
+        confirmed = find_line_value(TEMPLATE_BY_KEY[key], [location])
+        if confirmed is None or abs(confirmed["value"] - value) >= 0.005:
+            return False, proposal
+        proposal[key] = {"value": value, "location": location}
+    return True, proposal
 
 
 def _content_from_proposal(deal: dict, facts: dict, proposal: dict) -> dict:
@@ -415,14 +479,30 @@ def _content_from_proposal(deal: dict, facts: dict, proposal: dict) -> dict:
 
 
 def build_spread_content(deal: dict, facts: dict, reply: str) -> dict:
+    # The deterministic derivation is computed either way — it is the fallback
+    # AND the yardstick. Reconciling against it is what stops the model from
+    # silently SUPPRESSING a template line the documents plainly support by
+    # returning null for it.
+    from_record = {line["line_item_key"]: line for line in derive_spread(deal, facts)["line_items"]}
     proposal = parse_spread_reply(reply, facts)
     if proposal is None:
-        derived = derive_spread(deal, facts)
+        lines = [from_record[line["line_item_key"]] for line in SPREAD_TEMPLATE]
         source = "deterministic-fallback"
     else:
-        derived = _content_from_proposal(deal, facts, proposal)
-        source = "agent"
-    lines = derived["line_items"]
+        from_agent = {
+            line["line_item_key"]: line for line in _content_from_proposal(deal, facts, proposal)["line_items"]
+        }
+        lines = []
+        recovered = 0
+        for template_line in SPREAD_TEMPLATE:
+            key = template_line["line_item_key"]
+            if from_agent[key]["supported"]:
+                lines.append(from_agent[key])
+                continue
+            lines.append(from_record[key])
+            if from_record[key]["supported"]:
+                recovered += 1
+        source = "agent+record" if recovered else "agent"
     supported = [line for line in lines if line["supported"]]
     unsupported = [line["line_item_key"] for line in lines if not line["supported"]]
     citations = [
@@ -459,7 +539,7 @@ def build_spread_content(deal: dict, facts: dict, reply: str) -> dict:
         "supported_line_count": len(supported),
         "template_line_count": len(lines),
         # Contract the roster holds this agent to: zero uncited figures.
-        "uncited_value_count": len([line for line in supported if not line["citation"].get("document_location_id")]),
+        "uncited_value_count": uncited_count(lines),
         "documents_on_file": len(facts["document_rows"]),
         "document_location_count": len(facts["locations"]),
         "rationale": rationale,
@@ -576,12 +656,14 @@ def adopt_workflow_spread(deal: dict, actor_user_id: str) -> dict | None:
 
     facts = spread_facts(deal)
     model = uw.model_id()
-    cost_row = uw.costmeter.record(
-        model, uw._estimate_tokens(build_spread_prompt(deal, facts)), uw._estimate_tokens(reply)
-    )
+    in_tokens = uw._estimate_tokens(build_spread_prompt(deal, facts))
+    out_tokens = uw._estimate_tokens(reply)
+    cost_row = uw.costmeter.record(model, in_tokens, out_tokens)
     run = store.insert(
         "agent_runs",
         {
+            "input_tokens": in_tokens,
+            "output_tokens": out_tokens,
             "deal_id": deal["id"],
             "deal_reference": deal["deal_reference"],
             "agent_type": "financial_spreading",
@@ -591,7 +673,9 @@ def adopt_workflow_spread(deal: dict, actor_user_id: str) -> dict | None:
             "prompt_template_version": uw.prompt_version(SPREAD_PROMPT_NAME),
             "inputs": spread_run_inputs(deal, facts) | {"workflow_run_id": run_id, "workflow_node": "spread_financials"},
             "raw_output": uw.pii.redact(reply)[:4000],
-            "latency_ms": 0,
+            # wall clock of the workflow tick that executed this agent node —
+            # the engine exposes no per-node timing (same convention as slice 1)
+            "latency_ms": uw.last_tick_ms(run_id),
             "token_cost": cost_row["usd"],
             "ran_at": uw.now_iso(),
             "error": None,
@@ -684,11 +768,12 @@ def apply_spread_edits(content: dict, edits: dict) -> dict:
             lines[key] = _unsupported_line(template, line.get("period"))
             lines[key]["citation"]["source_reference"] = NOT_SUPPORTED + (f" — {note}" if note else "")
         else:
-            value = parse_number(raw_value) if isinstance(raw_value, str) else (
-                float(raw_value) if isinstance(raw_value, (int, float)) and not isinstance(raw_value, bool) else None
-            )
+            value = coerce_money(raw_value)
             if value is None:
-                raise uw.DomainError(400, f"edit for '{key}' must be a number or null")
+                raise uw.DomainError(
+                    400,
+                    f"edit for '{key}' must be a finite number within {MAX_ABS_VALUE:,.0f}, or null to withdraw it",
+                )
             line["value"] = round(value, 2)
             line["display_value"] = f"{value:,.0f}"
             line["supported"] = True
@@ -711,7 +796,7 @@ def apply_spread_edits(content: dict, edits: dict) -> dict:
         {"line_item_key": line["line_item_key"], "label": line["label"], "value": line["value"], **line["citation"]}
         for line in supported
     ]
-    content["uncited_value_count"] = len([line for line in supported if not line["citation"].get("source_type")])
+    content["uncited_value_count"] = uncited_count(ordered)
     return {"line_items": applied}
 
 
@@ -830,7 +915,7 @@ def promote_spread(deal: dict, content: dict, actor: dict) -> dict:
         "citation_ids": citation_ids,
         "spread_line_item_count": len(line_item_ids),
         "citation_count": len(citation_ids),
-        "uncited_figure_count": 0,
+        "uncited_figure_count": uncited_count(content.get("spread_line_items")),
         "unsupported_lines": content.get("unsupported_lines", []),
         "template_version": content.get("template_version", SPREAD_TEMPLATE_VERSION),
         "audit_log_id": audit["id"],
