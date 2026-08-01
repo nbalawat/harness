@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Process Console</title>
+<style>
+  :root{
+    --bg:#0f1115;--panel:#171a21;--panel2:#1e222b;--border:#2a2f3a;--fg:#e7eaf0;--muted:#9aa3b2;
+    --accent:#5b8cff;--agent:#7c5cff;--human:#e0913a;--system:#3fb37f;--ok:#3fb37f;--wait:#e0913a;--fail:#e05a5a;
+    --font:'Inter',system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+  }
+  @media (prefers-color-scheme: light){:root{--bg:#f4f6fb;--panel:#fff;--panel2:#eef2f8;--border:#e2e7f0;--fg:#141821;--muted:#5c6675}}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:var(--font);background:var(--bg);color:var(--fg);height:100vh;display:flex;flex-direction:column}
+  header{display:flex;align-items:center;gap:.7rem;padding:.8rem 1.3rem;border-bottom:1px solid var(--border);background:var(--panel)}
+  .logo{width:30px;height:30px;border-radius:9px;background:linear-gradient(135deg,var(--agent),var(--accent));display:grid;place-items:center;font-weight:800;color:#fff}
+  header h1{font-size:1.02rem;margin:0;font-weight:650}
+  header .sub{color:var(--muted);font-size:.78rem}
+  .stats{margin-left:auto;display:flex;gap:1.3rem;font-size:.8rem}
+  .stat b{font-size:1.1rem;display:block}.stat span{color:var(--muted)}
+  .mode{font-size:.72rem;color:var(--muted);padding:.3rem .6rem;border:1px solid var(--border);border-radius:999px;display:flex;gap:.4rem;align-items:center}
+  .mode .dot{width:7px;height:7px;border-radius:50%;background:var(--ok)}
+  .wrap{flex:1;display:grid;grid-template-columns:340px 1fr;min-height:0}
+  aside{border-right:1px solid var(--border);background:var(--panel);overflow-y:auto;padding:1rem}
+  aside h3{font-size:.72rem;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin:.1rem 0 .6rem}
+  .newbox{background:var(--panel2);border:1px solid var(--border);border-radius:12px;padding:.9rem;margin-bottom:1.1rem}
+  .newbox input,.newbox textarea{width:100%;padding:.55rem .7rem;border:1px solid var(--border);border-radius:9px;background:var(--bg);color:var(--fg);font:inherit;margin-bottom:.5rem}
+  .newbox textarea{resize:vertical;min-height:54px;max-height:130px}
+  .newbox button{width:100%;padding:.6rem;border:0;border-radius:9px;background:var(--accent);color:#fff;font-weight:600;cursor:pointer}
+  .newbox button:disabled{opacity:.5}
+  .item{padding:.6rem .7rem;border:1px solid var(--border);border-radius:10px;margin-bottom:.5rem;cursor:pointer;transition:.15s}
+  .item:hover{border-color:var(--accent)}
+  .item.sel{border-color:var(--accent);background:var(--panel2)}
+  .item .t{font-size:.88rem;font-weight:600;margin-bottom:.35rem}
+  .item .meta{display:flex;align-items:center;gap:.5rem;font-size:.72rem;color:var(--muted)}
+  .pill{font-size:.68rem;font-weight:650;padding:.1rem .5rem;border-radius:6px;color:#fff}
+  .pill.running{background:var(--accent)}.pill.parked{background:var(--wait)}.pill.completed{background:var(--ok)}.pill.failed{background:var(--fail)}
+  .bar{flex:1;height:5px;background:var(--border);border-radius:3px;overflow:hidden}
+  .bar i{display:block;height:100%;background:var(--ok)}
+  main{overflow-y:auto;padding:1.3rem clamp(1rem,3vw,2.4rem)}
+  .placeholder{color:var(--muted);text-align:center;margin-top:18vh}
+  .runhead{display:flex;align-items:center;gap:.7rem;margin-bottom:.4rem;flex-wrap:wrap}
+  .runhead h2{margin:0;font-size:1.2rem}
+  .desc{color:var(--muted);font-size:.85rem;margin-bottom:1.4rem}
+  .steps{position:relative;padding-left:8px}
+  .step{position:relative;padding:0 0 1.1rem 1.9rem;border-left:2px solid var(--border);margin-left:9px}
+  .step:last-child{border-left-color:transparent}
+  .node{position:absolute;left:-11px;top:0;width:20px;height:20px;border-radius:50%;border:2px solid var(--border);background:var(--bg);display:grid;place-items:center;font-size:.6rem}
+  .step.done .node{background:var(--ok);border-color:var(--ok);color:#fff}
+  .step.waiting .node{background:var(--wait);border-color:var(--wait);color:#fff;animation:pulse 1.4s infinite}
+  .step.pending .node{background:var(--bg)}
+  .step.skipped .node{opacity:.5}
+  @keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(224,145,58,.5)}50%{box-shadow:0 0 0 6px rgba(224,145,58,0)}}
+  .step .top{display:flex;align-items:center;gap:.5rem;flex-wrap:wrap}
+  .step .name{font-weight:600;font-size:.95rem}
+  .kind{font-size:.66rem;font-weight:650;padding:.1rem .45rem;border-radius:5px}
+  .kind.agent{background:rgba(124,92,255,.18);color:var(--agent)}
+  .kind.human{background:rgba(224,145,58,.18);color:var(--human)}
+  .kind.deterministic,.kind.condition{background:rgba(63,179,127,.15);color:var(--system)}
+  .status{font-size:.72rem;color:var(--muted);margin-left:auto}
+  .out{margin-top:.5rem;background:var(--panel);border:1px solid var(--border);border-radius:9px;padding:.6rem .75rem;font-size:.85rem;line-height:1.5}
+  .out .lbl{font-size:.62rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:.25rem}
+  .decision{margin-top:.6rem;background:var(--panel2);border:1px solid var(--wait);border-radius:10px;padding:.8rem}
+  .decision .q{font-size:.9rem;margin-bottom:.7rem}
+  .decision .btns{display:flex;gap:.6rem}
+  .decision button{flex:1;padding:.55rem;border-radius:9px;border:0;font-weight:600;cursor:pointer}
+  .approve{background:var(--ok);color:#fff}.decline{background:var(--fail);color:#fff}
+  .thinking{color:var(--muted);font-size:.82rem;font-style:italic}
+  @media(max-width:820px){.wrap{grid-template-columns:1fr}aside{display:none}}
+</style>
+</head>
+<body>
+  <header>
+    <div class="logo">P</div>
+    <div><h1 id="procName">Process Console</h1><div class="sub" id="procDesc"></div></div>
+    <div class="stats" id="stats"></div>
+    <div class="mode"><span class="dot"></span><span id="mode">…</span></div>
+  </header>
+  <div class="wrap">
+    <aside>
+      <h3>Start a work item</h3>
+      <div class="newbox" id="newbox"></div>
+      <h3>Work items</h3>
+      <div id="items"><div class="thinking">No items yet — start one above.</div></div>
+    </aside>
+    <main id="main"><div class="placeholder">Select or start a work item to watch it flow through the process.</div></main>
+  </div>
+  <script src="app.js" defer></script>
+</body>
+</html>

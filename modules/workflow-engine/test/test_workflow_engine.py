@@ -52,7 +52,7 @@ def test_full_run_parks_at_human_and_resumes_on_approval():
 
     assert workflow_engine.tick(run_id)["status"] == "parked", "tick without a decision stays parked"
 
-    approval_flow.approve(st["approval_id"], "ana", "looks right")
+    approval_flow.approve(list(st["parked"].values())[0], "ana", "looks right")
     done = workflow_engine.tick(run_id)
     assert done["status"] == "completed"
     assert done["context"]["approve"]["approved"] is True and done["context"]["approve"]["by"] == "ana"
@@ -73,7 +73,7 @@ def test_condition_short_circuits():
 def test_rejection_fails_the_run():
     run_id = workflow_engine.start("reply-approval", {"topic": "refunds"})
     st = workflow_engine.state(run_id)
-    approval_flow.reject(st["approval_id"], "bob", "not like this")
+    approval_flow.reject(list(st["parked"].values())[0], "bob", "not like this")
     done = workflow_engine.tick(run_id)
     assert done["status"] == "failed" and "rejected" in done["error"]
 
@@ -84,3 +84,28 @@ def test_contract_violation_fails_loud():
     st = workflow_engine.state(run_id)
     assert st["status"] == "failed" and "contract violation" in st["error"]
     workflow_engine.register_handler("validate_input", lambda ctx: {"ok": bool(ctx["inputs"].get("topic")), "topic": ctx["inputs"].get("topic", "")})
+
+
+def test_dependency_graph_runs_parallel_branches_and_joins():
+    defs = [{"name": "onboard", "nodes": [
+        {"id": "intake", "kind": "deterministic", "handler": "vi", "deps": []},
+        {"id": "a", "kind": "agent", "prompt": "x", "deps": ["intake"]},
+        {"id": "b", "kind": "agent", "prompt": "y", "deps": ["intake"]},
+        {"id": "join", "kind": "deterministic", "handler": "vj", "deps": ["a", "b"]},
+        {"id": "gate", "kind": "human", "question": "ok?", "deps": ["join"]},
+        {"id": "done", "kind": "deterministic", "handler": "vd", "deps": ["gate"]},
+    ]}]
+    workflow_engine._defs_cache = defs
+    workflow_engine.register_handler("vi", lambda c: {"ok": True})
+    workflow_engine.register_handler("vj", lambda c: {"joined": True})
+    workflow_engine.register_handler("vd", lambda c: {"done": True})
+    assert workflow_engine.validate_definitions(defs) == []
+    rid = workflow_engine.start("onboard", {})
+    st = workflow_engine.state(rid)
+    # both parallel agent branches completed before the join, then parked at the gate
+    assert {"intake", "a", "b", "join"}.issubset(set(st["completed"]))
+    assert "gate" in st["parked"]
+    approval_flow.approve(list(st["parked"].values())[0], "mgr")
+    st = workflow_engine.tick(rid)
+    assert st["status"] == "completed" and "done" in st["completed"]
+    workflow_engine._defs_cache = None

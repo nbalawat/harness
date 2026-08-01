@@ -1,0 +1,13 @@
+name: workflow-console
+version: 0.1.0
+description: Operator + domain surface for a business process — run work items through the step graph, watch each agent/human/deterministic step, act at decision steps. Generic over any workflow the engine runs.
+provides:
+  - http: GET /api/process, GET/POST /api/process/runs, POST /api/process/runs/{id}/decide
+  - ui: process console (index.html + app.js) served at / and /app.js
+requires:
+  - workflow-engine
+  - approval-flow
+compose:
+  overlay: compose/
+certify:
+  tests: test/
