@@ -1,0 +1,40 @@
+{
+  "standards_profile": "firm-baseline-v0",
+  "security": {
+    "high_findings": 0,
+    "total_findings": 0,
+    "files_scanned": 83,
+    "evidence": "security_report.json"
+  },
+  "validation": {
+    "backend_tests": "pass",
+    "agent_evals": "pass",
+    "compose_config": "skipped",
+    "evidence": "integration_report.json"
+  },
+  "requirements": {
+    "total": 66,
+    "covered": 66,
+    "uncovered": 0,
+    "assumptions": 32,
+    "evidence": "rtm.json"
+  },
+  "agents": {
+    "count": 5,
+    "names": [
+      "Portfolio Q&A Agent",
+      "Intake Triage Agent",
+      "Financial Spreading Agent",
+      "Credit Memo Agent",
+      "Policy Compliance Agent"
+    ],
+    "eval_criteria_total": 35
+  },
+  "code_audit": {
+    "status": "findings",
+    "findings": 8,
+    "high_findings": 4,
+    "files_checked": 61,
+    "evidence": "audit.json"
+  }
+}

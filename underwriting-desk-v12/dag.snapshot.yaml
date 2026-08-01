@@ -1,0 +1,676 @@
+# agentic-app — problem statement + documents -> working agentic application.
+# v0.3.0: VERTICAL SLICES — after the walking-skeleton scaffold, the app is
+# built feature-by-feature (slice-plan derives 1-6 end-to-end slices from the
+# requirements; each slice node activates only if its slice exists, carries
+# its own acceptance verification, and commits a launchable app).
+# v0.12.0: PARALLEL BUILD — slice-1 is the foundation; slices 2..6 build
+# CONCURRENTLY on top of it (engine runs the whole ready frontier in
+# parallel), then merge-slices unions the trees deterministically (line-level
+# three-way merge; conflicts fail loudly, never LLM-resolved) and
+# verify-merged re-proves every slice's acceptance cumulatively. Design
+# options are three concurrent nodes off a shared screen inventory. A single
+# post-merge slice-audit replaces the per-slice reviewer subagents.
+# Model tiering (certified pins, sized from real run cost data 2026-07-26):
+#   haiku  — structured, bounded outputs (gap-questions, data-design, screen-inventory)
+#   sonnet — mainstream coding/extraction (ingest, agent-design, build-*, slice-audit)
+#   opus   — reasoning + user-facing creative quality (requirements, architecture, design options)
+# escalateModel: retries run one tier up with the failure feedback.
+# See docs/DESIGN.md §7/§7b for the design rationale per node.
+name: agentic-app
+version: 0.12.0
+description: Builds a working agentic AI application from your problem statement and documents — requirements with provenance, approvable designs, certified modules, parallel feature-slice build with deterministic merge and tests, security scan, and governance evidence.
+
+# Frontier concurrency: how many non-gate nodes may execute at once. Three
+# keeps parallel slices (and the three design options) genuinely concurrent
+# without saturating API limits. HARNESS_CONCURRENCY overrides per machine.
+concurrency: 3
+
+cost:
+  # PHILOSOPHY: budgets are RUNAWAY GUARDS, not cost targets — set ~3x the
+  # observed p95 so legitimate heavy work never stalls a build. The envelope
+  # is the real spend control; finished work always commits (never shredded);
+  # budgets only block STARTING further attempts.
+  run_budget_usd: 150.00
+  nodes:
+    ingest: { budget_usd: 6.00 }
+    requirements-synthesis: { budget_usd: 9.00 }
+    gap-questions: { budget_usd: 3.00 }
+    architecture: { budget_usd: 6.00 }
+    screen-inventory: { budget_usd: 2.00 }
+    design-option-1: { budget_usd: 12.00 }
+    design-option-2: { budget_usd: 12.00 }
+    design-option-3: { budget_usd: 12.00 }
+    data-design: { budget_usd: 5.00 }
+    agent-design: { budget_usd: 5.00 }
+    workflow-design: { budget_usd: 6.00 }
+    slice-plan: { budget_usd: 9.00 }
+    slice-1: { budget_usd: 30.00 }
+    slice-2: { budget_usd: 30.00 }
+    slice-3: { budget_usd: 30.00 }
+    slice-4: { budget_usd: 30.00 }
+    slice-5: { budget_usd: 30.00 }
+    slice-6: { budget_usd: 30.00 }
+    slice-audit: { budget_usd: 8.00 }
+
+interaction:
+  max_questions_per_gate: 6
+
+mcp:
+  # The app-under-build as a managed service: slices probe cheaply instead of
+  # paying a failed verification boot. Same boot contract as preview/verify.
+  app-sandbox:
+    server: "@harness/app-sandbox"
+    config:
+      boot: uv run --with fastapi --with uvicorn --with-requirements requirements.txt uvicorn dev:app --host 127.0.0.1 --port $PORT
+      health: /health
+      cwd: backend
+      env: { HARNESS_AGENT_MODE: stub }
+
+certification:
+  # The feedback loop is part of the certified promise: after the golden run,
+  # this change request must flow into requirements (with provenance), cascade,
+  # and re-derive to green with memoization re-using untouched steps.
+  revision_drill:
+    node: requirements-synthesis
+    feedback: "User change request CR-99: analysts must be able to see which agent produced each reply. Add this as a NEW requirement with provenance source \"user-feedback\" referencing CR-99, confidence \"stated\"."
+
+# How the dashboard launches the built product for live preview.
+preview:
+  artifact: app
+  command: uv run --with fastapi --with uvicorn --with-requirements requirements.txt uvicorn dev:app --host 127.0.0.1 --port $PORT
+  cwd: backend
+  health: /health
+
+nodes:
+  # -- Requirements (challenges a + b) --------------------------------------
+  - id: intake
+    phase: Requirements
+    description: "Collects your problem statement, supporting documents, and key choices."
+    kind: gate
+    questions:
+      - { id: project_name, prompt: "What should the application be called?", placeholder: "e.g. KYC Review Desk" }
+      - id: problem_statement
+        prompt: "Describe the problem this application should solve."
+        type: long
+        placeholder: "Who uses it, what they need to accomplish, the workflow stages, where AI agents should help, and which decisions must stay human. The richer this is, the fewer questions you'll be asked later."
+      - id: documents_dir
+        prompt: "Supporting documents (policies, specs, notes — any format)."
+        type: files
+        default: "none"
+        why: "Everything you provide is read into an evidence corpus; requirements trace back to your documents instead of being invented."
+      - id: deploy_target
+        prompt: "Where should the finished app run?"
+        type: choice
+        default: "local"
+        options:
+          - { value: "local", label: "My machine", hint: "Run locally from the dashboard; no cloud stage." }
+          - { value: "cloud-run", label: "Google Cloud Run", hint: "Adds a certified deploy stage that produces a reviewed deploy plan." }
+      - id: supervision
+        prompt: "How closely do you want to supervise the build?"
+        type: choice
+        default: "every-slice"
+        options:
+          - { value: "every-slice", label: "Checkpoint every slice (recommended)", hint: "After each delivered feature: a short review window (90 seconds) with its evidence and screenshot. Answer to decide; walk away and it proceeds on approval-by-default, recorded as an assumption." }
+          - { value: "gates-only", label: "Five decisions only", hint: "You're asked at intake, clarify, design pick, design review, and final sign-off. Slices build straight through with no pauses." }
+    outputs:
+      - { name: intake, file: intake.json, schema: schemas/intake.schema.json }
+
+  - id: ingest
+    phase: Requirements
+    description: "Reads every document you provided and builds an evidence corpus — each claim tracked back to its source."
+    kind: agent
+    model: claude-sonnet-5
+    escalateModel: claude-opus-5
+    maxTurns: 40
+    deps: [intake]
+    prompt: prompts/ingest.md
+    mock: node "$HARNESS_PROJECT_DIR/mocks/ingest.cjs"
+    retries: 2
+    outputs:
+      - { name: corpus, file: corpus, dir: true }
+      - { name: corpus_index, file: corpus_index.json, schema: schemas/corpus_index.schema.json }
+
+  - id: requirements-synthesis
+    phase: Requirements
+    description: "Turns the evidence into requirements, each labeled stated / inferred / unknown with provenance."
+    kind: agent
+    model: claude-opus-5
+    deps: [ingest, intake]
+    prompt: prompts/requirements.md
+    mock: node "$HARNESS_PROJECT_DIR/mocks/requirements.cjs"
+    retries: 2
+    outputs:
+      - { name: requirements, file: requirements.json, schema: schemas/requirements.schema.json }
+
+  - id: gap-questions
+    phase: Requirements
+    description: "Finds the few gaps that genuinely change the build and turns ONLY those into questions with sensible defaults."
+    kind: agent
+    model: claude-haiku-4-5
+    escalateModel: claude-sonnet-5
+    deps: [requirements-synthesis]
+    prompt: prompts/gap-questions.md
+    mock: node "$HARNESS_PROJECT_DIR/mocks/gap-questions.cjs"
+    outputs:
+      - { name: gaps, file: gaps.json, schema: schemas/gaps.schema.json }
+
+  - id: clarify
+    phase: Requirements
+    description: "You answer the clarifying questions (or accept the defaults)."
+    kind: gate
+    deps: [gap-questions]
+    questionsFrom: { artifact: gaps }
+    outputs:
+      - { name: clarifications, file: clarifications.json }
+
+  # -- Architecture + budgets (challenge d) ---------------------------------
+  - id: architecture
+    phase: Design
+    description: "Chooses certified modules for your app and plans the build budget."
+    kind: agent
+    model: claude-opus-5
+    deps: [requirements-synthesis, clarify, intake]
+    prompt: prompts/architecture.md
+    mock: node "$HARNESS_PROJECT_DIR/mocks/architecture.cjs"
+    outputs:
+      - { name: architecture, file: architecture.json, schema: schemas/architecture.schema.json }
+
+  - id: budget-check
+    phase: Design
+    description: "Verifies the build plan fits the certified cost envelope."
+    kind: verifier
+    deps: [architecture]
+    command: node "$HARNESS_PROJECT_DIR/scripts/budget-check.cjs"
+
+  # -- Design options (challenge c) -----------------------------------------
+  # The shared screen inventory makes the three concurrent options COMPARABLE:
+  # every option builds the same screens, so design-select is a real choice.
+  - id: screen-inventory
+    phase: Design
+    description: "Derives the screen inventory every design option must cover — the shared contract that keeps concurrent options comparable."
+    kind: agent
+    model: claude-haiku-4-5
+    escalateModel: claude-sonnet-5
+    deps: [requirements-synthesis, intake]
+    prompt: prompts/screen-inventory.md
+    mock: node "$HARNESS_PROJECT_DIR/mocks/screen-inventory.cjs"
+    retries: 2
+    outputs:
+      - { name: screen_inventory, file: screen_inventory.json, schema: schemas/screen_inventory.schema.json }
+
+  - id: design-option-1
+    phase: Design
+    description: "Design direction 1 — operational console: dense sidebar, panels, status chips. Built concurrently with the other directions."
+    kind: agent
+    model: claude-opus-5
+    maxTurns: 45
+    params: { option: 1, direction: "operational console — dense sidebars, panels, status chips, keyboard-first ergonomics; a cockpit for daily work" }
+    deps: [screen-inventory, requirements-synthesis, intake]
+    prompt: prompts/design-option.md
+    mock: node "$HARNESS_PROJECT_DIR/mocks/design-option.cjs"
+    retries: 2
+    outputs:
+      - { name: option_1_dir, file: designs, dir: true }
+
+  - id: design-option-2
+    phase: Design
+    description: "Design direction 2 — editorial print: masthead, serif measure, generous whitespace. Built concurrently with the other directions."
+    kind: agent
+    model: claude-opus-5
+    maxTurns: 45
+    params: { option: 2, direction: "editorial print — manuscript desks, mastheads, serif measure, generous whitespace; a page you read" }
+    deps: [screen-inventory, requirements-synthesis, intake]
+    prompt: prompts/design-option.md
+    mock: node "$HARNESS_PROJECT_DIR/mocks/design-option.cjs"
+    retries: 2
+    outputs:
+      - { name: option_2_dir, file: designs, dir: true }
+
+  - id: design-option-3
+    phase: Design
+    description: "Design direction 3 — minimal terminal: monospace, high contrast, zero chrome. Built concurrently with the other directions."
+    kind: agent
+    model: claude-opus-5
+    maxTurns: 45
+    params: { option: 3, direction: "minimal terminal — monospace, high contrast, zero chrome, brutal clarity; an instrument, not a brochure" }
+    deps: [screen-inventory, requirements-synthesis, intake]
+    prompt: prompts/design-option.md
+    mock: node "$HARNESS_PROJECT_DIR/mocks/design-option.cjs"
+    retries: 2
+    outputs:
+      - { name: option_3_dir, file: designs, dir: true }
+
+  - id: design-assemble
+    phase: Design
+    description: "Collects the three concurrently-built design options into one comparable set with a verified index."
+    kind: deterministic
+    deps: [design-option-1, design-option-2, design-option-3]
+    command: node "$HARNESS_PROJECT_DIR/scripts/design-assemble.cjs"
+    outputs:
+      - { name: designs_dir, file: designs, dir: true }
+      - { name: designs, file: designs.json, schema: schemas/designs.schema.json }
+
+  - id: design-check
+    phase: Design
+    description: "Verifies the design options are complete and comparable."
+    kind: verifier
+    deps: [design-assemble]
+    command: node "$HARNESS_PROJECT_DIR/scripts/design-check.cjs"
+
+  - id: design-select
+    phase: Design
+    description: "You pick the design direction for your app."
+    kind: gate
+    deps: [design-assemble, design-check]
+    questions:
+      - { id: chosen_option, prompt: "Which design option? (option-1 / option-2 / option-3)", default: "option-1", why: "Selected tokens configure the app shell." }
+    outputs:
+      - { name: design_choice, file: design_choice.json, schema: schemas/design_choice.schema.json }
+
+  - id: design-contract
+    phase: Design
+    description: "Turns your chosen design into an enforceable promise: every screen and interactive element it contains, inventoried for delivery tracking."
+    kind: deterministic
+    deps: [design-select, design-assemble]
+    command: node "$HARNESS_PROJECT_DIR/scripts/design-contract.cjs"
+    outputs:
+      - { name: design_contract, file: design_contract.json, schema: schemas/design_contract.schema.json }
+
+  # -- Detailed design -------------------------------------------------------
+  - id: data-design
+    phase: Design
+    description: "Designs the data tables your app needs."
+    kind: agent
+    model: claude-haiku-4-5
+    escalateModel: claude-sonnet-5
+    deps: [requirements-synthesis]
+    prompt: prompts/data-design.md
+    mock: node "$HARNESS_PROJECT_DIR/mocks/data-design.cjs"
+    outputs:
+      - { name: data_model, file: data_model.json, schema: schemas/data_model.schema.json }
+
+  - id: agent-design
+    phase: Design
+    description: "Sweeps every workflow step and requirement for agent opportunities — the roster plus an auditable map of every slot considered, included or rejected with reasons."
+    kind: agent
+    model: claude-opus-5
+    deps: [requirements-synthesis, clarify, workflow-design]
+    prompt: prompts/agent-design.md
+    mock: node "$HARNESS_PROJECT_DIR/mocks/agent-design.cjs"
+    outputs:
+      - { name: agent_roster, file: agent_roster.json, schema: schemas/agent_roster.schema.json }
+
+  # -- Traceability + confirmation (requirements FLOW into design; user confirms) --
+  - id: workflow-design
+    phase: Design
+    description: "Derives the app's business processes as deterministic workflows with agentic nodes — the pipeline's own architecture, shipped into your app."
+    kind: agent
+    model: claude-opus-5
+    deps: [requirements-synthesis, data-design]
+    prompt: prompts/workflow-design.md
+    mock: node "$HARNESS_PROJECT_DIR/mocks/workflow-design.cjs"
+    retries: 2
+    verify: node "$HARNESS_PROJECT_DIR/scripts/check-workflows.cjs"
+    outputs:
+      - { name: workflows, file: workflows.json, schema: schemas/workflows.schema.json }
+
+  - id: traceability
+    phase: Confirmation
+    description: "Builds the requirements traceability matrix — proof that every requirement is addressed somewhere."
+    kind: deterministic
+    deps: [requirements-synthesis, architecture, data-design, agent-design, design-assemble, gap-questions, clarify, workflow-design]
+    command: node "$HARNESS_PROJECT_DIR/scripts/traceability.cjs"
+    outputs:
+      - { name: rtm, file: rtm.json, schema: schemas/rtm.schema.json }
+
+  - id: design-review
+    phase: Confirmation
+    description: "You confirm the requirements-to-design mapping and all assumptions before any build spend."
+    kind: gate
+    deps: [traceability, design-select, budget-check]
+    questions:
+      - { id: approve_design, prompt: "Review rtm.json (requirements -> design mapping + assumptions). Approve the design and start the build? (yes/no)", why: "Last checkpoint before build spend; confirms every requirement is addressed." }
+    outputs:
+      - { name: design_review, file: design_review.json, schema: schemas/design_review.schema.json }
+
+  # -- Compose + build (challenge e) ----------------------------------------
+  - id: scaffold
+    phase: Build
+    description: "Assembles the working skeleton: certified modules composed, your design applied, tests included. Zero AI cost."
+    kind: deterministic
+    deps: [architecture, design-review, design-select, design-assemble, data-design, agent-design, workflow-design, intake]
+    command: node "$HARNESS_PROJECT_DIR/scripts/scaffold.cjs"
+    outputs:
+      - { name: app, file: app, dir: true }
+
+  - id: slice-plan
+    phase: Build
+    description: "Plans the build as vertical slices — each one a user-visible feature delivered end to end, sized to fit one build attempt."
+    kind: agent
+    model: claude-opus-5
+    deps: [requirements-synthesis, architecture, data-design, agent-design, workflow-design, design-review, design-contract]
+    prompt: prompts/slice-plan.md
+    mock: node "$HARNESS_PROJECT_DIR/mocks/slice-plan.cjs"
+    verify: node "$HARNESS_PROJECT_DIR/scripts/check-slice-plan.cjs"
+    outputs:
+      - { name: slice_plan, file: slice_plan.json, schema: schemas/slice_plan.schema.json }
+
+  # Slice 1 is the FOUNDATION: core plumbing plus its own covered screens,
+  # verified cumulatively. Slices 2..6 then build CONCURRENTLY on top of it.
+  - id: slice-1
+    phase: Build
+    description: "Builds the foundation slice across every layer, then proves it: acceptance checks and the test suite. Slices 2+ build on this in parallel."
+    kind: agent
+    model: claude-sonnet-5
+    escalateModel: claude-opus-5
+    maxTurns: 120
+    retries: 2
+    params: { slice: 1 }
+    when: { artifact: slice_plan, path: "slices.0", exists: true }
+    deps: [scaffold, slice-plan]
+    allowedTools: [Read, Write, Edit, Bash, Glob, Grep, Skill,
+                   mcp__app-sandbox__start_app, mcp__app-sandbox__request,
+                   mcp__app-sandbox__logs, mcp__app-sandbox__run_tests,
+                   mcp__app-sandbox__stop_app]
+    mcp: [app-sandbox]
+    skills: [app-conventions, workflow-authoring, fsi-hardening]
+    prompt: prompts/build-slice.md
+    mock: node "$HARNESS_PROJECT_DIR/mocks/build-slice.cjs"
+    verify: node "$HARNESS_PROJECT_DIR/scripts/verify-slice.cjs"
+    outputs:
+      - { name: app, file: app, dir: true }
+
+  - id: slice-2
+    phase: Build
+    description: "Builds feature slice 2 on the foundation, in parallel with its sibling slices, then proves it: its acceptance checks, the foundation's, and the test suite."
+    kind: agent
+    model: claude-sonnet-5
+    escalateModel: claude-opus-5
+    maxTurns: 120
+    retries: 2
+    params: { slice: 2, parallel: true }
+    when: { artifact: slice_plan, path: "slices.1", exists: true }
+    deps: [slice-1, review-slice-1, slice-plan]
+    allowedTools: [Read, Write, Edit, Bash, Glob, Grep, Skill,
+                   mcp__app-sandbox__start_app, mcp__app-sandbox__request,
+                   mcp__app-sandbox__logs, mcp__app-sandbox__run_tests,
+                   mcp__app-sandbox__stop_app]
+    mcp: [app-sandbox]
+    skills: [app-conventions, workflow-authoring, fsi-hardening]
+    prompt: prompts/build-slice.md
+    mock: node "$HARNESS_PROJECT_DIR/mocks/build-slice.cjs"
+    verify: node "$HARNESS_PROJECT_DIR/scripts/verify-slice.cjs"
+    outputs:
+      - { name: app_2, file: app, dir: true }
+
+  - id: slice-3
+    phase: Build
+    description: "Builds feature slice 3 on the foundation, in parallel with its sibling slices, then proves it: its acceptance checks, the foundation's, and the test suite."
+    kind: agent
+    model: claude-sonnet-5
+    escalateModel: claude-opus-5
+    maxTurns: 120
+    retries: 2
+    params: { slice: 3, parallel: true }
+    when: { artifact: slice_plan, path: "slices.2", exists: true }
+    deps: [slice-1, review-slice-1, slice-plan]
+    allowedTools: [Read, Write, Edit, Bash, Glob, Grep, Skill,
+                   mcp__app-sandbox__start_app, mcp__app-sandbox__request,
+                   mcp__app-sandbox__logs, mcp__app-sandbox__run_tests,
+                   mcp__app-sandbox__stop_app]
+    mcp: [app-sandbox]
+    skills: [app-conventions, workflow-authoring, fsi-hardening]
+    prompt: prompts/build-slice.md
+    mock: node "$HARNESS_PROJECT_DIR/mocks/build-slice.cjs"
+    verify: node "$HARNESS_PROJECT_DIR/scripts/verify-slice.cjs"
+    outputs:
+      - { name: app_3, file: app, dir: true }
+
+  - id: slice-4
+    phase: Build
+    description: "Builds feature slice 4 on the foundation, in parallel with its sibling slices, then proves it: its acceptance checks, the foundation's, and the test suite."
+    kind: agent
+    model: claude-sonnet-5
+    escalateModel: claude-opus-5
+    maxTurns: 120
+    retries: 2
+    params: { slice: 4, parallel: true }
+    when: { artifact: slice_plan, path: "slices.3", exists: true }
+    deps: [slice-1, review-slice-1, slice-plan]
+    allowedTools: [Read, Write, Edit, Bash, Glob, Grep, Skill,
+                   mcp__app-sandbox__start_app, mcp__app-sandbox__request,
+                   mcp__app-sandbox__logs, mcp__app-sandbox__run_tests,
+                   mcp__app-sandbox__stop_app]
+    mcp: [app-sandbox]
+    skills: [app-conventions, workflow-authoring, fsi-hardening]
+    prompt: prompts/build-slice.md
+    mock: node "$HARNESS_PROJECT_DIR/mocks/build-slice.cjs"
+    verify: node "$HARNESS_PROJECT_DIR/scripts/verify-slice.cjs"
+    outputs:
+      - { name: app_4, file: app, dir: true }
+
+  - id: slice-5
+    phase: Build
+    description: "Builds feature slice 5 on the foundation, in parallel with its sibling slices, then proves it: its acceptance checks, the foundation's, and the test suite."
+    kind: agent
+    model: claude-sonnet-5
+    escalateModel: claude-opus-5
+    maxTurns: 120
+    retries: 2
+    params: { slice: 5, parallel: true }
+    when: { artifact: slice_plan, path: "slices.4", exists: true }
+    deps: [slice-1, review-slice-1, slice-plan]
+    allowedTools: [Read, Write, Edit, Bash, Glob, Grep, Skill,
+                   mcp__app-sandbox__start_app, mcp__app-sandbox__request,
+                   mcp__app-sandbox__logs, mcp__app-sandbox__run_tests,
+                   mcp__app-sandbox__stop_app]
+    mcp: [app-sandbox]
+    skills: [app-conventions, workflow-authoring, fsi-hardening]
+    prompt: prompts/build-slice.md
+    mock: node "$HARNESS_PROJECT_DIR/mocks/build-slice.cjs"
+    verify: node "$HARNESS_PROJECT_DIR/scripts/verify-slice.cjs"
+    outputs:
+      - { name: app_5, file: app, dir: true }
+
+  - id: slice-6
+    phase: Build
+    description: "Builds feature slice 6 on the foundation, in parallel with its sibling slices, then proves it: its acceptance checks, the foundation's, and the test suite."
+    kind: agent
+    model: claude-sonnet-5
+    escalateModel: claude-opus-5
+    maxTurns: 120
+    retries: 2
+    params: { slice: 6, parallel: true }
+    when: { artifact: slice_plan, path: "slices.5", exists: true }
+    deps: [slice-1, review-slice-1, slice-plan]
+    allowedTools: [Read, Write, Edit, Bash, Glob, Grep, Skill,
+                   mcp__app-sandbox__start_app, mcp__app-sandbox__request,
+                   mcp__app-sandbox__logs, mcp__app-sandbox__run_tests,
+                   mcp__app-sandbox__stop_app]
+    mcp: [app-sandbox]
+    skills: [app-conventions, workflow-authoring, fsi-hardening]
+    prompt: prompts/build-slice.md
+    mock: node "$HARNESS_PROJECT_DIR/mocks/build-slice.cjs"
+    verify: node "$HARNESS_PROJECT_DIR/scripts/verify-slice.cjs"
+    outputs:
+      - { name: app_6, file: app, dir: true }
+
+  # -- Slice checkpoints (every-slice supervision) --------------------------
+  # `when.all` keeps phantom checkpoints out: a review only exists when its
+  # slice exists in the plan AND every-slice supervision was chosen.
+  - id: review-slice-1
+    phase: Build
+    description: "Checkpoint: the foundation slice is delivered and verified — you approve it (or request changes) before the parallel build wave starts."
+    kind: gate
+    window: 90
+    when:
+      all:
+        - { artifact: intake, path: supervision, equals: "every-slice" }
+        - { artifact: slice_plan, path: "slices.0", exists: true }
+    deps: [slice-1]
+    questions:
+      - { id: verdict, prompt: "Slice 1 is delivered and verified — continue the build?", type: boolean, default: "yes", why: "Your checkpoint. Review its screenshot and evidence first; use Request changes on the slice if you want it revised before continuing." }
+    outputs:
+      - { name: review_slice_1, file: review.json }
+
+  - id: review-slice-2
+    phase: Build
+    description: "Checkpoint: slice 2 is delivered and verified — you approve it (or request changes) before the merge."
+    kind: gate
+    window: 90
+    when:
+      all:
+        - { artifact: intake, path: supervision, equals: "every-slice" }
+        - { artifact: slice_plan, path: "slices.1", exists: true }
+    deps: [slice-2]
+    questions:
+      - { id: verdict, prompt: "Slice 2 is delivered and verified — continue the build?", type: boolean, default: "yes", why: "Your checkpoint. Review its screenshot and evidence first; use Request changes on the slice if you want it revised before continuing." }
+    outputs:
+      - { name: review_slice_2, file: review.json }
+
+  - id: review-slice-3
+    phase: Build
+    description: "Checkpoint: slice 3 is delivered and verified — you approve it (or request changes) before the merge."
+    kind: gate
+    window: 90
+    when:
+      all:
+        - { artifact: intake, path: supervision, equals: "every-slice" }
+        - { artifact: slice_plan, path: "slices.2", exists: true }
+    deps: [slice-3]
+    questions:
+      - { id: verdict, prompt: "Slice 3 is delivered and verified — continue the build?", type: boolean, default: "yes", why: "Your checkpoint. Review its screenshot and evidence first; use Request changes on the slice if you want it revised before continuing." }
+    outputs:
+      - { name: review_slice_3, file: review.json }
+
+  - id: review-slice-4
+    phase: Build
+    description: "Checkpoint: slice 4 is delivered and verified — you approve it (or request changes) before the merge."
+    kind: gate
+    window: 90
+    when:
+      all:
+        - { artifact: intake, path: supervision, equals: "every-slice" }
+        - { artifact: slice_plan, path: "slices.3", exists: true }
+    deps: [slice-4]
+    questions:
+      - { id: verdict, prompt: "Slice 4 is delivered and verified — continue the build?", type: boolean, default: "yes", why: "Your checkpoint. Review its screenshot and evidence first; use Request changes on the slice if you want it revised before continuing." }
+    outputs:
+      - { name: review_slice_4, file: review.json }
+
+  - id: review-slice-5
+    phase: Build
+    description: "Checkpoint: slice 5 is delivered and verified — you approve it (or request changes) before the merge."
+    kind: gate
+    window: 90
+    when:
+      all:
+        - { artifact: intake, path: supervision, equals: "every-slice" }
+        - { artifact: slice_plan, path: "slices.4", exists: true }
+    deps: [slice-5]
+    questions:
+      - { id: verdict, prompt: "Slice 5 is delivered and verified — continue the build?", type: boolean, default: "yes", why: "Your checkpoint. Review its screenshot and evidence first; use Request changes on the slice if you want it revised before continuing." }
+    outputs:
+      - { name: review_slice_5, file: review.json }
+
+  - id: review-slice-6
+    phase: Build
+    description: "Checkpoint: slice 6 is delivered and verified — you approve it (or request changes) before the merge."
+    kind: gate
+    window: 90
+    when:
+      all:
+        - { artifact: intake, path: supervision, equals: "every-slice" }
+        - { artifact: slice_plan, path: "slices.5", exists: true }
+    deps: [slice-6]
+    questions:
+      - { id: verdict, prompt: "Slice 6 is delivered and verified — continue the build?", type: boolean, default: "yes", why: "Your checkpoint. Review its screenshot and evidence first; use Request changes on the slice if you want it revised before continuing." }
+    outputs:
+      - { name: review_slice_6, file: review.json }
+
+  # -- Deterministic merge of the parallel slice wave -----------------------
+  - id: merge-slices
+    phase: Build
+    description: "Unions the parallel slices into one app — line-level three-way merge against the foundation; a genuine conflict fails loudly (never LLM-resolved) — then re-proves EVERY slice's acceptance cumulatively."
+    kind: deterministic
+    deps: [slice-1, slice-2, slice-3, slice-4, slice-5, slice-6,
+           review-slice-1, review-slice-2, review-slice-3, review-slice-4, review-slice-5, review-slice-6,
+           slice-plan]
+    command: node "$HARNESS_PROJECT_DIR/scripts/merge-slices.cjs"
+    verify: node "$HARNESS_PROJECT_DIR/scripts/verify-merged.cjs"
+    outputs:
+      - { name: app, file: app, dir: true }
+
+  # -- Validate + secure (challenges e + f) ---------------------------------
+  - id: slice-audit
+    phase: Verification
+    description: "One read-only audit of the merged app — harness contracts (design fidelity, route shadowing, module bypasses) and FSI hardening (validation, audit rows, human gates, RBAC) — replacing per-slice reviewer subagents."
+    kind: agent
+    model: claude-sonnet-5
+    escalateModel: claude-opus-5
+    maxTurns: 50
+    retries: 2
+    deps: [merge-slices, slice-plan]
+    allowedTools: [Read, Glob, Grep]
+    prompt: prompts/slice-audit.md
+    mock: node "$HARNESS_PROJECT_DIR/mocks/slice-audit.cjs"
+    outputs:
+      - { name: audit, file: audit.json, schema: schemas/audit.schema.json }
+
+  - id: integrate
+    phase: Verification
+    description: "Runs the whole app: full test suite, agent evals, and container boot smoke."
+    kind: verifier
+    deps: [merge-slices]
+    command: node "$HARNESS_PROJECT_DIR/scripts/verify-integrate.cjs"
+    outputs:
+      - { name: integration_report, file: integration_report.json, schema: schemas/integration_report.schema.json }
+
+  - id: design-coverage
+    phase: Verification
+    description: "Proves design delivery: boots the finished app, visits every screen you approved, verifies its elements exist, and screenshots each one live. An approved screen missing from the app fails the build."
+    kind: deterministic
+    deps: [merge-slices, integrate, design-contract, slice-plan]
+    command: node "$HARNESS_PROJECT_DIR/scripts/design-coverage.cjs"
+    outputs:
+      - { name: design_coverage, file: design_coverage.json, schema: schemas/design_coverage.schema.json }
+      - { name: coverage_shots, file: coverage, dir: true }
+
+  - id: security-scan
+    phase: Verification
+    description: "Deterministic security scan — secrets, dynamic code, unsafe patterns. High findings block."
+    kind: verifier
+    deps: [merge-slices]
+    command: node "$HARNESS_PROJECT_DIR/scripts/security-scan.cjs"
+    outputs:
+      - { name: security_report, file: security_report.json, schema: schemas/security_report.schema.json }
+
+  - id: governance-report
+    phase: Verification
+    description: "Generates the evidence pack: tests, evals, security, code audit, and requirement coverage with proof."
+    kind: deterministic
+    deps: [security-scan, integrate, agent-design, traceability, slice-audit]
+    command: node "$HARNESS_PROJECT_DIR/scripts/governance.cjs"
+    outputs:
+      - { name: governance, file: governance.json, schema: schemas/governance.schema.json }
+
+  - id: uat
+    phase: Ship
+    description: "You exercise the app and give final approval."
+    kind: gate
+    deps: [governance-report, design-coverage]
+    questions:
+      - { id: approved, prompt: "You have exercised the app and reviewed the evidence pack. Approve for release?", type: boolean }
+    outputs:
+      - { name: uat, file: uat.json, schema: schemas/uat.schema.json }
+
+  # -- Optional deploy (conditional) ----------------------------------------
+  - id: deploy
+    phase: Ship
+    description: "Produces the Cloud Run deploy plan (only when you chose cloud deployment)."
+    kind: deterministic
+    deps: [uat, architecture]
+    when: { artifact: architecture, path: deploy_target, equals: cloud-run }
+    command: node "$HARNESS_PROJECT_DIR/scripts/deploy-plan.cjs"
+    outputs:
+      - { name: deploy_plan, file: deploy, dir: true }

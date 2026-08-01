@@ -1,0 +1,174 @@
+{
+  "chosen_option": "option-2",
+  "screens": [
+    {
+      "id": "screen-chat",
+      "title": "The Portfolio Desk",
+      "elements": [
+        {
+          "tag": "form",
+          "id": "composer",
+          "label": null
+        },
+        {
+          "tag": "input",
+          "id": "input",
+          "label": "question"
+        },
+        {
+          "tag": "button",
+          "id": null,
+          "label": "Send to desk"
+        },
+        {
+          "tag": "button",
+          "id": null,
+          "label": "Where is Harborline Freight stuck?"
+        },
+        {
+          "tag": "button",
+          "id": null,
+          "label": "Total exposure by risk grade"
+        },
+        {
+          "tag": "button",
+          "id": null,
+          "label": "Which deals lack a signed spread?"
+        },
+        {
+          "tag": "button",
+          "id": null,
+          "label": "Show declines this quarter and their reasons"
+        }
+      ],
+      "element_count": 7
+    },
+    {
+      "id": "screen-pipeline-board",
+      "title": "Pipeline Board",
+      "elements": [
+        {
+          "tag": "form",
+          "id": null,
+          "label": "Find deals in this edition"
+        },
+        {
+          "tag": "input",
+          "id": null,
+          "label": "borrower, deal id, industry…"
+        },
+        {
+          "tag": "select",
+          "id": null,
+          "label": null
+        },
+        {
+          "tag": "select",
+          "id": null,
+          "label": null
+        },
+        {
+          "tag": "select",
+          "id": null,
+          "label": null
+        },
+        {
+          "tag": "select",
+          "id": null,
+          "label": null
+        },
+        {
+          "tag": "select",
+          "id": null,
+          "label": null
+        },
+        {
+          "tag": "button",
+          "id": null,
+          "label": "Apply"
+        }
+      ],
+      "element_count": 8
+    },
+    {
+      "id": "screen-deal-detail",
+      "title": "Deal Dossier",
+      "elements": [
+        {
+          "tag": "button",
+          "id": null,
+          "label": "Accept draft"
+        },
+        {
+          "tag": "button",
+          "id": null,
+          "label": "Edit before accepting"
+        },
+        {
+          "tag": "button",
+          "id": null,
+          "label": "Reject &amp; redraft"
+        },
+        {
+          "tag": "button",
+          "id": null,
+          "label": "Waive with rationale"
+        },
+        {
+          "tag": "button",
+          "id": null,
+          "label": "Return to analyst"
+        },
+        {
+          "tag": "button",
+          "id": null,
+          "label": "Approve as senior credit officer"
+        },
+        {
+          "tag": "button",
+          "id": null,
+          "label": "Decline with adverse-action reason"
+        },
+        {
+          "tag": "button",
+          "id": null,
+          "label": "Return to an earlier stage"
+        }
+      ],
+      "element_count": 8
+    },
+    {
+      "id": "screen-audit-timeline",
+      "title": "The Chronicle",
+      "elements": [
+        {
+          "tag": "button",
+          "id": null,
+          "label": "Export for audit"
+        }
+      ],
+      "element_count": 1
+    },
+    {
+      "id": "screen-sla-dashboard",
+      "title": "The Idle Register",
+      "elements": [
+        {
+          "tag": "button",
+          "id": null,
+          "label": "Reassign selected"
+        },
+        {
+          "tag": "button",
+          "id": null,
+          "label": "Nudge owners"
+        }
+      ],
+      "element_count": 2
+    }
+  ],
+  "totals": {
+    "screens": 5,
+    "elements": 26
+  }
+}

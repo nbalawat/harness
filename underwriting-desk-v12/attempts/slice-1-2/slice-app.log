@@ -1,0 +1,33 @@
+INFO:     Started server process [71988]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:55467 (Press CTRL+C to quit)
+INFO:     127.0.0.1:55469 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55470 - "POST /api/deals HTTP/1.1" 201 Created
+INFO:     127.0.0.1:55469 - "GET /api/pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55470 - "POST /api/deals/DEAL-1001/agents/intake-triage/run HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55469 - "POST /api/deals/DEAL-1001/triage/accept HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55479 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55480 - "GET /app.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55479 - "GET /tokens.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55479 - "GET /agent/mode HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55480 - "GET /agents HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55482 - "GET /api/pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55481 - "GET /api/conversations HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:55483 - "GET /favicon.ico HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:55483 - "POST /chat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55483 - "GET / HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:55483 - "GET /agent/mode HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55482 - "GET /api/conversations HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:55480 - "GET /api/pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55481 - "GET /agents HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55481 - "GET /api/pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55481 - "POST /api/deals HTTP/1.1" 201 Created
+INFO:     127.0.0.1:55481 - "GET /api/pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55481 - "POST /api/deals/DEAL-1002/agents/intake-triage/run HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55481 - "POST /api/deals/DEAL-1002/triage/accept HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55481 - "GET /api/pipeline HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [71988]

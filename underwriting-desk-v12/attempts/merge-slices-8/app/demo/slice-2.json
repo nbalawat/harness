@@ -1,0 +1,11 @@
+{
+  "screen": "screen-deal-detail",
+  "caption": "Opening DEAL-1002's dossier, running the Financial Spreading Agent for cited figures, and accepting the draft — which deterministically computes DSCR, leverage, current ratio, and the risk grade band.",
+  "steps": [
+    { "action": "click", "selector": "[data-screen=\"deal-detail\"]" },
+    { "action": "fill", "selector": "#dossier-deal-code", "value": "DEAL-1002" },
+    { "action": "click", "selector": "#dossier-load-btn" },
+    { "action": "click", "selector": "#spread-run-btn" },
+    { "action": "click", "selector": "#spread-accept-btn" }
+  ]
+}

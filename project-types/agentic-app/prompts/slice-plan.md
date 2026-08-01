@@ -15,9 +15,23 @@ SLICE SIZING (time is the scarce resource — plan for it):
   ("the intake process runs end to end"), with a final slice for cross-cutting
   surfaces (search, export, admin). The workflow's own execution is the
   natural acceptance.
-- Acceptance stays small: 2-4 checks per slice, each fast HTTP assertions —
+- Acceptance stays small: 2-5 checks per slice, each fast HTTP assertions —
   the cumulative suite re-runs every slice, so every check you add is paid on
   every later slice.
+- NEGATIVE ACCEPTANCE (security, REQUIRED): every slice whose acceptance
+  includes a mutating request (POST/PUT/DELETE) must ALSO include at least one
+  check proving a refusal — an unauthorized or invalid actor/request getting a
+  4xx (`expect_status`: 401/403/404/409/422). "Verified" means the app refuses
+  wrong things, not merely that right things work. Examples: an unknown
+  `acting_user_email` mutating -> 403; a request missing a required field ->
+  422; a write to a closed generic table -> 403. The verifier rejects plans
+  that skip this.
+- AGENT CHECKS MUST PROVE GROUNDING: on live builds the verifier exercises
+  agent endpoints with REAL model calls. An agent acceptance check must
+  therefore assert content only a genuinely working, data-grounded agent can
+  produce — e.g. `expect_contains` a seeded record's code or a required
+  citation marker — never just a 200 status. An agent that answers "I cannot
+  help" would pass a status-only check; design checks that would catch that.
 
 
 DESIGN COVERAGE (non-negotiable): inputs include design_contract — the inventory

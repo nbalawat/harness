@@ -1,0 +1,29 @@
+{
+  "name": "Phosphor Ledger",
+  "screens": ["chat", "pipeline-board", "deal-detail", "audit-timeline", "sla-dashboard"],
+  "addresses": [
+    "R-002",
+    "R-003",
+    "R-013",
+    "R-014",
+    "R-015",
+    "R-019",
+    "R-020",
+    "R-021",
+    "R-022",
+    "R-024",
+    "R-025",
+    "R-026",
+    "R-034",
+    "R-045",
+    "R-047",
+    "R-049",
+    "R-051",
+    "R-052",
+    "R-057",
+    "R-058",
+    "R-063",
+    "R-064",
+    "R-066"
+  ]
+}

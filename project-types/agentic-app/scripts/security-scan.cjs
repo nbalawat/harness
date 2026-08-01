@@ -47,6 +47,47 @@ function scan(dir) {
 }
 scan(appDir);
 
+// RBAC backstop (deterministic, no LLM): the class of hole behind the
+// /api/{table} audit finding. A MUTATING route whose handler carries no
+// identity token at all is either a bug or needs an explicit
+// `# public-endpoint: <reason>` marker on its decorator line.
+const IDENTITY = /acting_user_email|require_role|ensure_role|current_user|Depends\s*\(|ext_auth\.|resolve_user|x-user-email|req\.(?:actor|by|author|user(?:name)?|email)\b|approved_by|started_by/;
+const GUARD = /OPEN_WRITE_TABLES|status_code=40[35]|require_role|acting_user_email/;
+function scanMutations(dir) {
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    if (entry.name === "__pycache__" || entry.name === "node_modules") continue;
+    const p = path.join(dir, entry.name);
+    if (entry.isDirectory()) { scanMutations(p); continue; }
+    if (!entry.name.endsWith(".py")) continue;
+    const content = fs.readFileSync(p, "utf8");
+    const decRe = /@(?:app|router)\.(post|put|delete)\(\s*["']([^"']+)["'][^\n]*/g;
+    let m;
+    while ((m = decRe.exec(content)) !== null) {
+      const decoratorLine = m[0];
+      if (/#\s*public-endpoint:/.test(decoratorLine)) continue;
+      const rest = content.slice(m.index + m[0].length);
+      const next = rest.search(/\n@(?:app|router)\.|(?:\n\ndef |\n\nclass )/);
+      const body = next === -1 ? rest.slice(0, 2500) : rest.slice(0, Math.min(next, 2500));
+      const rel = path.relative(appDir, p);
+      if (m[2] === "/api/{table}" && !GUARD.test(body)) {
+        findings.push({ severity: "high", rule: "generic-table-write-unguarded", file: rel, detail: `${m[1].toUpperCase()} /api/{table} without allowlist/role guard` });
+        continue;
+      }
+      if (!IDENTITY.test(decoratorLine + body)) {
+        // Slice-authored modules (ext_*.py) are held to the hard bar; other
+        // files surface as medium so legacy substrate stays visible, not fatal.
+        findings.push({
+          severity: /^ext_[a-z0-9_]+\.py$/.test(entry.name) ? "high" : "medium",
+          rule: "unauthenticated-mutation",
+          file: rel,
+          detail: `${m[1].toUpperCase()} ${m[2]} handler carries no identity (add role check via acting_user_email, or an explicit '# public-endpoint: <reason>' marker)`,
+        });
+      }
+    }
+  }
+}
+scanMutations(appDir);
+
 const high = findings.filter((f) => f.severity === "high");
 fs.writeFileSync(
   "security_report.json",

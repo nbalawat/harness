@@ -39,8 +39,11 @@ function artifact(name) {
 for (let i = 0; i < 4000; i++) {
   await new Promise((r) => setTimeout(r, 5000));
   const ev = events();
-  if (ev.some((e) => e.type === "run.completed")) { log("RUN COMPLETED"); break; }
-  if (ev.some((e) => e.type === "run.failed")) { log("RUN FAILED"); break; }
+  // Terminal state is the LATEST lifecycle event — a historical run.failed
+  // that a later resume recovered from must not stop the driver.
+  const lifecycle = [...ev].reverse().find((e) => ["run.completed", "run.failed", "run.parked", "run.created"].includes(e.type));
+  if (lifecycle?.type === "run.completed") { log("RUN COMPLETED"); break; }
+  if (lifecycle?.type === "run.failed" && !resuming) { log("RUN FAILED (latest state)"); break; }
 
   // open review window -> approve via ui-answers (the live process polls it)
   const win = [...ev].reverse().find((e) => e.type === "gate.window_open");

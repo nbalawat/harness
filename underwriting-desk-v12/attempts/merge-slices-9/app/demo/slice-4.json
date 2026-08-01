@@ -1,0 +1,9 @@
+{
+  "screen": "screen-sla-dashboard",
+  "caption": "The SLA idle register lists deals idle beyond five business days with a named escalation owner, and a credit officer reassigns a stuck deal straight from the register.",
+  "steps": [
+    { "action": "click", "selector": "button[data-screen=\"sla-dashboard\"]" },
+    { "action": "click", "selector": "#idle-register-body tr:first-child .idle-select" },
+    { "action": "click", "selector": "#sla-reassign-btn" }
+  ]
+}

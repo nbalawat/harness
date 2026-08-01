@@ -1,0 +1,36 @@
+INFO:     Started server process [73843]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:55596 (Press CTRL+C to quit)
+INFO:     127.0.0.1:55599 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55600 - "POST /api/deals HTTP/1.1" 201 Created
+INFO:     127.0.0.1:55599 - "GET /api/pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55600 - "POST /api/deals/DEAL-1001/agents/intake-triage/run HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55599 - "POST /api/deals/DEAL-1001/triage/accept HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55600 - "POST /api/deals/DEAL-1004/approve HTTP/1.1" 403 Forbidden
+INFO:     127.0.0.1:55599 - "POST /api/deals/DEAL-1004/approve HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55600 - "POST /api/deals/DEAL-1006/decline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55599 - "GET /api/sla/idle HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55608 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55608 - "GET /tokens.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55609 - "GET /app.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55608 - "GET /agent/mode HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55609 - "GET /agents HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55610 - "GET /api/conversations HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:55611 - "GET /api/pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55612 - "GET /api/sla/idle HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55608 - "GET /favicon.ico HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:55608 - "POST /chat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55608 - "GET / HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:55608 - "GET /agent/mode HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55611 - "GET /api/conversations HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:55609 - "GET /api/sla/idle HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55610 - "GET /api/pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55612 - "GET /agents HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55612 - "GET /api/sla/idle HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55612 - "POST /api/deals/DEAL-1005/sla-escalate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55612 - "GET /api/sla/idle HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [73843]

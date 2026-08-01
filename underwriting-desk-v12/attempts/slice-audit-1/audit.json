@@ -1,0 +1,65 @@
+{
+  "status": "findings",
+  "findings": [
+    {
+      "severity": "high",
+      "area": "fsi-hardening",
+      "file": "backend/main.py",
+      "line": 63,
+      "finding": "GET/POST /api/{table} is a generic, unauthenticated passthrough onto db.store for EVERY table in models.TABLES (users, deals, approvals, risk_grades, policy_exceptions, audit_log, financial_ratios, portfolio_qa_sessions, ...). POST accepts an arbitrary `row: dict` with no schema validation, no role check, and writes bypass ext_audit.record() entirely (no audit row). Because it is registered after the ext_*.py routers in main.py's for-loop, only paths a slice did NOT claim fall through to it (e.g. /api/users, /api/policy_exceptions, /api/risk_grades, /api/approvals) but for those it is a full read+write backdoor. Concretely: POST /api/users with {\"email\":\"eve@evil.test\",\"role\":\"senior_credit_officer\"} creates a forged users row; identity.find_user() (identity.py:26) takes the last row matching that email, so a subsequent call to any approve/decline endpoint with acting_user_email=\"eve@evil.test\" is treated as a genuine senior_credit_officer and can approve deals up to $1,000,000 — full privilege escalation with zero audit trail. The same hole allows forging 'approvals' or 'risk_grades' rows directly."
+    },
+    {
+      "severity": "high",
+      "area": "fsi-hardening",
+      "file": "backend/identity.py",
+      "line": 30,
+      "finding": "Every mutating endpoint across all five slices (deal creation, triage accept, spread accept, memo/policy runs, approve/decline/return, sla-escalate, qa/ask) authorizes purely on a client-supplied `acting_user_email` string resolved via identity.resolve_user() — there is no session token, password, or Authorization header check anywhere (frontend app.js never sends an Authorization header or reads a token; ext_auth.py's /auth/login and bearer-token `current_user()` are never called from any deal/qa endpoint). Any HTTP client can impersonate officer@bank.test or analyst@bank.test simply by typing that string, defeating the tiered approval-authority control in ext_tiered_approval_and_sla.py entirely. This is identity resolution done outside the auth-basic module (ext_auth.py) rather than through it, with no compensating authentication of the claimed email."
+    },
+    {
+      "severity": "high",
+      "area": "merge-seams",
+      "file": "backend/ext_memo_policy.py",
+      "line": 234,
+      "finding": "ext_memo_policy.py's DEAL-1003 fixture backfill (_backfill_underwriting_inputs) assigns risk_grade as a small integer (3=Pass/5=Watch/7=Substandard) under rubric_version \"v2.1\", writing into the same `deals.risk_grade` field and `risk_grades` table that ext_financial_spreading.py's assign_risk_grade (financial_spreading:347-409) populates with letter grades A-D under rubric_version \"risk-rubric-v1\". Both handlers write to the same shared table with incompatible value domains. The frontend shows the contradiction directly: the pipeline board's grade filter (frontend/app.js:177-182) treats risk_grade as numeric bands (\"1-3\", \"4-6\", \"7+\"), while the deal-detail rubric display (frontend/app.js:522-528) treats it as a letter A-D to toggle `rubric-band-A/B/C/D` elements. A deal graded by one slice's scheme is silently mis-rendered (or excluded from all filters) by UI built for the other slice's scheme."
+    },
+    {
+      "severity": "high",
+      "area": "fsi-hardening",
+      "file": "backend/ext_tiered_approval_and_sla.py",
+      "line": 410,
+      "finding": "approve_deal never checks for open policy_exceptions before approving. workflows.json's deal-underwriting-lifecycle definition explicitly gates approval behind a 'hasexceptions' -> 'waiver' -> 'resolve' -> 'clear' chain (workflows.json:160-186) requiring all exceptions resolved (R-052) before reaching the 'tier'/'decision' nodes, but no slice implements that gate in the actual REST surface, and the 'resolve' node's handler `resolve_policy_exceptions` (workflows.json:175) is never registered anywhere in the backend (confirmed: no `register_handler(\"resolve_policy_exceptions\"` call exists). Consequently a deal with open, unresolved exceptions raised by the Policy Compliance Agent — including a prohibited-industry breach on the seeded cannabis-dispensary fixture DEAL-1003 — can be approved by a senior_credit_officer via POST /api/deals/{deal_code}/approve with no waiver ever recorded."
+    },
+    {
+      "severity": "medium",
+      "area": "fsi-hardening",
+      "file": "backend/ext_financial_spreading.py",
+      "line": 435,
+      "finding": "GET /api/deals/{deal_code}, /documents, /ratios, /risk-grade, and (in ext_memo_policy.py) /memo, /policy-exceptions, /audit, and (in ext_tiered_approval_and_sla.py) /approvals carry no acting-user parameter and no role/identity check at all — any caller can read any deal's financial spread, computed ratios, risk grade, credit memo narrative, policy exceptions, and full audit timeline. This is inconsistent with the same app's careful RBAC scoping on POST /api/qa/ask (resolve_qa_permission_scope restricts a relationship_manager to only their own deals), and with GET /api/qa/sessions (ext_grounded_portfolio_qa.py:390-393) which returns every user's Q&A question/answer history, including source_deal_ids, to any unauthenticated caller."
+    },
+    {
+      "severity": "medium",
+      "area": "route-shadowing",
+      "file": "backend/ext_workflow_runs.py",
+      "line": 19,
+      "finding": "POST /workflows/{name}/start, /workflows/runs/{run_id}/tick, and /workflow/submissions/{item_id}/approve|reject (ext_workflow.py:31-48) carry no role check and reuse the exact node-handler functions registered by every slice via workflow_engine.register_handler (e.g. validate_intake_submission, record_approval_decision) — but the CAN_SUBMIT_DEAL/CAN_TRIAGE/tier-authority checks that gate those same mutations on the dedicated /api/... endpoints live only in the ext_*.py REST wrapper functions, not in the handlers themselves. POST /workflows/deal-underwriting-lifecycle/start with a fabricated `inputs` body immediately executes validate_intake_submission and inserts a real audited `deals` row with zero role gate. The run then fails with a WorkflowError partway through the next deterministic node ('route'), because handlers like record_triage_and_route_to_queue read `context[\"deal_id\"]` directly (the shape a REST endpoint hand-builds) whereas workflow_engine.tick() supplies an accumulated `{node_id: output, ...}` context — so the generic engine path for this workflow is both an unauthenticated attack surface and internally broken, a genuine merge-seam between the workflow-engine module and the slices' handler-authoring convention."
+    },
+    {
+      "severity": "medium",
+      "area": "fsi-hardening",
+      "file": "backend/ext_tiered_approval_and_sla.py",
+      "line": 504,
+      "finding": "return_deal does not call `_already_decided(deal)` the way approve_deal (line 414) and decline_deal (line 460) do, so a deal already in a terminal state (approved/declined/closed) can still be returned to an earlier stage via POST /api/deals/{deal_code}/return, silently reversing a recorded final decision with only a free-text `reason` (not a controlled reason code) and no idempotency guard, unlike the double-decision protection the module's own docstring (line 142, R-062) claims for this endpoint family."
+    },
+    {
+      "severity": "low",
+      "area": "fsi-hardening",
+      "file": "backend/ext_financial_spreading.py",
+      "line": 429,
+      "finding": "DocumentAttachRequest.document_type (used by POST /api/deals/{deal_code}/documents) is an unconstrained free-text string, not validated against REQUIRED_DOCUMENT_TYPES or any enum. A typo'd document_type is silently accepted and stored, then never counted toward the 'required documents present' check (verify_required_documents), giving no error feedback to the caller for a mis-typed but structurally valid payload."
+    }
+  ],
+  "checked": {
+    "files": 61,
+    "axes": ["contracts", "fsi-hardening"]
+  }
+}

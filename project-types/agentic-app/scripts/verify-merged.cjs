@@ -54,7 +54,9 @@ async function main() {
   const log = fs.openSync("merged-app.log", "w");
   const child = spawn(
     `uv run --with fastapi --with uvicorn --with-requirements requirements.txt uvicorn dev:app --host 127.0.0.1 --port ${port}`,
-    { shell: true, detached: true, cwd: path.join(app, "backend"), env: { ...process.env, HARNESS_AGENT_MODE: "stub" }, stdio: ["ignore", log, log] },
+    // Live builds verify with LIVE agents (stub would mask grounding defects);
+    // mock/certification runs stay deterministic on stubs.
+    { shell: true, detached: true, cwd: path.join(app, "backend"), env: { ...process.env, ...(process.env.HARNESS_RUN_MODE === "live" ? {} : { HARNESS_AGENT_MODE: "stub" }) }, stdio: ["ignore", log, log] },
   );
   fs.closeSync(log);
   const kill = () => {
@@ -109,7 +111,9 @@ async function main() {
     { cwd: path.join(app, "backend"), encoding: "utf8", timeout: 300000 },
   );
   if (pytest.status !== 0) fail(`backend tests FAILED on the merged app\n${(pytest.stdout ?? "").slice(-1500)}\n${(pytest.stderr ?? "").slice(-1000)}`);
-  spawnSync("find", [app, "-name", "__pycache__", "-type", "d", "-exec", "rm", "-rf", "{}", "+"]);
+  for (const cache of ["__pycache__", ".pytest_cache"]) {
+    spawnSync("find", [app, "-name", cache, "-type", "d", "-exec", "rm", "-rf", "{}", "+"]);
+  }
   console.log(`merged app verified: all ${slices.length} slice(s) acceptance + tests green`);
 }
 

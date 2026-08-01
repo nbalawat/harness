@@ -1,0 +1,137 @@
+{
+  "designs_dir": {
+    "path": "/Users/nbalawat/development/harness/underwriting-desk-v12/artifacts/design-assemble/designs"
+  },
+  "designs": {
+    "path": "/Users/nbalawat/development/harness/underwriting-desk-v12/artifacts/design-assemble/designs.json",
+    "data": {
+      "options": [
+        {
+          "id": "option-1",
+          "name": "Console Deck",
+          "screens": [
+            "chat",
+            "pipeline-board",
+            "deal-detail",
+            "audit-timeline",
+            "sla-dashboard"
+          ],
+          "addresses": [
+            "R-002",
+            "R-003",
+            "R-006",
+            "R-009",
+            "R-011",
+            "R-013",
+            "R-014",
+            "R-015",
+            "R-019",
+            "R-020",
+            "R-021",
+            "R-022",
+            "R-023",
+            "R-024",
+            "R-025",
+            "R-026",
+            "R-031",
+            "R-032",
+            "R-033",
+            "R-034",
+            "R-041",
+            "R-043",
+            "R-045",
+            "R-047",
+            "R-048",
+            "R-049",
+            "R-051",
+            "R-052",
+            "R-054",
+            "R-055",
+            "R-056",
+            "R-057",
+            "R-058",
+            "R-063",
+            "R-064",
+            "R-066"
+          ],
+          "tokens_file": "designs/option-1/tokens.css",
+          "preview_file": "designs/option-1/index.html"
+        },
+        {
+          "id": "option-2",
+          "name": "Ledger Broadsheet",
+          "screens": [
+            "chat",
+            "pipeline-board",
+            "deal-detail",
+            "audit-timeline",
+            "sla-dashboard"
+          ],
+          "addresses": [
+            "R-003",
+            "R-014",
+            "R-015",
+            "R-019",
+            "R-023",
+            "R-024",
+            "R-025",
+            "R-026",
+            "R-034",
+            "R-043",
+            "R-045",
+            "R-047",
+            "R-048",
+            "R-049",
+            "R-051",
+            "R-052",
+            "R-057",
+            "R-058",
+            "R-063",
+            "R-064",
+            "R-066"
+          ],
+          "tokens_file": "designs/option-2/tokens.css",
+          "preview_file": "designs/option-2/index.html"
+        },
+        {
+          "id": "option-3",
+          "name": "Phosphor Ledger",
+          "screens": [
+            "chat",
+            "pipeline-board",
+            "deal-detail",
+            "audit-timeline",
+            "sla-dashboard"
+          ],
+          "addresses": [
+            "R-002",
+            "R-003",
+            "R-013",
+            "R-014",
+            "R-015",
+            "R-019",
+            "R-020",
+            "R-021",
+            "R-022",
+            "R-024",
+            "R-025",
+            "R-026",
+            "R-034",
+            "R-045",
+            "R-047",
+            "R-049",
+            "R-051",
+            "R-052",
+            "R-057",
+            "R-058",
+            "R-063",
+            "R-064",
+            "R-066"
+          ],
+          "tokens_file": "designs/option-3/tokens.css",
+          "preview_file": "designs/option-3/index.html"
+        }
+      ]
+    }
+  }
+}

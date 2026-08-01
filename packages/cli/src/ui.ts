@@ -301,6 +301,27 @@ export function buildState(workspace: string): Record<string, unknown> {
     slicesDelivered: def.nodes.filter((n) => /^slice-[0-9]+$/.test(n.id) && state.committed.has(n.id)).length,
   };
 
+  // Remediation context: user revisions whose reopened closure is still
+  // re-deriving — the dashboard must SAY a wave is a remediation and WHY,
+  // or re-running steps look like the build repeating itself.
+  const remediation = events
+    .filter((e) => e.type === "node.reopened" && e.reason === "user_revision")
+    .slice(-6)
+    .map((rev) => {
+      const cascade = events
+        .filter((e) => e.type === "node.reopened" && e.revisionOf === rev.nodeId && String(e.ts) >= String(rev.ts))
+        .map((e) => String(e.nodeId));
+      const reopened = [...new Set([String(rev.nodeId), ...cascade])];
+      const remaining = reopened.filter((id) => !state.committed.has(id) && !state.skipped.has(id));
+      return {
+        nodeId: rev.nodeId,
+        feedback: (rev.feedback as string | undefined) ?? null,
+        at: rev.ts,
+        reopened,
+        remaining,
+      };
+    });
+
   // Open review window: the run is WAITING (not parked) for a verdict.
   let windowGate: Record<string, unknown> | null = null;
   const lastWindow = [...events].reverse().find((e) => e.type === "gate.window_open");
@@ -400,6 +421,8 @@ export function buildState(workspace: string): Record<string, unknown> {
     quality,
     designChoice: (designChoiceDoc?.chosen_option as string | undefined) ?? null,
     windowGate,
+    remediation,
+    remediationActive: remediation.some((r) => r.remaining.length > 0),
     designDelivery,
     appAgents: Array.isArray(rosterDoc?.agents) ? rosterDoc!.agents : null,
     agentOpportunityMap: Array.isArray(rosterDoc?.opportunity_map) ? rosterDoc!.opportunity_map : null,
@@ -1167,6 +1190,11 @@ body { font:14px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif; background:
 .banner { display:none; align-items:center; gap:.7rem; max-width:1420px; margin:1rem auto 0; padding:.7rem 1rem; border:1px solid var(--warn); border-left-width:4px; background:var(--surface); border-radius:10px; }
 .banner b { color:var(--warn); }
 .banner button { margin-left:auto; }
+.banner.remed { border-color:var(--accent, #3b5bdb); }
+.banner.remed b { color:var(--accent, #3b5bdb); white-space:nowrap; }
+.banner.remed span { line-height:1.45; }
+.banner.remed .fb { opacity:.75; font-style:italic; }
+.chip.remed { background:var(--accent, #3b5bdb); color:#fff; }
 main { padding:1.2rem clamp(1rem,4vw,2.5rem); max-width:1420px; margin:0 auto; }
 .tabpane { display:none; }
 .tabpane.active { display:block; }
@@ -1418,6 +1446,7 @@ button.ghost { background:transparent; border:1px solid var(--border); color:var
   </nav>
 </div></div>
 <div class="banner" id="banner"><b>Waiting on you</b><span id="bannerText"></span><button class="primary" onclick="showTab('overview');window.scrollTo({top:0,behavior:'smooth'})">Answer now</button></div>
+<div class="banner remed" id="remBanner"><b>Remediation wave</b><span id="remText"></span></div>
 <main>
 <section id="storefront" style="display:none" class="store">
   <div class="hero">
@@ -1882,6 +1911,20 @@ async function tick() {
   if (s.pendingQuestion) setText('bannerText', 'the ' + s.pendingQuestion.nodeId + ' agent asked you a question');
   else if (s.parkedGate) setText('bannerText', s.parkedGate.questions.length + ' question' + (s.parkedGate.questions.length===1?'':'s') + ' at ' + s.parkedGate.nodeId);
 
+  // Remediation wave: say WHAT is re-deriving and WHY — re-running steps must
+  // never look like the build mysteriously repeating itself.
+  const remB = document.getElementById('remBanner');
+  const activeRems = (s.remediation || []).filter(r => r.remaining.length > 0);
+  remB.style.display = activeRems.length ? 'flex' : 'none';
+  if (activeRems.length) {
+    setHTML('remText', activeRems.map(r => {
+      const doneN = r.reopened.length - r.remaining.length;
+      return 'Feedback on <b class="mono">' + esc(r.nodeId) + '</b> is re-deriving ' + r.reopened.length +
+        ' step(s) — ' + doneN + ' done, now on <span class="mono">' + esc(r.remaining[0]) + '</span>.' +
+        (r.feedback ? ' <span class="fb">&ldquo;' + esc(r.feedback.slice(0, 180)) + (r.feedback.length > 180 ? '…' : '') + '&rdquo;</span>' : '');
+    }).join('<br>'));
+  }
+
   setText('progressV', done + ' / ' + s.nodes.length);
   document.getElementById('progressBar').style.width = (100*done/s.nodes.length) + '%';
   setText('progressSub', 'steps complete');
@@ -2098,7 +2141,8 @@ async function tick() {
     return '<div class="phase"><div class="phead"><b>' + esc(ph) + '</b><div class="bar"><div style="width:' + (100*phDone/list.length) + '%"></div></div><span class="stat">' + phDone + '/' + list.length + '</span></div>' + header +
       list.map(n =>
         '<div class="prow ' + n.state + '" data-id="' + esc(n.id) + '"><span class="icon">' + (STATE_ICON[n.state]||'') + '</span>' +
-        '<span class="id mono">' + esc(n.id) + (n.retries ? ' <span class="chip retry">retry ×' + n.retries + '</span>' : '') + '</span>' +
+        '<span class="id mono">' + esc(n.id) + (n.retries ? ' <span class="chip retry">retry ×' + n.retries + '</span>' : '') +
+        ((s.remediation || []).some(r => r.remaining.includes(n.id)) ? ' <span class="chip remed" title="re-deriving from your feedback">remediating</span>' : '') + '</span>' +
         (n.kind === 'agent' ? '<span class="chip model">' + esc(shortModel(n.model) || 'agent') + '</span>' : '<span class="chip">' + n.kind + '</span>') +
         '<span class="desc">' + esc(n.description ?? '') + '</span>' +
         '<span class="num">' + (n.cost && n.cost.costUsd ? '$' + n.cost.costUsd.toFixed(2) : '') + '</span>' +

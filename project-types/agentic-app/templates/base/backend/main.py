@@ -8,7 +8,7 @@ from pydantic import BaseModel
 
 from agent_runtime import mode, respond
 from db import store
-from models import TABLES
+from models import OPEN_READ_TABLES, OPEN_WRITE_TABLES, TABLES
 
 app = FastAPI(title="__APP_NAME__")
 
@@ -55,20 +55,27 @@ def agents():
         return json.load(f)
 
 
-@app.post("/chat")
+@app.post("/chat")  # public-endpoint: the app's front-door conversational surface
 def chat(req: ChatRequest):
     return {"reply": respond(req.message)}
 
 
-@app.get("/api/{table}")
+# Generic table API — DEFAULT CLOSED. Only tables the approved data model
+# explicitly exposes (access: "open"/"read") are served here; everything else
+# must go through explicit endpoints that carry identity and role checks.
+@app.get("/api/{table}")  # public-endpoint: reads limited to the model's open allowlist
 def list_rows(table: str):
     if table not in TABLES:
         raise HTTPException(status_code=404, detail="unknown table")
+    if table not in OPEN_READ_TABLES:
+        raise HTTPException(status_code=403, detail=f"table '{table}' is not exposed via the generic API — use its explicit endpoints")
     return store.list(table)
 
 
-@app.post("/api/{table}")
+@app.post("/api/{table}")  # public-endpoint: writes limited to the model's open allowlist
 def create_row(table: str, row: dict):
     if table not in TABLES:
         raise HTTPException(status_code=404, detail="unknown table")
+    if table not in OPEN_WRITE_TABLES:
+        raise HTTPException(status_code=403, detail=f"table '{table}' does not accept generic writes — use its explicit endpoints")
     return store.insert(table, row)

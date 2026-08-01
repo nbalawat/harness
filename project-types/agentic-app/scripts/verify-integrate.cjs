@@ -72,11 +72,13 @@ const pytest = run(
 );
 if (pytest.status !== 0) fail("backend tests", pytest);
 
-// 5. Agent evals — executable exit criteria for agent behavior
+// 5. Agent evals — executable exit criteria for agent behavior. Live builds
+// eval LIVE agents (a stub pass proves nothing about real grounding); mock
+// runs stay deterministic on stubs.
 const evals = run(
   "uv",
   ["run", "--with-requirements", path.join(app, "backend", "requirements.txt"), "python", path.join(app, "agents", "run_evals.py")],
-  { env: { ...process.env, HARNESS_AGENT_MODE: "stub" } },
+  { env: { ...process.env, ...(process.env.HARNESS_RUN_MODE === "live" ? {} : { HARNESS_AGENT_MODE: "stub" }) } },
 );
 if (evals.status !== 0) fail("agent evals", evals);
 

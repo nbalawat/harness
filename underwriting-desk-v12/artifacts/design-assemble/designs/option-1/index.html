@@ -1,0 +1,1732 @@
+<!DOCTYPE html>
+<html lang="en" data-density="compact">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Underwriting Command Center</title>
+<link rel="stylesheet" href="tokens.css">
+<style>
+/* ============================================================
+   CONSOLE DECK — structural CSS
+   Cockpit shell: topbar / left rail / work surface / inspector /
+   status bar. Everything is dense, gridded, and keyboard-labelled.
+   ============================================================ */
+
+*, *::before, *::after { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-ui);
+  font-size: 13px;
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+}
+h1, h2, h3, h4 { margin: 0; font-weight: 600; letter-spacing: -0.01em; }
+ul, ol { margin: 0; padding: 0; list-style: none; }
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: none; box-shadow: var(--focus); border-radius: var(--radius); }
+
+.mono { font-family: var(--font); }
+.num  { font-family: var(--font); font-variant-numeric: tabular-nums; }
+
+/* ---------- app frame ---------- */
+.console {
+  display: grid;
+  grid-template-columns: var(--rail) minmax(0, 1fr) var(--inspector);
+  grid-template-rows: var(--topbar) minmax(0, 1fr) var(--statusbar);
+  grid-template-areas:
+    "top  top  top"
+    "rail work insp"
+    "bar  bar  bar";
+  height: 100vh;
+}
+
+/* ---------- topbar ---------- */
+.topbar {
+  grid-area: top;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 0 12px;
+  background: linear-gradient(180deg, var(--surface-2), var(--surface));
+  border-bottom: 1px solid var(--border);
+}
+.brand { display: flex; align-items: baseline; gap: 9px; padding-right: 12px; border-right: 1px solid var(--border); }
+.brand .mark {
+  width: 22px; height: 22px; border-radius: var(--radius);
+  background: var(--primary); color: var(--on-primary);
+  display: grid; place-items: center;
+  font-family: var(--font); font-size: 11px; font-weight: 700;
+  align-self: center;
+}
+.brand h1 { font-size: 13.5px; letter-spacing: 0.01em; white-space: nowrap; }
+.brand .env {
+  font-family: var(--font); font-size: 9.5px; letter-spacing: 0.1em;
+  color: var(--fg-faint); text-transform: uppercase;
+}
+
+.omnibar {
+  flex: 1 1 auto; max-width: 560px;
+  display: flex; align-items: center; gap: 8px;
+  height: 26px; padding: 0 8px;
+  background: var(--bg-sunken);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.omnibar input {
+  flex: 1; min-width: 0; background: none; border: 0; outline: none;
+  font-family: var(--font); font-size: 11.5px;
+}
+.omnibar input::placeholder { color: var(--fg-faint); }
+.omnibar .glyph { color: var(--fg-faint); font-size: 11px; }
+
+kbd {
+  font-family: var(--font); font-size: 9.5px; line-height: 1;
+  padding: 3px 4px; border-radius: 3px;
+  background: var(--surface-3); border: 1px solid var(--border-strong);
+  border-bottom-width: 2px; color: var(--fg-dim); white-space: nowrap;
+}
+
+.topbar-right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+
+/* agent mode switch — the global human-in-the-loop posture (R-023/R-025) */
+.agent-mode {
+  display: flex; align-items: center; gap: 6px;
+  height: 26px; padding: 0 4px 0 8px;
+  background: var(--agent-bg);
+  border: 1px solid rgba(183, 139, 245, 0.4);
+  border-radius: 999px;
+}
+.agent-mode .dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--agent); box-shadow: 0 0 0 3px var(--agent-bg);
+}
+.agent-mode .label {
+  font-family: var(--font); font-size: 10px; letter-spacing: 0.06em;
+  text-transform: uppercase; color: var(--agent);
+}
+.agent-mode select {
+  height: 20px; padding: 0 4px;
+  background: rgba(0,0,0,0.28); border: 1px solid rgba(183,139,245,0.32);
+  border-radius: var(--radius);
+  font-family: var(--font); font-size: 10.5px; color: var(--fg);
+}
+.agent-mode .guard {
+  font-family: var(--font); font-size: 9.5px; color: var(--fg-faint);
+  padding-right: 4px;
+}
+
+.who {
+  display: flex; align-items: center; gap: 7px;
+  padding: 0 8px 0 4px; height: 26px;
+  background: var(--surface-3); border: 1px solid var(--border);
+  border-radius: 999px;
+}
+.who .av {
+  width: 19px; height: 19px; border-radius: 50%;
+  background: var(--info-bg); color: var(--info);
+  display: grid; place-items: center;
+  font-family: var(--font); font-size: 9.5px; font-weight: 700;
+}
+.who .name { font-size: 11.5px; }
+.who .role {
+  font-family: var(--font); font-size: 9px; letter-spacing: 0.07em;
+  text-transform: uppercase; color: var(--fg-faint);
+  padding-left: 6px; border-left: 1px solid var(--border-strong);
+}
+
+/* ---------- left rail ---------- */
+.rail {
+  grid-area: rail;
+  background: var(--bg-sunken);
+  border-right: 1px solid var(--border);
+  display: flex; flex-direction: column;
+  overflow-y: auto;
+}
+.rail-group { padding: 10px 8px 6px; }
+.rail-group + .rail-group { border-top: 1px solid var(--border); }
+.rail-title {
+  font-family: var(--font); font-size: 9.5px; letter-spacing: 0.13em;
+  text-transform: uppercase; color: var(--fg-faint);
+  padding: 0 6px 7px;
+  display: flex; justify-content: space-between; align-items: center;
+}
+.nav li + li { margin-top: 1px; }
+.nav button {
+  width: 100%; display: flex; align-items: center; gap: 8px;
+  height: var(--row); padding: 0 7px;
+  background: none; border: 1px solid transparent; border-radius: var(--radius);
+  color: var(--fg-dim); font-size: 12.5px; text-align: left;
+}
+.nav button:hover { background: var(--surface); color: var(--fg); }
+.nav button[aria-current="page"] {
+  background: var(--surface-2); color: var(--fg);
+  border-color: var(--border-strong);
+  box-shadow: inset 2px 0 0 var(--primary);
+}
+.nav .ico {
+  width: 15px; text-align: center; font-family: var(--font);
+  font-size: 11px; color: var(--fg-faint);
+}
+.nav button[aria-current="page"] .ico { color: var(--primary); }
+.nav .txt { flex: 1; }
+.nav .count {
+  font-family: var(--font); font-size: 10px; font-variant-numeric: tabular-nums;
+  padding: 1px 5px; border-radius: 999px;
+  background: var(--neutral-bg); color: var(--fg-dim);
+}
+.nav .count.alert { background: var(--crit-bg); color: var(--crit); }
+.nav .count.warn  { background: var(--warn-bg); color: var(--warn); }
+.nav .key { font-family: var(--font); font-size: 9.5px; color: var(--fg-faint); }
+
+/* stage ladder (R-002) */
+.ladder li {
+  display: grid; grid-template-columns: 16px 1fr auto;
+  align-items: center; gap: 7px;
+  height: 24px; padding: 0 7px; border-radius: var(--radius);
+  font-size: 11.5px; color: var(--fg-dim);
+}
+.ladder li:hover { background: var(--surface); color: var(--fg); }
+.ladder .step {
+  font-family: var(--font); font-size: 9.5px; color: var(--fg-faint);
+  text-align: right;
+}
+.ladder .n { font-family: var(--font); font-size: 10px; font-variant-numeric: tabular-nums; color: var(--fg-faint); }
+.ladder li[data-state="active"] { color: var(--fg); }
+.ladder li[data-state="active"] .step { color: var(--primary); }
+.ladder li[data-state="blocked"] .n { color: var(--crit); }
+
+.queue li {
+  display: flex; align-items: center; gap: 7px;
+  height: 24px; padding: 0 7px; border-radius: var(--radius);
+  font-size: 11.5px; color: var(--fg-dim);
+}
+.queue li:hover { background: var(--surface); }
+.queue .bar { flex: 1; height: 4px; background: var(--surface-2); border-radius: 2px; overflow: hidden; }
+.queue .bar i { display: block; height: 100%; background: var(--info); }
+.queue .bar i.hot { background: var(--warn); }
+
+.rail-foot { margin-top: auto; padding: 8px; border-top: 1px solid var(--border); }
+.rail-foot .hint {
+  display: flex; justify-content: space-between; align-items: center;
+  font-size: 10.5px; color: var(--fg-faint); padding: 3px 6px;
+}
+
+/* ---------- work surface ---------- */
+.work { grid-area: work; min-width: 0; display: flex; flex-direction: column; background: var(--bg); }
+
+.screen { display: none; flex-direction: column; min-height: 0; flex: 1; }
+.screen[data-active="true"] { display: flex; }
+
+.screen-head {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 12px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  min-height: 42px;
+}
+.screen-head h2 { font-size: 13px; }
+.screen-head .sub {
+  font-family: var(--font); font-size: 10px; color: var(--fg-faint);
+  letter-spacing: 0.05em; text-transform: uppercase;
+}
+.head-actions { margin-left: auto; display: flex; align-items: center; gap: 6px; }
+
+.btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  height: 25px; padding: 0 9px;
+  background: var(--surface-2); color: var(--fg);
+  border: 1px solid var(--border-strong); border-radius: var(--radius);
+  font-size: 11.5px; box-shadow: var(--tap);
+}
+.btn:hover { background: var(--surface-3); }
+.btn.primary { background: var(--primary); color: var(--on-primary); border-color: var(--primary); font-weight: 600; }
+.btn.primary:hover { filter: brightness(1.08); }
+.btn.ok { border-color: rgba(78,201,139,0.45); color: var(--ok); background: var(--ok-bg); }
+.btn.danger { border-color: rgba(242,104,92,0.45); color: var(--crit); background: var(--crit-bg); }
+.btn.ghost { background: none; border-color: transparent; color: var(--fg-dim); }
+.btn.ghost:hover { background: var(--surface-2); color: var(--fg); }
+.btn.sm { height: 21px; padding: 0 7px; font-size: 10.5px; }
+.btn kbd { margin-left: 2px; }
+
+/* filter strip */
+.filters {
+  display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+  padding: 6px 12px;
+  background: var(--bg-sunken);
+  border-bottom: 1px solid var(--border);
+}
+.filters label {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-family: var(--font); font-size: 10px; letter-spacing: 0.06em;
+  text-transform: uppercase; color: var(--fg-faint);
+}
+.filters select, .filters input[type="search"], .filters input[type="text"] {
+  height: 22px; padding: 0 6px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); font-size: 11.5px; color: var(--fg);
+}
+.filters .spacer { flex: 1; }
+.chip-toggle {
+  height: 22px; padding: 0 8px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 999px; font-size: 11px; color: var(--fg-dim);
+}
+.chip-toggle[aria-pressed="true"] { background: var(--info-bg); border-color: var(--info); color: var(--info); }
+
+/* ---------- status chips ---------- */
+.chip {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 1px 6px; border-radius: 3px;
+  font-family: var(--font); font-size: 10px; letter-spacing: 0.04em;
+  text-transform: uppercase; white-space: nowrap;
+  background: var(--neutral-bg); color: var(--fg-dim);
+  border: 1px solid transparent;
+}
+.chip::before { content: ""; width: 5px; height: 5px; border-radius: 1px; background: currentColor; }
+.chip.ok    { background: var(--ok-bg);    color: var(--ok);    border-color: rgba(78,201,139,0.28); }
+.chip.warn  { background: var(--warn-bg);  color: var(--warn);  border-color: rgba(242,163,60,0.28); }
+.chip.crit  { background: var(--crit-bg);  color: var(--crit);  border-color: rgba(242,104,92,0.30); }
+.chip.info  { background: var(--info-bg);  color: var(--info);  border-color: rgba(100,168,242,0.28); }
+.chip.agent { background: var(--agent-bg); color: var(--agent); border-color: rgba(183,139,245,0.30); }
+.chip.plain::before { display: none; }
+
+.grade {
+  font-family: var(--font); font-size: 10.5px; font-weight: 700;
+  padding: 1px 5px; border-radius: 3px;
+  background: var(--neutral-bg); color: var(--fg-dim);
+}
+.grade[data-band="1"], .grade[data-band="2"], .grade[data-band="3"] { background: var(--ok-bg); color: var(--grade-good); }
+.grade[data-band="4"], .grade[data-band="5"] { background: var(--warn-bg); color: var(--grade-watch); }
+.grade[data-band="6"], .grade[data-band="7"] { background: var(--crit-bg); color: var(--grade-bad); }
+
+/* ============================================================
+   SCREEN: CHAT — portfolio Q&A console (R-014, R-015, R-054)
+   ============================================================ */
+.chat-body { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0,1fr) 250px; }
+.chat-main { display: flex; flex-direction: column; min-width: 0; }
+
+#messages {
+  flex: 1; min-height: 0; overflow-y: auto;
+  padding: 12px 14px 18px;
+  display: flex; flex-direction: column; gap: 10px;
+}
+#messages > li {
+  display: grid; grid-template-columns: 22px minmax(0,1fr);
+  gap: 9px; align-items: start;
+}
+#messages .avatar {
+  width: 22px; height: 22px; border-radius: var(--radius);
+  display: grid; place-items: center;
+  font-family: var(--font); font-size: 9.5px; font-weight: 700;
+  background: var(--surface-3); color: var(--fg-dim);
+}
+#messages li[data-from="user"] .avatar { background: var(--info-bg); color: var(--info); }
+#messages li[data-from="agent"] .avatar { background: var(--agent-bg); color: var(--agent); }
+.msg { min-width: 0; }
+.msg-meta {
+  display: flex; align-items: center; gap: 7px; margin-bottom: 3px;
+  font-family: var(--font); font-size: 9.5px; color: var(--fg-faint);
+  letter-spacing: 0.05em; text-transform: uppercase;
+}
+.msg-meta .who-name { color: var(--fg-dim); }
+.bubble {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); padding: 8px 10px;
+  font-size: 12.5px;
+}
+#messages li[data-from="user"] .bubble { background: var(--surface-2); }
+.bubble p { margin: 0 0 6px; }
+.bubble p:last-child { margin-bottom: 0; }
+
+.answer-table { width: 100%; border-collapse: collapse; margin: 6px 0; font-family: var(--font); font-size: 11.5px; }
+.answer-table th, .answer-table td { text-align: left; padding: 3px 8px 3px 0; border-bottom: 1px solid var(--border); }
+.answer-table th { color: var(--fg-faint); font-weight: 500; font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; }
+.answer-table td.r { text-align: right; font-variant-numeric: tabular-nums; }
+
+.citations {
+  margin-top: 8px; padding-top: 7px; border-top: 1px dashed var(--border);
+  display: flex; flex-wrap: wrap; gap: 5px; align-items: center;
+}
+.citations .cite-label {
+  font-family: var(--font); font-size: 9.5px; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--fg-faint); margin-right: 2px;
+}
+.cite {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 1px 6px; border-radius: 999px;
+  background: var(--bg-sunken); border: 1px solid var(--border-strong);
+  font-family: var(--font); font-size: 10px; color: var(--info);
+  text-decoration: none;
+}
+.cite:hover { border-color: var(--info); background: var(--info-bg); }
+.cite .idx { color: var(--fg-faint); }
+
+.msg-tools { display: flex; gap: 5px; margin-top: 7px; }
+
+.scope-note {
+  display: flex; align-items: center; gap: 6px;
+  margin: 0 14px 8px; padding: 5px 8px;
+  background: var(--info-bg); border: 1px solid rgba(100,168,242,0.25);
+  border-radius: var(--radius); font-size: 11px; color: var(--fg-dim);
+}
+
+#composer {
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+  padding: 8px 12px 6px;
+  display: flex; flex-direction: column; gap: 6px;
+}
+.composer-row { display: flex; align-items: center; gap: 8px; }
+#composer #input {
+  flex: 1; min-width: 0; height: 30px; padding: 0 10px;
+  background: var(--bg-sunken); border: 1px solid var(--border-strong);
+  border-radius: var(--radius); font-size: 12.5px; outline: none;
+}
+#composer #input:focus { border-color: var(--primary); }
+#composer #input::placeholder { color: var(--fg-faint); }
+.composer-foot {
+  display: flex; align-items: center; gap: 8px;
+  font-family: var(--font); font-size: 9.5px; color: var(--fg-faint);
+}
+.composer-foot .spacer { flex: 1; }
+
+.chat-side { border-left: 1px solid var(--border); background: var(--bg-sunken); overflow-y: auto; }
+.side-block { padding: 9px 10px; border-bottom: 1px solid var(--border); }
+.side-block h3 {
+  font-family: var(--font); font-size: 9.5px; letter-spacing: 0.12em;
+  text-transform: uppercase; color: var(--fg-faint); margin-bottom: 7px;
+}
+.prompt-list li + li { margin-top: 3px; }
+.prompt-list button {
+  width: 100%; text-align: left; padding: 5px 7px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); font-size: 11.5px; color: var(--fg-dim);
+}
+.prompt-list button:hover { border-color: var(--info); color: var(--fg); }
+.kv { display: grid; grid-template-columns: 1fr auto; gap: 3px 8px; font-size: 11.5px; }
+.kv dt { color: var(--fg-faint); }
+.kv dd { margin: 0; font-family: var(--font); font-variant-numeric: tabular-nums; }
+
+/* ============================================================
+   SCREEN: PIPELINE BOARD (R-003, R-058)
+   ============================================================ */
+.board {
+  flex: 1; min-height: 0; overflow: auto;
+  display: grid; grid-auto-flow: column;
+  grid-auto-columns: 246px; gap: 1px;
+  background: var(--border);
+  border-top: 1px solid var(--border);
+}
+.col { background: var(--bg); display: flex; flex-direction: column; min-height: 0; }
+.col-head {
+  position: sticky; top: 0; z-index: 2;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 6px 8px;
+  display: flex; flex-direction: column; gap: 4px;
+}
+.col-head .line1 { display: flex; align-items: center; gap: 6px; }
+.col-head .idx {
+  font-family: var(--font); font-size: 9.5px; color: var(--on-primary);
+  background: var(--fg-faint); border-radius: 2px; padding: 0 4px;
+}
+.col-head[data-hot="true"] .idx { background: var(--primary); }
+.col-head h3 { font-size: 11.5px; flex: 1; }
+.col-head .tally { font-family: var(--font); font-size: 10.5px; color: var(--fg-dim); font-variant-numeric: tabular-nums; }
+.col-head .meter { height: 3px; background: var(--surface-3); border-radius: 2px; overflow: hidden; }
+.col-head .meter i { display: block; height: 100%; background: var(--info); }
+.col-head .meter i.warn { background: var(--warn); }
+.col-head .meter i.crit { background: var(--crit); }
+
+.cards { padding: 6px; display: flex; flex-direction: column; gap: 5px; overflow-y: auto; }
+.card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-left: 2px solid var(--border-strong);
+  border-radius: var(--radius); padding: 6px 7px;
+  display: flex; flex-direction: column; gap: 5px;
+  text-align: left; width: 100%;
+}
+.card:hover { border-color: var(--border-strong); background: var(--surface-2); }
+.card[data-sla="breach"] { border-left-color: var(--crit); }
+.card[data-sla="risk"] { border-left-color: var(--warn); }
+.card[data-sla="ok"] { border-left-color: var(--ok); }
+.card .c1 { display: flex; align-items: center; gap: 6px; }
+.card .id { font-family: var(--font); font-size: 9.5px; color: var(--fg-faint); }
+.card .amt { margin-left: auto; font-family: var(--font); font-size: 11px; font-variant-numeric: tabular-nums; }
+.card .borrower { font-size: 12px; font-weight: 600; color: var(--fg); }
+.card .c3 { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+.card .c4 {
+  display: flex; align-items: center; gap: 6px;
+  font-family: var(--font); font-size: 9.5px; color: var(--fg-faint);
+  padding-top: 4px; border-top: 1px solid var(--border);
+}
+.card .owner { display: inline-flex; align-items: center; gap: 4px; }
+.card .owner .av {
+  width: 14px; height: 14px; border-radius: 50%;
+  background: var(--surface-3); color: var(--fg-dim);
+  display: grid; place-items: center; font-size: 8px;
+}
+.card .idle { margin-left: auto; }
+.card .idle[data-over="true"] { color: var(--crit); }
+
+.col-empty {
+  margin: 6px; padding: 10px; text-align: center;
+  border: 1px dashed var(--border); border-radius: var(--radius);
+  font-size: 11px; color: var(--fg-faint);
+}
+
+/* ============================================================
+   SCREEN: DEAL DETAIL (R-025, R-049, R-009, R-011, R-052)
+   ============================================================ */
+.deal { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0,1fr) 300px; }
+.deal-main { min-width: 0; overflow-y: auto; padding: 10px 12px 24px; display: flex; flex-direction: column; gap: 10px; }
+
+.stage-strip {
+  display: flex; align-items: stretch; gap: 2px;
+  background: var(--bg-sunken); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 3px; overflow-x: auto;
+}
+.stage-strip li {
+  flex: 1 0 auto; min-width: 92px; padding: 4px 7px; border-radius: 2px;
+  display: flex; flex-direction: column; gap: 2px;
+  background: var(--surface);
+}
+.stage-strip .s-name { font-size: 10.5px; color: var(--fg-dim); white-space: nowrap; }
+.stage-strip .s-meta { font-family: var(--font); font-size: 9px; color: var(--fg-faint); }
+.stage-strip li[data-state="done"] { background: var(--ok-bg); }
+.stage-strip li[data-state="done"] .s-name { color: var(--ok); }
+.stage-strip li[data-state="current"] { background: var(--warn-bg); box-shadow: inset 0 -2px 0 var(--primary); }
+.stage-strip li[data-state="current"] .s-name { color: var(--primary); font-weight: 600; }
+.stage-strip li[data-state="todo"] { opacity: 0.55; }
+
+.panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); }
+.panel > header {
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 9px; border-bottom: 1px solid var(--border);
+  background: var(--surface-2); border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+}
+.panel > header h3 { font-size: 11.5px; }
+.panel > header .tag {
+  font-family: var(--font); font-size: 9.5px; letter-spacing: 0.07em;
+  text-transform: uppercase; color: var(--fg-faint);
+}
+.panel > header .right { margin-left: auto; display: flex; gap: 5px; align-items: center; }
+.panel-body { padding: 9px; }
+
+/* deterministic metrics strip (R-016..R-019, R-045) */
+.metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; background: var(--border); }
+.metric { background: var(--surface); padding: 8px 9px; display: flex; flex-direction: column; gap: 2px; }
+.metric .m-label {
+  font-family: var(--font); font-size: 9.5px; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--fg-faint);
+}
+.metric .m-val { font-family: var(--font); font-size: 19px; font-variant-numeric: tabular-nums; }
+.metric .m-foot { font-family: var(--font); font-size: 9.5px; color: var(--fg-faint); }
+.metric .m-val.ok { color: var(--ok); }
+.metric .m-val.warn { color: var(--warn); }
+.metric .m-val.crit { color: var(--crit); }
+
+/* agent review block (R-049) */
+.review-grid { display: grid; grid-template-columns: minmax(0,1fr) 232px; gap: 1px; background: var(--border); }
+.draft { background: var(--surface); padding: 10px 11px; font-size: 12.5px; line-height: 1.55; }
+.draft h4 { font-size: 12px; margin-bottom: 5px; }
+.draft p { margin: 0 0 8px; }
+.draft sup a {
+  color: var(--info); font-family: var(--font); font-size: 9.5px;
+  text-decoration: none; padding: 0 1px;
+}
+.draft sup a:hover { text-decoration: underline; }
+.draft .edited { background: var(--warn-bg); border-bottom: 1px dotted var(--warn); }
+
+.cite-panel { background: var(--bg-sunken); padding: 9px; }
+.cite-panel h4 {
+  font-family: var(--font); font-size: 9.5px; letter-spacing: 0.1em;
+  text-transform: uppercase; color: var(--fg-faint); margin-bottom: 7px;
+}
+.cite-list li + li { margin-top: 5px; }
+.cite-list a {
+  display: block; padding: 5px 7px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-left: 2px solid var(--info);
+  border-radius: var(--radius); text-decoration: none; color: inherit;
+}
+.cite-list a:hover { background: var(--surface-2); }
+.cite-list .c-src { font-family: var(--font); font-size: 10px; color: var(--info); }
+.cite-list .c-loc { font-family: var(--font); font-size: 9.5px; color: var(--fg-faint); }
+.cite-list .c-txt { font-size: 11px; color: var(--fg-dim); margin-top: 2px; }
+
+.decision-bar {
+  display: flex; align-items: center; gap: 7px; flex-wrap: wrap;
+  padding: 8px 9px; border-top: 1px solid var(--border);
+  background: var(--surface-2); border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+}
+.decision-bar .note {
+  font-family: var(--font); font-size: 9.5px; color: var(--fg-faint);
+  margin-left: auto; text-align: right;
+}
+
+/* spread table (R-008, R-009, R-042) */
+.table-wrap { overflow-x: auto; }
+table.grid { width: 100%; border-collapse: collapse; font-size: 11.5px; }
+table.grid th, table.grid td { padding: 4px 8px; border-bottom: 1px solid var(--border); text-align: left; }
+table.grid thead th {
+  position: sticky; top: 0; background: var(--surface-2);
+  font-family: var(--font); font-size: 9.5px; letter-spacing: 0.07em;
+  text-transform: uppercase; color: var(--fg-faint); font-weight: 500;
+  border-bottom: 1px solid var(--border-strong);
+}
+table.grid td.n { text-align: right; font-family: var(--font); font-variant-numeric: tabular-nums; }
+table.grid tbody tr:hover { background: var(--surface-2); }
+table.grid tr[data-uncited="true"] { background: var(--crit-bg); }
+table.grid .src { font-family: var(--font); font-size: 10px; color: var(--info); text-decoration: none; }
+table.grid .src.missing { color: var(--crit); }
+
+/* exceptions (R-013, R-052) */
+.exceptions li {
+  display: grid; grid-template-columns: auto minmax(0,1fr) auto;
+  gap: 8px; align-items: start;
+  padding: 7px 9px; border-bottom: 1px solid var(--border);
+}
+.exceptions li:last-child { border-bottom: 0; }
+.exceptions .rule { font-family: var(--font); font-size: 10px; color: var(--warn); }
+.exceptions .why { font-size: 11.5px; color: var(--fg-dim); }
+.exceptions .why strong { color: var(--fg); font-weight: 600; }
+
+/* approval tier ladder (R-020..R-024) */
+.tier { display: flex; flex-direction: column; gap: 5px; }
+.tier li {
+  display: grid; grid-template-columns: 14px minmax(0,1fr) auto;
+  gap: 8px; align-items: center;
+  padding: 5px 7px; border-radius: var(--radius);
+  background: var(--bg-sunken); border: 1px solid var(--border);
+  font-size: 11.5px;
+}
+.tier li[data-state="required"] { border-color: var(--primary); background: var(--warn-bg); }
+.tier li[data-state="done"] .t-mark { color: var(--ok); }
+.tier .t-mark { font-family: var(--font); font-size: 11px; color: var(--fg-faint); }
+.tier .t-cap { font-family: var(--font); font-size: 10px; color: var(--fg-faint); }
+
+/* deal inspector column */
+.deal-side { border-left: 1px solid var(--border); background: var(--bg-sunken); overflow-y: auto; }
+.doc-list li {
+  display: flex; align-items: center; gap: 7px;
+  padding: 5px 7px; border-radius: var(--radius); font-size: 11.5px;
+}
+.doc-list li:hover { background: var(--surface); }
+.doc-list .ext {
+  font-family: var(--font); font-size: 8.5px; padding: 1px 4px; border-radius: 2px;
+  background: var(--surface-3); color: var(--fg-dim);
+}
+.doc-list .missing { color: var(--crit); }
+.doc-list .meta { margin-left: auto; font-family: var(--font); font-size: 9.5px; color: var(--fg-faint); }
+
+/* ============================================================
+   SCREEN: AUDIT TIMELINE (R-027..R-030, R-050, R-051)
+   ============================================================ */
+.audit-body { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0,1fr) 280px; }
+.timeline-scroll { overflow-y: auto; padding: 10px 12px 24px; }
+.timeline { position: relative; padding-left: 132px; }
+.timeline::before {
+  content: ""; position: absolute; left: 124px; top: 4px; bottom: 4px;
+  width: 1px; background: var(--border);
+}
+.timeline > li { position: relative; padding: 0 0 10px 16px; }
+.timeline .stamp {
+  position: absolute; left: -132px; top: 2px; width: 116px; text-align: right;
+  font-family: var(--font); font-size: 10px; color: var(--fg-faint);
+  font-variant-numeric: tabular-nums;
+}
+.timeline .node {
+  position: absolute; left: -8px; top: 6px;
+  width: 7px; height: 7px; border-radius: 2px;
+  background: var(--fg-faint); box-shadow: 0 0 0 3px var(--bg);
+}
+.timeline li[data-kind="state"]  .node { background: var(--info); }
+.timeline li[data-kind="calc"]   .node { background: var(--ok); }
+.timeline li[data-kind="agent"]  .node { background: var(--agent); }
+.timeline li[data-kind="human"]  .node { background: var(--primary); }
+.timeline li[data-kind="policy"] .node { background: var(--crit); }
+
+.event {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 7px 9px;
+}
+.event .e-head { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
+.event .e-title { font-size: 12px; font-weight: 600; }
+.event .actor { font-family: var(--font); font-size: 10px; color: var(--fg-dim); }
+.event .hash {
+  margin-left: auto; font-family: var(--font); font-size: 9.5px; color: var(--fg-faint);
+}
+.event .e-body { margin-top: 5px; font-size: 11.5px; color: var(--fg-dim); }
+.diff {
+  margin-top: 6px; border: 1px solid var(--border); border-radius: var(--radius);
+  background: var(--bg-sunken); font-family: var(--font); font-size: 10.5px;
+  overflow: hidden;
+}
+.diff div { padding: 2px 8px; }
+.diff .before { color: var(--crit); background: var(--crit-bg); }
+.diff .after  { color: var(--ok);   background: var(--ok-bg); }
+
+.audit-side { border-left: 1px solid var(--border); background: var(--bg-sunken); overflow-y: auto; }
+.legend li { display: flex; align-items: center; gap: 7px; padding: 3px 0; font-size: 11.5px; color: var(--fg-dim); }
+.legend .sw { width: 8px; height: 8px; border-radius: 2px; }
+.integrity {
+  padding: 7px 8px; border-radius: var(--radius);
+  background: var(--ok-bg); border: 1px solid rgba(78,201,139,0.3);
+  font-size: 11px; color: var(--fg-dim);
+}
+.integrity strong { color: var(--ok); display: block; font-family: var(--font); font-size: 10.5px; margin-bottom: 2px; }
+
+/* ============================================================
+   SCREEN: SLA DASHBOARD (R-034, R-057)
+   ============================================================ */
+.sla-body { flex: 1; min-height: 0; overflow-y: auto; padding: 10px 12px 24px; display: flex; flex-direction: column; gap: 10px; }
+.stat-row { display: grid; grid-template-columns: repeat(5, minmax(0,1fr)); gap: 1px; background: var(--border); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; }
+.stat { background: var(--surface); padding: 9px 10px; display: flex; flex-direction: column; gap: 3px; }
+.stat .s-label { font-family: var(--font); font-size: 9.5px; letter-spacing: 0.09em; text-transform: uppercase; color: var(--fg-faint); }
+.stat .s-val { font-family: var(--font); font-size: 22px; font-variant-numeric: tabular-nums; line-height: 1.1; }
+.stat .s-val.crit { color: var(--crit); }
+.stat .s-val.warn { color: var(--warn); }
+.stat .s-val.ok { color: var(--ok); }
+.stat .s-delta { font-family: var(--font); font-size: 10px; color: var(--fg-faint); }
+
+.heat { display: grid; grid-template-columns: 150px repeat(8, minmax(0,1fr)); gap: 1px; background: var(--border); font-family: var(--font); font-size: 10.5px; }
+.heat > div { background: var(--surface); padding: 5px 6px; }
+.heat .h-head { color: var(--fg-faint); font-size: 9.5px; letter-spacing: 0.06em; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.heat .h-row { color: var(--fg-dim); }
+.heat .cell { text-align: center; font-variant-numeric: tabular-nums; }
+.heat .cell[data-heat="0"] { color: var(--fg-faint); }
+.heat .cell[data-heat="1"] { background: rgba(100,168,242,0.14); color: var(--info); }
+.heat .cell[data-heat="2"] { background: rgba(242,163,60,0.18); color: var(--warn); }
+.heat .cell[data-heat="3"] { background: rgba(242,104,92,0.24); color: var(--crit); font-weight: 700; }
+
+.breach-row td { vertical-align: middle; }
+.age-bar { display: flex; align-items: center; gap: 6px; min-width: 120px; }
+.age-bar .track { flex: 1; height: 5px; background: var(--surface-3); border-radius: 3px; overflow: hidden; }
+.age-bar .track i { display: block; height: 100%; background: var(--warn); }
+.age-bar .track i.over { background: var(--crit); }
+
+/* ---------- right inspector rail ---------- */
+.inspector {
+  grid-area: insp;
+  background: var(--bg-sunken);
+  border-left: 1px solid var(--border);
+  overflow-y: auto;
+  display: flex; flex-direction: column;
+}
+.insp-head {
+  position: sticky; top: 0; z-index: 2;
+  display: flex; align-items: center; gap: 7px;
+  padding: 8px 10px; min-height: 42px;
+  background: var(--surface); border-bottom: 1px solid var(--border);
+}
+.insp-head h2 { font-size: 11.5px; }
+.insp-head .right { margin-left: auto; }
+.run-list li {
+  padding: 6px 8px; border-bottom: 1px solid var(--border);
+  display: flex; flex-direction: column; gap: 3px;
+}
+.run-list .r1 { display: flex; align-items: center; gap: 6px; }
+.run-list .r-name { font-size: 11.5px; }
+.run-list .r-meta { font-family: var(--font); font-size: 9.5px; color: var(--fg-faint); display: flex; gap: 8px; }
+.run-list .r-bar { height: 3px; background: var(--surface-2); border-radius: 2px; overflow: hidden; }
+.run-list .r-bar i { display: block; height: 100%; background: var(--agent); }
+
+.guardrail {
+  margin: 9px 10px; padding: 8px;
+  background: var(--crit-bg); border: 1px solid rgba(242,104,92,0.3);
+  border-radius: var(--radius); font-size: 11px; color: var(--fg-dim);
+}
+.guardrail strong { display: block; font-family: var(--font); font-size: 10px; letter-spacing: 0.07em; text-transform: uppercase; color: var(--crit); margin-bottom: 3px; }
+.guardrail ul { margin-top: 4px; }
+.guardrail li { padding-left: 10px; position: relative; }
+.guardrail li::before { content: "×"; position: absolute; left: 0; color: var(--crit); }
+
+/* ---------- status bar ---------- */
+.statusbar {
+  grid-area: bar;
+  display: flex; align-items: center; gap: 12px;
+  padding: 0 10px;
+  background: var(--surface-2); border-top: 1px solid var(--border);
+  font-family: var(--font); font-size: 10px; color: var(--fg-faint);
+}
+.statusbar .seg { display: flex; align-items: center; gap: 5px; white-space: nowrap; }
+.statusbar .seg.live { color: var(--ok); }
+.statusbar .pulse { width: 5px; height: 5px; border-radius: 50%; background: var(--ok); }
+.statusbar .spacer { flex: 1; }
+.statusbar .keys { display: flex; gap: 8px; }
+
+@media (max-width: 1420px) {
+  .console { grid-template-columns: var(--rail) minmax(0,1fr); grid-template-areas: "top top" "rail work" "bar bar"; }
+  .inspector { display: none; }
+}
+</style>
+</head>
+<body>
+
+<div class="console">
+
+  <!-- ============================ TOPBAR ============================ -->
+  <header class="topbar">
+    <div class="brand">
+      <span class="mark">UC</span>
+      <h1>Underwriting Command Center</h1>
+      <span class="env">prod · us-central1</span>
+    </div>
+
+    <div class="omnibar">
+      <span class="glyph">⌕</span>
+      <input type="search" id="global-search" placeholder="Jump to deal, borrower, memo, audit entry…" aria-label="Global search">
+      <kbd>⌘K</kbd>
+    </div>
+
+    <div class="topbar-right">
+      <!-- Global agent posture. Agents are advisory only (R-023). -->
+      <div class="agent-mode" id="agent-mode" role="group" aria-label="Agent mode">
+        <span class="dot" aria-hidden="true"></span>
+        <span class="label">Agent</span>
+        <select id="agent-mode-select" aria-label="Agent autonomy level">
+          <option value="draft" selected>Draft &amp; hold</option>
+          <option value="suggest">Suggest only</option>
+          <option value="off">Paused</option>
+        </select>
+        <span class="guard">no auto-advance</span>
+      </div>
+
+      <button class="btn sm ghost" type="button">Runs <kbd>⌘R</kbd></button>
+
+      <div class="who">
+        <span class="av">DL</span>
+        <span class="name">D. Lindqvist</span>
+        <span class="role">Credit Officer</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- ============================ LEFT RAIL ============================ -->
+  <nav class="rail" aria-label="Primary">
+    <div class="rail-group">
+      <div class="rail-title"><span>Console</span><kbd>1–5</kbd></div>
+      <ul class="nav">
+        <li><button type="button" data-screen="pipeline-board" aria-current="page"><span class="ico">▤</span><span class="txt">Pipeline Board</span><span class="count">48</span></button></li>
+        <li><button type="button" data-screen="deal-detail"><span class="ico">▦</span><span class="txt">Deal Detail</span><span class="count warn">6</span></button></li>
+        <li><button type="button" data-screen="sla-dashboard"><span class="ico">◷</span><span class="txt">SLA Dashboard</span><span class="count alert">9</span></button></li>
+        <li><button type="button" data-screen="audit-timeline"><span class="ico">≡</span><span class="txt">Audit Timeline</span><span class="key">4</span></button></li>
+        <li><button type="button" data-screen="chat"><span class="ico">✳</span><span class="txt">Portfolio Q&amp;A</span><span class="key">5</span></button></li>
+      </ul>
+    </div>
+
+    <div class="rail-group">
+      <div class="rail-title"><span>Workflow stages</span><span class="key">48</span></div>
+      <ul class="ladder">
+        <li data-state="done"><span class="step">01</span><span>Intake</span><span class="n">4</span></li>
+        <li data-state="done"><span class="step">02</span><span>Doc extraction</span><span class="n">7</span></li>
+        <li data-state="active"><span class="step">03</span><span>Spreading</span><span class="n">9</span></li>
+        <li data-state="active"><span class="step">04</span><span>Risk grading</span><span class="n">5</span></li>
+        <li data-state="active"><span class="step">05</span><span>Memo drafting</span><span class="n">8</span></li>
+        <li data-state="blocked"><span class="step">06</span><span>Policy check</span><span class="n">6</span></li>
+        <li data-state="active"><span class="step">07</span><span>Approval</span><span class="n">6</span></li>
+        <li data-state="done"><span class="step">08</span><span>Closing</span><span class="n">3</span></li>
+      </ul>
+    </div>
+
+    <div class="rail-group">
+      <div class="rail-title"><span>Analyst queues</span><kbd>Q</kbd></div>
+      <ul class="queue">
+        <li><span>Northeast SMB</span><span class="bar"><i style="width:72%"></i></span><span class="num">13</span></li>
+        <li><span>CRE secured</span><span class="bar"><i class="hot" style="width:91%"></i></span><span class="num">17</span></li>
+        <li><span>Unassigned</span><span class="bar"><i style="width:24%"></i></span><span class="num">4</span></li>
+      </ul>
+    </div>
+
+    <div class="rail-foot">
+      <div class="hint"><span>Command palette</span><kbd>⌘K</kbd></div>
+      <div class="hint"><span>Approve focused</span><kbd>⇧A</kbd></div>
+      <div class="hint"><span>Return to analyst</span><kbd>⇧R</kbd></div>
+    </div>
+  </nav>
+
+  <!-- ============================ WORK SURFACE ============================ -->
+  <main class="work">
+
+    <!-- ================= SCREEN: PIPELINE BOARD ================= -->
+    <section class="screen" id="screen-pipeline-board" data-active="true" aria-label="Pipeline board">
+      <div class="screen-head">
+        <h2>Pipeline Board</h2>
+        <span class="sub">48 active · $37.2M exposure</span>
+        <div class="head-actions">
+          <button class="btn sm ghost" type="button">Group: Stage ▾</button>
+          <button class="btn sm ghost" type="button">Export CSV</button>
+          <button class="btn primary sm" type="button">New Deal <kbd>N</kbd></button>
+        </div>
+      </div>
+
+      <div class="filters" role="search">
+        <label>Find <input type="search" placeholder="borrower / deal id" size="18"></label>
+        <label>Owner
+          <select><option>All owners</option><option>Me</option><option>R. Okafor</option><option>J. Tran</option><option>Unassigned</option></select>
+        </label>
+        <label>Grade
+          <select><option>Any grade</option><option>1–3 Pass</option><option>4–5 Watch</option><option>6–7 Substandard</option></select>
+        </label>
+        <label>Exposure
+          <select><option>Any size</option><option>&lt; $250k</option><option>$250k–$1M</option><option>&gt; $1M</option></select>
+        </label>
+        <label>Age
+          <select><option>Any age</option><option>&gt; 3 business days</option><option>&gt; 5 business days</option></select>
+        </label>
+        <div class="spacer"></div>
+        <button class="chip-toggle" type="button" aria-pressed="true">SLA breach only</button>
+        <button class="chip-toggle" type="button" aria-pressed="false">Awaiting my decision</button>
+        <button class="chip-toggle" type="button" aria-pressed="false">Open exceptions</button>
+      </div>
+
+      <div class="board">
+        <div class="col">
+          <div class="col-head">
+            <div class="line1"><span class="idx">01</span><h3>Intake</h3><span class="tally">4 · $1.9M</span></div>
+            <div class="meter"><i style="width:28%"></i></div>
+          </div>
+          <div class="cards">
+            <button class="card" type="button" data-sla="ok">
+              <div class="c1"><span class="id">D-4821</span><span class="amt">$180,000</span></div>
+              <div class="borrower">Harborline Marine Supply</div>
+              <div class="c3"><span class="chip agent">triage ok</span><span class="chip plain">2 docs missing</span></div>
+              <div class="c4"><span class="owner"><span class="av">RO</span>R. Okafor</span><span class="idle">idle 1d</span></div>
+            </button>
+            <button class="card" type="button" data-sla="risk">
+              <div class="c1"><span class="id">D-4830</span><span class="amt">$640,000</span></div>
+              <div class="borrower">Cedar Fork Logistics</div>
+              <div class="c3"><span class="chip warn">needs docs</span></div>
+              <div class="c4"><span class="owner"><span class="av">—</span>Unassigned</span><span class="idle">idle 4d</span></div>
+            </button>
+          </div>
+        </div>
+
+        <div class="col">
+          <div class="col-head">
+            <div class="line1"><span class="idx">02</span><h3>Doc Extraction</h3><span class="tally">7 · $4.4M</span></div>
+            <div class="meter"><i style="width:48%"></i></div>
+          </div>
+          <div class="cards">
+            <button class="card" type="button" data-sla="ok">
+              <div class="c1"><span class="id">D-4788</span><span class="amt">$95,000</span></div>
+              <div class="borrower">Pine &amp; Bolt Hardware</div>
+              <div class="c3"><span class="chip agent">extracting</span></div>
+              <div class="c4"><span class="owner"><span class="av">JT</span>J. Tran</span><span class="idle">idle 0d</span></div>
+            </button>
+            <button class="card" type="button" data-sla="risk">
+              <div class="c1"><span class="id">D-4771</span><span class="amt">$1,250,000</span></div>
+              <div class="borrower">Valemont Dairy Co-op</div>
+              <div class="c3"><span class="chip info">committee tier</span><span class="chip agent">3 pages low conf</span></div>
+              <div class="c4"><span class="owner"><span class="av">JT</span>J. Tran</span><span class="idle" data-over="true">idle 5d</span></div>
+            </button>
+          </div>
+        </div>
+
+        <div class="col">
+          <div class="col-head" data-hot="true">
+            <div class="line1"><span class="idx">03</span><h3>Financial Spreading</h3><span class="tally">9 · $8.1M</span></div>
+            <div class="meter"><i class="warn" style="width:76%"></i></div>
+          </div>
+          <div class="cards">
+            <button class="card" type="button" data-sla="breach">
+              <div class="c1"><span class="id">D-4712</span><span class="amt">$1,450,000</span></div>
+              <div class="borrower">Northgate Fabrication LLC</div>
+              <div class="c3"><span class="chip crit">1 uncited figure</span><span class="chip agent">awaiting accept</span></div>
+              <div class="c4"><span class="owner"><span class="av">RO</span>R. Okafor</span><span class="idle" data-over="true">idle 7d</span></div>
+            </button>
+            <button class="card" type="button" data-sla="ok">
+              <div class="c1"><span class="id">D-4805</span><span class="amt">$310,000</span></div>
+              <div class="borrower">Solano Print Group</div>
+              <div class="c3"><span class="chip ok">spread accepted</span></div>
+              <div class="c4"><span class="owner"><span class="av">RO</span>R. Okafor</span><span class="idle">idle 2d</span></div>
+            </button>
+            <button class="card" type="button" data-sla="risk">
+              <div class="c1"><span class="id">D-4796</span><span class="amt">$225,000</span></div>
+              <div class="borrower">Kestrel Dental Partners</div>
+              <div class="c3"><span class="chip agent">retry queued</span></div>
+              <div class="c4"><span class="owner"><span class="av">JT</span>J. Tran</span><span class="idle">idle 4d</span></div>
+            </button>
+          </div>
+        </div>
+
+        <div class="col">
+          <div class="col-head">
+            <div class="line1"><span class="idx">04</span><h3>Risk Grading</h3><span class="tally">5 · $3.6M</span></div>
+            <div class="meter"><i style="width:40%"></i></div>
+          </div>
+          <div class="cards">
+            <button class="card" type="button" data-sla="ok">
+              <div class="c1"><span class="id">D-4744</span><span class="amt">$480,000</span></div>
+              <div class="borrower">Rowan Street Bakery</div>
+              <div class="c3"><span class="grade" data-band="3">Grade 3</span><span class="chip plain">rubric v4</span></div>
+              <div class="c4"><span class="owner"><span class="av">RO</span>R. Okafor</span><span class="idle">idle 1d</span></div>
+            </button>
+            <button class="card" type="button" data-sla="ok">
+              <div class="c1"><span class="id">D-4759</span><span class="amt">$870,000</span></div>
+              <div class="borrower">Alder Peak Outfitters</div>
+              <div class="c3"><span class="grade" data-band="5">Grade 5</span></div>
+              <div class="c4"><span class="owner"><span class="av">JT</span>J. Tran</span><span class="idle">idle 2d</span></div>
+            </button>
+          </div>
+        </div>
+
+        <div class="col">
+          <div class="col-head">
+            <div class="line1"><span class="idx">05</span><h3>Memo Drafting</h3><span class="tally">8 · $6.9M</span></div>
+            <div class="meter"><i style="width:62%"></i></div>
+          </div>
+          <div class="cards">
+            <button class="card" type="button" data-sla="risk">
+              <div class="c1"><span class="id">D-4690</span><span class="amt">$1,100,000</span></div>
+              <div class="borrower">Tallow Creek Foods</div>
+              <div class="c3"><span class="chip agent">draft ready</span><span class="chip warn">review due</span></div>
+              <div class="c4"><span class="owner"><span class="av">RO</span>R. Okafor</span><span class="idle">idle 3d</span></div>
+            </button>
+            <button class="card" type="button" data-sla="ok">
+              <div class="c1"><span class="id">D-4812</span><span class="amt">$205,000</span></div>
+              <div class="borrower">Vireo Landscaping</div>
+              <div class="c3"><span class="chip ok">memo accepted</span></div>
+              <div class="c4"><span class="owner"><span class="av">JT</span>J. Tran</span><span class="idle">idle 0d</span></div>
+            </button>
+          </div>
+        </div>
+
+        <div class="col">
+          <div class="col-head">
+            <div class="line1"><span class="idx">06</span><h3>Policy Check</h3><span class="tally">6 · $5.2M</span></div>
+            <div class="meter"><i class="crit" style="width:83%"></i></div>
+          </div>
+          <div class="cards">
+            <button class="card" type="button" data-sla="breach">
+              <div class="c1"><span class="id">D-4655</span><span class="amt">$2,300,000</span></div>
+              <div class="borrower">Iron Basin Aggregates</div>
+              <div class="c3"><span class="chip crit">2 open exceptions</span><span class="chip plain">LTV cap</span></div>
+              <div class="c4"><span class="owner"><span class="av">DL</span>D. Lindqvist</span><span class="idle" data-over="true">idle 9d</span></div>
+            </button>
+            <button class="card" type="button" data-sla="ok">
+              <div class="c1"><span class="id">D-4801</span><span class="amt">$390,000</span></div>
+              <div class="borrower">Marigold Childcare</div>
+              <div class="c3"><span class="chip ok">policy clear</span></div>
+              <div class="c4"><span class="owner"><span class="av">RO</span>R. Okafor</span><span class="idle">idle 1d</span></div>
+            </button>
+          </div>
+        </div>
+
+        <div class="col">
+          <div class="col-head">
+            <div class="line1"><span class="idx">07</span><h3>Approval</h3><span class="tally">6 · $5.8M</span></div>
+            <div class="meter"><i class="warn" style="width:70%"></i></div>
+          </div>
+          <div class="cards">
+            <button class="card" type="button" data-sla="risk">
+              <div class="c1"><span class="id">D-4633</span><span class="amt">$1,750,000</span></div>
+              <div class="borrower">Quarry Lane Holdings</div>
+              <div class="c3"><span class="chip info">committee · 2 of 4 votes</span></div>
+              <div class="c4"><span class="owner"><span class="av">DL</span>D. Lindqvist</span><span class="idle">idle 3d</span></div>
+            </button>
+            <button class="card" type="button" data-sla="ok">
+              <div class="c1"><span class="id">D-4778</span><span class="amt">$240,000</span></div>
+              <div class="borrower">Beacon Hill Optics</div>
+              <div class="c3"><span class="chip warn">analyst tier · awaiting sign</span></div>
+              <div class="c4"><span class="owner"><span class="av">JT</span>J. Tran</span><span class="idle">idle 1d</span></div>
+            </button>
+          </div>
+        </div>
+
+        <div class="col">
+          <div class="col-head">
+            <div class="line1"><span class="idx">08</span><h3>Closing</h3><span class="tally">3 · $1.3M</span></div>
+            <div class="meter"><i style="width:18%"></i></div>
+          </div>
+          <div class="cards">
+            <button class="card" type="button" data-sla="ok">
+              <div class="c1"><span class="id">D-4601</span><span class="amt">$520,000</span></div>
+              <div class="borrower">Fernwood Auto Body</div>
+              <div class="c3"><span class="chip ok">approved · J. Tran</span></div>
+              <div class="c4"><span class="owner"><span class="av">JT</span>J. Tran</span><span class="idle">idle 2d</span></div>
+            </button>
+            <div class="col-empty">Drop a deal here to schedule closing</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= SCREEN: DEAL DETAIL ================= -->
+    <section class="screen" id="screen-deal-detail" aria-label="Deal detail">
+      <div class="screen-head">
+        <h2>D-4712 · Northgate Fabrication LLC</h2>
+        <span class="chip crit">SLA breach · idle 7d</span>
+        <span class="chip warn">stage 03 spreading</span>
+        <span class="grade" data-band="5">Grade 5</span>
+        <div class="head-actions">
+          <button class="btn sm ghost" type="button">Audit <kbd>4</kbd></button>
+          <button class="btn sm ghost" type="button">Reassign</button>
+          <button class="btn sm" type="button">Return to analyst <kbd>⇧R</kbd></button>
+        </div>
+      </div>
+
+      <div class="deal">
+        <div class="deal-main">
+
+          <ol class="stage-strip" aria-label="Workflow stages">
+            <li data-state="done"><span class="s-name">01 Intake</span><span class="s-meta">R. Okafor · Jul 18</span></li>
+            <li data-state="done"><span class="s-name">02 Extraction</span><span class="s-meta">accepted · Jul 20</span></li>
+            <li data-state="current"><span class="s-name">03 Spreading</span><span class="s-meta">awaiting acceptance</span></li>
+            <li data-state="todo"><span class="s-name">04 Grading</span><span class="s-meta">deterministic</span></li>
+            <li data-state="todo"><span class="s-name">05 Memo</span><span class="s-meta">blocked</span></li>
+            <li data-state="todo"><span class="s-name">06 Policy</span><span class="s-meta">blocked</span></li>
+            <li data-state="todo"><span class="s-name">07 Approval</span><span class="s-meta">committee tier</span></li>
+            <li data-state="todo"><span class="s-name">08 Closing</span><span class="s-meta">—</span></li>
+          </ol>
+
+          <!-- deterministic calculations, never agent-computed -->
+          <section class="panel">
+            <header>
+              <h3>Deterministic Metrics</h3>
+              <span class="tag">code-computed · rubric v4 · no agent</span>
+              <div class="right"><button class="btn sm ghost" type="button">Show formulas</button><button class="btn sm ghost" type="button">Recompute</button></div>
+            </header>
+            <div class="metrics">
+              <div class="metric"><span class="m-label">DSCR</span><span class="m-val warn num">1.14×</span><span class="m-foot">min 1.20× · band 5</span></div>
+              <div class="metric"><span class="m-label">Leverage</span><span class="m-val crit num">4.62×</span><span class="m-foot">cap 4.00× · band 6</span></div>
+              <div class="metric"><span class="m-label">Current ratio</span><span class="m-val ok num">1.71</span><span class="m-foot">min 1.25 · band 2</span></div>
+              <div class="metric"><span class="m-label">Assigned grade</span><span class="m-val num">5</span><span class="m-foot">worst-band rule · rubric v4</span></div>
+            </div>
+          </section>
+
+          <!-- agent output review: draft + citations + accept/edit/reject -->
+          <section class="panel">
+            <header>
+              <span class="chip agent">Financial Spreading Agent</span>
+              <h3>Spread v3 — pending human acceptance</h3>
+              <span class="tag">run 8f21c · 6.4s · gpt-class</span>
+              <div class="right"><span class="chip crit">1 uncited</span></div>
+            </header>
+            <div class="review-grid">
+              <div class="draft">
+                <div class="table-wrap">
+                  <table class="grid">
+                    <thead>
+                      <tr><th>Line item</th><th>FY2023</th><th>FY2024</th><th>Unit</th><th>Source</th></tr>
+                    </thead>
+                    <tbody>
+                      <tr><td>Revenue</td><td class="n">8,410,220</td><td class="n">9,102,880</td><td>USD</td><td><a class="src" href="#cite-1">FS-2024 p.3 · A12</a></td></tr>
+                      <tr><td>COGS</td><td class="n">6,102,000</td><td class="n">6,880,410</td><td>USD</td><td><a class="src" href="#cite-1">FS-2024 p.3 · A19</a></td></tr>
+                      <tr><td>EBITDA</td><td class="n">742,300</td><td class="n">688,120</td><td>USD</td><td><a class="src" href="#cite-2">FS-2024 p.4 · B7</a></td></tr>
+                      <tr><td>Total debt service</td><td class="n">571,000</td><td class="n">603,900</td><td>USD</td><td><a class="src" href="#cite-3">Debt sched. p.1</a></td></tr>
+                      <tr data-uncited="true"><td>Owner add-backs</td><td class="n">—</td><td class="n">96,500</td><td>USD</td><td><a class="src missing" href="#cite-none">no source — invalid</a></td></tr>
+                      <tr><td>Current assets</td><td class="n">2,110,400</td><td class="n">2,240,900</td><td>USD</td><td><a class="src" href="#cite-4">FS-2024 p.6 · C3</a></td></tr>
+                      <tr><td>Current liabilities</td><td class="n">1,388,700</td><td class="n">1,310,220</td><td>USD</td><td><a class="src" href="#cite-4">FS-2024 p.6 · C9</a></td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+              <aside class="cite-panel">
+                <h4>Citations (4)</h4>
+                <ul class="cite-list">
+                  <li id="cite-1"><a href="#"><span class="c-src">FS-2024.pdf</span> <span class="c-loc">p.3 · cells A12, A19</span><span class="c-txt">Audited income statement, revenue &amp; COGS block</span></a></li>
+                  <li id="cite-2"><a href="#"><span class="c-src">FS-2024.pdf</span> <span class="c-loc">p.4 · cell B7</span><span class="c-txt">EBITDA reconciliation schedule</span></a></li>
+                  <li id="cite-3"><a href="#"><span class="c-src">debt-schedule.xlsx</span> <span class="c-loc">Sheet1 p.1</span><span class="c-txt">Term loan + equipment note amortization</span></a></li>
+                  <li id="cite-4"><a href="#"><span class="c-src">FS-2024.pdf</span> <span class="c-loc">p.6 · cells C3, C9</span><span class="c-txt">Balance sheet, current section</span></a></li>
+                </ul>
+              </aside>
+            </div>
+            <div class="decision-bar">
+              <button class="btn ok" type="button">Accept spread <kbd>⇧A</kbd></button>
+              <button class="btn" type="button">Edit figures <kbd>E</kbd></button>
+              <button class="btn danger" type="button">Reject &amp; rerun <kbd>⇧X</kbd></button>
+              <span class="note">Acceptance records D. Lindqvist + edits · stage will not advance without it</span>
+            </div>
+          </section>
+
+          <!-- policy exceptions -->
+          <section class="panel">
+            <header>
+              <span class="chip agent">Policy Compliance Agent</span>
+              <h3>Exceptions</h3>
+              <span class="tag">policy v2026.03</span>
+              <div class="right"><span class="chip crit">2 open · blocks approval</span></div>
+            </header>
+            <ul class="exceptions">
+              <li>
+                <span class="rule">POL-LTV-03</span>
+                <span class="why"><strong>LTV 82% exceeds 75% cap</strong> for equipment-secured facilities. Appraisal dated Mar 2024; collateral $1.77M against $1.45M request.</span>
+                <span><button class="btn sm" type="button">Waive</button></span>
+              </li>
+              <li>
+                <span class="rule">POL-CONC-11</span>
+                <span class="why"><strong>Metal fabrication concentration at 11.4%</strong> of portfolio, limit 10%. Approving this deal moves the bucket to 12.1%.</span>
+                <span><button class="btn sm" type="button">Waive</button></span>
+              </li>
+              <li>
+                <span class="rule">POL-IND-01</span>
+                <span class="why">Prohibited-industry screen: <strong>clear</strong>. NAICS 332312 not on exclusion list.</span>
+                <span><span class="chip ok">resolved</span></span>
+              </li>
+            </ul>
+          </section>
+
+          <!-- approval tiering -->
+          <section class="panel">
+            <header>
+              <h3>Approval Authority</h3>
+              <span class="tag">exposure $1,450,000</span>
+              <div class="right"><span class="chip info">committee required</span></div>
+            </header>
+            <div class="panel-body">
+              <ul class="tier">
+                <li data-state="done"><span class="t-mark">✓</span><span>Credit analyst</span><span class="t-cap">up to $250,000 · not sufficient</span></li>
+                <li data-state="done"><span class="t-mark">✓</span><span>Senior credit officer</span><span class="t-cap">up to $1,000,000 · not sufficient</span></li>
+                <li data-state="required"><span class="t-mark">●</span><span>Credit committee</span><span class="t-cap">above $1,000,000 · required</span></li>
+              </ul>
+            </div>
+            <div class="decision-bar">
+              <button class="btn primary" type="button">Record decision…</button>
+              <button class="btn danger" type="button">Decline with reason code</button>
+              <span class="note">Blocked: 2 open policy exceptions · spread not accepted</span>
+            </div>
+          </section>
+
+        </div>
+
+        <aside class="deal-side">
+          <div class="side-block">
+            <h3>Borrower</h3>
+            <dl class="kv">
+              <dt>Legal name</dt><dd>Northgate Fabrication LLC</dd>
+              <dt>NAICS</dt><dd>332312</dd>
+              <dt>Requested</dt><dd>$1,450,000</dd>
+              <dt>Aggregate exposure</dt><dd>$1,450,000</dd>
+              <dt>Facility</dt><dd>Equipment term</dd>
+              <dt>RM</dt><dd>M. Alvarez</dd>
+              <dt>Analyst</dt><dd>R. Okafor</dd>
+            </dl>
+          </div>
+          <div class="side-block">
+            <h3>Documents</h3>
+            <ul class="doc-list">
+              <li><span class="ext">PDF</span><span>FS-2024.pdf</span><span class="meta">2.1 MB</span></li>
+              <li><span class="ext">XLSX</span><span>debt-schedule.xlsx</span><span class="meta">88 KB</span></li>
+              <li><span class="ext">PDF</span><span>appraisal-mar24.pdf</span><span class="meta">6.4 MB</span></li>
+              <li><span class="ext">—</span><span class="missing">Interim FY2025 statement</span><span class="meta">missing</span></li>
+              <li><span class="ext">—</span><span class="missing">Personal guaranty</span><span class="meta">missing</span></li>
+            </ul>
+            <button class="btn sm ghost" type="button" style="margin-top:6px">Upload document</button>
+          </div>
+          <div class="side-block">
+            <h3>Rubric band hit</h3>
+            <dl class="kv">
+              <dt>DSCR 1.14× → band</dt><dd>5</dd>
+              <dt>Leverage 4.62× → band</dt><dd>6</dd>
+              <dt>Current 1.71 → band</dt><dd>2</dd>
+              <dt>Rule</dt><dd>worst-of</dd>
+              <dt>Assigned</dt><dd>5</dd>
+            </dl>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <!-- ================= SCREEN: AUDIT TIMELINE ================= -->
+    <section class="screen" id="screen-audit-timeline" aria-label="Audit timeline">
+      <div class="screen-head">
+        <h2>Audit Timeline</h2>
+        <span class="sub">D-4712 · Northgate Fabrication LLC · 214 entries</span>
+        <div class="head-actions">
+          <button class="btn sm ghost" type="button">Export signed JSON</button>
+          <button class="btn sm ghost" type="button">Verify chain</button>
+        </div>
+      </div>
+
+      <div class="filters">
+        <label>Kind
+          <select><option>All events</option><option>State change</option><option>Calculation</option><option>Agent draft</option><option>Human decision</option><option>Policy</option></select>
+        </label>
+        <label>Actor
+          <select><option>Anyone</option><option>Humans only</option><option>Agents only</option></select>
+        </label>
+        <label>From <input type="text" value="2024-07-18" size="10"></label>
+        <label>To <input type="text" value="2024-08-01" size="10"></label>
+        <div class="spacer"></div>
+        <span class="chip plain">append-only · no edit path</span>
+      </div>
+
+      <div class="audit-body">
+        <div class="timeline-scroll">
+          <ol class="timeline">
+            <li data-kind="human">
+              <span class="stamp">Aug 01 09:42:11Z</span><span class="node"></span>
+              <div class="event">
+                <div class="e-head"><span class="e-title">Spread acceptance withheld</span><span class="chip warn">human decision</span><span class="actor">D. Lindqvist · credit officer</span><span class="hash">#a91f…7c2</span></div>
+                <div class="e-body">Reviewer declined to accept spread v3: line item “Owner add-backs” carries no citation. Stage 03 remains open.</div>
+              </div>
+            </li>
+            <li data-kind="policy">
+              <span class="stamp">Jul 31 16:20:04Z</span><span class="node"></span>
+              <div class="event">
+                <div class="e-head"><span class="e-title">Exception raised POL-CONC-11</span><span class="chip crit">policy</span><span class="actor">policy-compliance-agent v7</span><span class="hash">#33be…0d1</span></div>
+                <div class="e-body">Metal fabrication concentration 11.4% vs 10.0% limit. Status: open. Blocks approval until waived by authorized human.</div>
+              </div>
+            </li>
+            <li data-kind="agent">
+              <span class="stamp">Jul 31 16:19:58Z</span><span class="node"></span>
+              <div class="event">
+                <div class="e-head"><span class="e-title">Agent draft recorded — spread v3</span><span class="chip agent">agent draft</span><span class="actor">financial-spreading-agent v4</span><span class="hash">#77ac…9f5</span></div>
+                <div class="e-body">7 line items extracted, 6 cited, 1 uncited. prompt v12 · 3,104 in / 812 out tokens · 6.4s · outcome: needs_review</div>
+              </div>
+            </li>
+            <li data-kind="calc">
+              <span class="stamp">Jul 31 16:20:22Z</span><span class="node"></span>
+              <div class="event">
+                <div class="e-head"><span class="e-title">Ratio computed — DSCR</span><span class="chip ok">calculation</span><span class="actor">calc-engine (deterministic)</span><span class="hash">#12d4…4ab</span></div>
+                <div class="e-body">inputs: EBITDA 688,120 · debt service 603,900 → 1.14× (half-up, 2dp). Divide-by-zero guard: n/a.</div>
+                <div class="diff"><div class="before">− dscr: null</div><div class="after">+ dscr: 1.14</div></div>
+              </div>
+            </li>
+            <li data-kind="state">
+              <span class="stamp">Jul 29 11:03:47Z</span><span class="node"></span>
+              <div class="event">
+                <div class="e-head"><span class="e-title">Stage transition 02 → 03</span><span class="chip info">state change</span><span class="actor">R. Okafor · credit analyst</span><span class="hash">#5ce0…88b</span></div>
+                <div class="e-body">Extraction output accepted; deal advanced to financial spreading and assigned to CRE secured queue.</div>
+                <div class="diff"><div class="before">− stage: doc_extraction</div><div class="after">+ stage: financial_spreading</div></div>
+              </div>
+            </li>
+            <li data-kind="human">
+              <span class="stamp">Jul 29 11:03:41Z</span><span class="node"></span>
+              <div class="event">
+                <div class="e-head"><span class="e-title">Agent output accepted — extraction v2</span><span class="chip warn">human decision</span><span class="actor">R. Okafor · credit analyst</span><span class="hash">#e004…31f</span></div>
+                <div class="e-body">2 fields edited before acceptance (fiscal year end, entity type). Edits stored with before/after payload.</div>
+              </div>
+            </li>
+            <li data-kind="agent">
+              <span class="stamp">Jul 20 08:11:09Z</span><span class="node"></span>
+              <div class="event">
+                <div class="e-head"><span class="e-title">Agent draft recorded — triage</span><span class="chip agent">agent draft</span><span class="actor">intake-triage-agent v3</span><span class="hash">#b8f1…225</span></div>
+                <div class="e-body">Classified as equipment term / SMB secured. Flagged 2 missing documents. Routed to CRE secured queue.</div>
+              </div>
+            </li>
+            <li data-kind="state">
+              <span class="stamp">Jul 18 14:52:30Z</span><span class="node"></span>
+              <div class="event">
+                <div class="e-head"><span class="e-title">Deal created</span><span class="chip info">state change</span><span class="actor">M. Alvarez · relationship manager</span><span class="hash">#0001…000</span></div>
+                <div class="e-body">Requested $1,450,000 equipment term facility for Northgate Fabrication LLC.</div>
+              </div>
+            </li>
+          </ol>
+        </div>
+
+        <aside class="audit-side">
+          <div class="side-block">
+            <h3>Event legend</h3>
+            <ul class="legend">
+              <li><span class="sw" style="background:var(--info)"></span>State change<span style="margin-left:auto" class="num">61</span></li>
+              <li><span class="sw" style="background:var(--ok)"></span>Calculation<span style="margin-left:auto" class="num">44</span></li>
+              <li><span class="sw" style="background:var(--agent)"></span>Agent draft<span style="margin-left:auto" class="num">38</span></li>
+              <li><span class="sw" style="background:var(--primary)"></span>Human decision<span style="margin-left:auto" class="num">57</span></li>
+              <li><span class="sw" style="background:var(--crit)"></span>Policy event<span style="margin-left:auto" class="num">14</span></li>
+            </ul>
+          </div>
+          <div class="side-block">
+            <h3>Chain integrity</h3>
+            <div class="integrity">
+              <strong>VERIFIED · 214/214</strong>
+              Every entry hash-links to its predecessor. No update or delete path is exposed at the API layer.
+            </div>
+          </div>
+          <div class="side-block">
+            <h3>Decision roster</h3>
+            <dl class="kv">
+              <dt>M. Alvarez</dt><dd>RM · 3</dd>
+              <dt>R. Okafor</dt><dd>Analyst · 29</dd>
+              <dt>J. Tran</dt><dd>Analyst · 11</dd>
+              <dt>D. Lindqvist</dt><dd>Officer · 14</dd>
+            </dl>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <!-- ================= SCREEN: SLA DASHBOARD ================= -->
+    <section class="screen" id="screen-sla-dashboard" aria-label="SLA dashboard">
+      <div class="screen-head">
+        <h2>SLA Dashboard</h2>
+        <span class="sub">business-day clock · excludes weekends &amp; bank holidays</span>
+        <div class="head-actions">
+          <button class="btn sm ghost" type="button">Calendar settings</button>
+          <button class="btn sm ghost" type="button">Subscribe to digest</button>
+          <button class="btn primary sm" type="button">Escalate selected</button>
+        </div>
+      </div>
+
+      <div class="filters">
+        <label>Threshold
+          <select><option selected>&gt; 5 business days idle</option><option>&gt; 3 business days idle</option><option>&gt; 10 business days idle</option></select>
+        </label>
+        <label>Stage
+          <select><option>All stages</option><option>Spreading</option><option>Policy check</option><option>Approval</option></select>
+        </label>
+        <label>Owner
+          <select><option>All owners</option><option>Me</option><option>Unassigned</option></select>
+        </label>
+        <div class="spacer"></div>
+        <span class="chip crit">9 breaching</span>
+        <span class="chip warn">6 at risk</span>
+      </div>
+
+      <div class="sla-body">
+        <div class="stat-row">
+          <div class="stat"><span class="s-label">Breaching &gt;5d</span><span class="s-val crit">9</span><span class="s-delta">+2 vs last week</span></div>
+          <div class="stat"><span class="s-label">At risk 4–5d</span><span class="s-val warn">6</span><span class="s-delta">−1 vs last week</span></div>
+          <div class="stat"><span class="s-label">Median idle</span><span class="s-val">2.4<span style="font-size:12px">d</span></span><span class="s-delta">target ≤ 3.0d</span></div>
+          <div class="stat"><span class="s-label">Worst offender</span><span class="s-val crit">9<span style="font-size:12px">d</span></span><span class="s-delta">D-4655 Iron Basin</span></div>
+          <div class="stat"><span class="s-label">Within SLA</span><span class="s-val ok">33</span><span class="s-delta">69% of pipeline</span></div>
+        </div>
+
+        <section class="panel">
+          <header><h3>Idle distribution by stage</h3><span class="tag">business days since last meaningful activity</span></header>
+          <div class="panel-body">
+            <div class="heat">
+              <div class="h-head">Stage \ days idle</div>
+              <div class="h-head">0</div><div class="h-head">1</div><div class="h-head">2</div><div class="h-head">3</div><div class="h-head">4</div><div class="h-head">5</div><div class="h-head">6–8</div><div class="h-head">9+</div>
+
+              <div class="h-row">Intake</div>
+              <div class="cell" data-heat="1">2</div><div class="cell" data-heat="1">1</div><div class="cell" data-heat="0">·</div><div class="cell" data-heat="0">·</div><div class="cell" data-heat="2">1</div><div class="cell" data-heat="0">·</div><div class="cell" data-heat="0">·</div><div class="cell" data-heat="0">·</div>
+
+              <div class="h-row">Doc extraction</div>
+              <div class="cell" data-heat="1">3</div><div class="cell" data-heat="1">2</div><div class="cell" data-heat="0">·</div><div class="cell" data-heat="1">1</div><div class="cell" data-heat="0">·</div><div class="cell" data-heat="3">1</div><div class="cell" data-heat="0">·</div><div class="cell" data-heat="0">·</div>
+
+              <div class="h-row">Financial spreading</div>
+              <div class="cell" data-heat="1">2</div><div class="cell" data-heat="0">·</div><div class="cell" data-heat="1">2</div><div class="cell" data-heat="0">·</div><div class="cell" data-heat="2">2</div><div class="cell" data-heat="0">·</div><div class="cell" data-heat="3">3</div><div class="cell" data-heat="0">·</div>
+
+              <div class="h-row">Risk grading</div>
+              <div class="cell" data-heat="1">3</div><div class="cell" data-heat="1">1</div><div class="cell" data-heat="1">1</div><div class="cell" data-heat="0">·</div><div class="cell" data-heat="0">·</div><div class="cell" data-heat="0">·</div><div class="cell" data-heat="0">·</div><div class="cell" data-heat="0">·</div>
+
+              <div class="h-row">Memo drafting</div>
+              <div class="cell" data-heat="1">2</div><div class="cell" data-heat="1">2</div><div class="cell" data-heat="1">1</div><div class="cell" data-heat="2">2</div><div class="cell" data-heat="0">·</div><div class="cell" data-heat="0">·</div><div class="cell" data-heat="2">1</div><div class="cell" data-heat="0">·</div>
+
+              <div class="h-row">Policy check</div>
+              <div class="cell" data-heat="0">·</div><div class="cell" data-heat="1">1</div><div class="cell" data-heat="1">1</div><div class="cell" data-heat="0">·</div><div class="cell" data-heat="2">1</div><div class="cell" data-heat="0">·</div><div class="cell" data-heat="2">2</div><div class="cell" data-heat="3">1</div>
+
+              <div class="h-row">Approval</div>
+              <div class="cell" data-heat="1">2</div><div class="cell" data-heat="1">1</div><div class="cell" data-heat="0">·</div><div class="cell" data-heat="2">2</div><div class="cell" data-heat="0">·</div><div class="cell" data-heat="0">·</div><div class="cell" data-heat="3">1</div><div class="cell" data-heat="0">·</div>
+
+              <div class="h-row">Closing</div>
+              <div class="cell" data-heat="1">1</div><div class="cell" data-heat="1">1</div><div class="cell" data-heat="1">1</div><div class="cell" data-heat="0">·</div><div class="cell" data-heat="0">·</div><div class="cell" data-heat="0">·</div><div class="cell" data-heat="0">·</div><div class="cell" data-heat="0">·</div>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel">
+          <header>
+            <h3>Breach register</h3>
+            <span class="tag">idle &gt; 5 business days</span>
+            <div class="right"><button class="btn sm ghost" type="button">Select all</button><button class="btn sm" type="button">Nudge owners</button></div>
+          </header>
+          <div class="table-wrap">
+            <table class="grid">
+              <thead>
+                <tr>
+                  <th style="width:22px"><input type="checkbox" aria-label="Select all rows"></th>
+                  <th>Deal</th><th>Borrower</th><th>Stage</th><th>Owner</th>
+                  <th class="n">Exposure</th><th>Grade</th><th>Idle</th><th>Blocked by</th><th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr class="breach-row">
+                  <td><input type="checkbox" aria-label="Select D-4655"></td>
+                  <td class="mono">D-4655</td><td>Iron Basin Aggregates</td><td>06 Policy check</td><td>D. Lindqvist</td>
+                  <td class="n">$2,300,000</td><td><span class="grade" data-band="6">6</span></td>
+                  <td><span class="age-bar"><span class="track"><i class="over" style="width:100%"></i></span><span class="num">9d</span></span></td>
+                  <td><span class="chip crit">2 open exceptions</span></td>
+                  <td><button class="btn sm" type="button">Open</button></td>
+                </tr>
+                <tr class="breach-row">
+                  <td><input type="checkbox" aria-label="Select D-4712"></td>
+                  <td class="mono">D-4712</td><td>Northgate Fabrication LLC</td><td>03 Spreading</td><td>R. Okafor</td>
+                  <td class="n">$1,450,000</td><td><span class="grade" data-band="5">5</span></td>
+                  <td><span class="age-bar"><span class="track"><i class="over" style="width:78%"></i></span><span class="num">7d</span></span></td>
+                  <td><span class="chip agent">awaiting acceptance</span></td>
+                  <td><button class="btn sm" type="button">Open</button></td>
+                </tr>
+                <tr class="breach-row">
+                  <td><input type="checkbox" aria-label="Select D-4771"></td>
+                  <td class="mono">D-4771</td><td>Valemont Dairy Co-op</td><td>02 Doc extraction</td><td>J. Tran</td>
+                  <td class="n">$1,250,000</td><td><span class="grade" data-band="4">4</span></td>
+                  <td><span class="age-bar"><span class="track"><i class="over" style="width:56%"></i></span><span class="num">5d</span></span></td>
+                  <td><span class="chip warn">low-confidence pages</span></td>
+                  <td><button class="btn sm" type="button">Open</button></td>
+                </tr>
+                <tr class="breach-row">
+                  <td><input type="checkbox" aria-label="Select D-4633"></td>
+                  <td class="mono">D-4633</td><td>Quarry Lane Holdings</td><td>07 Approval</td><td>D. Lindqvist</td>
+                  <td class="n">$1,750,000</td><td><span class="grade" data-band="3">3</span></td>
+                  <td><span class="age-bar"><span class="track"><i class="over" style="width:67%"></i></span><span class="num">6d</span></span></td>
+                  <td><span class="chip info">committee quorum</span></td>
+                  <td><button class="btn sm" type="button">Open</button></td>
+                </tr>
+                <tr class="breach-row">
+                  <td><input type="checkbox" aria-label="Select D-4690"></td>
+                  <td class="mono">D-4690</td><td>Tallow Creek Foods</td><td>05 Memo drafting</td><td>R. Okafor</td>
+                  <td class="n">$1,100,000</td><td><span class="grade" data-band="4">4</span></td>
+                  <td><span class="age-bar"><span class="track"><i class="over" style="width:67%"></i></span><span class="num">6d</span></span></td>
+                  <td><span class="chip agent">draft unreviewed</span></td>
+                  <td><button class="btn sm" type="button">Open</button></td>
+                </tr>
+                <tr class="breach-row">
+                  <td><input type="checkbox" aria-label="Select D-4830"></td>
+                  <td class="mono">D-4830</td><td>Cedar Fork Logistics</td><td>01 Intake</td><td>Unassigned</td>
+                  <td class="n">$640,000</td><td><span class="grade">—</span></td>
+                  <td><span class="age-bar"><span class="track"><i class="over" style="width:67%"></i></span><span class="num">6d</span></span></td>
+                  <td><span class="chip warn">no analyst claimed</span></td>
+                  <td><button class="btn sm" type="button">Assign</button></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+    </section>
+
+    <!-- ================= SCREEN: CHAT ================= -->
+    <section class="screen" id="screen-chat" aria-label="Portfolio Q and A">
+      <div class="screen-head">
+        <h2>Portfolio Q&amp;A</h2>
+        <span class="sub">grounded in stored deal records</span>
+        <span class="chip info">scope: your 48 permitted deals</span>
+        <div class="head-actions">
+          <button class="btn sm ghost" type="button">New thread <kbd>⌘N</kbd></button>
+          <button class="btn sm ghost" type="button">Export transcript</button>
+        </div>
+      </div>
+
+      <div class="chat-body">
+        <div class="chat-main">
+          <ul id="messages">
+            <li data-from="agent">
+              <span class="avatar">QA</span>
+              <div class="msg">
+                <div class="msg-meta"><span class="who-name">Portfolio Q&amp;A Agent</span><span>v6</span><span>09:02:14</span><span class="chip agent">read-only</span></div>
+                <div class="bubble">
+                  <p>Connected to the deal store. I answer only from records you are entitled to read, and every figure I return carries a link back to the deal it came from. I cannot approve, decline, or advance anything.</p>
+                </div>
+              </div>
+            </li>
+
+            <li data-from="user">
+              <span class="avatar">DL</span>
+              <div class="msg">
+                <div class="msg-meta"><span class="who-name">D. Lindqvist</span><span>credit officer</span><span>09:03:02</span></div>
+                <div class="bubble"><p>Which active deals above $1M have a DSCR under 1.25 and at least one open policy exception?</p></div>
+              </div>
+            </li>
+
+            <li data-from="agent">
+              <span class="avatar">QA</span>
+              <div class="msg">
+                <div class="msg-meta"><span class="who-name">Portfolio Q&amp;A Agent</span><span>1.9s</span><span>09:03:04</span><span class="chip ok">3 records</span></div>
+                <div class="bubble">
+                  <p>Three deals match. All are held at or before the approval stage.</p>
+                  <table class="answer-table">
+                    <thead><tr><th>Deal</th><th>Borrower</th><th class="r">Exposure</th><th class="r">DSCR</th><th>Open exceptions</th></tr></thead>
+                    <tbody>
+                      <tr><td>D-4655</td><td>Iron Basin Aggregates</td><td class="r">$2,300,000</td><td class="r">1.08×</td><td>2 — LTV, concentration</td></tr>
+                      <tr><td>D-4712</td><td>Northgate Fabrication</td><td class="r">$1,450,000</td><td class="r">1.14×</td><td>2 — LTV, concentration</td></tr>
+                      <tr><td>D-4690</td><td>Tallow Creek Foods</td><td class="r">$1,100,000</td><td class="r">1.21×</td><td>1 — prohibited industry review</td></tr>
+                    </tbody>
+                  </table>
+                  <p>Combined exposure $4.85M, 13.0% of the metal-fabrication and food-processing buckets together.</p>
+                  <div class="citations">
+                    <span class="cite-label">Grounded in</span>
+                    <a class="cite" href="#"><span class="idx">1</span> deal:D-4655 · ratios</a>
+                    <a class="cite" href="#"><span class="idx">2</span> deal:D-4712 · ratios</a>
+                    <a class="cite" href="#"><span class="idx">3</span> deal:D-4690 · ratios</a>
+                    <a class="cite" href="#"><span class="idx">4</span> policy v2026.03</a>
+                  </div>
+                  <div class="msg-tools">
+                    <button class="btn sm ghost" type="button">Open all in board</button>
+                    <button class="btn sm ghost" type="button">Pin to watchlist</button>
+                    <button class="btn sm ghost" type="button">Show query plan</button>
+                  </div>
+                </div>
+              </div>
+            </li>
+
+            <li data-from="user">
+              <span class="avatar">DL</span>
+              <div class="msg">
+                <div class="msg-meta"><span class="who-name">D. Lindqvist</span><span>credit officer</span><span>09:04:41</span></div>
+                <div class="bubble"><p>Approve D-4712 for me.</p></div>
+              </div>
+            </li>
+
+            <li data-from="agent">
+              <span class="avatar">QA</span>
+              <div class="msg">
+                <div class="msg-meta"><span class="who-name">Portfolio Q&amp;A Agent</span><span>0.3s</span><span>09:04:41</span><span class="chip crit">refused</span></div>
+                <div class="bubble">
+                  <p>I have no approval tool. Approvals are a named human action recorded against your identity — and D-4712 is above $1M, so it routes to credit committee.</p>
+                  <div class="msg-tools">
+                    <button class="btn sm" type="button">Open D-4712 approval panel</button>
+                  </div>
+                </div>
+              </div>
+            </li>
+          </ul>
+
+          <div class="scope-note">
+            <span class="chip info plain">RBAC</span>
+            Retrieval is filtered to your role before the model sees anything. Relationship managers see only their own deals.
+          </div>
+
+          <form id="composer" autocomplete="off">
+            <div class="composer-row">
+              <input id="input" type="text" placeholder="Ask across active deals — e.g. “concentration by industry for deals in approval”" aria-label="Message">
+              <button class="btn primary" type="submit">Send <kbd>↵</kbd></button>
+            </div>
+            <div class="composer-foot">
+              <span>Grounded retrieval · no model recall</span>
+              <span>·</span>
+              <span>Citations required on every figure</span>
+              <span class="spacer"></span>
+              <span>Shift+↵ newline</span>
+              <kbd>⌘/</kbd>
+            </div>
+          </form>
+        </div>
+
+        <aside class="chat-side">
+          <div class="side-block">
+            <h3>Saved questions</h3>
+            <ul class="prompt-list">
+              <li><button type="button">Deals idle &gt; 5 business days by owner</button></li>
+              <li><button type="button">Concentration by industry, approval stage</button></li>
+              <li><button type="button">Every uncited figure in active spreads</button></li>
+              <li><button type="button">Grade migration since last quarter</button></li>
+              <li><button type="button">Declines with adverse-action codes this month</button></li>
+            </ul>
+          </div>
+          <div class="side-block">
+            <h3>Thread context</h3>
+            <dl class="kv">
+              <dt>Records read</dt><dd>17</dd>
+              <dt>Deals in scope</dt><dd>48</dd>
+              <dt>Policy version</dt><dd>v2026.03</dd>
+              <dt>Rubric</dt><dd>v4</dd>
+              <dt>Tokens</dt><dd>12.4k</dd>
+            </dl>
+          </div>
+          <div class="side-block">
+            <h3>Tool allowlist</h3>
+            <ul class="legend">
+              <li><span class="sw" style="background:var(--ok)"></span>deal.read</li>
+              <li><span class="sw" style="background:var(--ok)"></span>ratio.read</li>
+              <li><span class="sw" style="background:var(--ok)"></span>policy.read</li>
+              <li><span class="sw" style="background:var(--crit)"></span>approve — denied</li>
+              <li><span class="sw" style="background:var(--crit)"></span>stage.advance — denied</li>
+            </ul>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ============================ RIGHT INSPECTOR ============================ -->
+  <aside class="inspector" aria-label="Agent activity inspector">
+    <div class="insp-head">
+      <h2>Agent Activity</h2>
+      <span class="chip agent">5 mandates</span>
+      <div class="right"><button class="btn sm ghost" type="button">⟳</button></div>
+    </div>
+
+    <div class="side-block">
+      <h3>Live runs</h3>
+      <ul class="run-list">
+        <li>
+          <div class="r1"><span class="r-name">Intake Triage</span><span class="chip ok">idle</span></div>
+          <div class="r-meta"><span>last 4m ago</span><span>D-4830</span><span>98% pass</span></div>
+          <div class="r-bar"><i style="width:12%"></i></div>
+        </li>
+        <li>
+          <div class="r1"><span class="r-name">Financial Spreading</span><span class="chip agent">running</span></div>
+          <div class="r-meta"><span>D-4796 retry 2/3</span><span>4.1s</span></div>
+          <div class="r-bar"><i style="width:64%"></i></div>
+        </li>
+        <li>
+          <div class="r1"><span class="r-name">Credit Memo</span><span class="chip warn">held</span></div>
+          <div class="r-meta"><span>D-4690 draft awaiting review</span></div>
+          <div class="r-bar"><i style="width:100%"></i></div>
+        </li>
+        <li>
+          <div class="r1"><span class="r-name">Policy Compliance</span><span class="chip crit">2 exceptions</span></div>
+          <div class="r-meta"><span>D-4655</span><span>policy v2026.03</span></div>
+          <div class="r-bar"><i style="width:88%"></i></div>
+        </li>
+        <li>
+          <div class="r1"><span class="r-name">Portfolio Q&amp;A</span><span class="chip ok">ready</span></div>
+          <div class="r-meta"><span>17 records read</span><span>1.9s p50</span></div>
+          <div class="r-bar"><i style="width:30%"></i></div>
+        </li>
+      </ul>
+    </div>
+
+    <div class="guardrail">
+      <strong>Hard guardrails</strong>
+      No agent holds a tool that can:
+      <ul>
+        <li>approve or decline a deal</li>
+        <li>advance a stage past approval</li>
+        <li>write a ratio or a risk grade</li>
+      </ul>
+    </div>
+
+    <div class="side-block">
+      <h3>Awaiting your acceptance</h3>
+      <ul class="prompt-list">
+        <li><button type="button">D-4712 · spread v3 <span class="chip crit" style="float:right">uncited</span></button></li>
+        <li><button type="button">D-4690 · memo draft v1</button></li>
+        <li><button type="button">D-4771 · extraction v2</button></li>
+      </ul>
+    </div>
+
+    <div class="side-block">
+      <h3>Today</h3>
+      <dl class="kv">
+        <dt>Agent runs</dt><dd>146</dd>
+        <dt>Accepted</dt><dd>118</dd>
+        <dt>Edited then accepted</dt><dd>21</dd>
+        <dt>Rejected</dt><dd>7</dd>
+        <dt>Auto-advanced</dt><dd>0</dd>
+      </dl>
+    </div>
+  </aside>
+
+  <!-- ============================ STATUS BAR ============================ -->
+  <footer class="statusbar">
+    <span class="seg live"><span class="pulse"></span>Connected · cloud-run us-central1</span>
+    <span class="seg">Role: credit officer</span>
+    <span class="seg">Policy v2026.03</span>
+    <span class="seg">Rubric v4</span>
+    <span class="seg">Audit chain ✓ 214/214</span>
+    <span class="spacer"></span>
+    <span class="keys">
+      <span class="seg"><kbd>⌘K</kbd> palette</span>
+      <span class="seg"><kbd>J/K</kbd> move</span>
+      <span class="seg"><kbd>⇧A</kbd> accept</span>
+      <span class="seg"><kbd>⇧X</kbd> reject</span>
+      <span class="seg"><kbd>?</kbd> help</span>
+    </span>
+  </footer>
+
+</div>
+
+<script src="app.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,149 @@
+{
+  "proven_through_slice": 4,
+  "scope": "foundation+self",
+  "slices": [
+    {
+      "slice": "deal-intake-and-triage",
+      "name": "Deal intake, triage agent, and pipeline board",
+      "objective": "As a relationship manager I submit an SMB loan request and it becomes a tracked deal; the Intake Triage Agent classifies it, flags the documents still missing, and recommends an analyst queue, and after an analyst explicitly accepts that proposal the deal is routed and visible to everyone on the pipeline board grouped by workflow stage.",
+      "addresses": [
+        "R-001",
+        "R-002",
+        "R-003",
+        "R-004",
+        "R-005",
+        "R-006",
+        "R-007",
+        "R-025",
+        "R-027",
+        "R-031",
+        "R-032",
+        "R-036",
+        "R-039",
+        "R-040",
+        "R-041",
+        "R-046",
+        "R-048",
+        "R-053",
+        "R-055",
+        "R-056",
+        "R-058",
+        "R-060",
+        "R-064",
+        "R-065",
+        "R-066",
+        "R-067"
+      ],
+      "checks": [
+        {
+          "method": "POST",
+          "path": "/api/deals",
+          "expected_status": 201,
+          "contains": [
+            "Harborline Freight",
+            "intake"
+          ],
+          "ok": true
+        },
+        {
+          "method": "GET",
+          "path": "/api/pipeline",
+          "expected_status": 200,
+          "contains": [
+            "intake",
+            "Harborline Freight"
+          ],
+          "ok": true
+        },
+        {
+          "method": "POST",
+          "path": "/api/deals/DEAL-1001/agents/intake-triage/run",
+          "expected_status": 200,
+          "contains": [
+            "classification",
+            "missing_documents",
+            "recommended_queue",
+            "confidence_score"
+          ],
+          "ok": true
+        },
+        {
+          "method": "POST",
+          "path": "/api/deals/DEAL-1001/triage/accept",
+          "expected_status": 200,
+          "contains": [
+            "document_extraction",
+            "queue"
+          ],
+          "ok": true
+        }
+      ]
+    },
+    {
+      "slice": "tiered-approval-and-sla",
+      "name": "Tiered human approval, adverse action, and the idle register",
+      "objective": "As a credit officer I approve, decline with a controlled adverse-action reason, or return a deal from its dossier, with approval authority enforced server-side by exposure tier so an analyst cannot approve above $250,000, and I watch the SLA idle register for deals sitting more than five business days so I can reassign them.",
+      "addresses": [
+        "R-020",
+        "R-021",
+        "R-022",
+        "R-023",
+        "R-024",
+        "R-026",
+        "R-030",
+        "R-033",
+        "R-034",
+        "R-047",
+        "R-053",
+        "R-057",
+        "R-062",
+        "R-063",
+        "R-068",
+        "R-069"
+      ],
+      "checks": [
+        {
+          "method": "POST",
+          "path": "/api/deals/DEAL-1004/approve",
+          "expected_status": 403,
+          "contains": [
+            "authority"
+          ],
+          "ok": true
+        },
+        {
+          "method": "POST",
+          "path": "/api/deals/DEAL-1004/approve",
+          "expected_status": 200,
+          "contains": [
+            "approved",
+            "senior_credit_officer",
+            "officer@bank.test"
+          ],
+          "ok": true
+        },
+        {
+          "method": "POST",
+          "path": "/api/deals/DEAL-1006/decline",
+          "expected_status": 200,
+          "contains": [
+            "declined",
+            "INSUFFICIENT_DSCR"
+          ],
+          "ok": true
+        },
+        {
+          "method": "GET",
+          "path": "/api/sla/idle",
+          "expected_status": 200,
+          "contains": [
+            "DEAL-1005",
+            "business_days_idle",
+            "escalation_owner"
+          ],
+          "ok": true
+        }
+      ]
+    }
+  ]
+}

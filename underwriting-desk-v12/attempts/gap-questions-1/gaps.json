@@ -1,0 +1,28 @@
+{
+  "questions": [
+    {
+      "id": "GAP-001",
+      "prompt": "Does the system integrate with the bank's existing SSO/OIDC identity provider (roles supplied as external claims), or should it own local user accounts and role assignment?",
+      "default": "local",
+      "why": "Determines whether to build local user/role management or implement OIDC/SSO integration. Changes authentication architecture, database schema, and API design."
+    },
+    {
+      "id": "GAP-002",
+      "prompt": "For credit committee approval on deals above $1,000,000, is approval a single action by any committee member, or a multi-member vote requiring a defined quorum/threshold recorded per voter?",
+      "default": "single",
+      "why": "Affects approval workflow UI, database audit trail schema, and approval logic. Single-member vs multi-vote changes how approval state and blocking conditions are modeled."
+    },
+    {
+      "id": "GAP-003",
+      "prompt": "For approval tiering, is 'exposure amount' the requested amount of the single deal, or aggregate outstanding plus proposed exposure across the borrower and its related entities?",
+      "default": "single_deal",
+      "why": "Changes whether exposure calculation requires borrower entity relationship queries and aggregation logic. Impacts the approval tier determination logic and potentially the data model for entity relationships."
+    },
+    {
+      "id": "GAP-004",
+      "prompt": "Must the document extraction stage parse real uploaded PDFs, scans, and spreadsheets, or does it operate on structured/typed financial input with documents attached for reference only?",
+      "default": "structured_input",
+      "why": "Determines whether the financial spreading agent uses OCR/document parsing or structured data entry. Real document parsing requires external AI vision models and OCR pipelines; structured input uses direct form entry with document storage for audit."
+    }
+  ]
+}

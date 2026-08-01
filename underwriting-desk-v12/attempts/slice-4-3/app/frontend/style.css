@@ -1,0 +1,15 @@
+/* chat-shell structural styles. Colors/typography come from tokens.css. */
+* { box-sizing: border-box; margin: 0; }
+body { font-family: var(--font, system-ui); background: var(--bg, #fff); color: var(--fg, #111); }
+.chat { max-width: 720px; margin: 0 auto; height: 100vh; display: flex; flex-direction: column; padding: 1rem; }
+header h1 { font-size: 1.1rem; padding-bottom: .75rem; border-bottom: 1px solid var(--border, #ddd); }
+.messages { flex: 1; overflow-y: auto; list-style: none; padding: 1rem 0; display: flex; flex-direction: column; gap: .5rem; }
+.message { padding: .6rem .9rem; border-radius: .75rem; max-width: 80%; }
+.message.user { align-self: flex-end; background: var(--primary, #333); color: var(--on-primary, #fff); }
+.message.assistant { align-self: flex-start; background: var(--surface, #f2f2f2); }
+.message.error { align-self: center; color: #b00020; }
+.composer { display: flex; gap: .5rem; padding-top: .75rem; border-top: 1px solid var(--border, #ddd); }
+.composer input { flex: 1; padding: .6rem .8rem; border: 1px solid var(--border, #ccc); border-radius: .5rem; }
+.composer button { padding: .6rem 1.1rem; border: 0; border-radius: .5rem; background: var(--primary, #333); color: var(--on-primary, #fff); cursor: pointer; }
+header { display:flex; align-items:baseline; gap:.8rem; }
+.agent-mode { font-size:.72rem; color:var(--primary, #333); border:1px solid var(--border,#ddd); border-radius:99px; padding:.1rem .6rem; }

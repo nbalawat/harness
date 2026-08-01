@@ -1,0 +1,7 @@
+The user reviewed this step's previous output and requested changes:
+
+AUDIT FINDINGS to fix in YOUR slice (on top of the revised foundation you receive): (1) HIGH: approve_deal must REFUSE to approve while the deal has open (unwaived) policy_exceptions — return a clear 4xx explaining an officer must waive with rationale or return the deal; make sure seed data keeps DEAL-1004 exception-free so the recorded approval checks still pass. (2) return_deal must use the same _already_decided guard approve_deal and decline_deal use. (3) Enforce approval tiers by SERVER-SIDE role resolved from acting_user_email via the foundation helper (analyst to $250k, senior officer to $1M, committee above), default-deny unknown users. CONSTRAINTS: every recorded acceptance check must keep passing exactly as written; keep app.js changes pure appends.
+
+
+The previously committed output is at: /Users/nbalawat/development/harness/underwriting-desk-v12/artifacts/slice-4
+Start from it and apply ONLY the requested changes — keep everything else stable.

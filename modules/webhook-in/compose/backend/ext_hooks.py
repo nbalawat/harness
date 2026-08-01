@@ -10,7 +10,7 @@ from db import store
 router = APIRouter()
 
 
-@router.post("/hooks/{name}")
+@router.post("/hooks/{name}")  # public-endpoint: external event intake, authenticated by HMAC signature + nonce
 async def receive(name: str, request: Request, x_hook_signature: str | None = Header(default=None), x_hook_nonce: str | None = Header(default=None)):
     secret = os.environ.get(f"APP_HOOK_SECRET_{name.upper()}")
     if not secret:

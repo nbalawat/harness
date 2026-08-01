@@ -1,0 +1,431 @@
+{
+  "uat": {
+    "path": "/Users/nbalawat/development/harness/underwriting-desk-v12/artifacts/uat/uat.json",
+    "data": {
+      "approved": "yes"
+    }
+  },
+  "architecture": {
+    "path": "/Users/nbalawat/development/harness/underwriting-desk-v12/artifacts/architecture/architecture.json",
+    "data": {
+      "modules": [
+        "persistence-core",
+        "agent-runtime",
+        "chat-shell",
+        "postgres-adapter",
+        "migrations",
+        "seed-data",
+        "auth-basic",
+        "rbac",
+        "row-level-security",
+        "permissions-ui",
+        "audit-log",
+        "audit-view",
+        "row-history",
+        "approval-flow",
+        "state-machine",
+        "workflow-engine",
+        "assignment",
+        "sla-timers",
+        "agent-router",
+        "tool-registry",
+        "eval-harness",
+        "prompt-registry",
+        "transcript-store",
+        "pii-redaction",
+        "rag-core",
+        "citation-tracker",
+        "search-index",
+        "versioned-drafts",
+        "blob-store",
+        "file-upload",
+        "forms-engine",
+        "data-table",
+        "record-detail",
+        "dashboard-cards",
+        "notifications-ui",
+        "screen-router",
+        "env-config",
+        "structured-logging",
+        "secrets-manager",
+        "health-plus"
+      ],
+      "deploy_target": "cloud-run",
+      "selection_rationale": {
+        "runtime": "agent-runtime (Claude Agent SDK) retained as the default — no department framework mandate appears in the intake or clarifications, so neither agent-runtime-langgraph nor agent-runtime-adk is warranted. All five agents (R-004) are roster entries on the one runtime.",
+        "pack_basis": "Started from pack-intake-triage (persistence-core, agent-runtime, chat-shell, email-ingest, forms-engine, agent-router, assignment, sla-timers, state-machine, slack-notify, audit-log) — the closest shape match: form intake, agent classification, queue routing, SLA, explicit state machine. Kept forms-engine, agent-router, assignment, sla-timers, state-machine, audit-log and the substrate.",
+        "pack_removals": [
+          "email-ingest — intake is relationship-manager submission through the app (R-001, R-048); no forward-to-app channel appears in any requirement.",
+          "slack-notify — no requirement mentions Slack or any external channel; SLA surfacing is an in-app dashboard (R-034, GAP-001)."
+        ],
+        "notable_exclusions": [
+          "doc-extract / table-extract / ocr-bridge — GAP-004 answered 'structured_input': the extraction stage operates on structured/typed financial input with documents attached for reference only (R-070). Parsing real PDFs/scans is explicitly out of scope, so the entire document-parsing chain is dead weight. This is the single largest build-budget saving in the selection.",
+          "sso-oidc — GAP-001 answered 'local': the app owns local user accounts and role assignment (R-067), so auth-basic + rbac + permissions-ui cover identity without an external IdP.",
+          "soft-delete / data-retention — the audit trail is append-only with no delete path exposed (R-050); no retention or purge requirement was stated.",
+          "cost-meter / request-metrics — R-056's token-usage and latency fields are recorded on the agent-invocation record in transcript-store; a separate spend meter is not demanded.",
+          "admin-console / feature-flags — policy and rubric config (R-044, R-045) are versioned data seeded with documented defaults, not a flagged-rollout surface.",
+          "export-csv / charting / pdf-render / email-send / scheduling / rate-limit — no requirement demands data export, charts, PDF artifacts, outbound mail, cron jobs, or throttling."
+        ],
+        "budget_effect": "40 certified modules carry the substrate, identity, audit, workflow, approval, grounding, and Cloud Run readiness layers. The build slices are left with genuinely app-specific work: the deterministic ratio/grading module (R-016 to R-019, R-061), the eight-stage underwriting transition table, the spread template schema, the lending-policy ruleset, and the five agent mandates."
+      },
+      "module_coverage": [
+        {
+          "module": "persistence-core",
+          "addresses": [
+            "R-001",
+            "R-040",
+            "R-041",
+            "R-042",
+            "R-044"
+          ]
+        },
+        {
+          "module": "postgres-adapter",
+          "addresses": [
+            "R-001",
+            "R-038",
+            "R-050",
+            "R-060"
+          ]
+        },
+        {
+          "module": "migrations",
+          "addresses": [
+            "R-040",
+            "R-042",
+            "R-044",
+            "R-045"
+          ]
+        },
+        {
+          "module": "seed-data",
+          "addresses": [
+            "R-044",
+            "R-045",
+            "R-065"
+          ]
+        },
+        {
+          "module": "agent-runtime",
+          "addresses": [
+            "R-004",
+            "R-005",
+            "R-006",
+            "R-008",
+            "R-010",
+            "R-012",
+            "R-014"
+          ]
+        },
+        {
+          "module": "agent-router",
+          "addresses": [
+            "R-004",
+            "R-005",
+            "R-007"
+          ]
+        },
+        {
+          "module": "tool-registry",
+          "addresses": [
+            "R-023",
+            "R-055",
+            "R-016",
+            "R-017",
+            "R-018",
+            "R-019"
+          ]
+        },
+        {
+          "module": "eval-harness",
+          "addresses": [
+            "R-037"
+          ]
+        },
+        {
+          "module": "prompt-registry",
+          "addresses": [
+            "R-056"
+          ]
+        },
+        {
+          "module": "transcript-store",
+          "addresses": [
+            "R-029",
+            "R-056"
+          ]
+        },
+        {
+          "module": "pii-redaction",
+          "addresses": [
+            "R-059"
+          ]
+        },
+        {
+          "module": "rag-core",
+          "addresses": [
+            "R-014",
+            "R-015"
+          ]
+        },
+        {
+          "module": "citation-tracker",
+          "addresses": [
+            "R-009",
+            "R-011",
+            "R-015",
+            "R-043"
+          ]
+        },
+        {
+          "module": "search-index",
+          "addresses": [
+            "R-015",
+            "R-058"
+          ]
+        },
+        {
+          "module": "workflow-engine",
+          "addresses": [
+            "R-002",
+            "R-016",
+            "R-017",
+            "R-018",
+            "R-019",
+            "R-025",
+            "R-046",
+            "R-061",
+            "R-064"
+          ]
+        },
+        {
+          "module": "state-machine",
+          "addresses": [
+            "R-002",
+            "R-013",
+            "R-046",
+            "R-047",
+            "R-052",
+            "R-062"
+          ]
+        },
+        {
+          "module": "approval-flow",
+          "addresses": [
+            "R-020",
+            "R-021",
+            "R-022",
+            "R-023",
+            "R-024",
+            "R-025",
+            "R-026",
+            "R-047",
+            "R-049",
+            "R-052",
+            "R-062",
+            "R-063"
+          ]
+        },
+        {
+          "module": "assignment",
+          "addresses": [
+            "R-007",
+            "R-047",
+            "R-048"
+          ]
+        },
+        {
+          "module": "sla-timers",
+          "addresses": [
+            "R-034",
+            "R-057"
+          ]
+        },
+        {
+          "module": "audit-log",
+          "addresses": [
+            "R-027",
+            "R-028",
+            "R-029",
+            "R-030",
+            "R-050"
+          ]
+        },
+        {
+          "module": "row-history",
+          "addresses": [
+            "R-027",
+            "R-028",
+            "R-050"
+          ]
+        },
+        {
+          "module": "audit-view",
+          "addresses": [
+            "R-051"
+          ]
+        },
+        {
+          "module": "auth-basic",
+          "addresses": [
+            "R-024",
+            "R-039"
+          ]
+        },
+        {
+          "module": "rbac",
+          "addresses": [
+            "R-031",
+            "R-032",
+            "R-033",
+            "R-023",
+            "R-053"
+          ]
+        },
+        {
+          "module": "row-level-security",
+          "addresses": [
+            "R-031",
+            "R-053",
+            "R-054"
+          ]
+        },
+        {
+          "module": "permissions-ui",
+          "addresses": [
+            "R-031",
+            "R-032",
+            "R-033",
+            "R-039"
+          ]
+        },
+        {
+          "module": "versioned-drafts",
+          "addresses": [
+            "R-010",
+            "R-019",
+            "R-042",
+            "R-044",
+            "R-045"
+          ]
+        },
+        {
+          "module": "blob-store",
+          "addresses": [
+            "R-041"
+          ]
+        },
+        {
+          "module": "file-upload",
+          "addresses": [
+            "R-006",
+            "R-041"
+          ]
+        },
+        {
+          "module": "forms-engine",
+          "addresses": [
+            "R-008",
+            "R-042",
+            "R-049",
+            "R-063"
+          ]
+        },
+        {
+          "module": "data-table",
+          "addresses": [
+            "R-003",
+            "R-058"
+          ]
+        },
+        {
+          "module": "record-detail",
+          "addresses": [
+            "R-049",
+            "R-051"
+          ]
+        },
+        {
+          "module": "dashboard-cards",
+          "addresses": [
+            "R-003",
+            "R-034"
+          ]
+        },
+        {
+          "module": "notifications-ui",
+          "addresses": [
+            "R-034",
+            "R-064"
+          ]
+        },
+        {
+          "module": "chat-shell",
+          "addresses": [
+            "R-014",
+            "R-066"
+          ]
+        },
+        {
+          "module": "screen-router",
+          "addresses": [
+            "R-003",
+            "R-049",
+            "R-066"
+          ]
+        },
+        {
+          "module": "env-config",
+          "addresses": [
+            "R-060"
+          ]
+        },
+        {
+          "module": "structured-logging",
+          "addresses": [
+            "R-056",
+            "R-059",
+            "R-060"
+          ]
+        },
+        {
+          "module": "secrets-manager",
+          "addresses": [
+            "R-059"
+          ]
+        },
+        {
+          "module": "health-plus",
+          "addresses": [
+            "R-060"
+          ]
+        }
+      ],
+      "build_budget_plan": {
+        "nodes": {
+          "slice-plan": 4,
+          "slice-1": 14,
+          "slice-2": 11,
+          "slice-3": 11,
+          "slice-4": 10,
+          "slice-5": 9,
+          "slice-6": 8,
+          "slice-audit": 5
+        },
+        "total_usd": 72
+      },
+      "build_budget_rationale": {
+        "envelope_usd": 150,
+        "planned_build_usd": 72,
+        "headroom_usd": 78,
+        "headroom_purpose": "Covers the upstream design-phase nodes already budgeted in the DAG (ingest, requirements-synthesis, gap-questions, architecture, screen-inventory, three design options, data/agent/workflow design) plus retry attempts on any escalated slice, all inside the same $150 run envelope.",
+        "notes": [
+          "slice-1 carries the foundation premium: Deal entity, auth/rbac wiring, the eight-stage transition table, and the pipeline board — every later slice builds on it.",
+          "Slices 2-6 decline in cost because composition does the heavy lifting: approval tiering, audit timeline, SLA dashboard, and grounded Q&A are each a thin app layer over an already-certified module.",
+          "Excluding the doc-extract/table-extract/ocr-bridge chain (GAP-004 = structured_input) removes the most expensive and least deterministic build work in the catalog.",
+          "Per-node figures sit well under the DAG's runaway guards (slice-* are capped at $30 each); those guards are ~3x p95 and are not cost targets."
+        ]
+      }
+    }
+  }
+}

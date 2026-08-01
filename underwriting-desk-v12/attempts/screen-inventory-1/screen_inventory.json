@@ -1,0 +1,25 @@
+{
+  "screens": ["chat", "pipeline-board", "deal-detail", "audit-timeline", "sla-dashboard"],
+  "rationale": [
+    {
+      "screen": "chat",
+      "because": "R-014, R-015: Portfolio Q&A agent answers credit officers' questions spanning active deals, grounded in stored deal data and traceable to deal records"
+    },
+    {
+      "screen": "pipeline-board",
+      "because": "R-003, R-058: Display the status of every deal at every workflow stage with deal list, search, and filter capability grouped by workflow stage"
+    },
+    {
+      "screen": "deal-detail",
+      "because": "R-025, R-049: Every agent output requires explicit human acceptance before workflow proceeds; human review UI shows draft alongside citations with accept, edit, and reject actions"
+    },
+    {
+      "screen": "audit-timeline",
+      "because": "R-051: Expose a per-deal audit timeline view so reviewers and auditors can read the full history of state changes, calculations, agent drafts, and human decisions in order"
+    },
+    {
+      "screen": "sla-dashboard",
+      "because": "R-034: Surface deals idle for more than 5 business days on an SLA dashboard"
+    }
+  ]
+}

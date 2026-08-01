@@ -1,0 +1,8 @@
+{
+  "model": "claude-opus-5",
+  "inputTokens": 29,
+  "outputTokens": 18929,
+  "cacheReadTokens": 847937,
+  "cacheWriteTokens": 54300,
+  "costUsd": 1.4414495
+}

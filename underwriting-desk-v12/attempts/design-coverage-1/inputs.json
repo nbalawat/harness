@@ -1,0 +1,589 @@
+{
+  "app": {
+    "path": "/Users/nbalawat/development/harness/underwriting-desk-v12/artifacts/merge-slices/app"
+  },
+  "integration_report": {
+    "path": "/Users/nbalawat/development/harness/underwriting-desk-v12/artifacts/integrate/integration_report.json",
+    "data": {
+      "python_compile": "pass",
+      "js_check": "pass",
+      "compose_config": "skipped",
+      "compose_smoke": "skipped",
+      "backend_tests": {
+        "status": "pass",
+        "summary": "53 passed, 1 warning"
+      },
+      "evals": {
+        "status": "pass",
+        "passed": 2,
+        "total": 2
+      }
+    }
+  },
+  "design_contract": {
+    "path": "/Users/nbalawat/development/harness/underwriting-desk-v12/artifacts/design-contract/design_contract.json",
+    "data": {
+      "chosen_option": "option-2",
+      "screens": [
+        {
+          "id": "screen-chat",
+          "title": "The Portfolio Desk",
+          "elements": [
+            {
+              "tag": "form",
+              "id": "composer",
+              "label": null
+            },
+            {
+              "tag": "input",
+              "id": "input",
+              "label": "question"
+            },
+            {
+              "tag": "button",
+              "id": null,
+              "label": "Send to desk"
+            },
+            {
+              "tag": "button",
+              "id": null,
+              "label": "Where is Harborline Freight stuck?"
+            },
+            {
+              "tag": "button",
+              "id": null,
+              "label": "Total exposure by risk grade"
+            },
+            {
+              "tag": "button",
+              "id": null,
+              "label": "Which deals lack a signed spread?"
+            },
+            {
+              "tag": "button",
+              "id": null,
+              "label": "Show declines this quarter and their reasons"
+            }
+          ],
+          "element_count": 7
+        },
+        {
+          "id": "screen-pipeline-board",
+          "title": "Pipeline Board",
+          "elements": [
+            {
+              "tag": "form",
+              "id": null,
+              "label": "Find deals in this edition"
+            },
+            {
+              "tag": "input",
+              "id": null,
+              "label": "borrower, deal id, industry…"
+            },
+            {
+              "tag": "select",
+              "id": null,
+              "label": null
+            },
+            {
+              "tag": "select",
+              "id": null,
+              "label": null
+            },
+            {
+              "tag": "select",
+              "id": null,
+              "label": null
+            },
+            {
+              "tag": "select",
+              "id": null,
+              "label": null
+            },
+            {
+              "tag": "select",
+              "id": null,
+              "label": null
+            },
+            {
+              "tag": "button",
+              "id": null,
+              "label": "Apply"
+            }
+          ],
+          "element_count": 8
+        },
+        {
+          "id": "screen-deal-detail",
+          "title": "Deal Dossier",
+          "elements": [
+            {
+              "tag": "button",
+              "id": null,
+              "label": "Accept draft"
+            },
+            {
+              "tag": "button",
+              "id": null,
+              "label": "Edit before accepting"
+            },
+            {
+              "tag": "button",
+              "id": null,
+              "label": "Reject &amp; redraft"
+            },
+            {
+              "tag": "button",
+              "id": null,
+              "label": "Waive with rationale"
+            },
+            {
+              "tag": "button",
+              "id": null,
+              "label": "Return to analyst"
+            },
+            {
+              "tag": "button",
+              "id": null,
+              "label": "Approve as senior credit officer"
+            },
+            {
+              "tag": "button",
+              "id": null,
+              "label": "Decline with adverse-action reason"
+            },
+            {
+              "tag": "button",
+              "id": null,
+              "label": "Return to an earlier stage"
+            }
+          ],
+          "element_count": 8
+        },
+        {
+          "id": "screen-audit-timeline",
+          "title": "The Chronicle",
+          "elements": [
+            {
+              "tag": "button",
+              "id": null,
+              "label": "Export for audit"
+            }
+          ],
+          "element_count": 1
+        },
+        {
+          "id": "screen-sla-dashboard",
+          "title": "The Idle Register",
+          "elements": [
+            {
+              "tag": "button",
+              "id": null,
+              "label": "Reassign selected"
+            },
+            {
+              "tag": "button",
+              "id": null,
+              "label": "Nudge owners"
+            }
+          ],
+          "element_count": 2
+        }
+      ],
+      "totals": {
+        "screens": 5,
+        "elements": 26
+      }
+    }
+  },
+  "slice_plan": {
+    "path": "/Users/nbalawat/development/harness/underwriting-desk-v12/artifacts/slice-plan/slice_plan.json",
+    "data": {
+      "slices": [
+        {
+          "id": "deal-intake-and-triage",
+          "name": "Deal intake, triage agent, and pipeline board",
+          "story": "As a relationship manager I submit an SMB loan request and it becomes a tracked deal; the Intake Triage Agent classifies it, flags the documents still missing, and recommends an analyst queue, and after an analyst explicitly accepts that proposal the deal is routed and visible to everyone on the pipeline board grouped by workflow stage.",
+          "addresses": [
+            "R-001",
+            "R-002",
+            "R-003",
+            "R-004",
+            "R-005",
+            "R-006",
+            "R-007",
+            "R-025",
+            "R-027",
+            "R-031",
+            "R-032",
+            "R-036",
+            "R-039",
+            "R-040",
+            "R-041",
+            "R-046",
+            "R-048",
+            "R-053",
+            "R-055",
+            "R-056",
+            "R-058",
+            "R-060",
+            "R-064",
+            "R-065",
+            "R-066",
+            "R-067"
+          ],
+          "covers": [
+            "screen-pipeline-board"
+          ],
+          "acceptance": [
+            {
+              "method": "POST",
+              "path": "/api/deals",
+              "body": {
+                "borrower_name": "Harborline Freight",
+                "borrower_industry": "trucking",
+                "requested_amount": 400000,
+                "exposure_amount": 400000,
+                "acting_user_email": "rm@bank.test"
+              },
+              "expect_status": 201,
+              "expect_contains": [
+                "Harborline Freight",
+                "intake"
+              ]
+            },
+            {
+              "method": "GET",
+              "path": "/api/pipeline",
+              "expect_status": 200,
+              "expect_contains": [
+                "intake",
+                "Harborline Freight"
+              ]
+            },
+            {
+              "method": "POST",
+              "path": "/api/deals/DEAL-1001/agents/intake-triage/run",
+              "body": {
+                "acting_user_email": "analyst@bank.test"
+              },
+              "expect_status": 200,
+              "expect_contains": [
+                "classification",
+                "missing_documents",
+                "recommended_queue",
+                "confidence_score"
+              ]
+            },
+            {
+              "method": "POST",
+              "path": "/api/deals/DEAL-1001/triage/accept",
+              "body": {
+                "acting_user_email": "analyst@bank.test"
+              },
+              "expect_status": 200,
+              "expect_contains": [
+                "document_extraction",
+                "queue"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "spread-ratios-and-risk-grade",
+          "name": "Cited financial spread, deterministic ratios, and risk grade",
+          "story": "As a credit analyst I open a deal dossier, run the Financial Spreading Agent to fill the standard spread template with a document-and-locator citation on every figure, accept or edit the draft, and the system then computes DSCR, leverage, and current ratio in deterministic code and assigns the risk grade from the versioned rubric, showing the exact band hit.",
+          "addresses": [
+            "R-008",
+            "R-009",
+            "R-016",
+            "R-017",
+            "R-018",
+            "R-019",
+            "R-025",
+            "R-028",
+            "R-029",
+            "R-035",
+            "R-042",
+            "R-043",
+            "R-045",
+            "R-049",
+            "R-061",
+            "R-064",
+            "R-070"
+          ],
+          "covers": [
+            "screen-deal-detail"
+          ],
+          "acceptance": [
+            {
+              "method": "POST",
+              "path": "/api/deals/DEAL-1002/agents/financial-spreading/run",
+              "body": {
+                "acting_user_email": "analyst@bank.test"
+              },
+              "expect_status": 200,
+              "expect_contains": [
+                "rows",
+                "citations",
+                "template_version",
+                "document_id"
+              ]
+            },
+            {
+              "method": "POST",
+              "path": "/api/deals/DEAL-1002/spread/accept",
+              "body": {
+                "acting_user_email": "analyst@bank.test",
+                "action": "accept"
+              },
+              "expect_status": 200,
+              "expect_contains": [
+                "accepted",
+                "analyst@bank.test"
+              ]
+            },
+            {
+              "method": "GET",
+              "path": "/api/deals/DEAL-1002/ratios",
+              "expect_status": 200,
+              "expect_contains": [
+                "dscr",
+                "leverage",
+                "current_ratio",
+                "numerator",
+                "denominator"
+              ]
+            },
+            {
+              "method": "GET",
+              "path": "/api/deals/DEAL-1002/risk-grade",
+              "expect_status": 200,
+              "expect_contains": [
+                "grade",
+                "rubric_version",
+                "band_hit"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "memo-policy-and-audit-trail",
+          "name": "Credit memo, policy exceptions, and the per-deal chronicle",
+          "story": "As a credit analyst I run the Credit Memo Agent to draft the memo citing the ratios, spread lines, and policy rules it relied on, then the Policy Compliance Agent tests the deal against the active lending ruleset and writes an exception for every breach; as a reviewer I read the whole history — state changes, ratio calculations, agent drafts, and human acceptances — in order on the deal's audit timeline.",
+          "addresses": [
+            "R-010",
+            "R-011",
+            "R-012",
+            "R-013",
+            "R-025",
+            "R-027",
+            "R-029",
+            "R-030",
+            "R-043",
+            "R-044",
+            "R-049",
+            "R-050",
+            "R-051",
+            "R-052",
+            "R-055",
+            "R-056"
+          ],
+          "covers": [
+            "screen-audit-timeline"
+          ],
+          "acceptance": [
+            {
+              "method": "POST",
+              "path": "/api/deals/DEAL-1003/agents/credit-memo/run",
+              "body": {
+                "acting_user_email": "analyst@bank.test"
+              },
+              "expect_status": 200,
+              "expect_contains": [
+                "memo_content",
+                "citations",
+                "sections"
+              ]
+            },
+            {
+              "method": "POST",
+              "path": "/api/deals/DEAL-1003/agents/policy-compliance/run",
+              "body": {
+                "acting_user_email": "analyst@bank.test"
+              },
+              "expect_status": 200,
+              "expect_contains": [
+                "findings",
+                "exceptions",
+                "policy_version",
+                "rule_reference"
+              ]
+            },
+            {
+              "method": "GET",
+              "path": "/api/deals/DEAL-1003/policy-exceptions",
+              "expect_status": 200,
+              "expect_contains": [
+                "rule_reference",
+                "rationale",
+                "status"
+              ]
+            },
+            {
+              "method": "GET",
+              "path": "/api/deals/DEAL-1003/audit",
+              "expect_status": 200,
+              "expect_contains": [
+                "actor_user_id",
+                "action",
+                "agent_draft",
+                "timestamp"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "tiered-approval-and-sla",
+          "name": "Tiered human approval, adverse action, and the idle register",
+          "story": "As a credit officer I approve, decline with a controlled adverse-action reason, or return a deal from its dossier, with approval authority enforced server-side by exposure tier so an analyst cannot approve above $250,000, and I watch the SLA idle register for deals sitting more than five business days so I can reassign them.",
+          "addresses": [
+            "R-020",
+            "R-021",
+            "R-022",
+            "R-023",
+            "R-024",
+            "R-026",
+            "R-030",
+            "R-033",
+            "R-034",
+            "R-047",
+            "R-053",
+            "R-057",
+            "R-062",
+            "R-063",
+            "R-068",
+            "R-069"
+          ],
+          "covers": [
+            "screen-sla-dashboard"
+          ],
+          "acceptance": [
+            {
+              "method": "POST",
+              "path": "/api/deals/DEAL-1004/approve",
+              "body": {
+                "acting_user_email": "analyst@bank.test",
+                "decision_notes": "Looks fine to me"
+              },
+              "expect_status": 403,
+              "expect_contains": [
+                "authority"
+              ]
+            },
+            {
+              "method": "POST",
+              "path": "/api/deals/DEAL-1004/approve",
+              "body": {
+                "acting_user_email": "officer@bank.test",
+                "decision_notes": "Within policy, DSCR above floor"
+              },
+              "expect_status": 200,
+              "expect_contains": [
+                "approved",
+                "senior_credit_officer",
+                "officer@bank.test"
+              ]
+            },
+            {
+              "method": "POST",
+              "path": "/api/deals/DEAL-1006/decline",
+              "body": {
+                "acting_user_email": "officer@bank.test",
+                "reason_code": "INSUFFICIENT_DSCR",
+                "reason_detail": "DSCR of 0.82 is below the 1.25 policy floor"
+              },
+              "expect_status": 200,
+              "expect_contains": [
+                "declined",
+                "INSUFFICIENT_DSCR"
+              ]
+            },
+            {
+              "method": "GET",
+              "path": "/api/sla/idle",
+              "expect_status": 200,
+              "expect_contains": [
+                "DEAL-1005",
+                "business_days_idle",
+                "escalation_owner"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "grounded-portfolio-qa",
+          "name": "Grounded, permission-scoped portfolio Q&A desk",
+          "story": "As a credit officer I ask the portfolio desk questions spanning active deals in plain English and get answers drawn only from stored deal records I am entitled to see, with every statement traceable to the deal ids behind it and the whole session recorded for audit.",
+          "addresses": [
+            "R-014",
+            "R-015",
+            "R-023",
+            "R-029",
+            "R-037",
+            "R-038",
+            "R-053",
+            "R-054",
+            "R-055",
+            "R-056",
+            "R-058",
+            "R-059",
+            "R-060",
+            "R-066"
+          ],
+          "covers": [
+            "screen-chat"
+          ],
+          "acceptance": [
+            {
+              "method": "POST",
+              "path": "/api/qa/ask",
+              "body": {
+                "question": "Who am I talking to?",
+                "acting_user_email": "officer@bank.test"
+              },
+              "expect_status": 200,
+              "expect_contains": [
+                "Portfolio Q&A Agent"
+              ]
+            },
+            {
+              "method": "POST",
+              "path": "/api/qa/ask",
+              "body": {
+                "question": "Which deals lack an accepted spread?",
+                "acting_user_email": "officer@bank.test"
+              },
+              "expect_status": 200,
+              "expect_contains": [
+                "source_deal_ids",
+                "DEAL-"
+              ]
+            },
+            {
+              "method": "GET",
+              "path": "/api/qa/sessions",
+              "expect_status": 200,
+              "expect_contains": [
+                "question",
+                "source_deal_ids",
+                "user_id"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

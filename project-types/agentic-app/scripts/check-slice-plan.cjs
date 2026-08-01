@@ -64,7 +64,24 @@ for (const slice of slices) {
   }
 }
 
+// NEGATIVE ACCEPTANCE: verification must prove the app REFUSES wrong things.
+// Any slice with a mutating check must also carry at least one 4xx check
+// (unauthorized actor, invalid payload, or closed-table write).
+for (const slice of slices) {
+  const mutates = slice.acceptance.some((a) => ["POST", "PUT", "DELETE"].includes(a.method));
+  const hasNegative = slice.acceptance.some((a) => (a.expect_status ?? 200) >= 400);
+  if (mutates && !hasNegative) {
+    console.error(
+      `slice '${slice.id}' has mutating acceptance but NO negative check — add at least one refusal proof ` +
+      "(expect_status 401/403/404/409/422: unknown actor mutating, missing required field, or a closed generic-table write). " +
+      "An app is only verified when wrong requests are proven to fail.",
+    );
+    process.exit(1);
+  }
+}
+
 console.log(
   `slice plan verified: ${slices.length} slice(s), all traced to requirements; ` +
-  `design coverage complete (${contractScreens.size}/${contractScreens.size} screens assigned)`,
+  `design coverage complete (${contractScreens.size}/${contractScreens.size} screens assigned); ` +
+  "negative acceptance present on every mutating slice",
 );

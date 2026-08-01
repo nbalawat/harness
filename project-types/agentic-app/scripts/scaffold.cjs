@@ -69,6 +69,11 @@ fs.writeFileSync(
 );
 
 // 4a. models.py is approved deterministic content (data-design artifact).
+// Table exposure is DEFAULT-CLOSED: the generic /api/{table} API serves only
+// tables the approved data model explicitly marks access:"open" (read+write)
+// or access:"read". Everything else is reachable solely through explicit,
+// identity-carrying endpoints — audit/identity/financial tables never leak
+// through a generic passthrough again.
 const tables = inputs.data_model.data.tables;
 fs.writeFileSync(
   "app/backend/models.py",
@@ -78,6 +83,10 @@ fs.writeFileSync(
     "TABLES = {",
     ...tables.map((t) => `    "${t.name}": [${t.columns.map((c) => `"${c.name}"`).join(", ")}],`),
     "}",
+    "",
+    "# Generic-API exposure (default closed; from the approved data model's per-table `access`).",
+    `OPEN_READ_TABLES = {${tables.filter((t) => t.access === "open" || t.access === "read").map((t) => `"${t.name}"`).join(", ")}}`,
+    `OPEN_WRITE_TABLES = {${tables.filter((t) => t.access === "open").map((t) => `"${t.name}"`).join(", ")}}`,
     "",
   ].join("\n"),
 );

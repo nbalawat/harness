@@ -1,0 +1,343 @@
+{
+  "workflows": [
+    {
+      "name": "deal-underwriting-lifecycle",
+      "description": "The end-to-end SMB underwriting process: intake validation, agent triage and routing, document check, agent financial spreading with mandatory citations, deterministic ratio computation and risk grading, agent memo drafting, agent policy compliance review, exception waiver, tiered human approval, and deterministic closing or adverse action. Every agent output is human-accepted before the run advances, and every state change after a human decision is a deterministic handler.",
+      "addresses": [
+        "R-001", "R-002", "R-003", "R-004", "R-005", "R-006", "R-007", "R-008", "R-009",
+        "R-010", "R-011", "R-012", "R-013", "R-016", "R-017", "R-018", "R-019", "R-020",
+        "R-021", "R-022", "R-023", "R-024", "R-025", "R-026", "R-027", "R-028", "R-029",
+        "R-030", "R-032", "R-033", "R-040", "R-041", "R-042", "R-043", "R-044", "R-045",
+        "R-046", "R-047", "R-048", "R-049", "R-050", "R-051", "R-052", "R-055", "R-056",
+        "R-061", "R-062", "R-063", "R-064"
+      ],
+      "nodes": [
+        {
+          "id": "intake",
+          "kind": "deterministic",
+          "handler": "validate_intake_submission",
+          "output_schema": {
+            "required": ["deal_id", "valid", "borrower_name", "borrower_industry", "requested_amount", "exposure_amount", "submitted_by_user_id", "audit_entry_id"]
+          }
+        },
+        {
+          "id": "intakeok",
+          "kind": "condition",
+          "path": "intake.valid",
+          "equals": true,
+          "on_false": "end"
+        },
+        {
+          "id": "triage",
+          "kind": "agent",
+          "prompt": "You are the intake triage agent. Classify loan request ${intake_deal_id} for borrower ${intake_borrower_name} in industry ${intake_borrower_industry}, requested amount ${intake_requested_amount}, exposure ${intake_exposure_amount}. Return: classification (request type and complexity), missing_documents (list of required document types not yet attached), recommended_queue (the analyst queue this should be routed to), and confidence_score. You may read deal and document records only. You may not approve, decline, grade, price, or advance this deal; recommendations are proposals for a human to accept.",
+          "output_schema": {
+            "required": ["classification", "missing_documents", "recommended_queue", "confidence_score"]
+          }
+        },
+        {
+          "id": "triagereview",
+          "kind": "human",
+          "question": "Triage of deal ${intake_deal_id}: classification ${triage_classification}, missing documents ${triage_missing_documents}, routing to ${triage_recommended_queue} (confidence ${triage_confidence_score}). Accept, edit, or reject this triage result?"
+        },
+        {
+          "id": "route",
+          "kind": "deterministic",
+          "handler": "record_triage_and_route_to_queue",
+          "output_schema": {
+            "required": ["queue_assignment_id", "queue_name", "assigned_to_user_id", "triage_decision_id", "review_id", "audit_entry_id"]
+          }
+        },
+        {
+          "id": "docs",
+          "kind": "deterministic",
+          "handler": "verify_required_documents",
+          "output_schema": {
+            "required": ["all_required_present", "document_ids", "missing_document_types", "audit_entry_id"]
+          }
+        },
+        {
+          "id": "docsok",
+          "kind": "condition",
+          "path": "docs.all_required_present",
+          "equals": true,
+          "on_false": "end"
+        },
+        {
+          "id": "spread",
+          "kind": "agent",
+          "prompt": "You are the financial spreading agent. Extract borrower financials for deal ${intake_deal_id} from documents ${docs_document_ids} into the standard spread template (versioned line_item_key / period / value / unit rows). Every extracted figure MUST carry a structured citation (document_id plus page, section, or cell locator). An uncited figure is invalid — omit it and list it under unextractable instead of guessing. Return rows, citations, and unextractable. You may not compute ratios, assign grades, or advance the deal.",
+          "output_schema": {
+            "required": ["rows", "citations", "unextractable", "template_version"]
+          }
+        },
+        {
+          "id": "citecheck",
+          "kind": "deterministic",
+          "handler": "validate_spread_citations",
+          "output_schema": {
+            "required": ["every_figure_cited", "uncited_line_item_keys", "citation_ids", "audit_entry_id"]
+          }
+        },
+        {
+          "id": "citesok",
+          "kind": "condition",
+          "path": "citecheck.every_figure_cited",
+          "equals": true,
+          "on_false": "end"
+        },
+        {
+          "id": "spreadreview",
+          "kind": "human",
+          "question": "Financial spread for deal ${intake_deal_id}: ${spread_rows} with citations ${citecheck_citation_ids}. Figures the agent could not extract: ${spread_unextractable}. Accept, edit, or reject this spread?"
+        },
+        {
+          "id": "savespread",
+          "kind": "deterministic",
+          "handler": "persist_accepted_spread",
+          "output_schema": {
+            "required": ["spread_id", "template_version", "line_item_count", "review_id", "reviewed_by_user_id", "audit_entry_id"]
+          }
+        },
+        {
+          "id": "ratios",
+          "kind": "deterministic",
+          "handler": "compute_financial_ratios",
+          "output_schema": {
+            "required": ["dscr", "leverage", "current_ratio", "ratio_ids", "rounding_method", "divide_by_zero_handling", "audit_entry_ids"]
+          }
+        },
+        {
+          "id": "grade",
+          "kind": "deterministic",
+          "handler": "assign_risk_grade",
+          "output_schema": {
+            "required": ["grade", "rubric_version", "band_hit", "risk_grade_id", "reasoning", "audit_entry_id"]
+          }
+        },
+        {
+          "id": "memo",
+          "kind": "agent",
+          "prompt": "You are the credit memo agent. Draft the underwriting memo for deal ${intake_deal_id} (${intake_borrower_name}, ${intake_borrower_industry}, exposure ${intake_exposure_amount}). Use only the computed values supplied: DSCR ${ratios_dscr}, leverage ${ratios_leverage}, current ratio ${ratios_current_ratio}, risk grade ${grade_grade} from rubric ${grade_rubric_version} band ${grade_band_hit}, and accepted spread ${savespread_spread_id}. Every assertion must cite the specific ratio id, spread line item, or policy rule it relies on. Do not recompute any ratio, restate a different grade, recommend an approval decision, or advance the deal.",
+          "output_schema": {
+            "required": ["memo_content", "citations", "sections"]
+          }
+        },
+        {
+          "id": "memoreview",
+          "kind": "human",
+          "question": "Credit memo for deal ${intake_deal_id}: ${memo_memo_content}. Citations: ${memo_citations}. Accept, edit, or reject this memo draft?"
+        },
+        {
+          "id": "savememo",
+          "kind": "deterministic",
+          "handler": "persist_accepted_memo",
+          "output_schema": {
+            "required": ["memo_id", "citation_ids", "review_id", "reviewed_by_user_id", "audit_entry_id"]
+          }
+        },
+        {
+          "id": "policy",
+          "kind": "agent",
+          "prompt": "You are the policy compliance agent. Review accepted memo ${savememo_memo_id} for deal ${intake_deal_id} (industry ${intake_borrower_industry}, exposure ${intake_exposure_amount}, grade ${grade_grade}) against the active lending policy ruleset. Cover at minimum concentration limits, prohibited industries, and LTV caps. For each violation return a written exception: rule_reference, violation_detail, and rationale. Return findings, exceptions, and policy_version. You may not waive an exception, approve, decline, or advance the deal.",
+          "output_schema": {
+            "required": ["findings", "exceptions", "policy_version"]
+          }
+        },
+        {
+          "id": "policyreview",
+          "kind": "human",
+          "question": "Policy compliance review for deal ${intake_deal_id} against policy ${policy_policy_version}: findings ${policy_findings}, proposed exceptions ${policy_exceptions}. Accept, edit, or reject these compliance findings?"
+        },
+        {
+          "id": "exceptions",
+          "kind": "deterministic",
+          "handler": "record_policy_exceptions",
+          "output_schema": {
+            "required": ["policy_version", "exception_ids", "open_exception_count", "has_open_exceptions", "review_id", "audit_entry_id"]
+          }
+        },
+        {
+          "id": "hasexceptions",
+          "kind": "condition",
+          "path": "exceptions.has_open_exceptions",
+          "equals": true,
+          "on_false": "tier"
+        },
+        {
+          "id": "waiver",
+          "kind": "human",
+          "question": "Deal ${intake_deal_id} has ${exceptions_open_exception_count} open policy exception(s): ${exceptions_exception_ids}. For each, waive with a written rationale or leave open. Open exceptions block approval."
+        },
+        {
+          "id": "resolve",
+          "kind": "deterministic",
+          "handler": "resolve_policy_exceptions",
+          "output_schema": {
+            "required": ["resolved_exception_ids", "open_exception_count", "resolved_by_user_id", "resolved_at", "audit_entry_id"]
+          }
+        },
+        {
+          "id": "clear",
+          "kind": "condition",
+          "path": "resolve.open_exception_count",
+          "equals": 0,
+          "on_false": "end"
+        },
+        {
+          "id": "tier",
+          "kind": "deterministic",
+          "handler": "determine_approval_tier",
+          "output_schema": {
+            "required": ["exposure_amount", "required_authority_level", "eligible_role", "tier_rule_applied", "audit_entry_id"]
+          }
+        },
+        {
+          "id": "decision",
+          "kind": "human",
+          "question": "Deal ${intake_deal_id} (${intake_borrower_name}) — exposure ${tier_exposure_amount}, risk grade ${grade_grade}, memo ${savememo_memo_id}. Requires ${tier_required_authority_level} authority (role: ${tier_eligible_role}). Approve, decline, or return this deal? Decline requires an adverse-action reason code plus detail; return requires a written reason and a target stage."
+        },
+        {
+          "id": "record",
+          "kind": "deterministic",
+          "handler": "record_approval_decision",
+          "output_schema": {
+            "required": ["approval_id", "decision", "is_approved", "decided_by_user_id", "decided_at", "authority_level_verified", "idempotency_key", "audit_entry_id"]
+          }
+        },
+        {
+          "id": "outcome",
+          "kind": "deterministic",
+          "handler": "record_adverse_action_or_return",
+          "output_schema": {
+            "required": ["outcome", "adverse_action_reason_code", "adverse_action_detail", "returned_to_stage", "reassigned_to_user_id", "audit_entry_id"]
+          }
+        },
+        {
+          "id": "approvedgate",
+          "kind": "condition",
+          "path": "record.is_approved",
+          "equals": true,
+          "on_false": "end"
+        },
+        {
+          "id": "close",
+          "kind": "deterministic",
+          "handler": "close_approved_deal",
+          "output_schema": {
+            "required": ["deal_id", "final_stage", "final_status", "closed_at", "audit_entry_id"]
+          }
+        }
+      ]
+    },
+    {
+      "name": "portfolio-qa",
+      "description": "A credit officer asks a portfolio question: retrieval is scoped to the asker's RBAC permissions before the agent sees anything, the answer is checked for grounding against the retrieved deal records, the asker accepts or flags it, and the session plus its sources are recorded for traceability.",
+      "addresses": ["R-014", "R-015", "R-025", "R-029", "R-053", "R-054", "R-055", "R-056"],
+      "nodes": [
+        {
+          "id": "scope",
+          "kind": "deterministic",
+          "handler": "resolve_qa_permission_scope",
+          "output_schema": {
+            "required": ["user_id", "role", "question", "visible_deal_ids", "scope_is_empty"]
+          }
+        },
+        {
+          "id": "scopeok",
+          "kind": "condition",
+          "path": "scope.scope_is_empty",
+          "equals": false,
+          "on_false": "end"
+        },
+        {
+          "id": "retrieve",
+          "kind": "deterministic",
+          "handler": "retrieve_grounded_deal_context",
+          "output_schema": {
+            "required": ["context_records", "source_deal_ids", "record_count"]
+          }
+        },
+        {
+          "id": "answer",
+          "kind": "agent",
+          "prompt": "You are the portfolio Q&A agent. Answer this credit officer question using ONLY the supplied deal records — never model recall or outside knowledge: \"${scope_question}\". Records in scope: ${retrieve_context_records} (deals ${retrieve_source_deal_ids}). Cite the deal id and record for every claim. If the records do not support an answer, say so and name what is missing. You have read-only access to the records supplied here and may not approve, decline, or advance any deal.",
+          "output_schema": {
+            "required": ["answer", "cited_record_refs", "unsupported_claims"]
+          }
+        },
+        {
+          "id": "groundcheck",
+          "kind": "deterministic",
+          "handler": "verify_answer_grounding",
+          "output_schema": {
+            "required": ["grounded", "cited_deal_ids", "out_of_scope_citation_count", "unsourced_claim_count"]
+          }
+        },
+        {
+          "id": "groundok",
+          "kind": "condition",
+          "path": "groundcheck.grounded",
+          "equals": true,
+          "on_false": "end"
+        },
+        {
+          "id": "accept",
+          "kind": "human",
+          "question": "Answer to \"${scope_question}\": ${answer_answer}. Sourced from deals ${groundcheck_cited_deal_ids}. Accept this answer or flag it as unsupported?"
+        },
+        {
+          "id": "record",
+          "kind": "deterministic",
+          "handler": "record_qa_session",
+          "output_schema": {
+            "required": ["session_id", "source_deal_ids", "trace_data", "accepted_by_user_id", "audit_entry_id"]
+          }
+        }
+      ]
+    },
+    {
+      "name": "sla-idle-escalation",
+      "description": "A deal that has sat idle beyond the business-day SLA is measured deterministically, surfaced to its owning credit officer with the blocking work listed, and the officer's choice to reassign, return, or acknowledge is applied by a deterministic auditable handler. No agent participates, so the five-agent mandate is not widened.",
+      "addresses": ["R-003", "R-027", "R-030", "R-033", "R-034", "R-046", "R-047", "R-048", "R-051", "R-057", "R-058"],
+      "nodes": [
+        {
+          "id": "measure",
+          "kind": "deterministic",
+          "handler": "compute_business_day_idle_time",
+          "output_schema": {
+            "required": ["deal_id", "idle_business_days", "sla_breached", "last_activity_timestamp", "current_stage", "assigned_to_user_id"]
+          }
+        },
+        {
+          "id": "breached",
+          "kind": "condition",
+          "path": "measure.sla_breached",
+          "equals": true,
+          "on_false": "end"
+        },
+        {
+          "id": "blockers",
+          "kind": "deterministic",
+          "handler": "collect_stage_blockers",
+          "output_schema": {
+            "required": ["blocking_items", "open_exception_count", "pending_review_count", "missing_document_types"]
+          }
+        },
+        {
+          "id": "escalate",
+          "kind": "human",
+          "question": "Deal ${measure_deal_id} has been idle ${measure_idle_business_days} business days at stage ${measure_current_stage}, owned by ${measure_assigned_to_user_id}. Blocking: ${blockers_blocking_items}. Reassign, return to an earlier stage with a written reason, or acknowledge with a note?"
+        },
+        {
+          "id": "apply",
+          "kind": "deterministic",
+          "handler": "apply_sla_escalation_action",
+          "output_schema": {
+            "required": ["action_taken", "reassigned_to_user_id", "returned_to_stage", "decided_by_user_id", "note", "audit_entry_id"]
+          }
+        }
+      ]
+    }
+  ]
+}

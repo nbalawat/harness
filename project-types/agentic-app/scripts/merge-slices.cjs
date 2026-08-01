@@ -12,9 +12,14 @@ const inputs = JSON.parse(fs.readFileSync("inputs.json", "utf8"));
 const base = inputs.app.path; // the foundation: slice-1's committed app
 
 // Per-branch noise that must never merge: verification rewrites these in each
-// slice's own tree (acceptance_report.json) or Python caches them.
+// slice's own tree (acceptance_report.json) or tooling caches them (pytest,
+// mypy, ruff — each branch's test run writes different cache contents).
+const NOISE_DIRS = ["__pycache__", ".pytest_cache", ".mypy_cache", ".ruff_cache", "node_modules"];
 const EXCLUDE = (rel) =>
-  rel === "acceptance_report.json" || rel.includes("__pycache__") || rel.endsWith(".pyc");
+  rel === "acceptance_report.json" ||
+  rel.endsWith(".pyc") ||
+  rel.endsWith(".DS_Store") ||
+  NOISE_DIRS.some((d) => rel.split(path.sep).includes(d));
 
 function walk(root) {
   const out = [];
@@ -108,16 +113,32 @@ for (const rel of sorted) {
   if (distinct.some((v) => v.content === null)) conflict(rel, slices, "one slice deleted it, another changed it");
   if (!distinct.every((v) => isText(v.content)) || !isText(baseContent)) conflict(rel, slices, "binary file");
 
+  const baseText = baseContent.toString();
+  const ordered = [...variants].sort((a, b) => a.slice - b.slice);
+
   if (rel === "SLICES.md") {
     // Append-only ledger: every slice adds its entries under the foundation's.
     // Each variant must extend the base; suffixes concatenate in slice order.
-    const baseText = baseContent.toString();
     let out = baseText;
-    for (const v of variants.sort((a, b) => a.slice - b.slice)) {
+    for (const v of ordered) {
       const text = v.content.toString();
       if (!text.startsWith(baseText)) conflict(rel, slices, "a slice rewrote the ledger instead of appending");
       out += text.slice(baseText.length);
     }
+    fs.writeFileSync(dest, out);
+    continue;
+  }
+
+  // Append-extensions: when EVERY slice kept the base intact and only added
+  // to the end (the common shape for shared wiring files like app.js — each
+  // slice appends its own screen's behavior), the deterministic union is the
+  // base plus each suffix in slice order. A three-way merge would call four
+  // same-point insertions a conflict; concatenation is exactly the intended
+  // result, and verify-merged still has to PROVE the union boots and passes.
+  if (ordered.every((v) => v.content.toString().startsWith(baseText))) {
+    let out = baseText;
+    for (const v of ordered) out += v.content.toString().slice(baseText.length);
+    fs.mkdirSync(path.dirname(dest), { recursive: true });
     fs.writeFileSync(dest, out);
     continue;
   }

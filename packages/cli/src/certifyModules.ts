@@ -71,7 +71,10 @@ function makeScratchApp(modulesDir: string, projectTypeDir: string, moduleDir: s
   overlay(moduleDir, app);
   fs.writeFileSync(
     path.join(app, "backend", "models.py"),
-    'TABLES = {\n    "conversations": ["id", "user"],\n    "messages": ["id", "conversation_id", "content"],\n    "approvals": ["id", "message", "approved"],\n}\n',
+    'TABLES = {\n    "conversations": ["id", "user"],\n    "messages": ["id", "conversation_id", "content"],\n    "approvals": ["id", "message", "approved"],\n}\n' +
+      '# Generic-API exposure (module-test substrate: chat tables open, approvals closed).\n' +
+      'OPEN_READ_TABLES = {"conversations", "messages"}\n' +
+      'OPEN_WRITE_TABLES = {"conversations", "messages"}\n',
   );
   fs.mkdirSync(path.join(app, "agents", "evals"), { recursive: true });
   fs.writeFileSync(

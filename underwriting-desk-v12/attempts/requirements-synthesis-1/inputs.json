@@ -1,0 +1,220 @@
+{
+  "corpus": {
+    "path": "/Users/nbalawat/development/harness/underwriting-desk-v12/artifacts/ingest/corpus"
+  },
+  "corpus_index": {
+    "path": "/Users/nbalawat/development/harness/underwriting-desk-v12/artifacts/ingest/corpus_index.json",
+    "data": {
+      "sources": [
+        {
+          "id": "src_intake",
+          "original": "/Users/nbalawat/development/harness/underwriting-desk-v12/artifacts/intake/intake.json",
+          "extracted": "corpus/intake.md",
+          "type": "json/problem_statement"
+        }
+      ],
+      "claims": [
+        {
+          "id": "c001",
+          "text": "Relationship managers at a commercial bank currently have no single system for underwriting SMB loan requests; the application must provide that single system.",
+          "source": "src_intake"
+        },
+        {
+          "id": "c002",
+          "text": "The application must run the underwriting pipeline as an explicit multi-stage workflow: intake -> document extraction -> financial spreading -> risk grading -> memo drafting -> policy compliance check -> tiered approval -> closing.",
+          "source": "src_intake"
+        },
+        {
+          "id": "c003",
+          "text": "Stage status must be visible on a pipeline board.",
+          "source": "src_intake"
+        },
+        {
+          "id": "c004",
+          "text": "Five distinct AI agents work inside the workflow, each with a narrow mandate.",
+          "source": "src_intake"
+        },
+        {
+          "id": "c005",
+          "text": "Intake triage agent classifies incoming requests.",
+          "source": "src_intake"
+        },
+        {
+          "id": "c006",
+          "text": "Intake triage agent flags missing documents.",
+          "source": "src_intake"
+        },
+        {
+          "id": "c007",
+          "text": "Intake triage agent routes requests to analyst queues.",
+          "source": "src_intake"
+        },
+        {
+          "id": "c008",
+          "text": "Financial spreading agent extracts figures from borrower statements into the standard spread template.",
+          "source": "src_intake"
+        },
+        {
+          "id": "c009",
+          "text": "Financial spreading agent must cite a source for every number it extracts.",
+          "source": "src_intake"
+        },
+        {
+          "id": "c010",
+          "text": "Credit memo agent drafts the underwriting memo.",
+          "source": "src_intake"
+        },
+        {
+          "id": "c011",
+          "text": "Credit memo agent must cite the specific ratios, spread figures, and policy rules it relied on when drafting the memo.",
+          "source": "src_intake"
+        },
+        {
+          "id": "c012",
+          "text": "Policy compliance agent reviews every memo against lending policy, including concentration limits, prohibited industries, and LTV caps.",
+          "source": "src_intake"
+        },
+        {
+          "id": "c013",
+          "text": "Policy compliance agent raises written exceptions when policy violations are found.",
+          "source": "src_intake"
+        },
+        {
+          "id": "c014",
+          "text": "Portfolio Q&A agent answers credit officers' questions across active deals.",
+          "source": "src_intake"
+        },
+        {
+          "id": "c015",
+          "text": "Portfolio Q&A agent answers must be grounded in stored deal data.",
+          "source": "src_intake"
+        },
+        {
+          "id": "c016",
+          "text": "Deterministic logic, never an agent, computes DSCR (debt service coverage ratio).",
+          "source": "src_intake"
+        },
+        {
+          "id": "c017",
+          "text": "Deterministic logic, never an agent, computes leverage.",
+          "source": "src_intake"
+        },
+        {
+          "id": "c018",
+          "text": "Deterministic logic, never an agent, computes current ratio.",
+          "source": "src_intake"
+        },
+        {
+          "id": "c019",
+          "text": "Deterministic logic assigns the risk grade from a transparent rubric.",
+          "source": "src_intake"
+        },
+        {
+          "id": "c020",
+          "text": "Approvals tier by exposure amount: a credit analyst may approve deals up to $250k.",
+          "source": "src_intake"
+        },
+        {
+          "id": "c021",
+          "text": "Approvals tier by exposure amount: a senior credit officer may approve deals up to $1M.",
+          "source": "src_intake"
+        },
+        {
+          "id": "c022",
+          "text": "Approvals tier by exposure amount: a credit committee must approve deals above $1M.",
+          "source": "src_intake"
+        },
+        {
+          "id": "c023",
+          "text": "No agent may approve, decline, or advance a deal past an approval step.",
+          "source": "src_intake"
+        },
+        {
+          "id": "c024",
+          "text": "A named human decision is mandatory at each approval step.",
+          "source": "src_intake"
+        },
+        {
+          "id": "c025",
+          "text": "Every agent output requires human acceptance before the workflow proceeds.",
+          "source": "src_intake"
+        },
+        {
+          "id": "c026",
+          "text": "Declined deals require a documented adverse-action reason.",
+          "source": "src_intake"
+        },
+        {
+          "id": "c027",
+          "text": "Every state change lands in an immutable audit trail.",
+          "source": "src_intake"
+        },
+        {
+          "id": "c028",
+          "text": "Every ratio calculation lands in an immutable audit trail.",
+          "source": "src_intake"
+        },
+        {
+          "id": "c029",
+          "text": "Every agent draft lands in an immutable audit trail.",
+          "source": "src_intake"
+        },
+        {
+          "id": "c030",
+          "text": "Every human decision lands in an immutable audit trail.",
+          "source": "src_intake"
+        },
+        {
+          "id": "c031",
+          "text": "RBAC must separate relationship managers, who may submit deals and view only their own deals.",
+          "source": "src_intake"
+        },
+        {
+          "id": "c032",
+          "text": "RBAC must separate credit analysts, who may spread financials, draft memos, and recommend.",
+          "source": "src_intake"
+        },
+        {
+          "id": "c033",
+          "text": "RBAC must separate credit officers, who may approve, decline, or return deals.",
+          "source": "src_intake"
+        },
+        {
+          "id": "c034",
+          "text": "Deals idle past 5 business days must surface on an SLA dashboard.",
+          "source": "src_intake"
+        },
+        {
+          "id": "c035",
+          "text": "Unit tests are required for every ratio and grading rule.",
+          "source": "src_intake"
+        },
+        {
+          "id": "c036",
+          "text": "API tests are required for every endpoint and workflow transition.",
+          "source": "src_intake"
+        },
+        {
+          "id": "c037",
+          "text": "Agent evals are required for every agent.",
+          "source": "src_intake"
+        },
+        {
+          "id": "c038",
+          "text": "The application must be deployed to Cloud Run.",
+          "source": "src_intake"
+        }
+      ]
+    }
+  },
+  "intake": {
+    "path": "/Users/nbalawat/development/harness/underwriting-desk-v12/artifacts/intake/intake.json",
+    "data": {
+      "project_name": "Underwriting Command Center",
+      "problem_statement": "Relationship managers at a commercial bank have no single system for underwriting SMB loan requests. The application runs the underwriting pipeline as an explicit multi-stage workflow: intake -> document extraction -> financial spreading -> risk grading -> memo drafting -> policy compliance check -> tiered approval -> closing, with stage status visible on a pipeline board. Five distinct AI agents work inside the workflow, each with a narrow mandate: (1) intake triage agent classifying requests, flagging missing documents, routing to analyst queues; (2) financial spreading agent extracting figures from borrower statements into the standard spread template, citing a source for every number; (3) credit memo agent drafting the underwriting memo citing the specific ratios, spread figures, and policy rules it relied on; (4) policy compliance agent reviewing every memo against lending policy (concentration limits, prohibited industries, LTV caps) raising written exceptions; (5) portfolio Q&A agent answering credit officers' questions across active deals grounded in stored deal data. Deterministic logic - never an agent - computes DSCR, leverage, and current ratio and assigns the risk grade from a transparent rubric. Approvals tier by exposure: credit analyst to $250k, senior credit officer to $1M, credit committee above. No agent may approve, decline, or advance a deal past an approval step - a named human decision is mandatory at each, and every agent output requires human acceptance before the workflow proceeds. Declined deals need a documented adverse-action reason. Every state change, ratio calculation, agent draft, and human decision lands in an immutable audit trail, with RBAC separating relationship managers (submit, view own), credit analysts (spread, draft, recommend), and credit officers (approve, decline, return). Deals idle past 5 business days surface on an SLA dashboard. Robust testing expected: unit tests for every ratio and grading rule, API tests for every endpoint and workflow transition, and agent evals for every agent.",
+      "documents_dir": "none",
+      "deploy_target": "cloud-run",
+      "supervision": "every-slice"
+    }
+  }
+}

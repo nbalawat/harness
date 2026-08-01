@@ -1,0 +1,54 @@
+/* ============================================================
+   UNDERWRITING COMMAND CENTER — OPTION 3 :: "PHOSPHOR LEDGER"
+   Direction: minimal terminal. Monospace, high contrast, zero
+   chrome. Every pixel is either data or a rule separating data.
+   ============================================================ */
+
+:root {
+  /* --- required tokens --- */
+  --primary: #ffb000;   /* phosphor amber — the only accent that exists */
+  --on-primary: #0a0a0a;
+  --bg: #0a0a0a;        /* CRT black */
+  --fg: #e6e6e6;        /* bone white text */
+  --surface: #121212;   /* one step off black; used for panes */
+  --border: #2e2e2e;    /* hairline rules */
+  --font: "SF Mono", "SFMono-Regular", "JetBrains Mono", "IBM Plex Mono",
+          "Roboto Mono", Menlo, Consolas, "DejaVu Sans Mono", monospace;
+
+  /* --- derived surfaces (all monochrome, no gradients) --- */
+  --surface-2: #171717;
+  --surface-3: #1d1d1d;
+  --border-strong: #4a4a4a;
+  --fg-dim: #8a8a8a;
+  --fg-faint: #5c5c5c;
+
+  /* --- semantic status: terminal palette, no decoration --- */
+  --ok: #3ddc84;        /* green — accepted / within policy */
+  --warn: #ffb000;      /* amber — attention / pending human */
+  --alert: #ff4d3d;     /* red — breach / exception / decline */
+  --info: #56b6ff;      /* cyan — machine-computed / deterministic */
+  --agent: #c678f0;     /* violet — agent-authored, unaccepted */
+
+  /* --- geometry: zero radius, zero shadow, hairline everything --- */
+  --radius: 0px;
+  --rule: 1px solid var(--border);
+  --rule-strong: 1px solid var(--border-strong);
+  --rule-primary: 1px solid var(--primary);
+
+  /* --- rhythm: a strict character grid --- */
+  --ch: 8.4px;
+  --row: 22px;
+  --gap-1: 4px;
+  --gap-2: 8px;
+  --gap-3: 16px;
+  --gap-4: 24px;
+  --gap-5: 32px;
+
+  /* --- type scale: 4 sizes, no more --- */
+  --t-xs: 10px;
+  --t-sm: 11.5px;
+  --t-md: 13px;
+  --t-lg: 16px;
+  --track: 0.06em;
+  --track-wide: 0.16em;
+}

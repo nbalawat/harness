@@ -1,0 +1,6 @@
+{
+  "GAP-001": "local — and the SLA dashboard must highlight deals aging past 5 business days in red with an escalation owner.",
+  "GAP-002": "single",
+  "GAP-003": "single_deal",
+  "GAP-004": "structured_input"
+}

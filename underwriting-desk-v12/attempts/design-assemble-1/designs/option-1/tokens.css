@@ -1,0 +1,55 @@
+/* Underwriting Command Center — Option 1: "Console Deck"
+   Direction: operational console. Dense, high-contrast, terminal-adjacent.
+   Palette is a low-glare slate cockpit with an amber-signal accent so status
+   chips read instantly across a wall of rows. */
+
+:root {
+  /* ---- required tokens ---- */
+  --primary: #f2a33c;
+  --on-primary: #1a1206;
+  --bg: #0e1116;
+  --fg: #e4e9f0;
+  --surface: #161b23;
+  --border: #2a323d;
+  --font: "SF Mono", "JetBrains Mono", "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+
+  /* ---- extended console scale ---- */
+  --bg-sunken: #090b0f;
+  --surface-2: #1d232d;
+  --surface-3: #242c38;
+  --border-strong: #3a4553;
+  --fg-dim: #97a3b4;
+  --fg-faint: #66707e;
+
+  --font-ui: "Inter", "SF Pro Text", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+
+  /* ---- signal colors: workflow + SLA + policy state ---- */
+  --ok: #4ec98b;
+  --ok-bg: rgba(78, 201, 139, 0.13);
+  --warn: #f2a33c;
+  --warn-bg: rgba(242, 163, 60, 0.14);
+  --crit: #f2685c;
+  --crit-bg: rgba(242, 104, 92, 0.14);
+  --info: #64a8f2;
+  --info-bg: rgba(100, 168, 242, 0.14);
+  --agent: #b78bf5;
+  --agent-bg: rgba(183, 139, 245, 0.14);
+  --neutral-bg: rgba(151, 163, 180, 0.11);
+
+  /* ---- grades ---- */
+  --grade-good: #4ec98b;
+  --grade-watch: #f2a33c;
+  --grade-bad: #f2685c;
+
+  /* ---- metrics ---- */
+  --row: 30px;
+  --rail: 216px;
+  --inspector: 320px;
+  --topbar: 44px;
+  --statusbar: 26px;
+  --radius: 3px;
+  --radius-lg: 5px;
+  --tap: 0 1px 0 rgba(255, 255, 255, 0.03) inset;
+  --shadow: 0 8px 26px rgba(0, 0, 0, 0.55);
+  --focus: 0 0 0 2px var(--bg), 0 0 0 3px var(--primary);
+}

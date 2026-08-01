@@ -11,11 +11,16 @@ client = TestClient(app)
 
 
 def test_record_and_list_newest_first():
-    client.post("/audit", json={"event": "approve", "detail": {"id": 1}})
-    client.post("/audit", json={"event": "send", "detail": {"id": 2}})
+    client.post("/audit", json={"event": "approve", "actor": "officer@test", "detail": {"id": 1}})
+    client.post("/audit", json={"event": "send", "actor": "analyst@test", "detail": {"id": 2}})
     entries = client.get("/audit").json()
     assert entries[0]["event"] == "send"
+    assert entries[0]["actor"] == "analyst@test"
     assert any(e["event"] == "approve" for e in entries)
+
+
+def test_actor_is_required():
+    assert client.post("/audit", json={"event": "anonymous"}).status_code == 422
 
 
 def test_python_hook_records():

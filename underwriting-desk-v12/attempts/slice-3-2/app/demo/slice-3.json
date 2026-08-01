@@ -1,0 +1,13 @@
+{
+  "screen": "screen-audit-timeline",
+  "caption": "The Credit Memo Agent drafts a cited memo, the analyst accepts it, the Policy Compliance Agent flags a prohibited-industry exception, and the deal's full chronicle — state changes, calculations, agent drafts and the human acceptance — reads back in order.",
+  "steps": [
+    { "action": "click", "selector": "[data-screen=\"audit-timeline\"]" },
+    { "action": "fill", "selector": "#chronicle-deal-code", "value": "DEAL-1003" },
+    { "action": "fill", "selector": "#chronicle-analyst-email", "value": "analyst@bank.test" },
+    { "action": "click", "selector": "#memo-run-btn" },
+    { "action": "click", "selector": "#memo-accept-btn" },
+    { "action": "click", "selector": "#policy-run-btn" },
+    { "action": "click", "selector": "#chronicle-load-btn" }
+  ]
+}

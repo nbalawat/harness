@@ -1,0 +1,154 @@
+{
+  "proven_through_slice": 3,
+  "scope": "foundation+self",
+  "slices": [
+    {
+      "slice": "deal-intake-and-triage",
+      "name": "Deal intake, triage agent, and pipeline board",
+      "objective": "As a relationship manager I submit an SMB loan request and it becomes a tracked deal; the Intake Triage Agent classifies it, flags the documents still missing, and recommends an analyst queue, and after an analyst explicitly accepts that proposal the deal is routed and visible to everyone on the pipeline board grouped by workflow stage.",
+      "addresses": [
+        "R-001",
+        "R-002",
+        "R-003",
+        "R-004",
+        "R-005",
+        "R-006",
+        "R-007",
+        "R-025",
+        "R-027",
+        "R-031",
+        "R-032",
+        "R-036",
+        "R-039",
+        "R-040",
+        "R-041",
+        "R-046",
+        "R-048",
+        "R-053",
+        "R-055",
+        "R-056",
+        "R-058",
+        "R-060",
+        "R-064",
+        "R-065",
+        "R-066",
+        "R-067"
+      ],
+      "checks": [
+        {
+          "method": "POST",
+          "path": "/api/deals",
+          "expected_status": 201,
+          "contains": [
+            "Harborline Freight",
+            "intake"
+          ],
+          "ok": true
+        },
+        {
+          "method": "GET",
+          "path": "/api/pipeline",
+          "expected_status": 200,
+          "contains": [
+            "intake",
+            "Harborline Freight"
+          ],
+          "ok": true
+        },
+        {
+          "method": "POST",
+          "path": "/api/deals/DEAL-1001/agents/intake-triage/run",
+          "expected_status": 200,
+          "contains": [
+            "classification",
+            "missing_documents",
+            "recommended_queue",
+            "confidence_score"
+          ],
+          "ok": true
+        },
+        {
+          "method": "POST",
+          "path": "/api/deals/DEAL-1001/triage/accept",
+          "expected_status": 200,
+          "contains": [
+            "document_extraction",
+            "queue"
+          ],
+          "ok": true
+        }
+      ]
+    },
+    {
+      "slice": "memo-policy-and-audit-trail",
+      "name": "Credit memo, policy exceptions, and the per-deal chronicle",
+      "objective": "As a credit analyst I run the Credit Memo Agent to draft the memo citing the ratios, spread lines, and policy rules it relied on, then the Policy Compliance Agent tests the deal against the active lending ruleset and writes an exception for every breach; as a reviewer I read the whole history — state changes, ratio calculations, agent drafts, and human acceptances — in order on the deal's audit timeline.",
+      "addresses": [
+        "R-010",
+        "R-011",
+        "R-012",
+        "R-013",
+        "R-025",
+        "R-027",
+        "R-029",
+        "R-030",
+        "R-043",
+        "R-044",
+        "R-049",
+        "R-050",
+        "R-051",
+        "R-052",
+        "R-055",
+        "R-056"
+      ],
+      "checks": [
+        {
+          "method": "POST",
+          "path": "/api/deals/DEAL-1003/agents/credit-memo/run",
+          "expected_status": 200,
+          "contains": [
+            "memo_content",
+            "citations",
+            "sections"
+          ],
+          "ok": true
+        },
+        {
+          "method": "POST",
+          "path": "/api/deals/DEAL-1003/agents/policy-compliance/run",
+          "expected_status": 200,
+          "contains": [
+            "findings",
+            "exceptions",
+            "policy_version",
+            "rule_reference"
+          ],
+          "ok": true
+        },
+        {
+          "method": "GET",
+          "path": "/api/deals/DEAL-1003/policy-exceptions",
+          "expected_status": 200,
+          "contains": [
+            "rule_reference",
+            "rationale",
+            "status"
+          ],
+          "ok": true
+        },
+        {
+          "method": "GET",
+          "path": "/api/deals/DEAL-1003/audit",
+          "expected_status": 200,
+          "contains": [
+            "actor_user_id",
+            "action",
+            "agent_draft",
+            "timestamp"
+          ],
+          "ok": true
+        }
+      ]
+    }
+  ]
+}

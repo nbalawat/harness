@@ -1,0 +1,43 @@
+INFO:     Started server process [74371]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:55630 (Press CTRL+C to quit)
+INFO:     127.0.0.1:55633 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55634 - "POST /api/deals HTTP/1.1" 201 Created
+INFO:     127.0.0.1:55633 - "GET /api/pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55634 - "POST /api/deals/DEAL-1001/agents/intake-triage/run HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55633 - "POST /api/deals/DEAL-1001/triage/accept HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55634 - "POST /api/deals/DEAL-1003/agents/credit-memo/run HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55633 - "POST /api/deals/DEAL-1003/agents/policy-compliance/run HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55634 - "GET /api/deals/DEAL-1003/policy-exceptions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55633 - "GET /api/deals/DEAL-1003/audit HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55643 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55643 - "GET /tokens.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55644 - "GET /app.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55644 - "GET /agent/mode HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55643 - "GET /agents HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55646 - "GET /api/pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55645 - "GET /api/conversations HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:55647 - "GET /api/users HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55648 - "GET /api/deals/DEAL-1003/audit HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55648 - "GET /favicon.ico HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:55648 - "POST /chat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55648 - "GET / HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:55648 - "GET /agent/mode HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55645 - "GET /api/conversations HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:55646 - "GET /api/pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55647 - "GET /agents HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55644 - "GET /api/deals/DEAL-1003/audit HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55643 - "GET /api/users HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55643 - "GET /api/deals/DEAL-1003/audit HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55643 - "POST /api/deals/DEAL-1003/agents/credit-memo/run HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55643 - "GET /api/deals/DEAL-1003/audit HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55643 - "POST /api/deals/DEAL-1003/memo/accept HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55643 - "GET /api/deals/DEAL-1003/audit HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55643 - "POST /api/deals/DEAL-1003/agents/policy-compliance/run HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55643 - "GET /api/deals/DEAL-1003/audit HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55643 - "GET /api/deals/DEAL-1003/audit HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [74371]

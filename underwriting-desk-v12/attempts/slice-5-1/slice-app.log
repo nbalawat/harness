@@ -1,0 +1,42 @@
+INFO:     Started server process [75212]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:55765 (Press CTRL+C to quit)
+INFO:     127.0.0.1:55767 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55768 - "POST /api/deals HTTP/1.1" 201 Created
+INFO:     127.0.0.1:55767 - "GET /api/pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55768 - "POST /api/deals/DEAL-1001/agents/intake-triage/run HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55767 - "POST /api/deals/DEAL-1001/triage/accept HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55768 - "POST /api/qa/ask HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55767 - "POST /api/qa/ask HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55768 - "GET /api/qa/sessions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55776 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55776 - "GET /tokens.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55777 - "GET /app.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55777 - "GET /api/pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55776 - "GET /api/policy_exceptions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55778 - "GET /agent/mode HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55780 - "GET /api/conversations HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:55777 - "GET /api/pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55779 - "GET /agents HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55779 - "GET /favicon.ico HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:55779 - "POST /api/qa/ask HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55779 - "GET /api/pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55777 - "GET /api/policy_exceptions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55777 - "GET / HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:55777 - "GET /api/pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55779 - "GET /api/policy_exceptions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55780 - "GET /agent/mode HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55776 - "GET /api/conversations HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:55778 - "GET /agents HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55781 - "GET /api/pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55781 - "GET /api/pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55781 - "POST /api/deals HTTP/1.1" 201 Created
+INFO:     127.0.0.1:55781 - "GET /api/pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55781 - "POST /api/qa/ask HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55781 - "GET /api/pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55785 - "GET /api/policy_exceptions HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [75212]

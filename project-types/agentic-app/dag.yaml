@@ -16,8 +16,13 @@
 #   opus   — reasoning + user-facing creative quality (requirements, architecture, design options)
 # escalateModel: retries run one tier up with the failure feedback.
 # See docs/DESIGN.md §7/§7b for the design rationale per node.
+# v0.12.1: SECURITY BAKED INTO THE SUBSTRATE — generic /api/{table} is
+# default-closed (data model must opt tables in); slice plans must include
+# negative acceptance (refusal proofs); the security scan mechanically fails
+# any slice-authored mutating route carrying no identity; live builds verify
+# agents with LIVE calls (stub only for mock/certification determinism).
 name: agentic-app
-version: 0.12.0
+version: 0.12.1
 description: Builds a working agentic AI application from your problem statement and documents — requirements with provenance, approvable designs, certified modules, parallel feature-slice build with deterministic merge and tests, security scan, and governance evidence.
 
 # Frontier concurrency: how many non-gate nodes may execute at once. Three

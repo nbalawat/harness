@@ -1,0 +1,18 @@
+INFO:     Started server process [88062]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:58085 (Press CTRL+C to quit)
+INFO:     127.0.0.1:58088 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58094 - "POST /api/deals HTTP/1.1" 201 Created
+INFO:     127.0.0.1:58095 - "GET /api/pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58096 - "POST /api/deals/DEAL-1001/agents/intake-triage/run HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58097 - "POST /api/deals/DEAL-1001/triage/accept HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58098 - "POST /api/qa/ask HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58099 - "POST /api/qa/ask HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58100 - "GET /api/qa/sessions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58101 - "GET /api/qa/sessions?acting_user_email=officer@bank.test HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58102 - "GET /api/qa/book-summary?acting_user_email=officer@bank.test HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [88062]

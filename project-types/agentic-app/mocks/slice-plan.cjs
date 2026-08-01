@@ -17,6 +17,7 @@ writeJson("slice_plan.json", {
       acceptance: [
         { method: "GET", path: "/health", expect_contains: ["ok"] },
         { method: "POST", path: "/chat", body: { message: "hello" }, expect_contains: ["help"] },
+        { method: "POST", path: "/chat", body: {}, expect_status: 422 },
       ],
     },
     {
@@ -28,6 +29,7 @@ writeJson("slice_plan.json", {
       acceptance: [
         { method: "POST", path: "/api/conversations", body: { user: "analyst-1" }, expect_status: 200 },
         { method: "GET", path: "/api/conversations", expect_contains: ["analyst-1"] },
+        { method: "POST", path: "/api/approvals_log", body: { message: "sneak" }, expect_status: 403 },
       ],
     },
     {
@@ -38,6 +40,7 @@ writeJson("slice_plan.json", {
       addresses: byCat("ux", "functional"),
       acceptance: [
         { method: "POST", path: "/approvals", body: { message: "draft reply" }, expect_contains: ["approved"] },
+        { method: "POST", path: "/approvals", body: {}, expect_status: 422 },
       ],
     },
   ],

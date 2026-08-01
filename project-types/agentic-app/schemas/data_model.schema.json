@@ -8,6 +8,7 @@
         "type": "object",
         "properties": {
           "addresses": { "type": "array", "items": { "type": "string" } },
+          "access": { "enum": ["open", "read"], "description": "Generic /api/{table} exposure: open = read+write, read = read-only. Absent = closed (explicit endpoints only) — the default for anything sensitive." },
           "name": { "type": "string", "pattern": "^[a-z_]+$" },
           "columns": {
             "type": "array",

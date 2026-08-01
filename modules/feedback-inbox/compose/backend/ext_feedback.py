@@ -11,7 +11,7 @@ class FeedbackRequest(BaseModel):
     page: str | None = None
 
 
-@router.post("/feedback")
+@router.post("/feedback")  # public-endpoint: anonymous end-user feedback capture (no identity by design)
 def add(req: FeedbackRequest):
     message = req.message.strip()
     if not message:

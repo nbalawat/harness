@@ -12,7 +12,7 @@ class LoginRequest(BaseModel):
     username: str
 
 
-@router.post("/auth/login")
+@router.post("/auth/login")  # public-endpoint: credential exchange is inherently pre-identity
 def login(req: LoginRequest):
     username = req.username.strip()
     if not username:

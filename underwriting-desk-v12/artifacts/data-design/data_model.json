@@ -1,0 +1,288 @@
+{
+  "tables": [
+    {
+      "name": "users",
+      "addresses": ["R-024", "R-031", "R-032", "R-033", "R-039", "R-053"],
+      "columns": [
+        { "name": "id", "type": "string" },
+        { "name": "email", "type": "string" },
+        { "name": "name", "type": "string" },
+        { "name": "role", "type": "string" },
+        { "name": "is_active", "type": "boolean" },
+        { "name": "created_at", "type": "timestamp" },
+        { "name": "updated_at", "type": "timestamp" }
+      ]
+    },
+    {
+      "name": "deals",
+      "addresses": ["R-001", "R-003", "R-026", "R-027", "R-034", "R-040", "R-046", "R-047", "R-048", "R-051", "R-058", "R-062"],
+      "columns": [
+        { "name": "id", "type": "string" },
+        { "name": "borrower_name", "type": "string" },
+        { "name": "borrower_industry", "type": "string" },
+        { "name": "borrower_entity_id", "type": "string" },
+        { "name": "requested_amount", "type": "decimal" },
+        { "name": "exposure_amount", "type": "decimal" },
+        { "name": "current_stage", "type": "string" },
+        { "name": "current_status", "type": "string" },
+        { "name": "created_by_user_id", "type": "string" },
+        { "name": "assigned_to_user_id", "type": "string" },
+        { "name": "risk_grade", "type": "string" },
+        { "name": "decline_reason_code", "type": "string" },
+        { "name": "decline_reason_detail", "type": "string" },
+        { "name": "last_activity_timestamp", "type": "timestamp" },
+        { "name": "created_at", "type": "timestamp" },
+        { "name": "updated_at", "type": "timestamp" }
+      ]
+    },
+    {
+      "name": "documents",
+      "addresses": ["R-041", "R-043", "R-059"],
+      "columns": [
+        { "name": "id", "type": "string" },
+        { "name": "deal_id", "type": "string" },
+        { "name": "document_type", "type": "string" },
+        { "name": "file_name", "type": "string" },
+        { "name": "file_size", "type": "integer" },
+        { "name": "checksum", "type": "string" },
+        { "name": "storage_path", "type": "string" },
+        { "name": "uploaded_by_user_id", "type": "string" },
+        { "name": "uploaded_at", "type": "timestamp" },
+        { "name": "created_at", "type": "timestamp" }
+      ]
+    },
+    {
+      "name": "financial_spread_template",
+      "addresses": ["R-042", "R-061"],
+      "columns": [
+        { "name": "id", "type": "string" },
+        { "name": "deal_id", "type": "string" },
+        { "name": "template_version", "type": "string" },
+        { "name": "line_item_key", "type": "string" },
+        { "name": "period", "type": "string" },
+        { "name": "value", "type": "decimal" },
+        { "name": "unit", "type": "string" },
+        { "name": "created_at", "type": "timestamp" }
+      ]
+    },
+    {
+      "name": "citations",
+      "addresses": ["R-009", "R-011", "R-043"],
+      "columns": [
+        { "name": "id", "type": "string" },
+        { "name": "source_type", "type": "string" },
+        { "name": "source_id", "type": "string" },
+        { "name": "document_id", "type": "string" },
+        { "name": "page_number", "type": "integer" },
+        { "name": "section", "type": "string" },
+        { "name": "cell_locator", "type": "string" },
+        { "name": "quoted_text", "type": "string" },
+        { "name": "created_at", "type": "timestamp" }
+      ]
+    },
+    {
+      "name": "financial_ratios",
+      "addresses": ["R-016", "R-017", "R-018", "R-028", "R-061"],
+      "columns": [
+        { "name": "id", "type": "string" },
+        { "name": "deal_id", "type": "string" },
+        { "name": "ratio_type", "type": "string" },
+        { "name": "numerator", "type": "decimal" },
+        { "name": "denominator", "type": "decimal" },
+        { "name": "result", "type": "decimal" },
+        { "name": "rounding_method", "type": "string" },
+        { "name": "divide_by_zero_handling", "type": "string" },
+        { "name": "computed_at", "type": "timestamp" },
+        { "name": "created_at", "type": "timestamp" }
+      ]
+    },
+    {
+      "name": "risk_grades",
+      "addresses": ["R-019", "R-045", "R-061"],
+      "columns": [
+        { "name": "id", "type": "string" },
+        { "name": "deal_id", "type": "string" },
+        { "name": "grade", "type": "string" },
+        { "name": "rubric_version", "type": "string" },
+        { "name": "band_hit", "type": "string" },
+        { "name": "reasoning", "type": "string" },
+        { "name": "computed_at", "type": "timestamp" },
+        { "name": "created_at", "type": "timestamp" }
+      ]
+    },
+    {
+      "name": "lending_policy",
+      "addresses": ["R-012", "R-044"],
+      "columns": [
+        { "name": "id", "type": "string" },
+        { "name": "version", "type": "string" },
+        { "name": "rule_type", "type": "string" },
+        { "name": "rule_key", "type": "string" },
+        { "name": "rule_value", "type": "string" },
+        { "name": "is_active", "type": "boolean" },
+        { "name": "created_at", "type": "timestamp" },
+        { "name": "updated_at", "type": "timestamp" }
+      ]
+    },
+    {
+      "name": "policy_exceptions",
+      "addresses": ["R-013", "R-052"],
+      "columns": [
+        { "name": "id", "type": "string" },
+        { "name": "deal_id", "type": "string" },
+        { "name": "policy_rule_id", "type": "string" },
+        { "name": "rule_reference", "type": "string" },
+        { "name": "violation_detail", "type": "string" },
+        { "name": "rationale", "type": "string" },
+        { "name": "status", "type": "string" },
+        { "name": "raised_by_user_id", "type": "string" },
+        { "name": "resolved_by_user_id", "type": "string" },
+        { "name": "resolved_at", "type": "timestamp" },
+        { "name": "created_at", "type": "timestamp" }
+      ]
+    },
+    {
+      "name": "agent_outputs",
+      "addresses": ["R-025", "R-029", "R-049", "R-056"],
+      "columns": [
+        { "name": "id", "type": "string" },
+        { "name": "deal_id", "type": "string" },
+        { "name": "agent_id", "type": "string" },
+        { "name": "stage", "type": "string" },
+        { "name": "model", "type": "string" },
+        { "name": "prompt_version", "type": "string" },
+        { "name": "input_data", "type": "json" },
+        { "name": "output_content", "type": "text" },
+        { "name": "token_usage", "type": "json" },
+        { "name": "latency_ms", "type": "integer" },
+        { "name": "outcome", "type": "string" },
+        { "name": "generated_at", "type": "timestamp" },
+        { "name": "created_at", "type": "timestamp" }
+      ]
+    },
+    {
+      "name": "human_reviews",
+      "addresses": ["R-025", "R-029", "R-049"],
+      "columns": [
+        { "name": "id", "type": "string" },
+        { "name": "agent_output_id", "type": "string" },
+        { "name": "deal_id", "type": "string" },
+        { "name": "reviewed_by_user_id", "type": "string" },
+        { "name": "action", "type": "string" },
+        { "name": "original_content", "type": "text" },
+        { "name": "edited_content", "type": "text" },
+        { "name": "rejection_reason", "type": "text" },
+        { "name": "reviewed_at", "type": "timestamp" },
+        { "name": "created_at", "type": "timestamp" }
+      ]
+    },
+    {
+      "name": "approvals",
+      "addresses": ["R-020", "R-021", "R-022", "R-023", "R-024", "R-030", "R-062"],
+      "columns": [
+        { "name": "id", "type": "string" },
+        { "name": "deal_id", "type": "string" },
+        { "name": "stage", "type": "string" },
+        { "name": "approval_authority_level", "type": "string" },
+        { "name": "exposure_amount", "type": "decimal" },
+        { "name": "approved_by_user_id", "type": "string" },
+        { "name": "decision", "type": "string" },
+        { "name": "decision_notes", "type": "text" },
+        { "name": "decided_at", "type": "timestamp" },
+        { "name": "created_at", "type": "timestamp" }
+      ]
+    },
+    {
+      "name": "deal_returns",
+      "addresses": ["R-047"],
+      "columns": [
+        { "name": "id", "type": "string" },
+        { "name": "deal_id", "type": "string" },
+        { "name": "returned_from_stage", "type": "string" },
+        { "name": "returned_to_stage", "type": "string" },
+        { "name": "returned_by_user_id", "type": "string" },
+        { "name": "reason", "type": "text" },
+        { "name": "reassigned_to_user_id", "type": "string" },
+        { "name": "created_at", "type": "timestamp" }
+      ]
+    },
+    {
+      "name": "queue_assignments",
+      "addresses": ["R-007", "R-048"],
+      "columns": [
+        { "name": "id", "type": "string" },
+        { "name": "deal_id", "type": "string" },
+        { "name": "queue_name", "type": "string" },
+        { "name": "assigned_to_user_id", "type": "string" },
+        { "name": "claimed_by_user_id", "type": "string" },
+        { "name": "claimed_at", "type": "timestamp" },
+        { "name": "status", "type": "string" },
+        { "name": "created_at", "type": "timestamp" },
+        { "name": "updated_at", "type": "timestamp" }
+      ]
+    },
+    {
+      "name": "audit_log",
+      "addresses": ["R-027", "R-028", "R-029", "R-030", "R-050", "R-051"],
+      "columns": [
+        { "name": "id", "type": "string" },
+        { "name": "deal_id", "type": "string" },
+        { "name": "actor_user_id", "type": "string" },
+        { "name": "action", "type": "string" },
+        { "name": "resource_type", "type": "string" },
+        { "name": "resource_id", "type": "string" },
+        { "name": "before_payload", "type": "json" },
+        { "name": "after_payload", "type": "json" },
+        { "name": "timestamp", "type": "timestamp" },
+        { "name": "created_at", "type": "timestamp" }
+      ]
+    },
+    {
+      "name": "business_calendar",
+      "addresses": ["R-034", "R-057"],
+      "columns": [
+        { "name": "id", "type": "string" },
+        { "name": "calendar_date", "type": "date" },
+        { "name": "is_business_day", "type": "boolean" },
+        { "name": "holiday_name", "type": "string" },
+        { "name": "created_at", "type": "timestamp" }
+      ]
+    },
+    {
+      "name": "portfolio_qa_sessions",
+      "addresses": ["R-014", "R-015", "R-054"],
+      "columns": [
+        { "name": "id", "type": "string" },
+        { "name": "user_id", "type": "string" },
+        { "name": "question", "type": "text" },
+        { "name": "grounded_response", "type": "text" },
+        { "name": "source_deal_ids", "type": "json" },
+        { "name": "trace_data", "type": "json" },
+        { "name": "created_at", "type": "timestamp" }
+      ]
+    },
+    {
+      "name": "intake_triage_decisions",
+      "addresses": ["R-005", "R-006"],
+      "columns": [
+        { "name": "id", "type": "string" },
+        { "name": "deal_id", "type": "string" },
+        { "name": "classification", "type": "string" },
+        { "name": "missing_documents", "type": "json" },
+        { "name": "confidence_score", "type": "decimal" },
+        { "name": "created_at", "type": "timestamp" }
+      ]
+    },
+    {
+      "name": "adverse_action_reasons",
+      "addresses": ["R-026", "R-063"],
+      "columns": [
+        { "name": "id", "type": "string" },
+        { "name": "reason_code", "type": "string" },
+        { "name": "reason_label", "type": "string" },
+        { "name": "is_active", "type": "boolean" },
+        { "name": "created_at", "type": "timestamp" }
+      ]
+    }
+  ]
+}

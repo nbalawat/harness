@@ -241,6 +241,10 @@ function runCommand(ctx: RunContext, command: string, attemptDir: string): Promi
         ...process.env,
         HARNESS_PROJECT_DIR: ctx.projectTypeDir,
         HARNESS_WORKSPACE: ctx.workspace,
+        // Verifiers key off this: a LIVE build's app is verified with LIVE
+        // agents (a grounding bug in an agent is a real defect the stub would
+        // mask); mock/certification runs stay deterministic on stubs.
+        HARNESS_RUN_MODE: ctx.mockAgents ? "mock" : "live",
       },
     });
     let stdout = "";

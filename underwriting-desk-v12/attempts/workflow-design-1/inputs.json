@@ -1,0 +1,1555 @@
+{
+  "requirements": {
+    "path": "/Users/nbalawat/development/harness/underwriting-desk-v12/artifacts/requirements-synthesis/requirements.json",
+    "data": {
+      "requirements": [
+        {
+          "id": "R-001",
+          "text": "Provide a single system of record for underwriting SMB loan requests at a commercial bank, replacing the current absence of any unified underwriting system for relationship managers.",
+          "category": "functional",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src_intake",
+            "claim": "c001"
+          }
+        },
+        {
+          "id": "R-002",
+          "text": "Run the underwriting pipeline as an explicit multi-stage workflow with the ordered stages: intake, document extraction, financial spreading, risk grading, memo drafting, policy compliance check, tiered approval, closing.",
+          "category": "functional",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src_intake",
+            "claim": "c002"
+          }
+        },
+        {
+          "id": "R-003",
+          "text": "Display the status of every deal at every workflow stage on a pipeline board.",
+          "category": "ux",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src_intake",
+            "claim": "c003"
+          }
+        },
+        {
+          "id": "R-004",
+          "text": "Implement exactly five distinct AI agents operating inside the workflow, each constrained to a narrow mandate rather than one general-purpose agent.",
+          "category": "agent",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src_intake",
+            "claim": "c004"
+          }
+        },
+        {
+          "id": "R-005",
+          "text": "Intake triage agent classifies incoming loan requests.",
+          "category": "agent",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src_intake",
+            "claim": "c005"
+          }
+        },
+        {
+          "id": "R-006",
+          "text": "Intake triage agent flags missing documents on a request.",
+          "category": "agent",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src_intake",
+            "claim": "c006"
+          }
+        },
+        {
+          "id": "R-007",
+          "text": "Intake triage agent routes requests to the appropriate analyst queues.",
+          "category": "agent",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src_intake",
+            "claim": "c007"
+          }
+        },
+        {
+          "id": "R-008",
+          "text": "Financial spreading agent extracts figures from borrower financial statements into the standard spread template.",
+          "category": "agent",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src_intake",
+            "claim": "c008"
+          }
+        },
+        {
+          "id": "R-009",
+          "text": "Financial spreading agent must cite a source for every number it extracts; an uncited extracted figure is invalid.",
+          "category": "agent",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src_intake",
+            "claim": "c009"
+          }
+        },
+        {
+          "id": "R-010",
+          "text": "Credit memo agent drafts the underwriting memo for a deal.",
+          "category": "agent",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src_intake",
+            "claim": "c010"
+          }
+        },
+        {
+          "id": "R-011",
+          "text": "Credit memo agent must cite the specific ratios, spread figures, and policy rules it relied on when drafting the memo.",
+          "category": "agent",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src_intake",
+            "claim": "c011"
+          }
+        },
+        {
+          "id": "R-012",
+          "text": "Policy compliance agent reviews every memo against lending policy, covering at minimum concentration limits, prohibited industries, and LTV caps.",
+          "category": "agent",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src_intake",
+            "claim": "c012"
+          }
+        },
+        {
+          "id": "R-013",
+          "text": "Policy compliance agent raises written exceptions when it finds policy violations.",
+          "category": "agent",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src_intake",
+            "claim": "c013"
+          }
+        },
+        {
+          "id": "R-014",
+          "text": "Portfolio Q&A agent answers credit officers' questions spanning active deals.",
+          "category": "agent",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src_intake",
+            "claim": "c014"
+          }
+        },
+        {
+          "id": "R-015",
+          "text": "Portfolio Q&A agent answers must be grounded in stored deal data rather than model recall, and must be traceable to the deal records used.",
+          "category": "agent",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src_intake",
+            "claim": "c015"
+          }
+        },
+        {
+          "id": "R-016",
+          "text": "Compute DSCR (debt service coverage ratio) with deterministic code, never with an agent.",
+          "category": "functional",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src_intake",
+            "claim": "c016"
+          }
+        },
+        {
+          "id": "R-017",
+          "text": "Compute leverage with deterministic code, never with an agent.",
+          "category": "functional",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src_intake",
+            "claim": "c017"
+          }
+        },
+        {
+          "id": "R-018",
+          "text": "Compute current ratio with deterministic code, never with an agent.",
+          "category": "functional",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src_intake",
+            "claim": "c018"
+          }
+        },
+        {
+          "id": "R-019",
+          "text": "Assign the risk grade with deterministic logic driven by a transparent, inspectable rubric.",
+          "category": "functional",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src_intake",
+            "claim": "c019"
+          }
+        },
+        {
+          "id": "R-020",
+          "text": "Tier approval authority by exposure amount: a credit analyst may approve deals up to $250,000.",
+          "category": "functional",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src_intake",
+            "claim": "c020"
+          }
+        },
+        {
+          "id": "R-021",
+          "text": "Tier approval authority by exposure amount: a senior credit officer may approve deals up to $1,000,000.",
+          "category": "functional",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src_intake",
+            "claim": "c021"
+          }
+        },
+        {
+          "id": "R-022",
+          "text": "Tier approval authority by exposure amount: deals above $1,000,000 must be approved by a credit committee.",
+          "category": "functional",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src_intake",
+            "claim": "c022"
+          }
+        },
+        {
+          "id": "R-023",
+          "text": "No agent may approve a deal, decline a deal, or advance a deal past an approval step; this must be enforced as a hard system guardrail, not a prompt instruction.",
+          "category": "security",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src_intake",
+            "claim": "c023"
+          }
+        },
+        {
+          "id": "R-024",
+          "text": "A named human decision is mandatory at each approval step and must be recorded with the deciding user's identity.",
+          "category": "functional",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src_intake",
+            "claim": "c024"
+          }
+        },
+        {
+          "id": "R-025",
+          "text": "Every agent output requires explicit human acceptance before the workflow proceeds to the next stage.",
+          "category": "functional",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src_intake",
+            "claim": "c025"
+          }
+        },
+        {
+          "id": "R-026",
+          "text": "Declined deals require a documented adverse-action reason captured at the time of decline.",
+          "category": "functional",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src_intake",
+            "claim": "c026"
+          }
+        },
+        {
+          "id": "R-027",
+          "text": "Record every deal state change in an immutable audit trail.",
+          "category": "data",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src_intake",
+            "claim": "c027"
+          }
+        },
+        {
+          "id": "R-028",
+          "text": "Record every ratio calculation, including its inputs and result, in an immutable audit trail.",
+          "category": "data",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src_intake",
+            "claim": "c028"
+          }
+        },
+        {
+          "id": "R-029",
+          "text": "Record every agent draft in an immutable audit trail.",
+          "category": "data",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src_intake",
+            "claim": "c029"
+          }
+        },
+        {
+          "id": "R-030",
+          "text": "Record every human decision in an immutable audit trail.",
+          "category": "data",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src_intake",
+            "claim": "c030"
+          }
+        },
+        {
+          "id": "R-031",
+          "text": "RBAC role 'relationship manager': may submit deals and may view only their own deals.",
+          "category": "security",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src_intake",
+            "claim": "c031"
+          }
+        },
+        {
+          "id": "R-032",
+          "text": "RBAC role 'credit analyst': may spread financials, draft memos, and recommend.",
+          "category": "security",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src_intake",
+            "claim": "c032"
+          }
+        },
+        {
+          "id": "R-033",
+          "text": "RBAC role 'credit officer': may approve, decline, or return deals.",
+          "category": "security",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src_intake",
+            "claim": "c033"
+          }
+        },
+        {
+          "id": "R-034",
+          "text": "Surface deals idle for more than 5 business days on an SLA dashboard.",
+          "category": "ux",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src_intake",
+            "claim": "c034"
+          }
+        },
+        {
+          "id": "R-035",
+          "text": "Provide unit tests covering every ratio calculation and every grading rule.",
+          "category": "ops",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src_intake",
+            "claim": "c035"
+          }
+        },
+        {
+          "id": "R-036",
+          "text": "Provide API tests covering every endpoint and every workflow transition.",
+          "category": "ops",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src_intake",
+            "claim": "c036"
+          }
+        },
+        {
+          "id": "R-037",
+          "text": "Provide agent evals for every one of the five agents.",
+          "category": "ops",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src_intake",
+            "claim": "c037"
+          }
+        },
+        {
+          "id": "R-038",
+          "text": "Deploy the application to Google Cloud Run.",
+          "category": "ops",
+          "confidence": "stated",
+          "provenance": {
+            "source": "src_intake",
+            "claim": "c038"
+          }
+        },
+        {
+          "id": "R-039",
+          "text": "Authenticate every user with a persistent named identity and session, since named human decisions and role separation are required.",
+          "category": "security",
+          "confidence": "inferred",
+          "provenance": {
+            "source": "src_intake"
+          }
+        },
+        {
+          "id": "R-040",
+          "text": "Model a central Deal entity holding borrower details, requested/exposure amount, current stage, status, assigned owner, and created/updated timestamps; all workflow artifacts hang off it.",
+          "category": "data",
+          "confidence": "inferred",
+          "provenance": {
+            "source": "src_intake"
+          }
+        },
+        {
+          "id": "R-041",
+          "text": "Support uploading and storing borrower documents against a deal, with document type, checksum, and upload metadata, so the document extraction stage and citations have a durable target.",
+          "category": "data",
+          "confidence": "inferred",
+          "provenance": {
+            "source": "src_intake"
+          }
+        },
+        {
+          "id": "R-042",
+          "text": "Define the standard spread template as a versioned structured schema of named line items (periods, values, units), not free text, so ratios can be computed deterministically from it.",
+          "category": "data",
+          "confidence": "inferred",
+          "provenance": {
+            "source": "src_intake"
+          }
+        },
+        {
+          "id": "R-043",
+          "text": "Store citations as structured references (document id plus page/section/cell locator, or ratio/policy-rule id) rather than prose, so every cited number and memo assertion is machine-verifiable and clickable.",
+          "category": "data",
+          "confidence": "inferred",
+          "provenance": {
+            "source": "src_intake"
+          }
+        },
+        {
+          "id": "R-044",
+          "text": "Store lending policy as configurable rule data (concentration limits, prohibited industry list, LTV caps) seeded with a documented default ruleset, and version it so audit entries reference the policy version applied.",
+          "category": "data",
+          "confidence": "inferred",
+          "provenance": {
+            "source": "src_intake"
+          }
+        },
+        {
+          "id": "R-045",
+          "text": "Encode the risk grading rubric as versioned configuration with documented default bands, and display the rubric and the specific band hit alongside each assigned grade so the grade is explainable.",
+          "category": "functional",
+          "confidence": "inferred",
+          "provenance": {
+            "source": "src_intake"
+          }
+        },
+        {
+          "id": "R-046",
+          "text": "Enforce workflow progression with an explicit server-side state machine that rejects illegal or out-of-order stage transitions.",
+          "category": "functional",
+          "confidence": "inferred",
+          "provenance": {
+            "source": "src_intake"
+          }
+        },
+        {
+          "id": "R-047",
+          "text": "Support a credit officer 'return' action that sends a deal back to an earlier stage with a required written reason and reassigns it to the analyst queue.",
+          "category": "functional",
+          "confidence": "inferred",
+          "provenance": {
+            "source": "src_intake"
+          }
+        },
+        {
+          "id": "R-048",
+          "text": "Provide analyst work queues with assignment and claim semantics, since the triage agent routes requests to analyst queues.",
+          "category": "functional",
+          "confidence": "inferred",
+          "provenance": {
+            "source": "src_intake"
+          }
+        },
+        {
+          "id": "R-049",
+          "text": "Provide a human review UI for each agent output showing the draft alongside its citations, with accept, edit, and reject actions; the acceptance records the reviewing user and any edits.",
+          "category": "ux",
+          "confidence": "inferred",
+          "provenance": {
+            "source": "src_intake"
+          }
+        },
+        {
+          "id": "R-050",
+          "text": "Implement the audit trail as append-only storage with no update or delete path exposed at the application or API layer, each entry carrying actor, action, timestamp, and before/after payload.",
+          "category": "data",
+          "confidence": "inferred",
+          "provenance": {
+            "source": "src_intake"
+          }
+        },
+        {
+          "id": "R-051",
+          "text": "Expose a per-deal audit timeline view so reviewers and auditors can read the full history of state changes, calculations, agent drafts, and human decisions in order.",
+          "category": "ux",
+          "confidence": "inferred",
+          "provenance": {
+            "source": "src_intake"
+          }
+        },
+        {
+          "id": "R-052",
+          "text": "Model policy exceptions as first-class records with rule reference, written rationale, status, and resolver identity; an open exception blocks approval until explicitly waived or resolved by an authorized human.",
+          "category": "functional",
+          "confidence": "inferred",
+          "provenance": {
+            "source": "src_intake"
+          }
+        },
+        {
+          "id": "R-053",
+          "text": "Enforce RBAC server-side on every endpoint and enforce row-level scoping so a relationship manager cannot read another RM's deals via API or direct object reference.",
+          "category": "security",
+          "confidence": "inferred",
+          "provenance": {
+            "source": "src_intake"
+          }
+        },
+        {
+          "id": "R-054",
+          "text": "Scope Portfolio Q&A retrieval to the asking user's RBAC permissions so the agent cannot leak deal data the user is not entitled to see.",
+          "category": "security",
+          "confidence": "inferred",
+          "provenance": {
+            "source": "src_intake"
+          }
+        },
+        {
+          "id": "R-055",
+          "text": "Give each agent an explicit allowlist of read/write tools that excludes any approval, decline, stage-advance, ratio-write, or grade-write capability, so the no-agent-decision rule holds structurally.",
+          "category": "agent",
+          "confidence": "inferred",
+          "provenance": {
+            "source": "src_intake"
+          }
+        },
+        {
+          "id": "R-056",
+          "text": "Record every agent invocation with agent id, model, prompt version, inputs, outputs, token usage, latency, and outcome, to support evals and audit reconstruction.",
+          "category": "ops",
+          "confidence": "inferred",
+          "provenance": {
+            "source": "src_intake"
+          }
+        },
+        {
+          "id": "R-057",
+          "text": "Compute SLA idle time using a business-day calendar that excludes weekends and configurable bank holidays, measured from the last meaningful activity on the deal.",
+          "category": "functional",
+          "confidence": "inferred",
+          "provenance": {
+            "source": "src_intake"
+          }
+        },
+        {
+          "id": "R-058",
+          "text": "Provide deal list, search, and filter capability (by stage, owner, risk grade, exposure, age) with the pipeline board grouped by workflow stage.",
+          "category": "ux",
+          "confidence": "inferred",
+          "provenance": {
+            "source": "src_intake"
+          }
+        },
+        {
+          "id": "R-059",
+          "text": "Protect borrower financial data with encryption in transit and at rest, secrets held in a managed secret store, and no financial figures or PII written to application logs.",
+          "category": "security",
+          "confidence": "inferred",
+          "provenance": {
+            "source": "src_intake"
+          }
+        },
+        {
+          "id": "R-060",
+          "text": "Provide Cloud Run operational readiness: containerized build, health/readiness endpoints, structured JSON logging, configuration via environment, and stateless request handling.",
+          "category": "ops",
+          "confidence": "inferred",
+          "provenance": {
+            "source": "src_intake"
+          }
+        },
+        {
+          "id": "R-061",
+          "text": "Isolate all deterministic ratio and grading logic in a pure, side-effect-free module with fixed rounding and divide-by-zero rules, so it is directly unit-testable and reusable.",
+          "category": "functional",
+          "confidence": "inferred",
+          "provenance": {
+            "source": "src_intake"
+          }
+        },
+        {
+          "id": "R-062",
+          "text": "Guard approval and stage-transition endpoints against concurrent or duplicate submission so a deal cannot be double-approved or advanced twice.",
+          "category": "functional",
+          "confidence": "inferred",
+          "provenance": {
+            "source": "src_intake"
+          }
+        },
+        {
+          "id": "R-063",
+          "text": "Capture the adverse-action reason as a selection from a controlled reason-code list plus required free-text detail, so declines are consistently documented and reportable.",
+          "category": "functional",
+          "confidence": "inferred",
+          "provenance": {
+            "source": "src_intake"
+          }
+        },
+        {
+          "id": "R-064",
+          "text": "Handle agent failure, timeout, or low-confidence output by leaving the stage un-advanced and surfacing a retry or manual-completion path to the assigned human, never by auto-advancing.",
+          "category": "ops",
+          "confidence": "inferred",
+          "provenance": {
+            "source": "src_intake"
+          }
+        },
+        {
+          "id": "R-065",
+          "text": "Ship seed data covering all three roles and a representative deal in each workflow stage so the pipeline board, SLA dashboard, and approval tiers are demonstrable end to end.",
+          "category": "ops",
+          "confidence": "inferred",
+          "provenance": {
+            "source": "src_intake"
+          }
+        },
+        {
+          "id": "R-066",
+          "text": "Deliver the product as a web application usable on standard desktop browsers, since relationship managers, analysts, and officers each work in distinct in-app views.",
+          "category": "ux",
+          "confidence": "inferred",
+          "provenance": {
+            "source": "src_intake"
+          }
+        },
+        {
+          "id": "R-067",
+          "text": "Identity source for authentication is unspecified: whether the system integrates with the bank's existing SSO/OIDC identity provider (roles supplied as external claims) or owns local user accounts and role assignment itself.",
+          "category": "security",
+          "confidence": "unknown"
+        },
+        {
+          "id": "R-068",
+          "text": "Credit committee approval mechanics above $1M are unspecified: whether approval is a single action by any committee member, or a multi-member vote requiring a defined quorum/threshold recorded per voter.",
+          "category": "functional",
+          "confidence": "unknown"
+        },
+        {
+          "id": "R-069",
+          "text": "The basis of 'exposure amount' for approval tiering is unspecified: whether it is the requested amount of the single deal, or aggregate outstanding plus proposed exposure across the borrower and its related entities.",
+          "category": "functional",
+          "confidence": "unknown"
+        },
+        {
+          "id": "R-070",
+          "text": "Borrower document ingestion fidelity is unspecified and no sample documents were supplied: whether the document extraction stage must parse real uploaded PDFs/scans/spreadsheets, or operates on structured/typed financial input with documents attached for reference only.",
+          "category": "data",
+          "confidence": "unknown"
+        }
+      ]
+    }
+  },
+  "data_model": {
+    "path": "/Users/nbalawat/development/harness/underwriting-desk-v12/artifacts/data-design/data_model.json",
+    "data": {
+      "tables": [
+        {
+          "name": "users",
+          "addresses": [
+            "R-024",
+            "R-031",
+            "R-032",
+            "R-033",
+            "R-039",
+            "R-053"
+          ],
+          "columns": [
+            {
+              "name": "id",
+              "type": "string"
+            },
+            {
+              "name": "email",
+              "type": "string"
+            },
+            {
+              "name": "name",
+              "type": "string"
+            },
+            {
+              "name": "role",
+              "type": "string"
+            },
+            {
+              "name": "is_active",
+              "type": "boolean"
+            },
+            {
+              "name": "created_at",
+              "type": "timestamp"
+            },
+            {
+              "name": "updated_at",
+              "type": "timestamp"
+            }
+          ]
+        },
+        {
+          "name": "deals",
+          "addresses": [
+            "R-001",
+            "R-003",
+            "R-026",
+            "R-027",
+            "R-034",
+            "R-040",
+            "R-046",
+            "R-047",
+            "R-048",
+            "R-051",
+            "R-058",
+            "R-062"
+          ],
+          "columns": [
+            {
+              "name": "id",
+              "type": "string"
+            },
+            {
+              "name": "borrower_name",
+              "type": "string"
+            },
+            {
+              "name": "borrower_industry",
+              "type": "string"
+            },
+            {
+              "name": "borrower_entity_id",
+              "type": "string"
+            },
+            {
+              "name": "requested_amount",
+              "type": "decimal"
+            },
+            {
+              "name": "exposure_amount",
+              "type": "decimal"
+            },
+            {
+              "name": "current_stage",
+              "type": "string"
+            },
+            {
+              "name": "current_status",
+              "type": "string"
+            },
+            {
+              "name": "created_by_user_id",
+              "type": "string"
+            },
+            {
+              "name": "assigned_to_user_id",
+              "type": "string"
+            },
+            {
+              "name": "risk_grade",
+              "type": "string"
+            },
+            {
+              "name": "decline_reason_code",
+              "type": "string"
+            },
+            {
+              "name": "decline_reason_detail",
+              "type": "string"
+            },
+            {
+              "name": "last_activity_timestamp",
+              "type": "timestamp"
+            },
+            {
+              "name": "created_at",
+              "type": "timestamp"
+            },
+            {
+              "name": "updated_at",
+              "type": "timestamp"
+            }
+          ]
+        },
+        {
+          "name": "documents",
+          "addresses": [
+            "R-041",
+            "R-043",
+            "R-059"
+          ],
+          "columns": [
+            {
+              "name": "id",
+              "type": "string"
+            },
+            {
+              "name": "deal_id",
+              "type": "string"
+            },
+            {
+              "name": "document_type",
+              "type": "string"
+            },
+            {
+              "name": "file_name",
+              "type": "string"
+            },
+            {
+              "name": "file_size",
+              "type": "integer"
+            },
+            {
+              "name": "checksum",
+              "type": "string"
+            },
+            {
+              "name": "storage_path",
+              "type": "string"
+            },
+            {
+              "name": "uploaded_by_user_id",
+              "type": "string"
+            },
+            {
+              "name": "uploaded_at",
+              "type": "timestamp"
+            },
+            {
+              "name": "created_at",
+              "type": "timestamp"
+            }
+          ]
+        },
+        {
+          "name": "financial_spread_template",
+          "addresses": [
+            "R-042",
+            "R-061"
+          ],
+          "columns": [
+            {
+              "name": "id",
+              "type": "string"
+            },
+            {
+              "name": "deal_id",
+              "type": "string"
+            },
+            {
+              "name": "template_version",
+              "type": "string"
+            },
+            {
+              "name": "line_item_key",
+              "type": "string"
+            },
+            {
+              "name": "period",
+              "type": "string"
+            },
+            {
+              "name": "value",
+              "type": "decimal"
+            },
+            {
+              "name": "unit",
+              "type": "string"
+            },
+            {
+              "name": "created_at",
+              "type": "timestamp"
+            }
+          ]
+        },
+        {
+          "name": "citations",
+          "addresses": [
+            "R-009",
+            "R-011",
+            "R-043"
+          ],
+          "columns": [
+            {
+              "name": "id",
+              "type": "string"
+            },
+            {
+              "name": "source_type",
+              "type": "string"
+            },
+            {
+              "name": "source_id",
+              "type": "string"
+            },
+            {
+              "name": "document_id",
+              "type": "string"
+            },
+            {
+              "name": "page_number",
+              "type": "integer"
+            },
+            {
+              "name": "section",
+              "type": "string"
+            },
+            {
+              "name": "cell_locator",
+              "type": "string"
+            },
+            {
+              "name": "quoted_text",
+              "type": "string"
+            },
+            {
+              "name": "created_at",
+              "type": "timestamp"
+            }
+          ]
+        },
+        {
+          "name": "financial_ratios",
+          "addresses": [
+            "R-016",
+            "R-017",
+            "R-018",
+            "R-028",
+            "R-061"
+          ],
+          "columns": [
+            {
+              "name": "id",
+              "type": "string"
+            },
+            {
+              "name": "deal_id",
+              "type": "string"
+            },
+            {
+              "name": "ratio_type",
+              "type": "string"
+            },
+            {
+              "name": "numerator",
+              "type": "decimal"
+            },
+            {
+              "name": "denominator",
+              "type": "decimal"
+            },
+            {
+              "name": "result",
+              "type": "decimal"
+            },
+            {
+              "name": "rounding_method",
+              "type": "string"
+            },
+            {
+              "name": "divide_by_zero_handling",
+              "type": "string"
+            },
+            {
+              "name": "computed_at",
+              "type": "timestamp"
+            },
+            {
+              "name": "created_at",
+              "type": "timestamp"
+            }
+          ]
+        },
+        {
+          "name": "risk_grades",
+          "addresses": [
+            "R-019",
+            "R-045",
+            "R-061"
+          ],
+          "columns": [
+            {
+              "name": "id",
+              "type": "string"
+            },
+            {
+              "name": "deal_id",
+              "type": "string"
+            },
+            {
+              "name": "grade",
+              "type": "string"
+            },
+            {
+              "name": "rubric_version",
+              "type": "string"
+            },
+            {
+              "name": "band_hit",
+              "type": "string"
+            },
+            {
+              "name": "reasoning",
+              "type": "string"
+            },
+            {
+              "name": "computed_at",
+              "type": "timestamp"
+            },
+            {
+              "name": "created_at",
+              "type": "timestamp"
+            }
+          ]
+        },
+        {
+          "name": "lending_policy",
+          "addresses": [
+            "R-012",
+            "R-044"
+          ],
+          "columns": [
+            {
+              "name": "id",
+              "type": "string"
+            },
+            {
+              "name": "version",
+              "type": "string"
+            },
+            {
+              "name": "rule_type",
+              "type": "string"
+            },
+            {
+              "name": "rule_key",
+              "type": "string"
+            },
+            {
+              "name": "rule_value",
+              "type": "string"
+            },
+            {
+              "name": "is_active",
+              "type": "boolean"
+            },
+            {
+              "name": "created_at",
+              "type": "timestamp"
+            },
+            {
+              "name": "updated_at",
+              "type": "timestamp"
+            }
+          ]
+        },
+        {
+          "name": "policy_exceptions",
+          "addresses": [
+            "R-013",
+            "R-052"
+          ],
+          "columns": [
+            {
+              "name": "id",
+              "type": "string"
+            },
+            {
+              "name": "deal_id",
+              "type": "string"
+            },
+            {
+              "name": "policy_rule_id",
+              "type": "string"
+            },
+            {
+              "name": "rule_reference",
+              "type": "string"
+            },
+            {
+              "name": "violation_detail",
+              "type": "string"
+            },
+            {
+              "name": "rationale",
+              "type": "string"
+            },
+            {
+              "name": "status",
+              "type": "string"
+            },
+            {
+              "name": "raised_by_user_id",
+              "type": "string"
+            },
+            {
+              "name": "resolved_by_user_id",
+              "type": "string"
+            },
+            {
+              "name": "resolved_at",
+              "type": "timestamp"
+            },
+            {
+              "name": "created_at",
+              "type": "timestamp"
+            }
+          ]
+        },
+        {
+          "name": "agent_outputs",
+          "addresses": [
+            "R-025",
+            "R-029",
+            "R-049",
+            "R-056"
+          ],
+          "columns": [
+            {
+              "name": "id",
+              "type": "string"
+            },
+            {
+              "name": "deal_id",
+              "type": "string"
+            },
+            {
+              "name": "agent_id",
+              "type": "string"
+            },
+            {
+              "name": "stage",
+              "type": "string"
+            },
+            {
+              "name": "model",
+              "type": "string"
+            },
+            {
+              "name": "prompt_version",
+              "type": "string"
+            },
+            {
+              "name": "input_data",
+              "type": "json"
+            },
+            {
+              "name": "output_content",
+              "type": "text"
+            },
+            {
+              "name": "token_usage",
+              "type": "json"
+            },
+            {
+              "name": "latency_ms",
+              "type": "integer"
+            },
+            {
+              "name": "outcome",
+              "type": "string"
+            },
+            {
+              "name": "generated_at",
+              "type": "timestamp"
+            },
+            {
+              "name": "created_at",
+              "type": "timestamp"
+            }
+          ]
+        },
+        {
+          "name": "human_reviews",
+          "addresses": [
+            "R-025",
+            "R-029",
+            "R-049"
+          ],
+          "columns": [
+            {
+              "name": "id",
+              "type": "string"
+            },
+            {
+              "name": "agent_output_id",
+              "type": "string"
+            },
+            {
+              "name": "deal_id",
+              "type": "string"
+            },
+            {
+              "name": "reviewed_by_user_id",
+              "type": "string"
+            },
+            {
+              "name": "action",
+              "type": "string"
+            },
+            {
+              "name": "original_content",
+              "type": "text"
+            },
+            {
+              "name": "edited_content",
+              "type": "text"
+            },
+            {
+              "name": "rejection_reason",
+              "type": "text"
+            },
+            {
+              "name": "reviewed_at",
+              "type": "timestamp"
+            },
+            {
+              "name": "created_at",
+              "type": "timestamp"
+            }
+          ]
+        },
+        {
+          "name": "approvals",
+          "addresses": [
+            "R-020",
+            "R-021",
+            "R-022",
+            "R-023",
+            "R-024",
+            "R-030",
+            "R-062"
+          ],
+          "columns": [
+            {
+              "name": "id",
+              "type": "string"
+            },
+            {
+              "name": "deal_id",
+              "type": "string"
+            },
+            {
+              "name": "stage",
+              "type": "string"
+            },
+            {
+              "name": "approval_authority_level",
+              "type": "string"
+            },
+            {
+              "name": "exposure_amount",
+              "type": "decimal"
+            },
+            {
+              "name": "approved_by_user_id",
+              "type": "string"
+            },
+            {
+              "name": "decision",
+              "type": "string"
+            },
+            {
+              "name": "decision_notes",
+              "type": "text"
+            },
+            {
+              "name": "decided_at",
+              "type": "timestamp"
+            },
+            {
+              "name": "created_at",
+              "type": "timestamp"
+            }
+          ]
+        },
+        {
+          "name": "deal_returns",
+          "addresses": [
+            "R-047"
+          ],
+          "columns": [
+            {
+              "name": "id",
+              "type": "string"
+            },
+            {
+              "name": "deal_id",
+              "type": "string"
+            },
+            {
+              "name": "returned_from_stage",
+              "type": "string"
+            },
+            {
+              "name": "returned_to_stage",
+              "type": "string"
+            },
+            {
+              "name": "returned_by_user_id",
+              "type": "string"
+            },
+            {
+              "name": "reason",
+              "type": "text"
+            },
+            {
+              "name": "reassigned_to_user_id",
+              "type": "string"
+            },
+            {
+              "name": "created_at",
+              "type": "timestamp"
+            }
+          ]
+        },
+        {
+          "name": "queue_assignments",
+          "addresses": [
+            "R-007",
+            "R-048"
+          ],
+          "columns": [
+            {
+              "name": "id",
+              "type": "string"
+            },
+            {
+              "name": "deal_id",
+              "type": "string"
+            },
+            {
+              "name": "queue_name",
+              "type": "string"
+            },
+            {
+              "name": "assigned_to_user_id",
+              "type": "string"
+            },
+            {
+              "name": "claimed_by_user_id",
+              "type": "string"
+            },
+            {
+              "name": "claimed_at",
+              "type": "timestamp"
+            },
+            {
+              "name": "status",
+              "type": "string"
+            },
+            {
+              "name": "created_at",
+              "type": "timestamp"
+            },
+            {
+              "name": "updated_at",
+              "type": "timestamp"
+            }
+          ]
+        },
+        {
+          "name": "audit_log",
+          "addresses": [
+            "R-027",
+            "R-028",
+            "R-029",
+            "R-030",
+            "R-050",
+            "R-051"
+          ],
+          "columns": [
+            {
+              "name": "id",
+              "type": "string"
+            },
+            {
+              "name": "deal_id",
+              "type": "string"
+            },
+            {
+              "name": "actor_user_id",
+              "type": "string"
+            },
+            {
+              "name": "action",
+              "type": "string"
+            },
+            {
+              "name": "resource_type",
+              "type": "string"
+            },
+            {
+              "name": "resource_id",
+              "type": "string"
+            },
+            {
+              "name": "before_payload",
+              "type": "json"
+            },
+            {
+              "name": "after_payload",
+              "type": "json"
+            },
+            {
+              "name": "timestamp",
+              "type": "timestamp"
+            },
+            {
+              "name": "created_at",
+              "type": "timestamp"
+            }
+          ]
+        },
+        {
+          "name": "business_calendar",
+          "addresses": [
+            "R-034",
+            "R-057"
+          ],
+          "columns": [
+            {
+              "name": "id",
+              "type": "string"
+            },
+            {
+              "name": "calendar_date",
+              "type": "date"
+            },
+            {
+              "name": "is_business_day",
+              "type": "boolean"
+            },
+            {
+              "name": "holiday_name",
+              "type": "string"
+            },
+            {
+              "name": "created_at",
+              "type": "timestamp"
+            }
+          ]
+        },
+        {
+          "name": "portfolio_qa_sessions",
+          "addresses": [
+            "R-014",
+            "R-015",
+            "R-054"
+          ],
+          "columns": [
+            {
+              "name": "id",
+              "type": "string"
+            },
+            {
+              "name": "user_id",
+              "type": "string"
+            },
+            {
+              "name": "question",
+              "type": "text"
+            },
+            {
+              "name": "grounded_response",
+              "type": "text"
+            },
+            {
+              "name": "source_deal_ids",
+              "type": "json"
+            },
+            {
+              "name": "trace_data",
+              "type": "json"
+            },
+            {
+              "name": "created_at",
+              "type": "timestamp"
+            }
+          ]
+        },
+        {
+          "name": "intake_triage_decisions",
+          "addresses": [
+            "R-005",
+            "R-006"
+          ],
+          "columns": [
+            {
+              "name": "id",
+              "type": "string"
+            },
+            {
+              "name": "deal_id",
+              "type": "string"
+            },
+            {
+              "name": "classification",
+              "type": "string"
+            },
+            {
+              "name": "missing_documents",
+              "type": "json"
+            },
+            {
+              "name": "confidence_score",
+              "type": "decimal"
+            },
+            {
+              "name": "created_at",
+              "type": "timestamp"
+            }
+          ]
+        },
+        {
+          "name": "adverse_action_reasons",
+          "addresses": [
+            "R-026",
+            "R-063"
+          ],
+          "columns": [
+            {
+              "name": "id",
+              "type": "string"
+            },
+            {
+              "name": "reason_code",
+              "type": "string"
+            },
+            {
+              "name": "reason_label",
+              "type": "string"
+            },
+            {
+              "name": "is_active",
+              "type": "boolean"
+            },
+            {
+              "name": "created_at",
+              "type": "timestamp"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

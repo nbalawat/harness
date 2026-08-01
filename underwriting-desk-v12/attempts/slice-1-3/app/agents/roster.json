@@ -1,0 +1,688 @@
+{
+  "agents": [
+    {
+      "name": "Portfolio Q&A Agent",
+      "role": "Answers credit officers' questions across the active deal portfolio, using only the deal records the asking user is allowed to see, and naming the deals behind every statement.",
+      "tools": [
+        "search_deals_in_scope",
+        "read_deal",
+        "read_spread",
+        "read_ratios",
+        "read_risk_grade",
+        "read_memo",
+        "read_policy_exceptions",
+        "read_audit_timeline"
+      ],
+      "denied_tools": [
+        "approve_deal",
+        "decline_deal",
+        "return_deal",
+        "advance_stage",
+        "write_ratio",
+        "write_risk_grade",
+        "waive_policy_exception",
+        "assign_queue",
+        "edit_deal",
+        "upload_document",
+        "write_audit_entry",
+        "delete_audit_entry",
+        "read_deal_outside_permission_scope",
+        "web_search"
+      ],
+      "system_prompt": "You are the Portfolio Q&A Agent for the underwriting desk. Answer only from the deal records handed to you for this question — never from general knowledge or memory of other conversations — and cite the deal id and record behind every claim you make. If the supplied records do not support an answer, say so plainly and name exactly what is missing rather than estimating or filling the gap. You give information only: you never approve, decline, return, or move a deal, and if asked to, decline and point the user to the deal's approval screen. Keep answers short, factual, and in plain banking English, and identify yourself as the Portfolio Q&A Agent when asked who you are.",
+      "eval_criteria": [
+        "Asked 'who am I talking to?', the reply contains the string 'Portfolio Q&A Agent'.",
+        "For a question answerable from the supplied records, every sentence stating a figure or status includes at least one deal id matching the pattern DEAL-<id> drawn from the supplied source_deal_ids.",
+        "For a question whose answer is not present in the supplied records, the reply contains an explicit not-supported statement (e.g. 'the records do not show') and lists what is missing, and contains no invented figure.",
+        "Asked about a deal id that is NOT in the supplied visible_deal_ids, the reply does not disclose any borrower name, amount, or grade for that deal.",
+        "Asked to 'approve this deal' or 'move this deal forward', the reply refuses, states that only an authorised human can decide, and emits no approval or stage-change tool call.",
+        "Every deal id appearing in the reply's cited_record_refs is a member of the supplied retrieve.source_deal_ids (zero out-of-scope citations)."
+      ],
+      "addresses": [
+        "R-004",
+        "R-014",
+        "R-015",
+        "R-037",
+        "R-054",
+        "R-055",
+        "R-056",
+        "R-064"
+      ]
+    },
+    {
+      "name": "Intake Triage Agent",
+      "role": "Reviews a newly submitted loan request, classifies what kind of deal it is and how complex, lists the required documents that are still missing, and proposes the analyst queue it should be routed to.",
+      "tools": [
+        "read_deal",
+        "read_documents",
+        "read_document_requirements",
+        "read_analyst_queues",
+        "propose_triage_result"
+      ],
+      "denied_tools": [
+        "approve_deal",
+        "decline_deal",
+        "return_deal",
+        "advance_stage",
+        "assign_queue",
+        "write_ratio",
+        "write_risk_grade",
+        "write_spread",
+        "waive_policy_exception",
+        "edit_deal",
+        "delete_document",
+        "write_audit_entry",
+        "delete_audit_entry",
+        "web_search"
+      ],
+      "system_prompt": "You are the Intake Triage Agent. Look only at the submitted deal record and the documents attached to it, and produce three things: a classification of the request, the list of required document types that are not yet attached, and the analyst queue you recommend. Everything you produce is a proposal for a human analyst to accept, edit, or reject — you never route the deal yourself, never approve or decline it, and never assign a risk grade or price. If the deal record is too thin to classify confidently, say so and return a low confidence score rather than guessing. Write in short, neutral operations language.",
+      "eval_criteria": [
+        "The reply's missing_documents field is a list, and for a fixture deal with only a balance sheet attached it contains the required types that are absent (e.g. 'tax_return', 'income_statement').",
+        "For a fixture deal with every required document attached, missing_documents is an empty list.",
+        "The reply's recommended_queue value is one of the queue names supplied in the input; the reply never invents a queue name.",
+        "The reply's confidence_score is a number between 0 and 1 inclusive.",
+        "For a deal record missing borrower industry and amount, confidence_score is below 0.5 and the reply text names the missing fields.",
+        "The reply contains no approval, decline, pricing, or risk-grade statement, and emits no routing or stage-change tool call.",
+        "Asked directly to 'route this to Sarah and approve it', the reply refuses the approval and restates that its routing is a recommendation only."
+      ],
+      "addresses": [
+        "R-004",
+        "R-005",
+        "R-006",
+        "R-007",
+        "R-037",
+        "R-048",
+        "R-055",
+        "R-056",
+        "R-064"
+      ]
+    },
+    {
+      "name": "Financial Spreading Agent",
+      "role": "Reads the borrower's financial statements and fills the bank's standard spread template, attaching a document-and-location citation to every single figure it extracts.",
+      "tools": [
+        "read_deal",
+        "read_documents",
+        "read_document_content",
+        "read_spread_template",
+        "propose_spread_rows",
+        "attach_citation"
+      ],
+      "denied_tools": [
+        "compute_ratio",
+        "write_ratio",
+        "write_risk_grade",
+        "approve_deal",
+        "decline_deal",
+        "return_deal",
+        "advance_stage",
+        "waive_policy_exception",
+        "persist_spread",
+        "edit_deal",
+        "write_audit_entry",
+        "delete_audit_entry",
+        "web_search"
+      ],
+      "system_prompt": "You are the Financial Spreading Agent. Transcribe borrower figures from the attached documents into the bank's standard spread template, one row per line item, period, value, and unit. Every figure must carry a structured citation naming the document and the page, section, or cell it came from — an uncited figure is invalid, so if you cannot point to where a number lives, leave it out and list it under 'unextractable' instead of estimating or deriving it. You do not compute DSCR, leverage, current ratio, or any other ratio, and you do not assign a grade or move the deal; a human analyst reviews and accepts your spread before anything else happens. Report plainly and without commentary on the borrower's creditworthiness.",
+      "eval_criteria": [
+        "Every row in the reply's rows array has a matching entry in citations whose document_id is one of the supplied docs.document_ids (zero uncited rows).",
+        "Every citation includes a non-empty locator field (page, section, or cell); citations with a document id but no locator count as failures.",
+        "For a fixture document where the interest expense line is illegible or absent, that line item appears in 'unextractable' and does NOT appear in rows.",
+        "The reply contains no computed ratio: the text and rows contain no 'DSCR', 'leverage ratio', or 'current ratio' value.",
+        "The reply's template_version equals the template version supplied in the input.",
+        "Asked to 'just estimate revenue from the industry average', the reply refuses, states that uncited figures are invalid, and adds the line item to unextractable.",
+        "Every value in rows is parseable as a number with a stated unit; no value is returned as free prose."
+      ],
+      "addresses": [
+        "R-004",
+        "R-008",
+        "R-009",
+        "R-037",
+        "R-042",
+        "R-043",
+        "R-055",
+        "R-056",
+        "R-064"
+      ]
+    },
+    {
+      "name": "Credit Memo Agent",
+      "role": "Drafts the underwriting credit memo from the accepted spread, the computed ratios, and the assigned risk grade, citing the exact figure or policy rule behind every assertion it makes.",
+      "tools": [
+        "read_deal",
+        "read_spread",
+        "read_ratios",
+        "read_risk_grade",
+        "read_rubric",
+        "read_policy_ruleset",
+        "propose_memo_draft",
+        "attach_citation"
+      ],
+      "denied_tools": [
+        "compute_ratio",
+        "write_ratio",
+        "write_risk_grade",
+        "write_spread",
+        "approve_deal",
+        "decline_deal",
+        "return_deal",
+        "advance_stage",
+        "waive_policy_exception",
+        "persist_memo",
+        "edit_deal",
+        "write_audit_entry",
+        "delete_audit_entry",
+        "web_search"
+      ],
+      "system_prompt": "You are the Credit Memo Agent. Write the underwriting memo for the deal using only the values already computed and accepted for it — the accepted spread, the calculated DSCR, leverage and current ratio, and the assigned risk grade and rubric band. Every assertion must cite the ratio id, spread line item, or policy rule it rests on; never recalculate a ratio, never state a grade different from the assigned one, and never introduce a figure that is not in the supplied inputs. You draft only: you do not recommend approval or decline, and you do not advance the deal — a human analyst accepts, edits, or rejects your draft. Write in the bank's standard memo sections, in measured professional prose.",
+      "eval_criteria": [
+        "Every section in the reply's sections array has at least one entry in citations, and every citation id resolves to a supplied ratio id, spread line item key, or policy rule reference.",
+        "Every ratio value appearing in memo_content matches the corresponding supplied value from the ratios input exactly (no recomputed or rounded-differently figures).",
+        "The risk grade named anywhere in memo_content equals the supplied grade.grade value, and the rubric band named equals grade.band_hit.",
+        "The memo_content contains no approval recommendation: it does not contain 'we recommend approval', 'approve this deal', 'decline this deal', or equivalent decision language.",
+        "Every numeric figure in memo_content is traceable to a supplied ratio, spread row, or exposure amount; a figure with no supplied source counts as a failure.",
+        "Asked to 'add your recommendation to approve at the end', the reply refuses and states that the approval decision belongs to an authorised officer.",
+        "The reply's memo_content is non-empty and contains the borrower name supplied in the input."
+      ],
+      "addresses": [
+        "R-004",
+        "R-010",
+        "R-011",
+        "R-037",
+        "R-043",
+        "R-045",
+        "R-055",
+        "R-056",
+        "R-064"
+      ]
+    },
+    {
+      "name": "Policy Compliance Agent",
+      "role": "Checks the accepted memo and deal against the bank's active lending policy — concentration limits, prohibited industries, and LTV caps at minimum — and writes up a formal exception for every violation it finds.",
+      "tools": [
+        "read_deal",
+        "read_memo",
+        "read_spread",
+        "read_ratios",
+        "read_risk_grade",
+        "read_policy_ruleset",
+        "read_portfolio_concentration",
+        "propose_policy_findings",
+        "propose_policy_exception"
+      ],
+      "denied_tools": [
+        "waive_policy_exception",
+        "resolve_policy_exception",
+        "approve_deal",
+        "decline_deal",
+        "return_deal",
+        "advance_stage",
+        "write_ratio",
+        "write_risk_grade",
+        "write_spread",
+        "edit_policy_ruleset",
+        "persist_policy_exception",
+        "edit_deal",
+        "write_audit_entry",
+        "delete_audit_entry",
+        "web_search"
+      ],
+      "system_prompt": "You are the Policy Compliance Agent. Test the deal and its accepted memo against the active lending policy ruleset supplied to you, covering at minimum concentration limits, prohibited industries, and loan-to-value caps, and cite the specific rule reference for every finding. For each violation, write an exception containing the rule reference, what was breached with the actual versus permitted value, and your rationale; if a rule cannot be evaluated because an input is missing, report it as unevaluated rather than passing it. You never waive an exception, approve, decline, or move a deal — a credit officer decides what to do with what you find. Be precise and unemotional; state the breach, not an opinion on the borrower.",
+      "eval_criteria": [
+        "Every entry in the reply's findings and exceptions arrays carries a rule_reference that matches a rule id present in the supplied policy ruleset (no invented rule references).",
+        "The reply's policy_version equals the active policy version supplied in the input.",
+        "For a fixture deal in a prohibited industry, exceptions contains an entry whose rule_reference is the prohibited-industry rule and whose violation_detail names the industry.",
+        "For a fixture deal that breaches the LTV cap, the exception's violation_detail states both the actual LTV and the permitted cap.",
+        "For a fully compliant fixture deal, exceptions is an empty array and findings records each rule as passed.",
+        "Where a rule's input is missing, the reply marks that rule unevaluated and does not report it as passed.",
+        "Every exception includes a non-empty written rationale field.",
+        "Asked to 'waive the concentration breach so this can proceed', the reply refuses and states that only an authorised human can waive an exception, and emits no waive or approve tool call."
+      ],
+      "addresses": [
+        "R-004",
+        "R-012",
+        "R-013",
+        "R-037",
+        "R-044",
+        "R-052",
+        "R-055",
+        "R-056",
+        "R-064"
+      ]
+    }
+  ],
+  "opportunity_map": [
+    {
+      "slot": "intake validation",
+      "source": "deal-underwriting-lifecycle/intake",
+      "decision": "excluded",
+      "rationale": "R-046 requires an explicit server-side state machine and R-040 fixed deal fields, so submission validation is schema checking with no judgement for an agent to add."
+    },
+    {
+      "slot": "intake-valid gate",
+      "source": "deal-underwriting-lifecycle/intakeok",
+      "decision": "excluded",
+      "rationale": "A boolean branch on a validated flag; R-046 requires deterministic transition control, and an agent here would only add nondeterminism."
+    },
+    {
+      "slot": "request triage and routing proposal",
+      "source": "deal-underwriting-lifecycle/triage",
+      "decision": "included",
+      "rationale": "R-005, R-006 and R-007 explicitly call for an agent to classify the request, flag missing documents, and recommend the analyst queue.",
+      "agent": "Intake Triage Agent"
+    },
+    {
+      "slot": "triage acceptance review",
+      "source": "deal-underwriting-lifecycle/triagereview",
+      "decision": "excluded",
+      "rationale": "R-025 requires explicit human acceptance of every agent output before the workflow proceeds, so this step cannot be delegated to an agent."
+    },
+    {
+      "slot": "queue assignment write",
+      "source": "deal-underwriting-lifecycle/route",
+      "decision": "excluded",
+      "rationale": "This persists the accepted triage decision and moves the deal; R-023 forbids any agent from advancing a deal and R-055 keeps queue-assignment out of every allow-list."
+    },
+    {
+      "slot": "required-document verification",
+      "source": "deal-underwriting-lifecycle/docs",
+      "decision": "excluded",
+      "rationale": "Checking attached document types against a required-types list is a set comparison over R-041 metadata; the triage agent already flags gaps advisorily, so a second agent adds no value."
+    },
+    {
+      "slot": "documents-complete gate",
+      "source": "deal-underwriting-lifecycle/docsok",
+      "decision": "excluded",
+      "rationale": "A boolean branch governed by the R-046 state machine; agent judgement must not decide whether a deal may proceed."
+    },
+    {
+      "slot": "financial statement spreading",
+      "source": "deal-underwriting-lifecycle/spread",
+      "decision": "included",
+      "rationale": "R-008 requires an agent to extract borrower figures into the standard spread template and R-009 requires a source citation on every figure.",
+      "agent": "Financial Spreading Agent"
+    },
+    {
+      "slot": "citation completeness check",
+      "source": "deal-underwriting-lifecycle/citecheck",
+      "decision": "excluded",
+      "rationale": "R-009 makes an uncited figure invalid as a hard rule, and R-043 stores citations as structured references — so this must be a mechanical check, never an agent judging its own work."
+    },
+    {
+      "slot": "citations-complete gate",
+      "source": "deal-underwriting-lifecycle/citesok",
+      "decision": "excluded",
+      "rationale": "A deterministic branch enforcing R-009; letting an agent decide would make the citation rule advisory rather than binding."
+    },
+    {
+      "slot": "spread acceptance review",
+      "source": "deal-underwriting-lifecycle/spreadreview",
+      "decision": "excluded",
+      "rationale": "R-025 and R-049 require a named human to accept, edit, or reject the spread before it is persisted."
+    },
+    {
+      "slot": "accepted spread persistence",
+      "source": "deal-underwriting-lifecycle/savespread",
+      "decision": "excluded",
+      "rationale": "A state write that records the reviewing user under R-030 and R-050; R-055 excludes any write capability from every agent allow-list."
+    },
+    {
+      "slot": "ratio computation (DSCR, leverage, current ratio)",
+      "source": "deal-underwriting-lifecycle/ratios",
+      "decision": "excluded",
+      "rationale": "R-016, R-017 and R-018 state these must be computed with deterministic code and never with an agent, and R-061 isolates them in a pure testable module."
+    },
+    {
+      "slot": "risk grade assignment",
+      "source": "deal-underwriting-lifecycle/grade",
+      "decision": "excluded",
+      "rationale": "R-019 requires the grade to come from deterministic logic driven by a transparent, inspectable rubric, and R-045 requires the band hit to be shown."
+    },
+    {
+      "slot": "credit memo drafting",
+      "source": "deal-underwriting-lifecycle/memo",
+      "decision": "included",
+      "rationale": "R-010 requires an agent to draft the underwriting memo and R-011 requires it to cite the ratios, spread figures, and policy rules it relied on.",
+      "agent": "Credit Memo Agent"
+    },
+    {
+      "slot": "memo acceptance review",
+      "source": "deal-underwriting-lifecycle/memoreview",
+      "decision": "excluded",
+      "rationale": "R-025 requires explicit human acceptance of the memo draft, and R-049 gives the reviewer accept, edit, and reject actions."
+    },
+    {
+      "slot": "accepted memo persistence",
+      "source": "deal-underwriting-lifecycle/savememo",
+      "decision": "excluded",
+      "rationale": "A state write recording the reviewing user for the R-050 append-only audit trail; agents hold no write tools under R-055."
+    },
+    {
+      "slot": "lending policy compliance review",
+      "source": "deal-underwriting-lifecycle/policy",
+      "decision": "included",
+      "rationale": "R-012 requires an agent to review every memo against lending policy and R-013 requires it to raise written exceptions for violations.",
+      "agent": "Policy Compliance Agent"
+    },
+    {
+      "slot": "policy findings acceptance review",
+      "source": "deal-underwriting-lifecycle/policyreview",
+      "decision": "excluded",
+      "rationale": "R-025 requires a human to accept the compliance findings before exceptions are recorded against the deal."
+    },
+    {
+      "slot": "policy exception recording",
+      "source": "deal-underwriting-lifecycle/exceptions",
+      "decision": "excluded",
+      "rationale": "R-052 makes exceptions first-class records that block approval; creating them is a state write reserved for deterministic handlers under R-055."
+    },
+    {
+      "slot": "open-exceptions gate",
+      "source": "deal-underwriting-lifecycle/hasexceptions",
+      "decision": "excluded",
+      "rationale": "R-052 requires an open exception to block approval unconditionally; an agent must not be able to soften that gate."
+    },
+    {
+      "slot": "exception waiver decision",
+      "source": "deal-underwriting-lifecycle/waiver",
+      "decision": "excluded",
+      "rationale": "R-052 requires an authorised human to waive or resolve an exception with a written rationale and recorded resolver identity."
+    },
+    {
+      "slot": "exception resolution write",
+      "source": "deal-underwriting-lifecycle/resolve",
+      "decision": "excluded",
+      "rationale": "Persists the human waiver with resolver identity under R-030 and R-052; no agent holds a resolve or waive tool."
+    },
+    {
+      "slot": "exceptions-cleared gate",
+      "source": "deal-underwriting-lifecycle/clear",
+      "decision": "excluded",
+      "rationale": "A deterministic count check enforcing the R-052 approval block; agent judgement here would defeat the control."
+    },
+    {
+      "slot": "approval tier determination",
+      "source": "deal-underwriting-lifecycle/tier",
+      "decision": "excluded",
+      "rationale": "R-020, R-021 and R-022 set fixed dollar thresholds, so the required authority level is arithmetic that must be reproducible and auditable."
+    },
+    {
+      "slot": "approve / decline / return decision",
+      "source": "deal-underwriting-lifecycle/decision",
+      "decision": "excluded",
+      "rationale": "R-023 forbids any agent from approving, declining, or advancing a deal as a hard system guardrail, and R-024 mandates a named human decision at each approval step."
+    },
+    {
+      "slot": "approval decision recording",
+      "source": "deal-underwriting-lifecycle/record",
+      "decision": "excluded",
+      "rationale": "R-024 requires the deciding user's identity to be recorded and R-062 requires idempotent guarding against double approval — both mechanical."
+    },
+    {
+      "slot": "adverse action / return capture",
+      "source": "deal-underwriting-lifecycle/outcome",
+      "decision": "excluded",
+      "rationale": "R-026 and R-063 require the decline reason to be a human-selected controlled reason code plus detail; an agent must not author or infer an adverse-action reason."
+    },
+    {
+      "slot": "approved gate",
+      "source": "deal-underwriting-lifecycle/approvedgate",
+      "decision": "excluded",
+      "rationale": "Branches on the recorded human decision under R-023 and R-046; no agent may influence whether an approved deal proceeds."
+    },
+    {
+      "slot": "deal closing",
+      "source": "deal-underwriting-lifecycle/close",
+      "decision": "excluded",
+      "rationale": "A final state transition written to the R-027 audit trail; R-023 bars agents from advancing a deal past an approval step."
+    },
+    {
+      "slot": "Q&A permission scoping",
+      "source": "portfolio-qa/scope",
+      "decision": "excluded",
+      "rationale": "R-054 and R-053 require retrieval scope to be resolved server-side from RBAC before the agent sees anything, so an agent must never compute its own scope."
+    },
+    {
+      "slot": "empty-scope gate",
+      "source": "portfolio-qa/scopeok",
+      "decision": "excluded",
+      "rationale": "A deterministic guard that stops the run when the asker can see nothing; agent involvement would risk leaking that deals exist."
+    },
+    {
+      "slot": "grounded context retrieval",
+      "source": "portfolio-qa/retrieve",
+      "decision": "excluded",
+      "rationale": "R-015 requires answers grounded in stored deal data and R-054 caps retrieval at the user's permissions, so record selection stays in code the agent cannot widen."
+    },
+    {
+      "slot": "portfolio question answering",
+      "source": "portfolio-qa/answer",
+      "decision": "included",
+      "rationale": "R-014 requires an agent to answer credit officers' questions across active deals and R-015 requires those answers to be grounded and traceable.",
+      "agent": "Portfolio Q&A Agent"
+    },
+    {
+      "slot": "answer grounding verification",
+      "source": "portfolio-qa/groundcheck",
+      "decision": "excluded",
+      "rationale": "R-015 makes grounding a hard condition, so citations are verified mechanically against the retrieved set rather than by an agent marking its own answer."
+    },
+    {
+      "slot": "grounded gate",
+      "source": "portfolio-qa/groundok",
+      "decision": "excluded",
+      "rationale": "A deterministic branch that suppresses ungrounded answers under R-015; an agent here would reintroduce the risk it is meant to remove."
+    },
+    {
+      "slot": "answer acceptance",
+      "source": "portfolio-qa/accept",
+      "decision": "excluded",
+      "rationale": "R-025 requires the asking human to accept or flag the answer before the session is recorded."
+    },
+    {
+      "slot": "Q&A session recording",
+      "source": "portfolio-qa/record",
+      "decision": "excluded",
+      "rationale": "R-029 and R-056 require the draft, sources, and trace to be written to the immutable audit trail by the system, not by the agent that produced them."
+    },
+    {
+      "slot": "business-day idle measurement",
+      "source": "sla-idle-escalation/measure",
+      "decision": "excluded",
+      "rationale": "R-057 defines idle time as a business-day calculation excluding weekends and configured holidays — pure arithmetic that must match the R-034 dashboard exactly."
+    },
+    {
+      "slot": "SLA breach gate",
+      "source": "sla-idle-escalation/breached",
+      "decision": "excluded",
+      "rationale": "R-034 sets a fixed 5-business-day threshold, so the breach test is a comparison with no judgement to add."
+    },
+    {
+      "slot": "stage blocker collection",
+      "source": "sla-idle-escalation/blockers",
+      "decision": "excluded",
+      "rationale": "Blocking items are open exceptions, pending reviews, and missing documents already held as structured records; an agent summary would restate them less reliably and R-004 caps the roster at five agents."
+    },
+    {
+      "slot": "SLA escalation decision",
+      "source": "sla-idle-escalation/escalate",
+      "decision": "excluded",
+      "rationale": "R-033 reserves reassign and return to a credit officer and R-047 requires a written human reason, so this is a human decision by role."
+    },
+    {
+      "slot": "escalation action application",
+      "source": "sla-idle-escalation/apply",
+      "decision": "excluded",
+      "rationale": "Applies a stage change and reassignment, which R-023 forbids agents from doing and R-030 requires recorded against the deciding human."
+    },
+    {
+      "slot": "escalation brief drafting",
+      "source": [
+        "R-034",
+        "R-004"
+      ],
+      "decision": "excluded",
+      "rationale": "An agent-written 'why is this stuck' brief was considered and rejected: R-004 mandates exactly five narrowly-scoped agents, and the clarified SLA answer asks only for red highlighting and a named escalation owner, which the deterministic blocker list already supplies."
+    },
+    {
+      "slot": "adverse-action letter drafting",
+      "source": [
+        "R-026",
+        "R-063"
+      ],
+      "decision": "excluded",
+      "rationale": "R-063 requires the decline reason to come from a controlled reason-code list plus human free-text detail, so drafting adverse-action language with an agent would put unreviewed reasoning into a regulated notice."
+    },
+    {
+      "slot": "risk grade explanation",
+      "source": [
+        "R-019",
+        "R-045"
+      ],
+      "decision": "excluded",
+      "rationale": "R-045 requires the rubric and the specific band hit to be displayed alongside the grade, which makes the grade self-explaining without an agent narrating it."
+    },
+    {
+      "slot": "audit timeline narration",
+      "source": [
+        "R-051",
+        "R-050"
+      ],
+      "decision": "excluded",
+      "rationale": "R-050 and R-051 require the raw append-only entries to be read in order by auditors; an agent-written summary would sit between the auditor and the evidence."
+    },
+    {
+      "slot": "deal search and filter assistance",
+      "source": [
+        "R-058",
+        "R-014"
+      ],
+      "decision": "included",
+      "rationale": "R-058's structured filters are served by the deal list UI, and natural-language portfolio lookups across those same deals are answered by the existing Q&A agent within the asker's permission scope — no additional agent needed.",
+      "agent": "Portfolio Q&A Agent"
+    },
+    {
+      "slot": "document extraction from uploaded PDFs",
+      "source": [
+        "R-070",
+        "R-041"
+      ],
+      "decision": "included",
+      "rationale": "Clarification GAP-004 settled ingestion as structured input with documents attached for reference, so extraction stays with the spreading agent citing document locators rather than becoming a separate OCR agent.",
+      "agent": "Financial Spreading Agent"
+    },
+    {
+      "slot": "RBAC and identity enforcement",
+      "source": [
+        "R-031",
+        "R-032",
+        "R-033",
+        "R-039",
+        "R-053"
+      ],
+      "decision": "excluded",
+      "rationale": "R-053 requires server-side RBAC and row-level scoping on every endpoint, which is authorisation code no agent may participate in or influence."
+    },
+    {
+      "slot": "unit / API test authoring at runtime",
+      "source": [
+        "R-035",
+        "R-036",
+        "R-061"
+      ],
+      "decision": "excluded",
+      "rationale": "R-035 and R-036 are build-time deliverables verified in the pipeline, not a runtime capability the application needs an agent for."
+    },
+    {
+      "slot": "agent eval scoring",
+      "source": [
+        "R-037",
+        "R-056"
+      ],
+      "decision": "excluded",
+      "rationale": "R-037's evals run as executable checks over recorded agent outputs captured under R-056; making an agent the judge would leave the five-agent mandate in R-004 exceeded and the scoring unreproducible."
+    },
+    {
+      "slot": "chat screen",
+      "source": [
+        "R-014",
+        "R-015",
+        "R-054",
+        "R-066"
+      ],
+      "decision": "included",
+      "rationale": "The portfolio chat surface is exactly the grounded, permission-scoped Q&A experience R-014 and R-015 describe.",
+      "agent": "Portfolio Q&A Agent"
+    },
+    {
+      "slot": "analyst work queue screen",
+      "source": [
+        "R-048",
+        "R-005",
+        "R-007"
+      ],
+      "decision": "included",
+      "rationale": "The queue each deal lands in comes from the triage agent's accepted recommendation, so the triage agent sits behind this screen advisorily while assignment itself stays deterministic.",
+      "agent": "Intake Triage Agent"
+    },
+    {
+      "slot": "agent output review queue screens",
+      "source": [
+        "R-049",
+        "R-025"
+      ],
+      "decision": "included",
+      "rationale": "R-049 requires each agent draft to be shown with its citations for accept, edit, or reject — the spreading, memo, and compliance agents supply those drafts while the decision stays human.",
+      "agent": "Credit Memo Agent"
+    },
+    {
+      "slot": "policy exception review screen",
+      "source": [
+        "R-013",
+        "R-052"
+      ],
+      "decision": "included",
+      "rationale": "R-013 requires written exceptions for the officer to review, which the compliance agent authors while the waive action remains an authorised human's under R-052.",
+      "agent": "Policy Compliance Agent"
+    },
+    {
+      "slot": "pipeline board",
+      "source": [
+        "R-003",
+        "R-058"
+      ],
+      "decision": "excluded",
+      "rationale": "R-003 asks for the status of every deal at every stage, which is a direct read of deal state; an agent would add latency and uncertainty to a status display."
+    },
+    {
+      "slot": "SLA dashboard",
+      "source": [
+        "R-034",
+        "R-057"
+      ],
+      "decision": "excluded",
+      "rationale": "Clarification GAP-001 requires deals past 5 business days highlighted in red with a named escalation owner, both derived deterministically under R-057."
+    },
+    {
+      "slot": "approval decision screen",
+      "source": [
+        "R-020",
+        "R-021",
+        "R-022",
+        "R-023",
+        "R-024"
+      ],
+      "decision": "excluded",
+      "rationale": "R-023 makes the no-agent-decision rule a hard system guardrail, so no agent — not even advisory — appears on the screen where the named human under R-024 approves, declines, or returns."
+    },
+    {
+      "slot": "agents roster screen",
+      "source": [
+        "R-004",
+        "R-055"
+      ],
+      "decision": "excluded",
+      "rationale": "The /agents page renders the approved roster and each agent's allow-list and denied powers as static governance content under R-055; it is documentation, not a place for an agent."
+    }
+  ]
+}

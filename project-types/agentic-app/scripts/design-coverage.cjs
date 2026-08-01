@@ -39,7 +39,8 @@ async function main() {
   const log = fs.openSync("coverage-app.log", "w");
   const child = spawn(
     `uv run --with fastapi --with uvicorn --with-requirements requirements.txt uvicorn dev:app --host 127.0.0.1 --port ${port}`,
-    { shell: true, detached: true, cwd: path.join(app, "backend"), env: { ...process.env, HARNESS_AGENT_MODE: "stub" }, stdio: ["ignore", log, log] },
+    // Live builds boot with LIVE agents; mock runs stay deterministic on stubs.
+    { shell: true, detached: true, cwd: path.join(app, "backend"), env: { ...process.env, ...(process.env.HARNESS_RUN_MODE === "live" ? {} : { HARNESS_AGENT_MODE: "stub" }) }, stdio: ["ignore", log, log] },
   );
   fs.closeSync(log);
   const kill = () => {
