@@ -12,7 +12,7 @@ client = TestClient(app)
 
 
 def test_http_roundtrip():
-    assert client.put("/files/report.txt", content=b"hello blob").status_code == 200
+    assert client.put("/files/report.txt", content=b"hello blob", headers={"x-user-email": "tester@local"}).status_code == 200
     assert client.get("/files/report.txt").content == b"hello blob"
 
 
@@ -23,3 +23,7 @@ def test_traversal_is_neutralized():
 
 def test_missing_404():
     assert client.get("/files/never.bin").status_code == 404
+
+
+def test_upload_requires_identity():
+    assert client.put("/files/anon.txt", content=b"x").status_code == 401

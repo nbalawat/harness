@@ -5,6 +5,10 @@ const path = require("node:path");
 const { spawnSync } = require("node:child_process");
 
 const inputs = JSON.parse(fs.readFileSync("inputs.json", "utf8"));
+// FRESH copy every attempt: retry continuity + cpSync overlay would let a
+// previous attempt's stale files shadow the current app (same ghost-file
+// class the merge step once had).
+fs.rmSync("app-verify", { recursive: true, force: true });
 fs.cpSync(inputs.app.path, "app-verify", { recursive: true });
 const app = path.resolve("app-verify");
 

@@ -1,7 +1,7 @@
 """file-upload module: guarded intake for user files. See agent-guide."""
 import os
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, Header, HTTPException, Request
 
 import blob_store
 
@@ -13,7 +13,10 @@ def _allowed_exts():
 
 
 @router.put("/uploads/{name}")
-async def upload(name: str, request: Request):
+async def upload(name: str, request: Request, x_user_email: str | None = Header(default=None)):
+    # Writes carry identity: who uploaded is part of the record.
+    if not x_user_email:
+        raise HTTPException(status_code=401, detail="x-user-email header required for uploads")
     ext = name.rsplit(".", 1)[-1].lower() if "." in name else ""
     if ext not in _allowed_exts():
         raise HTTPException(status_code=415, detail=f"extension '.{ext}' not allowed")
@@ -24,4 +27,4 @@ async def upload(name: str, request: Request):
         stored = blob_store.save(name, data)
     except ValueError as e:
         raise HTTPException(status_code=413, detail=str(e))
-    return {"name": stored, "bytes": len(data)}
+    return {"name": stored, "bytes": len(data), "uploaded_by": x_user_email}

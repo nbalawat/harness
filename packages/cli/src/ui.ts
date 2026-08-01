@@ -192,9 +192,14 @@ export function buildState(workspace: string): Record<string, unknown> {
   // a fresh cycle. Lifetime attempt totals read as "retry ×10" on a step whose
   // failures were separate, explained remediation waves — pure alarm noise.
   const retries: Record<string, number> = {};
+  // How many remediation waves touched each node — the pipeline rows wear this.
+  const revisedCount: Record<string, number> = {};
   for (const e of events) {
     if (e.type === "node.running") running.add(e.nodeId as string);
-    if (e.type === "node.reopened") retries[e.nodeId as string] = 0;
+    if (e.type === "node.reopened") {
+      retries[e.nodeId as string] = 0;
+      revisedCount[e.nodeId as string] = (revisedCount[e.nodeId as string] ?? 0) + (e.reason === "user_revision" ? 1 : 0);
+    }
     if (e.type === "node.attempt_failed") retries[e.nodeId as string] = (retries[e.nodeId as string] ?? 0) + 1;
   }
 
@@ -255,6 +260,7 @@ export function buildState(workspace: string): Record<string, unknown> {
               : "pending",
     cost: costs[n.id] ?? null,
     retries: retries[n.id] ?? 0,
+    revised: revisedCount[n.id] ?? 0,
   }));
 
   // Decisions: every answer/approval you gave, with question text + sources.
@@ -406,17 +412,27 @@ export function buildState(workspace: string): Record<string, unknown> {
       let costUsd = 0;
       let outcome = "pending";
       let cached = false;
+      let firstRunIdx = Number.MAX_SAFE_INTEGER;
       for (let i = w.endIdx + 1; i < capIdx; i++) {
         const e = events[i];
         if (e.nodeId !== id) continue;
-        if (e.type === "node.running") { attempts++; outcome = "re-running"; }
+        if (e.type === "node.running") { attempts++; outcome = "re-running"; if (i < firstRunIdx) firstRunIdx = i; }
         if (e.type === "cost.recorded") costUsd += (e.cost as { costUsd?: number })?.costUsd ?? 0;
-        if (e.type === "node.committed") { outcome = "committed"; cached = e.cached === true; }
+        if (e.type === "node.committed") { outcome = "committed"; cached = e.cached === true; if (i < firstRunIdx) firstRunIdx = i; }
         if (e.type === "node.failed") outcome = "failed";
-        if (e.type === "node.skipped") outcome = "skipped";
+        if (e.type === "node.skipped") { outcome = "skipped"; if (i < firstRunIdx) firstRunIdx = i; }
       }
-      return { nodeId: id, outcome, cached, attempts, costUsd: Number(costUsd.toFixed(2)) };
+      return { nodeId: id, outcome, cached, attempts, costUsd: Number(costUsd.toFixed(2)), firstRunIdx };
     });
+    // The propagation chain reads in EXECUTION order (the order the engine
+    // actually re-derived things), never reopen order — pending steps trail
+    // in DAG declaration order so "what's next" reads naturally.
+    const dagOrder = new Map(def.nodes.map((n, i) => [n.id, i]));
+    actions.sort((a, b) =>
+      a.firstRunIdx !== b.firstRunIdx
+        ? a.firstRunIdx - b.firstRunIdx
+        : (dagOrder.get(a.nodeId) ?? 0) - (dagOrder.get(b.nodeId) ?? 0),
+    );
     const remaining = w.reopened.filter((id) => !state.committed.has(id) && !state.skipped.has(id));
     return {
       wave: globalIdx + 1,
@@ -2325,7 +2341,8 @@ async function tick() {
       list.map(n =>
         '<div class="prow ' + n.state + '" data-id="' + esc(n.id) + '"><span class="icon">' + (STATE_ICON[n.state]||'') + '</span>' +
         '<span class="id mono">' + esc(n.id) + (n.retries ? ' <span class="chip retry">retry ×' + n.retries + '</span>' : '') +
-        ((s.remediation || []).some(r => r.remaining.includes(n.id)) ? ' <span class="chip remed" title="re-deriving from your feedback">remediating</span>' : '') + '</span>' +
+        (n.revised ? ' <span class="chip" style="border:1px solid var(--accent,#3b5bdb);color:var(--accent,#3b5bdb)" title="remediation feedback was delivered to this step ' + n.revised + ' time(s) — see the Remediation panel on Overview">revised ×' + n.revised + '</span>' : '') +
+        ((s.remediation || []).some(r => r.remaining.includes(n.id)) ? ' <span class="chip remed" title="re-deriving from remediation feedback">remediating</span>' : '') + '</span>' +
         (n.kind === 'agent' ? '<span class="chip model">' + esc(shortModel(n.model) || 'agent') + '</span>' : '<span class="chip">' + n.kind + '</span>') +
         '<span class="desc">' + esc(n.description ?? '') + '</span>' +
         '<span class="num">' + (n.cost && n.cost.costUsd ? '$' + n.cost.costUsd.toFixed(2) : '') + '</span>' +
