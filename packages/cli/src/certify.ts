@@ -29,6 +29,7 @@ export interface CertifyReport {
   problems: string[];
   scenarios: ScenarioReport[];
   revisionDrill: { node: string; status: string; cachedReuses: number } | null;
+  gateRegression?: { status: string } | null;
   packageDigest: string;
   certifiedAt: string;
 }
@@ -231,6 +232,21 @@ export async function certify(
     if (result.status !== "completed") problems.push(`revision drill on '${drill.node}' did not re-derive to green`);
   }
 
+  // The NON-REPEAT GUARANTEE, enforced at release: if the project type ships a
+  // gate-regression script, every past failure-class must still be caught by
+  // its gate. A version whose gates regressed CANNOT be certified — the same
+  // class can no longer sneak back and cost a live remediation wave.
+  let gateRegression: { status: string } | null = null;
+  const regressionScript = path.join(dir, "scripts", "gate-regression.cjs");
+  if (fs.existsSync(regressionScript)) {
+    const { spawnSync } = await import("node:child_process");
+    const r = spawnSync("node", [regressionScript], { encoding: "utf8", env: { ...process.env, HARNESS_PROJECT_DIR: dir } });
+    gateRegression = { status: r.status === 0 ? "held" : "BROKEN" };
+    if (r.status !== 0) {
+      problems.push(`non-repeat guarantee BROKEN — a gate stopped catching its class:\n${(r.stdout + r.stderr).split("\n").filter((l) => /FAIL|BROKEN|-/.test(l)).slice(0, 8).join("\n")}`);
+    }
+  }
+
   const report: CertifyReport = {
     name: def.name,
     version: def.version,
@@ -238,6 +254,7 @@ export async function certify(
     problems,
     scenarios: reports,
     revisionDrill,
+    gateRegression,
     packageDigest: packageDigest(dir),
     certifiedAt: new Date().toISOString(),
   };

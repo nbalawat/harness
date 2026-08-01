@@ -1,8 +1,9 @@
 {
-  "digest": "fddb0a718dab7f1d",
+  "digest": "f5d852c4c8b769ca",
   "files": {
     "agent-design/agent_roster.json": "6dfba59a3d3e9535",
     "architecture/architecture.json": "f491bcfb6168f774",
+    "audit-check/audit_gate.json": "965ee34bcc913512",
     "clarify/clarifications.json": "1136576d3cfefad4",
     "data-design/data_model.json": "f681bd9e0efe8851",
     "design-assemble/designs/option-1/index.html": "64c23e0a97e39156",

@@ -434,6 +434,11 @@ async function main(): Promise<void> {
           `  revision drill (${report.revisionDrill.node}): ${report.revisionDrill.status}, ${report.revisionDrill.cachedReuses} cached re-use(s)`,
         );
       }
+      if (report.gateRegression) {
+        console.log(
+          `  non-repeat guarantee: ${report.gateRegression.status === "held" ? "HELD — every past wave-class still caught by its gate" : "BROKEN — a gate regressed"}`,
+        );
+      }
       for (const p of report.problems) console.log(`  PROBLEM: ${p}`);
       console.log(report.ok ? `CERTIFIED ${report.name}@${report.version} (${report.packageDigest.slice(0, 12)})` : "NOT CERTIFIED");
       code = report.ok ? 0 : 1;
