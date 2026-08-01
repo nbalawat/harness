@@ -2374,7 +2374,7 @@ async function tick() {
       activeWave.feedbacks.map(f =>
         '<div class="remfb">' + (REM_SRC_ICON[f.source] || '💬') + ' <b>' + esc(f.source) + '</b> found the problem → feedback delivered to <span class="mono">' + esc(f.nodeId) + '</span>' +
         (f.feedback ? '<details><summary class="hint">what it said</summary><div class="hint" style="white-space:pre-wrap;max-height:160px;overflow:auto">' + esc(f.feedback) + '</div></details>' : '') + '</div>').join('') +
-      '<div class="hint" style="margin-top:.25rem">Highlighted steps below are this wave\'s re-derivation, in place in the pipeline; dimmed steps were untouched.</div>');
+      '<div class="hint" style="margin-top:.25rem">Highlighted steps below are re-derived by this wave, in place in the pipeline; dimmed steps were untouched.</div>');
   } else wi.style.display = 'none';
   const waveAction = (id) => activeWave ? activeWave.actions.find(a => a.nodeId === id) : null;
 
