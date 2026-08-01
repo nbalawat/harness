@@ -1,0 +1,11 @@
+name: process-triggers
+version: 0.1.0
+description: Enterprise trigger surface for a business process — start an instance from a human action (internal/external), a system event, a schedule, or a system trigger.
+provides:
+  - http: GET /api/triggers, POST /api/triggers/{human/internal,human/external,event,system,schedule/tick}
+requires:
+  - workflow-engine
+compose:
+  overlay: compose/
+certify:
+  tests: test/

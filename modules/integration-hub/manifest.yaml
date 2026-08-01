@@ -1,0 +1,12 @@
+name: integration-hub
+version: 0.1.0
+description: Enterprise system integrations reached as swappable MCP servers (simulated to start). A step calls integrations.call("crm.lookup", {...}); point the registry at a real MCP server to go live. Every call is audited.
+provides:
+  - python: integrations.call(connector, params) — MCP stdio client
+  - http: GET /api/integrations
+requires:
+  - audit-log
+compose:
+  overlay: compose/
+certify:
+  tests: test/

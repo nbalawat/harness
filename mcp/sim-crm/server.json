@@ -1,0 +1,1 @@
+{ "name": "sim-crm", "version": "0.1.0", "description": "Simulated CRM: account lookup and enrichment.", "simulated": true, "config_schema": { "type": "object", "additionalProperties": true } }

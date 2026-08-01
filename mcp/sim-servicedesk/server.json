@@ -1,0 +1,1 @@
+{ "name": "sim-servicedesk", "version": "0.1.0", "description": "Simulated service desk: ticketing, email, documents.", "simulated": true, "config_schema": { "type": "object", "additionalProperties": true } }

@@ -65,3 +65,56 @@ INFO:     127.0.0.1:50645 - "POST /api/qa/ask HTTP/1.1" 200 OK
 INFO:     127.0.0.1:50645 - "GET /api/qa/book-summary?acting_user_email=officer%40bank.test HTTP/1.1" 200 OK
 INFO:     127.0.0.1:50656 - "POST /api/qa/ask HTTP/1.1" 200 OK
 INFO:     127.0.0.1:50656 - "GET /api/qa/book-summary?acting_user_email=officer%40bank.test HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53789 - "GET / HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:53789 - "GET /tokens.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:53789 - "GET /app.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:53789 - "GET /agent/mode HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53790 - "GET /agents HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53792 - "GET /api/conversations HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:53794 - "GET /api/pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53796 - "GET /api/adverse_action_reasons HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53789 - "GET /api/sla/idle?acting_user_email=officer%40bank.test HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53798 - "GET /api/deals/DEAL-1002/dossier?acting_user_email=analyst%40bank.test HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53790 - "GET /api/approval-tiers?acting_user_email=officer%40bank.test HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53794 - "GET /api/pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53792 - "GET /api/qa/book-summary?acting_user_email=officer%40bank.test HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53798 - "GET /api/pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53789 - "GET /api/pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53789 - "GET /api/deals/DEAL-1004/decisions?acting_user_email=officer%40bank.test HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53798 - "GET /api/deals/DEAL-1003/memo?acting_user_email=analyst%40bank.test HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53792 - "GET /api/deals/DEAL-1003/policy-exceptions?acting_user_email=analyst%40bank.test HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53794 - "GET /api/deals/DEAL-1003/audit?acting_user_email=analyst%40bank.test HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53794 - "GET /api/pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53794 - "GET /api/pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53792 - "GET /api/adverse_action_reasons HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53798 - "GET /api/deals/DEAL-1002/dossier?acting_user_email=analyst%40bank.test HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53801 - "POST /api/deals/DEAL-1002/agents/policy-compliance/run HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53801 - "GET /api/deals/DEAL-1002/dossier?acting_user_email=analyst%40bank.test HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53816 - "POST /api/deals/DEAL-1002/approve HTTP/1.1" 403 Forbidden
+INFO:     127.0.0.1:53818 - "GET /api/pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53818 - "GET /api/deals/DEAL-1003/memo?acting_user_email=analyst%40bank.test HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53820 - "GET /api/deals/DEAL-1003/policy-exceptions?acting_user_email=analyst%40bank.test HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53822 - "GET /api/deals/DEAL-1003/audit?acting_user_email=analyst%40bank.test HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53822 - "GET /api/sla/idle?acting_user_email=officer%40bank.test HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53820 - "GET /api/approval-tiers?acting_user_email=officer%40bank.test HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53820 - "GET /api/deals/DEAL-1004/decisions?acting_user_email=officer%40bank.test HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53820 - "GET /api/pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55448 - "GET / HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:55448 - "GET /tokens.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:55450 - "GET /app.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:55450 - "GET /agent/mode HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55448 - "GET /agents HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55453 - "GET /api/conversations HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:55454 - "GET /api/pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55457 - "GET /api/adverse_action_reasons HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55450 - "GET /api/sla/idle?acting_user_email=officer%40bank.test HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55448 - "GET /api/approval-tiers?acting_user_email=officer%40bank.test HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55454 - "GET /api/pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55453 - "GET /api/qa/book-summary?acting_user_email=officer%40bank.test HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55458 - "GET /api/deals/DEAL-1002/dossier?acting_user_email=analyst%40bank.test HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55448 - "GET /api/deals/DEAL-1004/decisions?acting_user_email=officer%40bank.test HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55450 - "GET /api/pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55448 - "GET /api/pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55448 - "GET /api/deals/DEAL-1003/memo?acting_user_email=analyst%40bank.test HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55458 - "GET /api/deals/DEAL-1003/audit?acting_user_email=analyst%40bank.test HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55450 - "GET /api/deals/DEAL-1003/policy-exceptions?acting_user_email=analyst%40bank.test HTTP/1.1" 200 OK

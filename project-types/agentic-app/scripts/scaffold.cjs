@@ -99,6 +99,63 @@ if (architecture.modules.includes("workflow-engine") && inputs.workflows) {
   fs.copyFileSync(inputs.workflows.path, "app/workflows/workflows.json");
 }
 
+// 4a-ter. PROCESS APP: when the workflow-console is composed, the app IS the
+// agentified business process — the console is its primary surface. The
+// scaffold makes it RUN out of the box: (a) the console frontend is served as
+// the app UI, (b) a default handler is generated for every deterministic step
+// so the process executes end to end from the first build (slices refine the
+// real logic later; agent + human steps already work via the runtime + gates).
+if (architecture.modules.includes("workflow-console") && inputs.workflows) {
+  // (a) the console frontend becomes the app frontend
+  const consoleFront = path.join(repoRoot, "modules", "workflow-console", "compose", "frontend");
+  for (const f of ["index.html", "app.js"]) {
+    fs.copyFileSync(path.join(consoleFront, f), path.join("app/frontend", f));
+  }
+  // (b) generate default handlers for every deterministic step in every process
+  const wf = JSON.parse(fs.readFileSync(inputs.workflows.path, "utf8"));
+  const detSteps = [];
+  for (const proc of wf.workflows || []) {
+    for (const node of proc.nodes || []) {
+      if (node.kind === "deterministic" && node.handler) {
+        detSteps.push({ handler: node.handler, id: node.id, required: (node.output_schema || {}).required || [] });
+      }
+    }
+  }
+  const seen = new Set();
+  const lines = [
+    '"""Generated default step handlers so the process RUNS from the first',
+    "build. Correctness-critical logic is refined by build slices; these keep",
+    "every deterministic step contract-valid so agent + human steps flow.",
+    '"""',
+    "import workflow_engine",
+    "",
+    "",
+    "def _default(step_id, required):",
+    "    def handler(ctx):",
+    "        out = {}",
+    "        inp = ctx.get('inputs', {})",
+    "        # an intake-like first step surfaces the work item's own fields",
+    "        if 'intake' in step_id or not ctx.get('inputs') is None and step_id.endswith('intake'):",
+    "            out.update({k: v for k, v in inp.items() if isinstance(v, (str, int, float, bool))})",
+    "        for field in required:",
+    "            if field in out:",
+    "                continue",
+    "            out[field] = inp.get(field, True if field == 'ok' else 'pending')",
+    "        if not out:",
+    "            out = {'ok': True}",
+    "        return out",
+    "    return handler",
+    "",
+    "",
+  ];
+  for (const s of detSteps) {
+    if (seen.has(s.handler)) continue;
+    seen.add(s.handler);
+    lines.push(`workflow_engine.register_handler(${JSON.stringify(s.handler)}, _default(${JSON.stringify(s.id)}, ${JSON.stringify(s.required)}))`);
+  }
+  fs.writeFileSync("app/backend/ext_process_handlers.py", lines.join("\n") + "\n");
+}
+
 // 4b. Agents scaffolding — the roster is approved deterministic content
 // (agent-design artifact), so it composes here; build-agents refines evals
 // and glue. Every stage after scaffold is self-consistent and testable.

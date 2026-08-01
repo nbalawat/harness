@@ -1,0 +1,19 @@
+{
+  "name": "process-app",
+  "version": "0.1.0",
+  "ok": true,
+  "problems": [],
+  "scenarios": [
+    {
+      "scenario": "answers.json",
+      "status": "completed",
+      "totalCostUsd": 0.9,
+      "nodeCount": 5,
+      "digest": "33b8ec2705bb67d3"
+    }
+  ],
+  "revisionDrill": null,
+  "gateRegression": null,
+  "packageDigest": "8f7dd2b123064792c76ad9b2c5089f14320d593e1805d8f5a58533eec814394f",
+  "certifiedAt": "2026-08-01T21:13:03.616Z"
+}

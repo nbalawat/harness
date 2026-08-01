@@ -1,0 +1,1 @@
+{ "name": "sim-erp", "version": "0.1.0", "description": "Simulated ERP: credit and terms.", "simulated": true, "config_schema": { "type": "object", "additionalProperties": true } }

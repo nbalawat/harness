@@ -1,0 +1,106 @@
+# process-app — describe a business process; get a running, agentified system.
+# The user describes their process in plain English; process-design derives the
+# step graph (which steps are AI agents, which are human decisions, which are
+# deterministic); scaffold composes the certified engine + console + runtime and
+# generates default step handlers so it RUNS from the first build; smoke proves
+# a work item advances through the graph.
+name: process-app
+version: 0.1.0
+description: Turns a plain-English business process into a running agentified system — a dependency graph of steps where AI agents do the cognitive work, deterministic code holds correctness, and humans own decisions, all driven from an operator console.
+
+cost:
+  run_budget_usd: 30.00
+  nodes:
+    process-design: { budget_usd: 8.00 }
+
+nodes:
+  - id: intake
+    phase: Describe
+    description: "Describe the business process to agentify."
+    kind: gate
+    questions:
+      - { id: process_name, prompt: "What is the business process called?", placeholder: "e.g. Vendor Onboarding, Refund Handling, Claims Intake" }
+      - id: process_description
+        prompt: "Walk through the process end to end — the steps in order, and what each step does."
+        type: long
+        placeholder: "When a vendor applies, we validate the application, assess operational risk, screen for compliance, run a credit check, score the result, a manager approves, then we activate the vendor across our systems."
+      - id: triggers
+        prompt: "How does this process get started? (select all that apply)"
+        type: choice
+        default: "human.internal"
+        options:
+          - { value: "human.internal", label: "An internal user starts it", hint: "An employee kicks it off — a form or a button." }
+          - { value: "human.external", label: "An external client submits it", hint: "A customer/vendor portal submission." }
+          - { value: "event", label: "An event from another system", hint: "A webhook or message from a system of record." }
+          - { value: "schedule", label: "On a schedule / batch", hint: "A nightly or periodic run over pending items." }
+      - id: ai_steps
+        prompt: "Which steps are judgement, analysis, drafting, or classification? (these become AI agent steps)"
+        type: long
+        default: "risk assessment, compliance screening"
+        placeholder: "risk assessment; compliance screening; drafting the recommendation memo; classifying the request"
+      - id: human_decisions
+        prompt: "Which steps must a named human own? (approvals, sign-offs)"
+        type: long
+        default: "final approval"
+        placeholder: "manager approval before activation; officer sign-off above $1M"
+      - id: systems
+        prompt: "Which enterprise systems does the process touch? (integrated as swappable MCP connectors — simulated to start)"
+        type: choice
+        default: "crm"
+        options:
+          - { value: "crm", label: "CRM", hint: "Account lookup / enrichment (sim-crm)." }
+          - { value: "erp", label: "ERP / finance", hint: "Credit, limits, terms (sim-erp)." }
+          - { value: "servicedesk", label: "Service desk", hint: "Ticketing, email, documents (sim-servicedesk)." }
+          - { value: "none", label: "None for now", hint: "No external systems yet." }
+      - id: deploy_intent
+        prompt: "Run locally now; move to cloud later?"
+        type: choice
+        default: "local"
+        options:
+          - { value: "local", label: "Local only", hint: "Runs on your machine; cloud is a separate optional workflow later." }
+          - { value: "cloud-ready", label: "Plan for cloud", hint: "Also produce a reviewed cloud-transition plan." }
+    outputs:
+      - { name: intake, file: intake.json, schema: schemas/intake.schema.json }
+
+  - id: process-design
+    phase: Design
+    description: "Derives the process as a dependency graph of agent / human / deterministic / condition steps."
+    kind: agent
+    model: claude-opus-5
+    escalateModel: claude-opus-5
+    maxTurns: 30
+    retries: 2
+    deps: [intake]
+    prompt: prompts/process-design.md
+    mock: node "$HARNESS_PROJECT_DIR/mocks/process-design.cjs"
+    verify: node "$HARNESS_PROJECT_DIR/scripts/check-process.cjs"
+    outputs:
+      - { name: workflows, file: workflows.json, schema: schemas/workflows.schema.json }
+
+  - id: review
+    phase: Confirm
+    description: "You confirm the process graph before it is built."
+    kind: gate
+    deps: [process-design]
+    questions:
+      - { id: approved, prompt: "Approve this process graph and build the running system?", type: boolean, default: "yes" }
+    outputs:
+      - { name: review, file: review.json }
+
+  - id: scaffold
+    phase: Build
+    description: "Composes the certified engine + console + agent runtime, ships the process, and generates default step handlers so it runs from the first build."
+    kind: deterministic
+    deps: [process-design, review, intake]
+    command: node "$HARNESS_PROJECT_DIR/scripts/scaffold.cjs"
+    outputs:
+      - { name: app, file: app, dir: true }
+
+  - id: smoke
+    phase: Verify
+    description: "Boots the app and drives a work item through the process graph — proving agents run, steps advance by dependency, and it parks at the human decision."
+    kind: verifier
+    deps: [scaffold]
+    command: node "$HARNESS_PROJECT_DIR/scripts/smoke.cjs"
+    outputs:
+      - { name: smoke_report, file: smoke_report.json }

@@ -1,0 +1,9 @@
+{"type":"object","properties":{
+  "process_name":{"type":"string"},
+  "process_description":{"type":"string"},
+  "triggers":{"type":"string"},
+  "ai_steps":{"type":"string"},
+  "human_decisions":{"type":"string"},
+  "systems":{"type":"string"},
+  "deploy_intent":{"type":"string"}
+},"required":["process_name","process_description"]}
