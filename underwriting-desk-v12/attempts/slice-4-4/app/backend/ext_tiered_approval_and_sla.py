@@ -628,8 +628,11 @@ def apply_sla_escalation_action(context):
         })
         reassigned_to_user_id = out["reassigned_to_user_id"]
     else:
+        # Acknowledging is a note on the RECORD, not work on the deal: it
+        # deliberately does NOT reset the idle clock, so a deal cannot be kept
+        # off the register by repeatedly acknowledging it. Reassigning and
+        # returning are real activity and do restart the clock.
         action = "acknowledge"
-        deals_repo.update_deal(deal_code, last_activity_timestamp=_now())
 
     entry = audit(f"sla.escalation_{action}", {
         "deal_id": deal_code,
@@ -1201,6 +1204,21 @@ def install_desk_fixtures():
         created_by_user_id=rm["id"],
         assigned_to_user_id=analyst["id"],
         last_activity_timestamp=long_idle,
+    )
+    # Above the officer ceiling: this one can only go to the credit committee,
+    # so the desk always shows the top tier at work (R-022/R-068).
+    _fixture_deal(
+        "DEAL-1007",
+        borrower_name="Ironvale Fabrication",
+        borrower_industry="metal fabrication",
+        requested_amount=1250000,
+        exposure_amount=1250000,
+        current_stage="tiered_approval",
+        current_status="awaiting_decision",
+        created_by_user_id=rm["id"],
+        assigned_to_user_id=analyst["id"],
+        risk_grade="4",
+        last_activity_timestamp=fresh,
     )
     _fixture_deal(
         "DEAL-1006",

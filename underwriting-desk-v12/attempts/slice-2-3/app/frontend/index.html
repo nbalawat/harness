@@ -1330,6 +1330,10 @@ sup.cite:hover { background: var(--surface-sunken); }
             <button type="button" class="btn btn--ink" id="spread-accept-btn" disabled>Accept draft</button>
             <button type="button" class="btn" id="spread-edit-btn" disabled>Edit before accepting</button>
             <button type="button" class="btn btn--quiet" id="spread-reject-btn" disabled>Reject &amp; redraft</button>
+            <label class="field field--wide">
+              <span>Reason, if you reject or edit</span>
+              <input type="text" id="spread-reject-reason" placeholder="e.g. EBITDA add-backs are not supported by the tax return">
+            </label>
             <p class="decision-note" id="spread-status">
               Acceptance records your name and the time, writes the figures to the template, and only
               then are the ratios and the risk grade computed — in code.
@@ -1405,7 +1409,7 @@ sup.cite:hover { background: var(--surface-sunken); }
             <input type="text" id="decision-reason-code" list="decision-reason-list" placeholder="INSUFFICIENT_DSCR">
           </label>
           <datalist id="decision-reason-list"></datalist>
-          <button type="button" class="btn btn--spot" id="decision-approve-btn">Approve</button>
+          <button type="button" class="btn btn--spot" id="decision-approve-btn">Approve as senior credit officer</button>
           <button type="button" class="btn" id="decision-decline-btn">Decline with adverse-action reason</button>
           <button type="button" class="btn btn--quiet" id="decision-return-btn">Return to an earlier stage</button>
           <p class="decision-note" id="decision-status">
@@ -1446,6 +1450,7 @@ sup.cite:hover { background: var(--surface-sunken); }
               <span>Extract sheet — one line item per row:
                 <code>key | period | value | unit | page | section | cell</code></span>
               <textarea id="document-figures" rows="4"
+                style="background:transparent;border:0;border-bottom:1px solid var(--border);padding:.3rem .1rem;min-width:16rem;font-size:.86rem;resize:vertical;"
                 placeholder="adjusted_ebitda | FY2025 | 712000 | USD | 2 | Statement of Operations | row 22"></textarea>
             </label>
             <button type="submit" class="btn btn--sm" id="document-attach-btn">Attach document</button>

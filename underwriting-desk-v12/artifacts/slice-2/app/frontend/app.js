@@ -404,317 +404,802 @@ fetch("/api/conversations")
 
 // ============================================================
 // Deal dossier (slice: spread-ratios-and-risk-grade)
-//   - opens a deal by code (GET /api/deals/{code})
-//   - runs the Financial Spreading Agent (POST .../agents/financial-spreading/run)
-//   - accepts, edits, or rejects the draft (POST .../spread/accept)
-//   - renders deterministic ratios (GET .../ratios) and risk grade (GET .../risk-grade)
+//   - opens a deal's dossier          (GET  /api/deals/{code}/dossier)
+//   - attaches a document + its extract sheet
+//                                     (POST /api/deals/{code}/documents)
+//   - runs the Financial Spreading Agent
+//        (POST /api/deals/{code}/agents/financial-spreading/run)
+//   - accepts / edits / rejects the draft
+//                                     (POST /api/deals/{code}/spread/accept)
+//   - reads the deterministic ratios  (GET  /api/deals/{code}/ratios)
+//   - reads the grade and its band    (GET  /api/deals/{code}/risk-grade)
+// The memo, policy and decision desks on this screen drive the endpoints the
+// later slices of this lifecycle own; each reports plainly when the step it
+// needs has not been reached yet.
 // ============================================================
 (function () {
-  const screen = document.getElementById("screen-deal-detail");
-  if (!screen) return;
-
-  const RATIO_LABELS = {
-    dscr: ["Debt service coverage", "EBITDA ÷ interest expense"],
-    leverage: ["Leverage", "total debt ÷ EBITDA"],
-    current_ratio: ["Current ratio", "current assets ÷ current liabilities"],
+  const LINE_ITEM_LABELS = {
+    revenue: "Revenue",
+    adjusted_ebitda: "Adjusted EBITDA",
+    interest_expense: "Interest expense",
+    current_assets: "Current assets",
+    current_liabilities: "Current liabilities",
+    total_funded_debt: "Total funded debt",
+    annual_debt_service: "Annual debt service",
   };
 
+  let dealCode = null;
+  let draft = null;
+  let editing = false;
+
+  function el(id) {
+    return document.getElementById(id);
+  }
+
+  function textOf(id) {
+    const node = el(id);
+    return node ? String(node.value || "").trim() : "";
+  }
+
+  function say(id, text) {
+    const node = el(id);
+    if (node) node.textContent = text;
+  }
+
   function money(n) {
-    const num = Number(n) || 0;
+    const num = Number(n);
+    if (!isFinite(num)) return "—";
     return "$" + num.toLocaleString("en-US");
   }
 
-  function fmtx(n) {
-    return n === null || n === undefined ? "—" : Number(n).toFixed(2) + "×";
+  function times(n) {
+    return n === null || n === undefined ? "not computable" : Number(n).toFixed(2) + "×";
   }
 
-  function setText(id, text) {
-    const el = document.getElementById(id);
-    if (el) el.textContent = text;
+  function label(key) {
+    return LINE_ITEM_LABELS[key] || String(key || "").replace(/_/g, " ");
   }
 
-  let dealCode = null;
-  let lastSpreadDraft = null;
-
-  function resetSpreadPanel() {
-    lastSpreadDraft = null;
-    setText("spread-narrative", "Run the Financial Spreading Agent to draft the standard spread template from this deal's attached documents.");
-    setText("spread-proof-meta", "Financial spreading agent");
-    const body = document.getElementById("spread-rows-body");
-    if (body) body.replaceChildren();
-    const un = document.getElementById("spread-unextractable-list");
-    if (un) un.replaceChildren();
-    const citeList = document.getElementById("citation-rail-list");
-    if (citeList) {
-      citeList.replaceChildren();
-      const li = document.createElement("li");
-      const label = document.createElement("span");
-      label.className = "cite-no";
-      label.textContent = "—";
-      li.appendChild(label);
-      li.appendChild(document.createTextNode(" Run the Financial Spreading Agent to populate citations."));
-      citeList.appendChild(li);
-    }
-    ["spread-accept-btn", "spread-edit-btn", "spread-reject-btn"].forEach((id) => {
-      const el = document.getElementById(id);
-      if (el) el.disabled = true;
-    });
-    setText("spread-status", "");
+  function citationText(c) {
+    if (!c) return "uncited";
+    const bits = [c.document_file_name || ("document " + c.document_id)];
+    if (c.page_number !== null && c.page_number !== undefined) bits.push("p." + c.page_number);
+    if (c.section) bits.push(c.section);
+    if (c.cell_locator) bits.push(c.cell_locator);
+    return bits.join(" · ");
   }
 
-  function renderDocuments(docs) {
-    const list = document.getElementById("docket-list");
+  function cell(row, text, className) {
+    const td = document.createElement("td");
+    if (className) td.className = className;
+    td.textContent = text;
+    row.appendChild(td);
+    return td;
+  }
+
+  function api(method, path, body) {
+    const options = { method: method, headers: { "Content-Type": "application/json" } };
+    if (body) options.body = JSON.stringify(body);
+    return fetch(path, options).then((r) =>
+      r
+        .json()
+        .catch(() => ({}))
+        .then((data) => ({ ok: r.ok, status: r.status, data: data }))
+    );
+  }
+
+  function detailOf(res) {
+    const d = res.data && res.data.detail;
+    if (typeof d === "string") return d;
+    if (d) return JSON.stringify(d);
+    return "HTTP " + res.status;
+  }
+
+  function actor() {
+    return textOf("dossier-analyst-email");
+  }
+
+  function scoped(path) {
+    const email = actor();
+    return email ? path + (path.indexOf("?") === -1 ? "?" : "&") + "acting_user_email=" + encodeURIComponent(email) : path;
+  }
+
+  // ---------------- rendering ----------------
+
+  function renderHead(deal) {
+    say("dossier-borrower", deal.borrower_name || deal.deal_code);
+    say(
+      "dossier-sub",
+      [
+        deal.deal_code,
+        deal.borrower_industry || "unclassified",
+        "stage " + String(deal.current_stage || "intake").replace(/_/g, " "),
+        "status " + String(deal.current_status || "open").replace(/_/g, " "),
+        deal.risk_grade ? "risk grade " + deal.risk_grade : "ungraded",
+      ].join(" · ")
+    );
+    say("dossier-exposure", money(deal.exposure_amount || deal.requested_amount));
+    say("dossier-tier", deal.approval_tier || "");
+  }
+
+  function renderDocket(documents, missing) {
+    const list = el("docket-list");
     if (!list) return;
     list.replaceChildren();
-    const REQUIRED = ["balance_sheet", "income_statement", "tax_return"];
-    const attached = new Set(docs.map((d) => d.document_type));
-    REQUIRED.forEach((t) => {
+    documents.forEach((d) => {
       const li = document.createElement("li");
-      const label = document.createElement("span");
-      label.textContent = t.replace(/_/g, " ");
+      const name = document.createElement("span");
+      name.textContent = d.file_name + " · " + String(d.document_type || "").replace(/_/g, " ");
       const state = document.createElement("span");
-      const has = attached.has(t);
-      state.textContent = has ? "attached" : "missing";
-      if (!has) state.className = "missing";
-      li.appendChild(label);
+      state.textContent = (d.line_items || []).length + " line items";
+      li.appendChild(name);
       li.appendChild(state);
       list.appendChild(li);
     });
+    (missing || []).forEach((type) => {
+      const li = document.createElement("li");
+      const name = document.createElement("span");
+      name.textContent = String(type).replace(/_/g, " ");
+      const state = document.createElement("span");
+      state.className = "missing";
+      state.textContent = "missing";
+      li.appendChild(name);
+      li.appendChild(state);
+      list.appendChild(li);
+    });
+    if (!list.childElementCount) {
+      const li = document.createElement("li");
+      li.textContent = "No documents attached yet.";
+      list.appendChild(li);
+    }
   }
 
-  function renderRatios(data) {
-    const body = document.getElementById("ratios-table-body");
+  function renderSpreadRows(rows, citationsByKey, editable) {
+    const body = el("spread-rows");
     if (!body) return;
     body.replaceChildren();
-    if (!data || !Array.isArray(data.ratios) || !data.ratios.length) {
-      const tr = document.createElement("tr");
-      const td = document.createElement("td");
-      td.colSpan = 3;
-      td.style.fontStyle = "italic";
-      td.style.color = "var(--ink-faint)";
-      td.textContent = "No ratios computed yet — accept a spread first.";
-      tr.appendChild(td);
-      body.appendChild(tr);
-      return;
-    }
-    data.ratios.forEach((r) => {
-      const label = RATIO_LABELS[r.ratio_type] || [r.ratio_type, ""];
+    rows.forEach((row) => {
       const tr = document.createElement("tr");
       const th = document.createElement("th");
       th.scope = "row";
-      th.appendChild(document.createTextNode(label[0]));
-      const formula = document.createElement("span");
-      formula.className = "formula";
-      formula.textContent = label[1];
-      th.appendChild(formula);
-      const inputs = document.createElement("td");
-      inputs.textContent = (r.numerator ?? "—") + " ÷ " + (r.denominator ?? "—");
-      const result = document.createElement("td");
-      result.className = "num";
-      result.textContent = fmtx(r.result);
+      th.textContent = label(row.line_item_key);
       tr.appendChild(th);
-      tr.appendChild(inputs);
-      tr.appendChild(result);
+      cell(tr, row.period || "");
+      const valueCell = document.createElement("td");
+      valueCell.className = "num";
+      if (editable) {
+        const input = document.createElement("input");
+        input.type = "number";
+        input.step = "0.01";
+        input.value = row.value === null || row.value === undefined ? "" : row.value;
+        input.dataset.lineItem = row.line_item_key;
+        input.dataset.period = row.period || "";
+        input.dataset.unit = row.unit || "USD";
+        input.className = "spread-edit-input";
+        input.style.width = "9rem";
+        input.style.textAlign = "right";
+        valueCell.appendChild(input);
+      } else {
+        valueCell.textContent = money(row.value);
+      }
+      tr.appendChild(valueCell);
+      const source = cell(tr, citationText(citationsByKey[row.line_item_key] || row.citation || null));
+      source.style.paddingLeft = "1.25rem";
       body.appendChild(tr);
     });
+    if (!rows.length) {
+      const tr = document.createElement("tr");
+      const td = document.createElement("td");
+      td.colSpan = 4;
+      td.textContent = "No spread drafted yet — run the Financial Spreading Agent.";
+      tr.appendChild(td);
+      body.appendChild(tr);
+    }
   }
 
-  function renderGrade(data) {
-    ["A", "B", "C", "D"].forEach((g) => {
-      const el = document.getElementById("rubric-band-" + g);
-      if (el) el.classList.toggle("hit", !!data && data.grade === g);
+  function renderUnextractable(items) {
+    const list = el("spread-unextractable");
+    if (!list) return;
+    list.replaceChildren();
+    (items || []).forEach((u) => {
+      const li = document.createElement("li");
+      const name = document.createElement("span");
+      name.textContent = label(u.line_item_key);
+      const why = document.createElement("span");
+      why.className = "missing";
+      why.textContent = u.reason || "illegible";
+      li.appendChild(name);
+      li.appendChild(why);
+      list.appendChild(li);
     });
-    setText("risk-grade-reasoning", data ? (data.reasoning || data.band_hit || "") : "Not yet graded — accept a spread first.");
+    if (!list.childElementCount) {
+      const li = document.createElement("li");
+      li.textContent = "Nothing was left out.";
+      list.appendChild(li);
+    }
   }
 
-  function loadRatiosAndGrade(code) {
-    fetch("/api/deals/" + encodeURIComponent(code) + "/ratios")
-      .then((r) => (r.ok ? r.json() : null))
-      .then(renderRatios)
-      .catch(() => renderRatios(null));
-    fetch("/api/deals/" + encodeURIComponent(code) + "/risk-grade")
-      .then((r) => (r.ok ? r.json() : null))
-      .then(renderGrade)
-      .catch(() => renderGrade(null));
+  function renderCitationRail(rows) {
+    const rail = el("citation-rail");
+    if (!rail) return;
+    rail.replaceChildren();
+    rows.forEach((row, index) => {
+      const li = document.createElement("li");
+      const no = document.createElement("span");
+      no.className = "cite-no";
+      no.textContent = "[" + (index + 1) + "]";
+      const src = document.createElement("span");
+      src.className = "cite-src";
+      src.textContent = citationText({
+        document_file_name: row.document_file_name,
+        document_id: row.document_id,
+        page_number: row.page_number,
+        section: row.section,
+        cell_locator: row.cell_locator,
+      });
+      li.appendChild(no);
+      li.appendChild(document.createTextNode(" " + label(row.line_item_key) + " "));
+      li.appendChild(src);
+      rail.appendChild(li);
+    });
+    if (!rail.childElementCount) {
+      const li = document.createElement("li");
+      li.textContent = "Citations appear here once a spread is accepted.";
+      rail.appendChild(li);
+    }
   }
 
-  function loadDeal(code) {
-    const status = document.getElementById("dossier-load-status");
-    if (!code) {
-      if (status) status.textContent = "Enter a deal code (e.g. DEAL-1002).";
+  function renderRatios(ratios) {
+    const body = el("ratios-rows");
+    if (!body) return;
+    body.replaceChildren();
+    const keys = ["dscr", "leverage", "current_ratio"];
+    let any = false;
+    keys.forEach((key) => {
+      const r = ratios && ratios[key];
+      if (!r) return;
+      any = true;
+      const tr = document.createElement("tr");
+      const th = document.createElement("th");
+      th.scope = "row";
+      th.textContent = r.label + " ";
+      const formula = document.createElement("span");
+      formula.className = "formula";
+      formula.textContent = r.formula;
+      th.appendChild(formula);
+      tr.appendChild(th);
+      cell(tr, money(r.numerator) + " ÷ " + money(r.denominator));
+      cell(tr, times(r.result), "num");
+      cell(tr, r.threshold || "", "num");
+      body.appendChild(tr);
+    });
+    if (!any) {
+      const tr = document.createElement("tr");
+      const td = document.createElement("td");
+      td.colSpan = 4;
+      td.textContent = "No ratios yet — they are computed in code the moment a spread is accepted.";
+      tr.appendChild(td);
+      body.appendChild(tr);
+    }
+    say(
+      "ratios-caption",
+      any
+        ? "Computed in deterministic code · half-up to two decimals · undefined when a denominator is zero"
+        : "Ratios are computed only from an accepted spread"
+    );
+  }
+
+  function renderGrade(grade) {
+    const strip = el("rubric-strip");
+    if (!strip) return;
+    strip.replaceChildren();
+    if (!grade) {
+      say("grade-note", "Ungraded. The grade is assigned from the rubric the moment a spread is accepted.");
+      strip.setAttribute("aria-label", "No risk grade assigned yet");
       return;
     }
-    fetch("/api/deals/" + encodeURIComponent(code))
-      .then((r) => (r.ok ? r.json() : Promise.reject(r)))
-      .then((deal) => {
-        dealCode = deal.deal_code;
-        setText("dossier-borrower-name", deal.borrower_name || dealCode);
-        setText(
-          "dossier-sub",
-          dealCode + " · " + (deal.borrower_industry || "—") + " · stage " + (deal.current_stage || "—")
-        );
-        setText("dossier-exposure-amount", money(deal.exposure_amount));
-        setText(
-          "dossier-tier",
-          (deal.risk_grade ? "Risk grade " + deal.risk_grade + " · " : "") + "exposure " + money(deal.exposure_amount)
-        );
-        if (status) status.textContent = "Opened " + dealCode + ".";
-        resetSpreadPanel();
-        fetch("/api/deals/" + encodeURIComponent(dealCode) + "/documents")
-          .then((r) => (r.ok ? r.json() : []))
-          .then(renderDocuments)
-          .catch(() => {});
-        loadRatiosAndGrade(dealCode);
-      })
-      .catch(() => {
-        dealCode = null;
-        if (status) status.textContent = "No deal found for '" + code + "'.";
-      });
-  }
-
-  function renderSpreadDraft(data) {
-    lastSpreadDraft = data;
-    setText("spread-narrative", data.narrative || "");
-    setText("spread-proof-meta", "Financial spreading agent · " + (data.template_version || ""));
-
-    const body = document.getElementById("spread-rows-body");
-    if (body) {
-      body.replaceChildren();
-      (data.rows || []).forEach((row) => {
-        const cite = (data.citations || []).find((c) => c.line_item_key === row.line_item_key) || {};
-        const tr = document.createElement("tr");
-        const cells = [
-          row.line_item_key,
-          row.period,
-          cite.document_id ? "doc " + cite.document_id + " · " + (cite.cell_locator || cite.section || "") : "—",
-          row.value + " " + (row.unit || ""),
-        ];
-        cells.forEach((val, idx) => {
-          const td = document.createElement("td");
-          if (idx === 3) td.className = "num";
-          td.textContent = String(val);
-          tr.appendChild(td);
-        });
-        body.appendChild(tr);
-      });
-    }
-
-    const un = document.getElementById("spread-unextractable-list");
-    if (un) {
-      un.replaceChildren();
-      (data.unextractable || []).forEach((item) => {
-        const li = document.createElement("li");
-        const label = document.createElement("span");
-        label.textContent = item.line_item_key || String(item);
-        const reason = document.createElement("span");
-        reason.className = "missing";
-        reason.textContent = item.reason || "unextractable";
-        li.appendChild(label);
-        li.appendChild(reason);
-        un.appendChild(li);
-      });
-    }
-
-    const citeList = document.getElementById("citation-rail-list");
-    if (citeList) {
-      citeList.replaceChildren();
-      (data.citations || []).forEach((c, i) => {
-        const li = document.createElement("li");
-        const no = document.createElement("span");
-        no.className = "cite-no";
-        no.textContent = "[" + (i + 1) + "]";
-        li.appendChild(no);
-        li.appendChild(document.createTextNode(" " + c.line_item_key));
-        const src = document.createElement("span");
-        src.className = "cite-src";
-        src.textContent = "doc " + c.document_id + " · " + (c.cell_locator || c.section || "");
-        li.appendChild(src);
-        citeList.appendChild(li);
-      });
-    }
-
-    ["spread-accept-btn", "spread-edit-btn", "spread-reject-btn"].forEach((id) => {
-      const el = document.getElementById(id);
-      if (el) el.disabled = false;
+    (grade.rubric || []).forEach((band) => {
+      const div = document.createElement("div");
+      if (band.is_band_hit) div.className = "hit";
+      const name = document.createElement("span");
+      name.className = "band";
+      name.textContent = band.label;
+      div.appendChild(name);
+      div.appendChild(document.createTextNode(String(band.grade)));
+      strip.appendChild(div);
     });
+    strip.setAttribute("aria-label", "Risk grade " + grade.grade + " of 8 on rubric " + grade.rubric_version);
+    say("grade-note", grade.rubric_version + " · " + grade.band_hit + ". " + (grade.reasoning || ""));
   }
 
-  const loadForm = document.getElementById("dossier-load-form");
-  if (loadForm) {
-    loadForm.addEventListener("submit", (event) => {
-      event.preventDefault();
-      loadDeal(document.getElementById("dossier-deal-code").value.trim());
-    });
-  }
-
-  const spreadRunBtn = document.getElementById("spread-run-btn");
-  if (spreadRunBtn) {
-    spreadRunBtn.addEventListener("click", () => {
-      const statusEl = document.getElementById("spread-status");
-      if (!dealCode) {
-        if (statusEl) statusEl.textContent = "Open a dossier above first.";
-        return;
-      }
-      const email = document.getElementById("spread-analyst-email").value.trim();
-      fetch("/api/deals/" + encodeURIComponent(dealCode) + "/agents/financial-spreading/run", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ acting_user_email: email }),
-      })
-        .then((r) => r.json().then((data) => ({ ok: r.ok, data })))
-        .then((res) => {
-          if (!res.ok) {
-            if (statusEl) statusEl.textContent = "Spreading failed: " + (res.data.detail || "error");
-            return;
-          }
-          renderSpreadDraft(res.data);
-          if (statusEl) {
-            statusEl.textContent = "Draft ready — " + (res.data.rows || []).length + " cited figures. Accept, edit, or reject.";
-          }
-        })
-        .catch((err) => {
-          if (statusEl) statusEl.textContent = "Request failed: " + err.message;
-        });
-    });
-  }
-
-  function decide(action) {
-    const statusEl = document.getElementById("spread-status");
-    if (!dealCode || !lastSpreadDraft) {
-      if (statusEl) statusEl.textContent = "Run the agent first.";
+  function renderMemo(memo) {
+    const body = el("memo-body");
+    if (!body) return;
+    body.replaceChildren();
+    if (!memo) {
+      const p = document.createElement("p");
+      p.className = "dropcap";
+      p.textContent =
+        "No memo drafted yet. The Credit Memo Agent writes from the accepted spread, the computed ratios and the assigned grade, citing the record behind every assertion.";
+      body.appendChild(p);
+      say("memo-stamp", "awaiting a run");
       return;
     }
-    const email = document.getElementById("spread-analyst-email").value.trim();
-    const note = document.getElementById("spread-decision-note").value.trim();
-    fetch("/api/deals/" + encodeURIComponent(dealCode) + "/spread/accept", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ acting_user_email: email, action: action, note: note || null }),
-    })
-      .then((r) => r.json().then((data) => ({ ok: r.ok, data })))
-      .then((res) => {
-        if (!res.ok) {
-          if (statusEl) statusEl.textContent = action + " failed: " + (res.data.detail || "error");
+    const sections = memo.sections || [];
+    if (sections.length) {
+      sections.forEach((section, index) => {
+        const heading = document.createElement("p");
+        const strong = document.createElement("strong");
+        strong.textContent = section.title || section.heading || "Section " + (index + 1);
+        heading.appendChild(strong);
+        body.appendChild(heading);
+        const p = document.createElement("p");
+        if (index === 0) p.className = "dropcap";
+        p.textContent = section.body || section.content || section.text || "";
+        body.appendChild(p);
+      });
+    } else {
+      const p = document.createElement("p");
+      p.className = "dropcap";
+      p.textContent = memo.memo_content || JSON.stringify(memo);
+      body.appendChild(p);
+    }
+    say("memo-stamp", "drafted");
+  }
+
+  function renderExceptions(exceptions) {
+    const list = el("exception-list");
+    if (!list) return;
+    list.replaceChildren();
+    (exceptions || []).forEach((e) => {
+      const li = document.createElement("li");
+      const rule = document.createElement("span");
+      rule.className = "ex-rule";
+      rule.textContent = [e.rule_reference, e.status || "open"].filter(Boolean).join(" · ");
+      const p = document.createElement("p");
+      p.textContent = [e.violation_detail, e.rationale].filter(Boolean).join(" — ");
+      li.appendChild(rule);
+      li.appendChild(p);
+
+      // The design's two exception controls. Only an authorised human may
+      // waive; the server decides, never this button.
+      const waive = document.createElement("button");
+      waive.type = "button";
+      waive.className = "btn btn--sm";
+      waive.textContent = "Waive with rationale";
+      waive.addEventListener("click", () => {
+        const rationale = textOf("decision-notes");
+        if (!rationale) {
+          say("policy-status", "A waiver needs a written rationale — type one in the decision notes below.");
           return;
         }
-        if (statusEl) {
-          statusEl.textContent = "Spread " + res.data.status + " by " + res.data.accepted_by + ". Stage now " + res.data.current_stage + ".";
-        }
-        ["spread-accept-btn", "spread-edit-btn", "spread-reject-btn"].forEach((id) => {
-          const el = document.getElementById(id);
-          if (el) el.disabled = true;
-        });
-        loadRatiosAndGrade(dealCode);
-      })
-      .catch((err) => {
-        if (statusEl) statusEl.textContent = "Request failed: " + err.message;
+        stageCall(
+          "policy-status",
+          "POST",
+          "/api/deals/{code}/policy-exceptions/" + encodeURIComponent(e.exception_id) + "/waive",
+          { acting_user_email: actor(), rationale: rationale },
+          () => say("policy-status", "Exception " + e.rule_reference + " waived, with your name on the record.")
+        );
       });
+
+      const back = document.createElement("button");
+      back.type = "button";
+      back.className = "btn btn--sm btn--quiet";
+      back.textContent = "Return to analyst";
+      back.addEventListener("click", () => {
+        stageCall(
+          "policy-status",
+          "POST",
+          "/api/deals/{code}/return",
+          {
+            acting_user_email: actor(),
+            reason: textOf("decision-notes") || "returned to the analyst over " + e.rule_reference,
+          },
+          () => say("policy-status", "Returned to the analyst over " + e.rule_reference + ".")
+        );
+      });
+
+      li.appendChild(waive);
+      li.appendChild(back);
+      list.appendChild(li);
+    });
+    if (!list.childElementCount) {
+      const li = document.createElement("li");
+      const rule = document.createElement("span");
+      rule.className = "ex-rule";
+      rule.textContent = "no exceptions recorded";
+      const p = document.createElement("p");
+      p.textContent = "Run the Policy Compliance Agent to test this deal against the active lending ruleset.";
+      li.appendChild(rule);
+      li.appendChild(p);
+      list.appendChild(li);
+    }
   }
 
-  const acceptBtn = document.getElementById("spread-accept-btn");
-  if (acceptBtn) acceptBtn.addEventListener("click", () => decide("accept"));
-  const editBtn = document.getElementById("spread-edit-btn");
-  if (editBtn) editBtn.addEventListener("click", () => decide("edit"));
-  const rejectBtn = document.getElementById("spread-reject-btn");
-  if (rejectBtn) rejectBtn.addEventListener("click", () => decide("reject"));
+  function setSpreadButtons(hasDraft, accepted) {
+    const accept = el("spread-accept-btn");
+    const edit = el("spread-edit-btn");
+    const reject = el("spread-reject-btn");
+    if (accept) accept.disabled = !hasDraft || accepted;
+    if (edit) edit.disabled = !hasDraft || accepted;
+    if (reject) reject.disabled = !hasDraft || accepted;
+  }
+
+  function renderDossier(d) {
+    renderHead(d.deal || {});
+    renderDocket(d.documents || [], d.missing_document_types || []);
+    const spread = d.spread || {};
+    const accepted = spread.accepted_rows || [];
+    draft = spread.draft || null;
+    editing = false;
+    const acceptedReview = spread.review && spread.review.action !== "reject";
+    if (accepted.length) {
+      const acceptedCitations = {};
+      accepted.forEach((row) => {
+        acceptedCitations[row.line_item_key] = {
+          document_file_name: row.document_file_name,
+          page_number: row.page_number,
+          section: row.section,
+          cell_locator: row.cell_locator,
+        };
+      });
+      renderSpreadRows(accepted, acceptedCitations, false);
+      renderCitationRail(accepted);
+      say("spread-caption", spread.template_version + " · accepted · every figure cited");
+      say("spread-stamp", "accepted");
+    } else if (draft) {
+      const byKey = {};
+      (draft.citations || []).forEach((c) => {
+        byKey[c.line_item_key] = c;
+      });
+      renderSpreadRows(draft.rows || [], byKey, false);
+      renderCitationRail([]);
+      say("spread-caption", draft.template_version + " · agent draft, awaiting acceptance");
+      say("spread-stamp", "drafted, not accepted");
+    } else {
+      renderSpreadRows([], {}, false);
+      renderCitationRail([]);
+      say("spread-caption", "Standard spread template · no draft yet");
+      say("spread-stamp", "awaiting a run");
+    }
+    renderUnextractable(draft ? draft.unextractable : []);
+    setSpreadButtons(!!draft, !!accepted.length && !!acceptedReview);
+    renderRatios(d.ratios);
+    renderGrade(d.risk_grade);
+    renderMemo(d.memo);
+    renderExceptions(d.policy_exceptions);
+    const stamp = el("spread-desk");
+    if (stamp) stamp.dataset.deal = d.deal ? d.deal.deal_code : "";
+  }
+
+  function loadDossier(code) {
+    if (!code) {
+      say("dossier-status", "Enter a deal id to open its dossier.");
+      return Promise.resolve();
+    }
+    return api("GET", scoped("/api/deals/" + encodeURIComponent(code) + "/dossier")).then((res) => {
+      if (!res.ok) {
+        say("dossier-status", "Could not open " + code + ": " + detailOf(res));
+        return;
+      }
+      dealCode = code;
+      renderDossier(res.data);
+      say("dossier-status", "Dossier " + code + " open, read live from the server.");
+    });
+  }
+
+  function loadDealList() {
+    return api("GET", "/api/pipeline").then((res) => {
+      const list = el("dossier-deal-list");
+      if (!list || !res.ok) return;
+      list.replaceChildren();
+      (res.data.deals || []).forEach((d) => {
+        const option = document.createElement("option");
+        option.value = d.deal_code;
+        option.textContent = d.borrower_name || "";
+        list.appendChild(option);
+      });
+    });
+  }
+
+  function loadDeclineReasons() {
+    return api("GET", "/api/adverse_action_reasons").then((res) => {
+      const list = el("decision-reason-list");
+      if (!list || !res.ok || !Array.isArray(res.data)) return;
+      list.replaceChildren();
+      res.data.forEach((r) => {
+        const option = document.createElement("option");
+        option.value = r.reason_code;
+        option.textContent = r.reason_label || "";
+        list.appendChild(option);
+      });
+    });
+  }
+
+  // ---------------- actions ----------------
+
+  const openForm = el("dossier-open-form");
+  if (openForm) {
+    openForm.addEventListener("submit", (event) => {
+      event.preventDefault();
+      loadDossier(textOf("dossier-deal-code"));
+    });
+  }
+
+  const attachForm = el("document-attach-form");
+  if (attachForm) {
+    attachForm.addEventListener("submit", (event) => {
+      event.preventDefault();
+      if (!dealCode) {
+        say("document-status", "Open a dossier first.");
+        return;
+      }
+      const figures = textOf("document-figures")
+        .split("\n")
+        .map((line) => line.split("|").map((part) => part.trim()))
+        .filter((parts) => parts.length && parts[0])
+        .map((parts) => ({
+          line_item_key: parts[0],
+          period: parts[1] || "FY2025",
+          value: parts[2] === undefined || parts[2] === "" ? null : Number(parts[2]),
+          unit: parts[3] || "USD",
+          page_number: parts[4] ? Number(parts[4]) : null,
+          section: parts[5] || null,
+          cell_locator: parts[6] || null,
+          quoted_text: parts.slice(0, 3).join(" "),
+        }));
+      api("POST", "/api/deals/" + encodeURIComponent(dealCode) + "/documents", {
+        acting_user_email: actor(),
+        document_type: textOf("document-type"),
+        file_name: textOf("document-file-name"),
+        figures: figures,
+      }).then((res) => {
+        if (!res.ok) {
+          say("document-status", "Could not attach: " + detailOf(res));
+          return;
+        }
+        say(
+          "document-status",
+          "Attached " +
+            res.data.document.file_name +
+            (res.data.documents_complete
+              ? " — the required pack is complete."
+              : " — still missing: " + (res.data.missing_document_types || []).join(", "))
+        );
+        loadDossier(dealCode);
+      });
+    });
+  }
+
+  const runBtn = el("spread-run-btn");
+  if (runBtn) {
+    runBtn.addEventListener("click", () => {
+      const code = dealCode || textOf("dossier-deal-code");
+      if (!code) {
+        say("spread-status", "Open a dossier first.");
+        return;
+      }
+      say("spread-status", "Transcribing from the attached documents…");
+      api("POST", "/api/deals/" + encodeURIComponent(code) + "/agents/financial-spreading/run", {
+        acting_user_email: actor(),
+      }).then((res) => {
+        if (!res.ok) {
+          say("spread-status", "Spreading failed: " + detailOf(res));
+          return;
+        }
+        dealCode = code;
+        draft = res.data;
+        editing = false;
+        const byKey = {};
+        (draft.citations || []).forEach((c) => {
+          byKey[c.line_item_key] = c;
+        });
+        renderSpreadRows(draft.rows || [], byKey, false);
+        renderUnextractable(draft.unextractable);
+        say("spread-caption", draft.template_version + " · agent draft, awaiting acceptance");
+        say("spread-stamp", "drafted, not accepted");
+        setSpreadButtons(true, false);
+        say(
+          "spread-status",
+          (draft.rows || []).length +
+            " line items transcribed, every one cited to a document and locator; " +
+            (draft.unextractable || []).length +
+            " left out as unreadable. An analyst must accept before anything is written to the template."
+        );
+      });
+    });
+  }
+
+  const editBtn = el("spread-edit-btn");
+  if (editBtn) {
+    editBtn.addEventListener("click", () => {
+      if (!draft) return;
+      editing = !editing;
+      const byKey = {};
+      (draft.citations || []).forEach((c) => {
+        byKey[c.line_item_key] = c;
+      });
+      renderSpreadRows(draft.rows || [], byKey, editing);
+      editBtn.textContent = editing ? "Cancel edit" : "Edit before accepting";
+      const accept = el("spread-accept-btn");
+      if (accept) accept.textContent = editing ? "Accept edited spread" : "Accept draft";
+      say(
+        "spread-status",
+        editing
+          ? "Editing the draft. Only line items the agent cited may be accepted — an edited figure keeps its citation."
+          : "Edit cancelled; the agent's transcription is restored."
+      );
+    });
+  }
+
+  function submitReview(action, body) {
+    const code = dealCode || textOf("dossier-deal-code");
+    if (!code) return;
+    api("POST", "/api/deals/" + encodeURIComponent(code) + "/spread/accept", body).then((res) => {
+      if (!res.ok) {
+        say("spread-status", "Could not " + action + ": " + detailOf(res));
+        return;
+      }
+      say("spread-status", res.data.message || "Recorded.");
+      loadDossier(code);
+    });
+  }
+
+  const acceptBtn = el("spread-accept-btn");
+  if (acceptBtn) {
+    acceptBtn.addEventListener("click", () => {
+      if (!editing) {
+        submitReview("accept", { acting_user_email: actor(), action: "accept" });
+        return;
+      }
+      const edited = Array.from(document.querySelectorAll(".spread-edit-input")).map((input) => ({
+        line_item_key: input.dataset.lineItem,
+        period: input.dataset.period,
+        value: input.value === "" ? null : Number(input.value),
+        unit: input.dataset.unit || "USD",
+      }));
+      submitReview("accept the edit", { acting_user_email: actor(), action: "edit", edited_rows: edited });
+    });
+  }
+
+  const rejectBtn = el("spread-reject-btn");
+  if (rejectBtn) {
+    rejectBtn.addEventListener("click", () => {
+      const reason = textOf("spread-reject-reason");
+      if (!reason) {
+        say("spread-status", "A rejected spread needs a written reason — type one beside these buttons.");
+        return;
+      }
+      submitReview("reject", { acting_user_email: actor(), action: "reject", rejection_reason: reason });
+    });
+  }
+
+  // ---- memo, policy and decision desks: later stages of the same dossier ----
+
+  function stageCall(statusId, method, path, body, done) {
+    const code = dealCode || textOf("dossier-deal-code");
+    if (!code) {
+      say(statusId, "Open a dossier first.");
+      return;
+    }
+    api(method, path.replace("{code}", encodeURIComponent(code)), body).then((res) => {
+      if (!res.ok) {
+        say(statusId, detailOf(res));
+        return;
+      }
+      if (done) done(res.data);
+      loadDossier(code);
+    });
+  }
+
+  const memoRun = el("memo-run-btn");
+  if (memoRun) {
+    memoRun.addEventListener("click", () => {
+      say("memo-status", "Drafting the memo from the accepted spread, ratios and grade…");
+      stageCall("memo-status", "POST", "/api/deals/{code}/agents/credit-memo/run", { acting_user_email: actor() }, () =>
+        say("memo-status", "Draft ready — it cites the ratios, spread lines and rules it relied on. Accept or reject it.")
+      );
+    });
+  }
+
+  const memoAccept = el("memo-accept-btn");
+  if (memoAccept) {
+    memoAccept.addEventListener("click", () => {
+      stageCall(
+        "memo-status",
+        "POST",
+        "/api/deals/{code}/memo/accept",
+        { acting_user_email: actor(), action: "accept" },
+        () => say("memo-status", "Memo accepted; your name and the time are on the record.")
+      );
+    });
+  }
+
+  const memoReject = el("memo-reject-btn");
+  if (memoReject) {
+    memoReject.addEventListener("click", () => {
+      const reason = textOf("decision-notes") || "returned to the agent for redrafting";
+      stageCall(
+        "memo-status",
+        "POST",
+        "/api/deals/{code}/memo/accept",
+        { acting_user_email: actor(), action: "reject", rejection_reason: reason },
+        () => say("memo-status", "Memo rejected — nothing was recorded as accepted.")
+      );
+    });
+  }
+
+  const policyRun = el("policy-run-btn");
+  if (policyRun) {
+    policyRun.addEventListener("click", () => {
+      say("policy-status", "Testing the deal against the active lending ruleset…");
+      stageCall(
+        "policy-status",
+        "POST",
+        "/api/deals/{code}/agents/policy-compliance/run",
+        { acting_user_email: actor() },
+        (data) =>
+          say(
+            "policy-status",
+            (data.exceptions || []).length + " exception(s) written against policy " + (data.policy_version || "")
+          )
+      );
+    });
+  }
+
+  const approveBtn = el("decision-approve-btn");
+  if (approveBtn) {
+    approveBtn.addEventListener("click", () => {
+      stageCall(
+        "decision-status",
+        "POST",
+        "/api/deals/{code}/approve",
+        { acting_user_email: actor(), decision_notes: textOf("decision-notes") },
+        (data) => say("decision-status", "Approved by " + (data.approved_by || actor()) + ".")
+      );
+    });
+  }
+
+  const declineBtn = el("decision-decline-btn");
+  if (declineBtn) {
+    declineBtn.addEventListener("click", () => {
+      const code = textOf("decision-reason-code");
+      if (!code) {
+        say("decision-status", "A decline needs a controlled adverse-action reason code.");
+        return;
+      }
+      stageCall(
+        "decision-status",
+        "POST",
+        "/api/deals/{code}/decline",
+        { acting_user_email: actor(), reason_code: code, reason_detail: textOf("decision-notes") },
+        () => say("decision-status", "Declined with adverse-action reason " + code + ".")
+      );
+    });
+  }
+
+  const returnBtn = el("decision-return-btn");
+  if (returnBtn) {
+    returnBtn.addEventListener("click", () => {
+      stageCall(
+        "decision-status",
+        "POST",
+        "/api/deals/{code}/return",
+        { acting_user_email: actor(), reason: textOf("decision-notes") || "returned for further work" },
+        () => say("decision-status", "Returned to an earlier stage with your written reason.")
+      );
+    });
+  }
+
+  document.addEventListener("screen:shown", (event) => {
+    if (event.detail && event.detail.screen === "screen-deal-detail") {
+      loadDealList();
+      loadDeclineReasons();
+      loadDossier(dealCode || textOf("dossier-deal-code"));
+    }
+  });
+
+  loadDealList();
+  loadDeclineReasons();
+  loadDossier(textOf("dossier-deal-code"));
 })();

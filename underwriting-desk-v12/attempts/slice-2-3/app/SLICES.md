@@ -98,3 +98,63 @@ still works, and `frontend/app.js` and `frontend/index.html` were not touched.
    extension allowlist still applies on top for identified callers.
 
 Covered by `backend/tests/test_deal_intake_and_triage.py` (24 tests green).
+
+## Slice 2 — Cited financial spread, deterministic ratios, and risk grade (`spread-ratios-and-risk-grade`)
+
+An analyst opens a deal dossier and runs the Financial Spreading Agent (`POST
+/api/deals/{deal_code}/agents/financial-spreading/run`), which transcribes the
+bank's standard spread template — one row per line item, period, value and
+unit — from the attached documents. **Every figure carries a structured
+citation** (document id plus page, section and cell locator); a line the agent
+cannot read is reported under `unextractable` and is never given a number. The
+draft is checked before a human ever sees it: `validate_spread_citations`
+rejects the run outright (422) if any row arrived without a document + locator.
+Nothing reaches `financial_spread_template` until a named analyst accepts,
+edits-then-accepts, or rejects the draft (`POST
+/api/deals/{deal_code}/spread/accept`) — a rejection needs a written reason and
+writes no figures, and an edited line item must still resolve to a cited
+source. Acceptance then triggers, in deterministic Python and never an LLM,
+DSCR, leverage and the current ratio (`GET /api/deals/{deal_code}/ratios`,
+each row storing its numerator, denominator, `half_up_2dp` rounding and
+`undefined_when_denominator_zero` handling) and the risk grade from the
+versioned rubric (`GET /api/deals/{deal_code}/risk-grade`, returning the grade,
+`rubric-v2.1`, the exact band struck and the whole inspectable rubric).
+Supporting endpoints: `POST /api/deals/{deal_code}/documents` attaches a
+borrower document with its digitised extract sheet (held in blob-store — the
+only thing the agent may transcribe from, which is what makes "every figure is
+cited" enforceable), `GET /api/deals/{deal_code}/spread` returns the accepted
+spread with its citations, and `GET /api/deals/{deal_code}/dossier` assembles
+the whole screen in one read. All reads are scoped through
+`identity.can_view_deal`; every mutation is guarded by
+`identity.require_actor(…, "deal.spread")` and writes an audit row
+(`deal.document_attached`, `spread.agent_run`, `spread.citations_validated`,
+`spread.accepted`/`spread.rejected`, `ratio.computed`, `risk_grade.assigned`).
+
+Backend: one new file, `ext_spread_ratios_and_risk_grade.py`, which also
+registers five of the `deal-underwriting-lifecycle` workflow's deterministic
+handlers — `verify_required_documents`, `validate_spread_citations`,
+`persist_accepted_spread`, `compute_financial_ratios` and `assign_risk_grade` —
+and calls exactly those functions from its REST endpoints, so the workflow
+contract and the shipped behaviour cannot drift apart. It also installs a
+composable wrapper around `deals_repo.next_deal_code` that skips the deal codes
+it reserves, honouring that module's documented promise that the counter is
+independent of fixture deals inserted with an explicit code (no shared module
+is edited). A worked demonstration dossier, `DEAL-1002` — Verrazano Dental
+Group, LLC, $640,000, with its three-document financial pack — is materialised
+once at import under that reserved code so the screen has a real spread to
+draft on a fresh boot.
+
+Frontend: the Deal Dossier screen (`screen-deal-detail`) is now live end to
+end inside the design's shell. An "open dossier" find-bar loads any deal from
+the board; the head, document docket (with an attach-a-document form that
+takes the extract sheet), spread table, unextractable list, citation rail,
+deterministic-ratio table and rubric strip all render from
+`/api/deals/{code}/dossier`; and the spread desk's run / accept / edit /
+reject controls drive the endpoints above, with "edit before accepting"
+turning the drafted values into editable fields. The memo, policy-exception
+and decision desks on the same screen drive the endpoints the later slices of
+this lifecycle own and report plainly when the step they need has not been
+reached yet. No shared chrome, other screen, or shared CSS was restructured.
+
+Covered by `backend/tests/test_spread_ratios_and_risk_grade.py` (20 tests
+green; 44 across the suite).

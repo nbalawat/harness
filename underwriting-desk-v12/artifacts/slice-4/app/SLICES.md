@@ -66,84 +66,114 @@ check still passes exactly as written and all five screens still work.
    raises on boot if any later slice registers an `/api/…` route after the
    catch-all, so a shadowed endpoint can never ship silently.
 
+### Revision — module hardening to the certified catalog 0.12.1
+
+The five composed module files below predated the hardened module catalog and
+were brought up to standard. No feature behavior changed: all four recorded
+acceptance checks for this slice still pass exactly as written, every screen
+still works, and `frontend/app.js` and `frontend/index.html` were not touched.
+
+1. `backend/ext_audit.py` — an audit entry with no attributable actor is not an
+   audit entry. `record(event, detail, actor="system")` now stamps `actor` on
+   every entry (machine-driven events default to `"system"`), and
+   `AuditRequest` makes `actor` a **required** field, so `POST /audit` without
+   one is a 422. `POST /audit` passes `req.actor` through.
+2. `backend/ext_workflow_runs.py` — workflow runs now record who drove them.
+   `StartRequest` gains `acting_user_email` (default `"system"`), which
+   `start()` threads into the run inputs as `_started_by`; a new `TickRequest`
+   lets `POST /workflows/runs/{id}/tick` accept an optional body naming the
+   actor, and each tick writes a `workflow.ticked` audit entry attributed to
+   them. Ticking with no body remains valid for machine-driven advances.
+3. `backend/ext_seed.py` — the `@router.post("/admin/seed")` decorator carries
+   the `# public-endpoint: dev-only fixture load, hard-gated by
+   APP_ALLOW_SEED=1` annotation; the endpoint stays 403 unless that env var
+   is set.
+4. `backend/ext_blobs.py` (`PUT /files/{name}`) and 5. `backend/ext_uploads.py`
+   (`PUT /uploads/{name}`) — these are mutations and are now identity-guarded
+   like every other mutation in the app. The caller identifies itself with an
+   `x-user-email` header or an `acting_user_email` query parameter (the body is
+   raw bytes, so identity cannot ride in it), resolved through
+   `identity.require_actor`: anonymous → 401, unknown user → 403, known active
+   user → stored, with an audit row written for the write. The upload
+   extension allowlist still applies on top for identified callers.
+
+Covered by `backend/tests/test_deal_intake_and_triage.py` (24 tests green).
+
 ## Slice 4 — Tiered human approval, adverse action, and the idle register (`tiered-approval-and-sla`)
 
-A credit officer decides a deal from its dossier: `POST
-/api/deals/{deal_code}/approve` enforces approval authority by exposure tier
-server-side (`determine_approval_tier` — analyst up to $250,000, senior
-credit officer up to $1,000,000, credit committee above), returning 403 with
-"authority" in the detail when the acting user's role is under-ranked for
-the deal's exposure, and 200 (with the deciding role/email and the closed
-stage) when it is not. `POST /api/deals/{deal_code}/decline` requires a
-reason code drawn from the controlled `adverse_action_reasons` list plus a
-written detail (R-063), and `POST /api/deals/{deal_code}/return` sends a
-deal back to an earlier stage with a written reason and reassigns it to the
-analyst queue. Every decision is guarded against being re-decided and is
-recorded through `record_approval_decision` / `record_adverse_action_or_return`
-/ `close_approved_deal` — the deterministic handlers for the
-`deal-underwriting-lifecycle` workflow's `tier`/`record`/`outcome`/`close`
-nodes, invoked directly the same way `ext_deal_intake.py` invokes its own
-nodes, since the nodes upstream of `tier` belong to sibling slices. The SLA
-idle register (`GET /api/sla/idle`) measures every open deal's idle time in
-business days — weekends and any `business_calendar` holiday excluded — from
-its last meaningful activity, and `POST /api/deals/{deal_code}/sla-escalate`
-lets a credit officer reassign, return, or acknowledge a stuck deal
-(`compute_business_day_idle_time` / `collect_stage_blockers` /
-`apply_sla_escalation_action`, the `sla-idle-escalation` workflow's
-handlers — no agent participates, per that workflow's own design). Backend:
-new `ext_tiered_approval_and_sla.py`; it also seeds its own fixture deals
-(`DEAL-1004`..`DEAL-1007`) directly with an explicit `deal_code`, exactly as
-`deals_repo.py` describes, so the tier/decline/idle acceptance paths have
-known state to act on. Frontend: the SLA Dashboard screen
-(`screen-sla-dashboard`) now renders its plates, idle register, and "Idle by
-Stage"/"Idle by Desk" tallies live from `/api/sla/idle`, and its "Reassign
-selected" / "Nudge owners" controls act on the checked rows.
+A credit officer approves (`POST /api/deals/{code}/approve`), declines with a
+controlled adverse-action reason (`POST /api/deals/{code}/decline`), or returns
+a deal to an earlier stage with a written reason and a re-assignment (`POST
+/api/deals/{code}/return`) — and the desk watches the SLA idle register (`GET
+/api/sla/idle`) for deals that have not moved in more than five **business**
+days, acting on them through `POST /api/sla/escalate`. Supporting reads: `GET
+/api/deals/{code}/approval-tier` (who may decide this deal, and why) and `GET
+/api/approvals/queue` (everything sitting at the approval step). All backend
+code is new and lives in `backend/ext_tiered_approval_and_sla.py`; no shared
+module was rewritten.
 
-**Revision (attempt 2, merge-safety only — no behaviour change):** this
-slice's `frontend/app.js` block was already appended after the foundation's
-last byte, but its boundary lines (`(function () {`, a `// =====` banner, and
-a closing `})();`) were textually identical to the foundation's own last
-lines, so a line-level union merge aligned the block *before* the
-foundation's final line and conflicted with sibling slices appending the
-same generic boundary. The module is now delimited by unique lines — it
-opens `(function sliceTieredApprovalAndSlaModule() {` under a
-`// --- begin slice tiered-approval-and-sla ... ---` comment and closes
-`})(); // --- end slice tiered-approval-and-sla ---` — so `diff` reports one
-pure trailing-append hunk with zero deletions and the first 403 lines of
-`app.js` remain byte-identical to the foundation. No backend, HTML, or
-behavioural change; all acceptance checks still pass.
+**Authority is the server's decision, tiered on exposure (R-020/R-021/R-022).**
+`tier_for()` is pure arithmetic: up to $250,000 a credit analyst may approve,
+up to $1,000,000 a senior credit officer, above that only the credit
+committee. `_require_decision_authority` resolves the caller through
+`identity.require_actor` (default-deny: anonymous → 401, unknown or
+deactivated → 403) and then checks the tier, so an analyst approving a
+$750,000 deal is refused before anything is written. Declines and returns
+additionally require the officer-only `deal.decline` / `deal.return`
+permissions (R-033). **No agent is involved anywhere in this path (R-023):**
+the module never imports `agent_runtime` at all — a system guardrail rather
+than a prompt instruction — and a test asserts that stays true.
 
-**Revision (attempt 3) — slice-audit findings.** Three hardening changes in
-`ext_tiered_approval_and_sla.py`; every recorded acceptance check still passes
-exactly as written, `app.js` is still a pure trailing append, and the SLA
-Dashboard screen is unchanged.
+**Every decision is a named human's and is recorded once (R-024/R-030/R-062).**
+An `approvals` row stores the deciding user, the authority level verified, the
+exposure and the notes, and `ext_audit.record` writes an audit row for the
+decision, the outcome and the close. Replaying the *same* decision returns the
+stored record (`replayed: true`) instead of approving twice; a *conflicting*
+second decision is a 409. Stage moves go through the `state-machine` module, so
+approving a deal that is not at the approval step is a 409 rather than a silent
+jump. A decline needs a `reason_code` from the active `adverse_action_reasons`
+list plus free-text detail, both validated before any write (R-026/R-063).
 
-1. *An open policy exception now blocks approval (HIGH).* `approve_deal`
-   refuses with 409 while the deal carries any unwaived `policy_exceptions`
-   row, naming the offending `rule_reference`s and telling the officer to
-   waive each with a written rationale or return the deal for rework. The
-   check fails CLOSED — a row with a missing or unrecognised status counts as
-   open. The remedy is real, not advice: the new officer-only
-   `POST /api/deals/{deal_code}/policy-exceptions/waive` carries the
-   exception forward on a fresh `status: "waived"` row (append-only, the same
-   event-sourced pattern `deals_repo.update_deal` uses) with the deciding
-   human and their rationale recorded and audited. Because
-   `policy_exceptions` is append-only, "open" is computed by folding to the
-   latest row per `(deal_id, rule_reference)`, which `collect_stage_blockers`
-   now shares. The DEAL-1004..1007 fixtures carry no exception (a test
-   asserts it), so the recorded approve/decline acceptance paths are
-   untouched.
-2. *`return_deal` uses the same `_already_decided` guard* as `approve_deal`
-   and `decline_deal`, so an approved, declined or closed deal can no longer
-   be reopened by a return.
-3. *Approval authority is resolved server-side, default-deny.* All five
-   mutating endpoints (approve, decline, return, waive, sla-escalate) now go
-   through the foundation guard `identity.require_actor(...)` instead of
-   `identity.resolve_user(...)`, which is documented as provisioning-only and
-   would have minted a `credit_analyst` for any unknown email. The exposure
-   tier (analyst to $250k, senior credit officer to $1M, credit committee
-   above) is applied to the role read off the stored `users` row, never off
-   anything in the request body. `credit_committee` is passed through
-   `require_actor`'s `roles=` parameter rather than `ROLE_PERMISSIONS`
-   because it is a tier authority this slice introduces and the shared
-   identity module is being built on concurrently by sibling slices.
+**Idle time is counted in business days from the last meaningful activity
+(R-034/R-057).** `business_days_between()` walks the calendar excluding
+weekends and any `business_calendar` date flagged non-business (the configured
+bank-holiday list is seeded and reported by the register). Acknowledging a deal
+deliberately does *not* reset the idle clock — only real work (reassignment,
+return) does — so a deal cannot be nursed off the register. `POST
+/api/sla/escalate` runs the approved `sla-idle-escalation` workflow end to end
+(measure → breached? → blockers → human park in approval-flow → apply) rather
+than re-implementing it. `GET /api/sla/idle` withholds borrower names from an
+unidentified caller and scopes rows to what an identified one may see.
+
+**Workflow handlers registered** (contracts from `workflows/workflows.json`):
+`determine_approval_tier`, `record_approval_decision`,
+`record_adverse_action_or_return`, `close_approved_deal` on
+deal-underwriting-lifecycle, and `compute_business_day_idle_time`,
+`collect_stage_blockers`, `apply_sla_escalation_action` on
+sla-idle-escalation.
+
+**Frontend — `screen-sla-dashboard` only.** Inside the design's existing shell:
+a "Decision Desk — Tiered Approval" manuscript (approval queue, live tier
+explanation, approve / decline-with-reason-code / return-for-rework), live
+plates, a live idle register whose rows are selectable, live "Idle by Stage" /
+"Idle by Desk" / bank-holiday panels, and the design's own "Reassign selected"
+and "Nudge owners" buttons wired to the escalation workflow. No other screen,
+shared CSS or chrome was touched.
+
+**Desk fixtures.** `install_desk_fixtures()` seeds the controlled reason-code
+vocabulary, the bank-holiday calendar, and four reference deals (DEAL-1004
+$750k awaiting decision, DEAL-1005 long idle, DEAL-1006 declinable, DEAL-1007
+$1.25M committee-tier) so the register and decision desk open on real data.
+Fixture deals use explicit codes and do **not** consume the deal-code sequence,
+so a deal filed through intake is still DEAL-1001; a small additive guard wraps
+`deals_repo.next_deal_code` so the allocator skips forward past any code a
+fixture already holds instead of issuing a duplicate `deal_code`.
+
+**Open questions carried forward, not silently decided:** R-069 (exposure basis)
+— the deal's own `exposure_amount` is used and named in `exposure_basis` on
+every tier response; R-068 (committee mechanics above $1M) — the build requires
+an explicit committee role and records one decision, and says so in
+`committee_mechanics_open_question`.
+
+Covered by `backend/tests/test_tiered_approval_and_sla.py` (26 tests; 51 green
+across the suite).

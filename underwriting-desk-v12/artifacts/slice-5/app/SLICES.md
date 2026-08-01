@@ -66,6 +66,38 @@ check still passes exactly as written and all five screens still work.
    raises on boot if any later slice registers an `/api/…` route after the
    catch-all, so a shadowed endpoint can never ship silently.
 
+### Revision — module hardening to the certified catalog 0.12.1
+
+The five composed module files below predated the hardened module catalog and
+were brought up to standard. No feature behavior changed: all four recorded
+acceptance checks for this slice still pass exactly as written, every screen
+still works, and `frontend/app.js` and `frontend/index.html` were not touched.
+
+1. `backend/ext_audit.py` — an audit entry with no attributable actor is not an
+   audit entry. `record(event, detail, actor="system")` now stamps `actor` on
+   every entry (machine-driven events default to `"system"`), and
+   `AuditRequest` makes `actor` a **required** field, so `POST /audit` without
+   one is a 422. `POST /audit` passes `req.actor` through.
+2. `backend/ext_workflow_runs.py` — workflow runs now record who drove them.
+   `StartRequest` gains `acting_user_email` (default `"system"`), which
+   `start()` threads into the run inputs as `_started_by`; a new `TickRequest`
+   lets `POST /workflows/runs/{id}/tick` accept an optional body naming the
+   actor, and each tick writes a `workflow.ticked` audit entry attributed to
+   them. Ticking with no body remains valid for machine-driven advances.
+3. `backend/ext_seed.py` — the `@router.post("/admin/seed")` decorator carries
+   the `# public-endpoint: dev-only fixture load, hard-gated by
+   APP_ALLOW_SEED=1` annotation; the endpoint stays 403 unless that env var
+   is set.
+4. `backend/ext_blobs.py` (`PUT /files/{name}`) and 5. `backend/ext_uploads.py`
+   (`PUT /uploads/{name}`) — these are mutations and are now identity-guarded
+   like every other mutation in the app. The caller identifies itself with an
+   `x-user-email` header or an `acting_user_email` query parameter (the body is
+   raw bytes, so identity cannot ride in it), resolved through
+   `identity.require_actor`: anonymous → 401, unknown user → 403, known active
+   user → stored, with an audit row written for the write. The upload
+   extension allowlist still applies on top for identified callers.
+
+Covered by `backend/tests/test_deal_intake_and_triage.py` (24 tests green).
 ## Slice 5 — Grounded, permission-scoped portfolio Q&A desk (`grounded-portfolio-qa`)
 
 A credit officer asks the portfolio desk a question in plain English (`POST
@@ -124,3 +156,14 @@ digest of those records (the raw reply is kept in the session trace for
 audit). New `GET /api/qa/book-summary` serves the desk's tallies from the
 same permission-scoped records. Every recorded acceptance check passes
 exactly as written; `frontend/app.js` changes remain a pure append.
+
+**Rebase (attempt 4) — no behaviour change.** This slice was re-based onto the
+revised foundation (module hardening to catalog 0.12.1): every shared file was
+re-taken from the current foundation and this slice's work re-applied on top —
+`backend/ext_grounded_portfolio_qa.py`, `backend/tests/test_grounded_portfolio_qa.py`,
+`demo/slice-5.json`, and pure appends to `frontend/app.js` and this file. The one
+adaptation to the hardened modules: `record_qa_session` now passes the asking
+user's email as `actor` to `ext_audit.record()`, since an audit entry must name
+who caused it — a Q&A session is caused by the person who asked, never by
+`system`. All three recorded acceptance checks still pass exactly as written and
+the backend suite is green (33 tests).

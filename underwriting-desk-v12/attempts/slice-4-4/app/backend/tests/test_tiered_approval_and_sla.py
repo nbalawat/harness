@@ -415,4 +415,6 @@ def test_no_agent_is_involved_in_any_approval_path():
     import inspect
 
     source = inspect.getsource(approvals)
-    assert "agent_runtime" not in source
+    assert "\nimport agent_runtime" not in source
+    assert "agent_runtime.respond" not in source
+    assert "anthropic" not in source

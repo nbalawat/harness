@@ -401,3 +401,425 @@ fetch("/api/conversations")
 
   loadPipeline();
 })();
+
+// ============================================================
+// Decision desk + SLA idle register (slice: tiered-approval-and-sla)
+//   - GET  /api/approvals/queue        deals sitting at the approval step
+//   - GET  /api/deals/{id}/approval-tier   who may decide, and why
+//   - POST /api/deals/{id}/approve|decline|return   the named human decision
+//   - GET  /api/sla/idle               the business-day idle register
+//   - POST /api/sla/escalate           runs the sla-idle-escalation workflow
+// Authority is decided by the SERVER; these controls only report what it says.
+// textContent everywhere — never innerHTML with data.
+// ============================================================
+(function () {
+  const STAGE_LABELS = {
+    intake: "Intake",
+    document_extraction: "Document extraction",
+    financial_spreading: "Financial spreading",
+    risk_grading: "Risk grading",
+    memo_drafting: "Memo drafting",
+    policy_compliance: "Policy compliance",
+    tiered_approval: "Tiered approval",
+    closing: "Closing",
+    closed: "Closed",
+  };
+
+  const el = (id) => document.getElementById(id);
+  const money = (n) => "$" + (Number(n) || 0).toLocaleString("en-US");
+  const stageLabel = (s) => STAGE_LABELS[s] || s || "—";
+  const emailOf = (id) => (el(id) ? String(el(id).value || "").trim() : "");
+
+  function compactMoney(n) {
+    const v = Number(n) || 0;
+    if (v >= 1000000) return "$" + (v / 1000000).toFixed(1) + "M";
+    if (v >= 1000) return "$" + Math.round(v / 1000) + "k";
+    return money(v);
+  }
+
+  function shortDate(iso) {
+    const t = Date.parse(iso || "");
+    if (!t) return "—";
+    return new Date(t).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+  }
+
+  function setRows(list, entries) {
+    if (!list) return;
+    list.replaceChildren();
+    entries.forEach(([label, value]) => {
+      const li = document.createElement("li");
+      const k = document.createElement("span");
+      k.textContent = label;
+      const v = document.createElement("span");
+      v.textContent = String(value);
+      li.appendChild(k);
+      li.appendChild(v);
+      list.appendChild(li);
+    });
+  }
+
+  function jsonOf(response) {
+    return response.json().then((data) => ({ ok: response.ok, data }));
+  }
+
+  // ---------------------------------------------------------------- register
+  let selectedIdleDeal = null;
+
+  function renderRegister(body) {
+    const rows = body.deals || [];
+    const breachedPlate = el("sla-plate-breached");
+    if (breachedPlate) breachedPlate.textContent = String(body.breached_count || 0);
+    const breachedCaption = el("sla-plate-breached-caption");
+    if (breachedCaption) breachedCaption.textContent = "of " + (body.active_deal_count || 0) + " active deals";
+    const exposurePlate = el("sla-plate-exposure");
+    if (exposurePlate) exposurePlate.textContent = compactMoney(body.idle_exposure);
+    const longestPlate = el("sla-plate-longest");
+    const longestCaption = el("sla-plate-longest-caption");
+    if (longestPlate) {
+      longestPlate.textContent = body.longest_idle ? body.longest_idle.business_days_idle + "d" : "0d";
+    }
+    if (longestCaption) {
+      longestCaption.textContent = body.longest_idle
+        ? (body.longest_idle.borrower_name || body.longest_idle.deal_id) +
+          ", " + stageLabel(body.longest_idle.current_stage).toLowerCase()
+        : "nothing past the service line";
+    }
+    const approachingPlate = el("sla-plate-approaching");
+    if (approachingPlate) approachingPlate.textContent = String(body.approaching_count || 0);
+
+    const tbody = el("sla-register-body");
+    if (tbody) {
+      tbody.replaceChildren();
+      if (!rows.length) {
+        const tr = document.createElement("tr");
+        const td = document.createElement("td");
+        td.colSpan = 7;
+        td.textContent = "No deal has crossed the service line. The register is clean.";
+        tr.appendChild(td);
+        tbody.appendChild(tr);
+      }
+      const longest = rows.length ? rows[0].business_days_idle || 1 : 1;
+      rows.forEach((row) => {
+        const tr = document.createElement("tr");
+
+        const pick = document.createElement("td");
+        const radio = document.createElement("input");
+        radio.type = "radio";
+        radio.name = "sla-selected-deal";
+        radio.value = row.deal_id;
+        radio.setAttribute("aria-label", "Select " + row.deal_id);
+        radio.id = "sla-pick-" + row.deal_id;
+        if (selectedIdleDeal === row.deal_id) radio.checked = true;
+        radio.addEventListener("change", () => {
+          selectedIdleDeal = row.deal_id;
+          const status = el("sla-escalation-status");
+          if (status) {
+            status.textContent =
+              row.deal_id + " selected — " + (row.blocking_items || []).join("; ");
+          }
+        });
+        pick.appendChild(radio);
+
+        const deal = document.createElement("td");
+        deal.className = "deal-cell";
+        const name = document.createElement("b");
+        name.textContent = row.borrower_name || row.deal_id;
+        const code = document.createElement("small");
+        code.textContent = row.deal_id;
+        deal.appendChild(name);
+        deal.appendChild(code);
+
+        const stage = document.createElement("td");
+        stage.textContent = stageLabel(row.current_stage);
+
+        const owner = document.createElement("td");
+        owner.textContent = row.owner_email || "Unassigned";
+
+        const last = document.createElement("td");
+        last.textContent = shortDate(row.last_activity_timestamp) + " · " + (row.blocking_items || ["idle"])[0];
+
+        const exposure = document.createElement("td");
+        exposure.className = "num";
+        exposure.textContent = money(row.exposure_amount);
+
+        const idle = document.createElement("td");
+        idle.className = "num";
+        const ageBar = document.createElement("span");
+        ageBar.className = "age-bar";
+        const bar = document.createElement("span");
+        bar.className = "bar";
+        bar.style.width = Math.max(8, Math.round((row.business_days_idle / longest) * 56)) + "px";
+        ageBar.appendChild(bar);
+        const days = document.createElement("span");
+        days.textContent = row.business_days_idle + "d";
+        ageBar.appendChild(days);
+        idle.appendChild(ageBar);
+
+        [pick, deal, stage, owner, last, exposure, idle].forEach((cell) => tr.appendChild(cell));
+        tbody.appendChild(tr);
+      });
+    }
+
+    setRows(
+      el("sla-by-stage"),
+      Object.entries(body.by_stage || {}).map(([k, v]) => [stageLabel(k), v])
+    );
+    setRows(el("sla-by-owner"), Object.entries(body.by_owner || {}));
+    const calendarNote = el("sla-calendar-note");
+    if (calendarNote) {
+      const holidays = body.bank_holidays || [];
+      calendarNote.textContent = holidays.length
+        ? "Bank holidays configured: " + holidays.join(", ") + "."
+        : "No bank holidays configured for this calendar year.";
+    }
+    const caption = el("sla-register-caption");
+    if (caption) {
+      caption.textContent =
+        "Deals idle beyond " + (body.threshold_business_days || 5) + " business days · escalation owner " +
+        (body.escalation_owner || "unassigned");
+    }
+  }
+
+  function loadRegister() {
+    const email = emailOf("sla-officer-email");
+    const url = "/api/sla/idle" + (email ? "?acting_user_email=" + encodeURIComponent(email) : "");
+    return fetch(url)
+      .then((r) => (r.ok ? r.json() : { deals: [] }))
+      .then(renderRegister)
+      .catch(() => {});
+  }
+
+  function escalate(action, note) {
+    const status = el("sla-escalation-status");
+    if (!selectedIdleDeal) {
+      if (status) status.textContent = "Select a deal on the register first.";
+      return;
+    }
+    fetch("/api/sla/escalate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        acting_user_email: emailOf("sla-officer-email"),
+        deal_code: selectedIdleDeal,
+        action: action,
+        note: note,
+      }),
+    })
+      .then(jsonOf)
+      .then((res) => {
+        if (!res.ok) {
+          if (status) status.textContent = "Escalation refused: " + (res.data.detail || "error");
+          return;
+        }
+        if (status) {
+          status.textContent =
+            res.data.action_taken === "reassign"
+              ? res.data.deal_id + " reassigned to " + (res.data.reassigned_to_email || "the queue") +
+                " by " + res.data.decided_by_email + " — recorded in the audit trail."
+              : res.data.deal_id + " acknowledged by " + res.data.decided_by_email +
+                " after " + res.data.idle_business_days + " idle business days.";
+        }
+        loadRegister();
+      })
+      .catch((err) => {
+        if (status) status.textContent = "Request failed: " + err.message;
+      });
+  }
+
+  const reassignBtn = el("sla-reassign-btn");
+  if (reassignBtn) {
+    reassignBtn.addEventListener("click", () => {
+      const note = el("sla-escalation-note");
+      escalate("reassign", (note && note.value.trim()) || "Idle past the service line — reassigned by the credit officer");
+    });
+  }
+  const nudgeBtn = el("sla-nudge-btn");
+  if (nudgeBtn) {
+    nudgeBtn.addEventListener("click", () => {
+      const note = el("sla-escalation-note");
+      escalate("acknowledge", (note && note.value.trim()) || "Owner nudged; deal acknowledged on the register");
+    });
+  }
+  const officerEmail = el("sla-officer-email");
+  if (officerEmail) officerEmail.addEventListener("change", loadRegister);
+
+  // ----------------------------------------------------------- decision desk
+  function renderTier(tier) {
+    const list = el("decision-tier");
+    if (!list) return;
+    if (!tier) {
+      list.replaceChildren();
+      return;
+    }
+    setRows(list, [
+      ["Exposure", money(tier.exposure_amount)],
+      ["Required authority", tier.required_authority_level],
+      ["Tier rule applied", tier.tier_rule_applied],
+      ["You may approve this", tier.caller_may_approve ? "yes — " + (tier.caller_role || "") : "no"],
+      ["Already decided", tier.already_decided || "not yet"],
+    ]);
+  }
+
+  function loadTier() {
+    const select = el("decision-deal");
+    const code = select ? select.value : "";
+    if (!code) {
+      renderTier(null);
+      return Promise.resolve();
+    }
+    const email = emailOf("decision-user-email");
+    return fetch(
+      "/api/deals/" + encodeURIComponent(code) + "/approval-tier" +
+        (email ? "?acting_user_email=" + encodeURIComponent(email) : "")
+    )
+      .then((r) => (r.ok ? r.json() : null))
+      .then(renderTier)
+      .catch(() => {});
+  }
+
+  function loadApprovalQueue() {
+    const email = emailOf("decision-user-email");
+    const url = "/api/approvals/queue" + (email ? "?acting_user_email=" + encodeURIComponent(email) : "");
+    return fetch(url)
+      .then((r) => (r.ok ? r.json() : { deals: [] }))
+      .then((body) => {
+        const select = el("decision-deal");
+        if (!select) return;
+        const previous = select.value;
+        select.replaceChildren();
+        (body.deals || []).forEach((d) => {
+          const option = document.createElement("option");
+          option.value = d.deal_id;
+          option.textContent =
+            d.deal_id + " · " + (d.borrower_name || "borrower withheld") + " · " +
+            money(d.exposure_amount) + " · needs " + d.required_authority_level;
+          select.appendChild(option);
+        });
+        if (!(body.deals || []).length) {
+          const option = document.createElement("option");
+          option.value = "";
+          option.textContent = "No deal is awaiting a decision.";
+          select.appendChild(option);
+        }
+        if (previous && Array.prototype.some.call(select.options, (o) => o.value === previous)) {
+          select.value = previous;
+        }
+        return loadTier();
+      })
+      .catch(() => {});
+  }
+
+  function loadReasonCodes() {
+    return fetch("/api/adverse_action_reasons")
+      .then((r) => (r.ok ? r.json() : []))
+      .then((rows) => {
+        const select = el("decision-reason-code");
+        if (!select || !Array.isArray(rows)) return;
+        select.replaceChildren();
+        rows
+          .filter((r) => r.is_active)
+          .forEach((r) => {
+            const option = document.createElement("option");
+            option.value = r.reason_code;
+            option.textContent = r.reason_code + " — " + r.reason_label;
+            select.appendChild(option);
+          });
+      })
+      .catch(() => {});
+  }
+
+  function decide(path, payload, describe) {
+    const select = el("decision-deal");
+    const status = el("decision-status");
+    const code = select ? select.value : "";
+    if (!code) {
+      if (status) status.textContent = "Choose a deal awaiting a decision first.";
+      return;
+    }
+    fetch("/api/deals/" + encodeURIComponent(code) + "/" + path, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(Object.assign({ acting_user_email: emailOf("decision-user-email") }, payload)),
+    })
+      .then(jsonOf)
+      .then((res) => {
+        if (!res.ok) {
+          if (status) status.textContent = "Refused by the server: " + (res.data.detail || "error");
+          return;
+        }
+        if (status) status.textContent = describe(res.data);
+        loadApprovalQueue();
+        loadRegister();
+      })
+      .catch((err) => {
+        if (status) status.textContent = "Request failed: " + err.message;
+      });
+  }
+
+  const approveBtn = el("decision-approve-btn");
+  if (approveBtn) {
+    approveBtn.addEventListener("click", () => {
+      const notes = el("decision-notes");
+      decide(
+        "approve",
+        { decision_notes: (notes && notes.value.trim()) || "" },
+        (d) =>
+          d.deal_id + " APPROVED by " + d.approved_by_email + " (" + d.required_authority_level +
+          " authority, exposure " + money(d.exposure_amount) + ") — now in " +
+          stageLabel(d.final_stage) + "."
+      );
+    });
+  }
+
+  const declineBtn = el("decision-decline-btn");
+  if (declineBtn) {
+    declineBtn.addEventListener("click", () => {
+      const codeEl = el("decision-reason-code");
+      const detailEl = el("decision-reason-detail");
+      decide(
+        "decline",
+        {
+          reason_code: codeEl ? codeEl.value : "",
+          reason_detail: detailEl ? detailEl.value.trim() : "",
+        },
+        (d) =>
+          d.deal_id + " DECLINED by " + d.declined_by_email + " — adverse action " +
+          d.adverse_action_reason_code + ": " + d.adverse_action_detail
+      );
+    });
+  }
+
+  const returnBtn = el("decision-return-btn");
+  if (returnBtn) {
+    returnBtn.addEventListener("click", () => {
+      const stageEl = el("decision-return-stage");
+      const notes = el("decision-notes");
+      decide(
+        "return",
+        {
+          returned_to_stage: stageEl ? stageEl.value : "",
+          reason: (notes && notes.value.trim()) || "",
+        },
+        (d) =>
+          d.deal_id + " RETURNED to " + stageLabel(d.returned_to_stage) + " by " +
+          d.returned_by_email + " and reassigned to " + (d.reassigned_to_email || "the analyst queue") + "."
+      );
+    });
+  }
+
+  const dealSelect = el("decision-deal");
+  if (dealSelect) dealSelect.addEventListener("change", loadTier);
+  const decisionEmail = el("decision-user-email");
+  if (decisionEmail) decisionEmail.addEventListener("change", loadApprovalQueue);
+
+  function loadSlaScreen() {
+    loadRegister();
+    loadApprovalQueue();
+  }
+
+  document.addEventListener("screen:shown", (event) => {
+    if (event.detail && event.detail.screen === "screen-sla-dashboard") loadSlaScreen();
+  });
+
+  loadReasonCodes().then(loadSlaScreen);
+})();

@@ -1,7 +1,8 @@
 """audit-log module: append-only action trail. See agent-guide.
 
-record(event, detail) is the one call site every slice uses for a state
-change. Beyond the lightweight developer-facing event stream kept here
+record(event, detail, actor) is the one call site every slice uses for a state
+change; `actor` names who caused it (defaulting to "system" for machine-driven
+events) and is stored on every entry. Beyond the lightweight event stream kept here
 in-memory (GET /audit), it also persists a normalized row into the domain
 `audit_log` table (see models.TABLES) via db.store, keyed by whatever of
 deal_id / actor_user_id / resource_type / resource_id / before / after the
@@ -20,9 +21,9 @@ _entries: list[dict] = []
 _counter = iter(range(1, 10**9))
 
 
-def record(event: str, detail: dict | None = None) -> dict:
+def record(event: str, detail: dict | None = None, actor: str = "system") -> dict:
     detail = detail or {}
-    entry = {"id": next(_counter), "seq": len(_entries) + 1, "event": event, "detail": detail, "at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())}
+    entry = {"id": next(_counter), "seq": len(_entries) + 1, "event": event, "detail": detail, "actor": actor, "at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())}
     _entries.append(entry)
     try:
         store.insert("audit_log", {
@@ -42,12 +43,13 @@ def record(event: str, detail: dict | None = None) -> dict:
 
 class AuditRequest(BaseModel):
     event: str
+    actor: str  # required: an audit entry with no attributable actor is not an audit entry
     detail: dict | None = None
 
 
 @router.post("/audit")
 def add(req: AuditRequest):
-    return record(req.event, req.detail)
+    return record(req.event, req.detail, actor=req.actor)
 
 
 @router.get("/audit")

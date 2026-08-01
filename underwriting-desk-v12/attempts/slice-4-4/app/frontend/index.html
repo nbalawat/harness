@@ -1642,25 +1642,82 @@ sup.cite:hover { background: var(--surface-sunken); }
       day it was opened.
     </p>
 
+    <!-- ---------- decision desk: tiered approval, adverse action, return ---------- -->
+    <article class="manuscript" id="decision-desk" style="margin-bottom:2rem;">
+      <div class="manuscript__head">
+        <h3>Decision Desk — Tiered Approval</h3>
+        <p>Approve, decline with a documented adverse-action reason, or return a deal to an
+          earlier stage. Authority is set by exposure and enforced on the server: an analyst may
+          not approve above $250,000, and no agent may decide at all.</p>
+      </div>
+
+      <div class="find-bar" style="border-top:0;padding-top:0;">
+        <label class="field field--wide">
+          <span>Deal awaiting a decision</span>
+          <select id="decision-deal"><option value="">Loading the approval queue…</option></select>
+        </label>
+        <label class="field">
+          <span>Your email (decider)</span>
+          <input type="email" id="decision-user-email" value="officer@bank.test">
+        </label>
+        <label class="field field--wide">
+          <span>Decision notes</span>
+          <input type="text" id="decision-notes" placeholder="Within policy, DSCR above floor">
+        </label>
+      </div>
+
+      <ul class="docket-list" id="decision-tier"></ul>
+
+      <div class="find-bar">
+        <label class="field">
+          <span>Adverse-action reason code</span>
+          <select id="decision-reason-code"><option value="">Loading reason codes…</option></select>
+        </label>
+        <label class="field field--wide">
+          <span>Adverse-action detail (required to decline)</span>
+          <input type="text" id="decision-reason-detail"
+                 placeholder="DSCR of 0.82 is below the 1.25 policy floor">
+        </label>
+        <label class="field">
+          <span>Return to stage</span>
+          <select id="decision-return-stage">
+            <option value="document_extraction">Document extraction</option>
+            <option value="financial_spreading">Financial spreading</option>
+            <option value="risk_grading">Risk grading</option>
+            <option value="memo_drafting">Memo drafting</option>
+            <option value="policy_compliance">Policy compliance</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="decision-bar">
+        <button type="button" class="btn btn--ink" id="decision-approve-btn">Approve</button>
+        <button type="button" class="btn btn--spot" id="decision-decline-btn">Decline (adverse action)</button>
+        <button type="button" class="btn btn--quiet" id="decision-return-btn">Return for rework</button>
+        <p class="decision-note" id="decision-status" role="status">Every decision is recorded against
+          the deciding officer's name and written to the deal's audit trail.</p>
+      </div>
+    </article>
+
     <div class="plate-row">
       <div class="plate">
         <span class="plate-label">Past the service line</span>
-        <span class="plate-figure alarm">6</span>
-        <p class="plate-caption">of 31 active deals</p>
+        <span class="plate-figure alarm" id="sla-plate-breached">—</span>
+        <p class="plate-caption" id="sla-plate-breached-caption">counting the book…</p>
       </div>
       <div class="plate">
         <span class="plate-label">Exposure at rest</span>
-        <span class="plate-figure">$3.1M</span>
+        <span class="plate-figure" id="sla-plate-exposure">—</span>
         <p class="plate-caption">idle capital in the book</p>
       </div>
       <div class="plate">
         <span class="plate-label">Longest idle</span>
-        <span class="plate-figure alarm">11d</span>
-        <p class="plate-caption">Vellum Bookbinding, extraction</p>
+        <span class="plate-figure alarm" id="sla-plate-longest">—</span>
+        <p class="plate-caption" id="sla-plate-longest-caption">the deal at the top of the register</p>
       </div>
       <div class="plate">
         <span class="plate-label">Approaching the line</span>
-        <span class="plate-figure caution">4</span>
+        <span class="plate-figure caution" id="sla-plate-approaching">—</span>
         <p class="plate-caption">idle 4 business days</p>
       </div>
     </div>
@@ -1669,9 +1726,10 @@ sup.cite:hover { background: var(--surface-sunken); }
 
       <div>
         <table class="idle-register">
-          <caption>Deals idle beyond five business days</caption>
+          <caption id="sla-register-caption">Deals idle beyond five business days</caption>
           <thead>
             <tr>
+              <th scope="col">Act</th>
               <th scope="col">Deal</th>
               <th scope="col">Stage</th>
               <th scope="col">Owner</th>
@@ -1680,101 +1738,53 @@ sup.cite:hover { background: var(--surface-sunken); }
               <th scope="col" class="num">Idle</th>
             </tr>
           </thead>
-          <tbody>
-            <tr>
-              <td class="deal-cell"><b>Vellum Bookbinding Co.</b><small>DEAL-2303</small></td>
-              <td>Document extraction</td>
-              <td>R. Adeyemi</td>
-              <td>16 Jul · agent draft stored</td>
-              <td class="num">$88,000</td>
-              <td class="num"><span class="age-bar"><span class="bar" style="width:56px"></span>11d</span></td>
-            </tr>
-            <tr>
-              <td class="deal-cell"><b>Bluewater Marine Supply</b><small>DEAL-2289</small></td>
-              <td>Risk grading</td>
-              <td>P. Lindqvist</td>
-              <td>22 Jul · spread accepted</td>
-              <td class="num">$395,000</td>
-              <td class="num"><span class="age-bar"><span class="bar" style="width:36px"></span>7d</span></td>
-            </tr>
-            <tr>
-              <td class="deal-cell"><b>Copper Kettle Catering</b><small>DEAL-2313</small></td>
-              <td>Intake</td>
-              <td>Unassigned</td>
-              <td>23 Jul · triage routed</td>
-              <td class="num">$70,000</td>
-              <td class="num"><span class="age-bar"><span class="bar" style="width:31px"></span>6d</span></td>
-            </tr>
-            <tr>
-              <td class="deal-cell"><b>Ironvale Fabrication</b><small>DEAL-2295</small></td>
-              <td>Financial spreading</td>
-              <td>J. Castellanos</td>
-              <td>24 Jul · documents verified</td>
-              <td class="num">$1,250,000</td>
-              <td class="num"><span class="age-bar"><span class="bar" style="width:26px"></span>5d</span></td>
-            </tr>
-            <tr>
-              <td class="deal-cell"><b>Lantern Bay Hospitality</b><small>DEAL-2246</small></td>
-              <td>Policy compliance</td>
-              <td>Compliance</td>
-              <td>24 Jul · exception raised</td>
-              <td class="num">$755,000</td>
-              <td class="num"><span class="age-bar"><span class="bar" style="width:26px"></span>5d</span></td>
-            </tr>
-            <tr>
-              <td class="deal-cell"><b>Quarry Road Concrete</b><small>DEAL-2256</small></td>
-              <td>Memo drafting</td>
-              <td>J. Castellanos</td>
-              <td>24 Jul · agent timed out</td>
-              <td class="num">$1,480,000</td>
-              <td class="num"><span class="age-bar"><span class="bar warn" style="width:26px"></span>5d</span></td>
-            </tr>
+          <tbody id="sla-register-body">
+            <tr><td colspan="7">Reading the register…</td></tr>
           </tbody>
         </table>
 
-        <p class="board-footnote">
-          Idle deals remain in their stage; nothing auto-advances. Where an agent failed or timed
-          out, the stage stays open and a retry or manual-completion path is offered to the
-          assigned human.
+        <p class="board-footnote" id="sla-register-footnote">
+          Idle deals remain in their stage; nothing auto-advances. Idle time is counted in
+          business days from the deal's last meaningful activity, weekends and the configured
+          bank-holiday calendar excluded. Select a deal to reassign it, return it, or acknowledge
+          it with a note — each choice is applied by the escalation workflow and audited.
         </p>
       </div>
 
       <aside class="marginalia" aria-label="Service line apparatus">
         <div class="sidebar-panel">
           <h4>Idle by Stage</h4>
-          <ul>
-            <li><span>Intake</span><span>1</span></li>
-            <li><span>Document extraction</span><span>1</span></li>
-            <li><span>Financial spreading</span><span>1</span></li>
-            <li><span>Risk grading</span><span>1</span></li>
-            <li><span>Memo drafting</span><span>1</span></li>
-            <li><span>Policy compliance</span><span>1</span></li>
-          </ul>
+          <ul id="sla-by-stage"></ul>
         </div>
 
         <div class="sidebar-panel">
           <h4>Idle by Desk</h4>
-          <ul>
-            <li><span>J. Castellanos</span><span>2</span></li>
-            <li><span>R. Adeyemi</span><span>1</span></li>
-            <li><span>P. Lindqvist</span><span>1</span></li>
-            <li><span>Unassigned</span><span>1</span></li>
-            <li><span>Compliance</span><span>1</span></li>
-          </ul>
+          <ul id="sla-by-owner"></ul>
         </div>
 
         <div class="sidebar-panel">
           <h4>The Calendar</h4>
           <p>Business days exclude weekends and the configured bank-holiday calendar. A deal
             crosses the service line at the start of its sixth idle business day.</p>
+          <p id="sla-calendar-note"></p>
         </div>
 
         <div class="margin-note">
           <h4>Act on the Register</h4>
+          <label class="field">
+            <span>Escalating officer</span>
+            <input type="email" id="sla-officer-email" value="officer@bank.test">
+          </label>
+          <label class="field">
+            <span>Note to the record</span>
+            <input type="text" id="sla-escalation-note"
+                   placeholder="Idle past the service line — reassigning">
+          </label>
           <p style="display:flex;flex-wrap:wrap;gap:.4rem;">
-            <button type="button" class="btn btn--sm">Reassign selected</button>
-            <button type="button" class="btn btn--sm btn--quiet">Nudge owners</button>
+            <button type="button" class="btn btn--sm" id="sla-reassign-btn">Reassign selected</button>
+            <button type="button" class="btn btn--sm btn--quiet" id="sla-nudge-btn">Nudge owners</button>
           </p>
+          <p id="sla-escalation-status" role="status"></p>
         </div>
       </aside>
     </div>

@@ -156,3 +156,14 @@ digest of those records (the raw reply is kept in the session trace for
 audit). New `GET /api/qa/book-summary` serves the desk's tallies from the
 same permission-scoped records. Every recorded acceptance check passes
 exactly as written; `frontend/app.js` changes remain a pure append.
+
+**Rebase (attempt 4) — no behaviour change.** This slice was re-based onto the
+revised foundation (module hardening to catalog 0.12.1): every shared file was
+re-taken from the current foundation and this slice's work re-applied on top —
+`backend/ext_grounded_portfolio_qa.py`, `backend/tests/test_grounded_portfolio_qa.py`,
+`demo/slice-5.json`, and pure appends to `frontend/app.js` and this file. The one
+adaptation to the hardened modules: `record_qa_session` now passes the asking
+user's email as `actor` to `ext_audit.record()`, since an audit entry must name
+who caused it — a Q&A session is caused by the person who asked, never by
+`system`. All three recorded acceptance checks still pass exactly as written and
+the backend suite is green (33 tests).

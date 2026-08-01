@@ -15,7 +15,7 @@ SEEDS = {
 }
 
 
-@router.post("/admin/seed")
+@router.post("/admin/seed")  # public-endpoint: dev-only fixture load, hard-gated by APP_ALLOW_SEED=1
 def seed():
     if os.environ.get("APP_ALLOW_SEED") != "1":
         raise HTTPException(status_code=403, detail="seeding disabled (set APP_ALLOW_SEED=1 in dev only)")

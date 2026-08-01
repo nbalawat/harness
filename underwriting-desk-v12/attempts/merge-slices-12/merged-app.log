@@ -1,0 +1,28 @@
+INFO:     Started server process [50278]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:63797 (Press CTRL+C to quit)
+INFO:     127.0.0.1:63803 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63805 - "POST /api/deals HTTP/1.1" 201 Created
+INFO:     127.0.0.1:63803 - "GET /api/pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63805 - "POST /api/deals/DEAL-1001/agents/intake-triage/run HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63841 - "POST /api/deals/DEAL-1001/triage/accept HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63805 - "POST /api/deals/DEAL-1002/agents/financial-spreading/run HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63881 - "POST /api/deals/DEAL-1002/spread/accept HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63805 - "GET /api/deals/DEAL-1002/ratios HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63881 - "GET /api/deals/DEAL-1002/risk-grade HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63805 - "POST /api/deals/DEAL-1003/agents/credit-memo/run HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63933 - "POST /api/deals/DEAL-1003/agents/policy-compliance/run HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63990 - "GET /api/deals/DEAL-1003/policy-exceptions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63933 - "GET /api/deals/DEAL-1003/audit HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63990 - "POST /api/deals/DEAL-1004/approve HTTP/1.1" 403 Forbidden
+INFO:     127.0.0.1:63933 - "POST /api/deals/DEAL-1004/approve HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63990 - "POST /api/deals/DEAL-1006/decline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63933 - "GET /api/sla/idle HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63990 - "POST /api/qa/ask HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64008 - "POST /api/qa/ask HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64049 - "GET /api/qa/sessions HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [50278]

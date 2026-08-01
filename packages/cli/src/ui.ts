@@ -194,11 +194,36 @@ export function buildState(workspace: string): Record<string, unknown> {
     if (e.type === "node.attempt_failed") retries[e.nodeId as string] = (retries[e.nodeId as string] ?? 0) + 1;
   }
 
+  // The engine lock is the authoritative liveness signal: while an engine
+  // holds it, the run is RUNNING no matter what stale park/fail events sit in
+  // the journal tail (a reopened gate's old park must never resurrect its
+  // question form — answers submitted to a phantom form go nowhere).
+  let engineAlive = false;
+  try {
+    const pid = Number(fs.readFileSync(path.join(workspace, "engine.lock"), "utf8"));
+    if (pid) {
+      process.kill(pid, 0);
+      engineAlive = true;
+    }
+  } catch {
+    /* no lock or dead holder */
+  }
+  const lastLifecycle = [...events]
+    .reverse()
+    .find((e) => e.type === "run.completed" || e.type === "run.parked" || e.type === "run.failed");
+  const runStatus = engineAlive
+    ? "running"
+    : lastLifecycle?.type === "run.completed"
+      ? "completed"
+      : lastLifecycle?.type === "run.parked"
+        ? "parked"
+        : lastLifecycle?.type === "run.failed"
+          ? "failed"
+          : "running";
   const parkedNodeId =
-    events
-      .filter((e) => e.type === "node.parked")
-      .map((e) => e.nodeId as string)
-      .find((id) => !state.committed.has(id)) ?? null;
+    runStatus === "parked" && lastLifecycle?.nodeId && !state.committed.has(String(lastLifecycle.nodeId))
+      ? String(lastLifecycle.nodeId)
+      : null;
 
   const dependents: Record<string, string[]> = {};
   for (const n of def.nodes) {
@@ -270,7 +295,10 @@ export function buildState(workspace: string): Record<string, unknown> {
       const meta = DOC_LABELS[name];
       if (meta && rel.endsWith(".json")) {
         const clean = rel.replace(/^artifacts\//, "");
-        documents.push({ ...meta, node: nodeId, href: `/view/${clean}`, fetch: `/artifact/${clean}` });
+        // Every artifact URL must carry the workspace — in the multi-run
+        // dashboard a bare /artifact/ path 404s (documents that "don't open").
+        const wsq = `?ws=${encodeURIComponent(workspace)}`;
+        documents.push({ ...meta, node: nodeId, href: `/view/${clean}${wsq}`, fetch: `/artifact/${clean}${wsq}` });
       }
     }
   }
@@ -371,7 +399,7 @@ export function buildState(workspace: string): Record<string, unknown> {
     const m = rel.match(new RegExp("^(slice-[0-9]+)/app/screenshots/(slice-[0-9]+)[.]png$"));
     if (m && m[1] === m[2].replace("slice-", "slice-")) {
       if (rel.startsWith(m[2].split(".")[0])) {
-        const shot: { slice: string; href: string; name?: string; caption?: string } = { slice: m[2], href: "/artifact/" + rel };
+        const shot: { slice: string; href: string; name?: string; caption?: string } = { slice: m[2], href: "/artifact/" + rel + `?ws=${encodeURIComponent(workspace)}` };
         const idx = Number(m[2].split("-")[1]);
         const planned = (slicePlanDoc?.slices as { name: string }[] | undefined)?.[idx - 1];
         if (planned) shot.name = planned.name;
@@ -434,13 +462,8 @@ export function buildState(workspace: string): Record<string, unknown> {
     runBudgetUsd: def.cost?.run_budget_usd ?? null,
     tokensIn,
     tokensOut,
-    status: events.some((e) => e.type === "run.completed")
-      ? "completed"
-      : parkedNodeId
-        ? "parked"
-        : events[events.length - 1]?.type === "run.failed"
-          ? "failed"
-          : "running",
+    status: runStatus,
+    engineAlive,
     nodes,
     parkedGate:
       parkedNodeId && byId.get(parkedNodeId)
@@ -1010,8 +1033,9 @@ export function startUiServer(target: string, port: number): Promise<http.Server
       } else if (url.pathname.startsWith("/view/")) {
         // Pretty document viewer for curated artifacts.
         const rel = decodeURIComponent(url.pathname.slice("/view/".length));
-        const abs = path.normalize(path.join(artifactsRoot(), rel));
-        if (!abs.startsWith(artifactsRoot() + path.sep) || !fs.existsSync(abs) || !fs.statSync(abs).isFile()) {
+        const aroot = artifactsRoot(wsFrom(url));
+        const abs = path.normalize(path.join(aroot, rel));
+        if (!abs.startsWith(aroot + path.sep) || !fs.existsSync(abs) || !fs.statSync(abs).isFile()) {
           res.writeHead(404).end("not found");
           return;
         }
@@ -1053,12 +1077,19 @@ export function startUiServer(target: string, port: number): Promise<http.Server
           const { nodeId, answers } = JSON.parse(body) as { nodeId: string; answers: Record<string, string> };
           const ws = wsFrom(url) ?? workspace!;
           const answersFile = mergeAnswers(ws, nodeId, answers);
-          const st = buildState(ws) as { status?: string };
-          // A live run polls ui-answers itself (review windows / gates in-process);
-          // spawning a second runner would collide with it.
-          if (st.status === "parked" || st.status === "failed") spawnResume(["--answers", answersFile], ws);
+          const st = buildState(ws) as { status?: string; engineAlive?: boolean };
+          // A live engine polls ui-answers itself (review windows / gates
+          // in-process) — spawning a second runner would just die on the
+          // engine lock. Tell the user WHAT happened either way.
+          let applied: string;
+          if (!st.engineAlive && (st.status === "parked" || st.status === "failed")) {
+            spawnResume(["--answers", answersFile], ws);
+            applied = "resuming";
+          } else {
+            applied = "recorded";
+          }
           res.writeHead(200, { "content-type": "application/json" });
-          res.end(JSON.stringify({ ok: true }));
+          res.end(JSON.stringify({ ok: true, applied }));
         });
       } else if (url.pathname === "/api/revise" && req.method === "POST") {
         let body = "";
@@ -1488,6 +1519,7 @@ button.ghost { background:transparent; border:1px solid var(--border); color:var
   <div class="secwrap" id="sec-design" style="display:none">
     <div class="seclabel">The design <span class="hint">— what your app looks like</span></div>
     <div class="card" id="designPanel" style="display:none"><h2 id="designHead">Design options — pick one</h2><div class="designs" id="designs"></div></div>
+    <div class="card" id="remedPanel" style="display:none"><h2>Remediation — problems found, routed back, and re-verified</h2><div class="hint" style="margin-bottom:.3rem">When a review, audit, or scan finds a problem, the feedback re-opens the owning step and everything downstream re-derives. Nothing is patched silently.</div><div id="remedList"></div></div>
     <div class="card" id="deliveryPanel" style="display:none"><h2>Design delivery — what you approved vs what's live <span class="hint" id="deliveryTotals"></span></h2><div id="deliveryGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:.6rem"></div></div>
   </div>
   <div class="secwrap" id="sec-anatomy" style="display:none">
@@ -1911,19 +1943,39 @@ async function tick() {
   if (s.pendingQuestion) setText('bannerText', 'the ' + s.pendingQuestion.nodeId + ' agent asked you a question');
   else if (s.parkedGate) setText('bannerText', s.parkedGate.questions.length + ' question' + (s.parkedGate.questions.length===1?'':'s') + ' at ' + s.parkedGate.nodeId);
 
-  // Remediation wave: say WHAT is re-deriving and WHY — re-running steps must
-  // never look like the build mysteriously repeating itself.
+  // Remediation: re-running steps must never look like the build mysteriously
+  // repeating itself. The banner carries the headline + live progress; the
+  // timeline card below keeps the full history of every wave and its outcome.
+  const remHeadline = (fb) => {
+    if (!fb) return 'review feedback';
+    const head = fb.split(/[:.]/)[0].trim();
+    return (head.length >= 8 && head.length <= 90 ? head : fb.slice(0, 90)).toLowerCase();
+  };
   const remB = document.getElementById('remBanner');
   const activeRems = (s.remediation || []).filter(r => r.remaining.length > 0);
   remB.style.display = activeRems.length ? 'flex' : 'none';
   if (activeRems.length) {
-    setHTML('remText', activeRems.map(r => {
-      const doneN = r.reopened.length - r.remaining.length;
-      return 'Feedback on <b class="mono">' + esc(r.nodeId) + '</b> is re-deriving ' + r.reopened.length +
-        ' step(s) — ' + doneN + ' done, now on <span class="mono">' + esc(r.remaining[0]) + '</span>.' +
-        (r.feedback ? ' <span class="fb">&ldquo;' + esc(r.feedback.slice(0, 180)) + (r.feedback.length > 180 ? '…' : '') + '&rdquo;</span>' : '');
-    }).join('<br>'));
+    const r = activeRems[activeRems.length - 1];
+    const doneN = r.reopened.length - r.remaining.length;
+    setHTML('remText', 'Fixing <b>' + esc(remHeadline(r.feedback)) + '</b> (feedback on <span class="mono">' + esc(r.nodeId) + '</span>) — ' +
+      doneN + ' of ' + r.reopened.length + ' steps re-verified, now on <span class="mono">' + esc(r.remaining[0]) + '</span>. ' +
+      '<span class="fb">Details in the Remediation panel below.</span>');
   }
+  const remP = document.getElementById('remedPanel');
+  if ((s.remediation || []).length) {
+    remP.style.display = '';
+    setHTML('remedList', s.remediation.slice().reverse().map(r => {
+      const doneN = r.reopened.length - r.remaining.length;
+      const state = r.remaining.length === 0
+        ? '<span class="chip" style="background:var(--ok,#2b8a3e);color:#fff">fixed &amp; re-verified</span>'
+        : '<span class="chip remed">in progress · ' + doneN + '/' + r.reopened.length + '</span>';
+      return '<div style="padding:.55rem 0;border-bottom:1px solid var(--border)">' +
+        '<div><b>' + esc(remHeadline(r.feedback)) + '</b> ' + state + '</div>' +
+        '<div class="hint">feedback entered at <span class="mono">' + esc(r.nodeId) + '</span> · ' + esc((r.at||'').slice(11,19)) + ' · re-derives: ' + r.reopened.map(esc).join(', ') + '</div>' +
+        (r.feedback ? '<details><summary class="hint">full feedback</summary><div class="hint" style="white-space:pre-wrap">' + esc(r.feedback) + '</div></details>' : '') +
+        '</div>';
+    }).join(''));
+  } else remP.style.display = 'none';
 
   setText('progressV', done + ' / ' + s.nodes.length);
   document.getElementById('progressBar').style.width = (100*done/s.nodes.length) + '%';
@@ -2060,10 +2112,13 @@ async function tick() {
       wireUpload(form);
       form.onsubmit = async (ev) => {
         ev.preventDefault();
+        const btn = form.querySelector('button[type=submit]');
+        btn.disabled = true; btn.textContent = 'Recording…';
         const answers = Object.fromEntries(new FormData(form).entries());
-        await fetch('/api/answer' + q(), { method:'POST', body: JSON.stringify({ nodeId: form.dataset.node, answers }) });
-        form.dataset.node = '';
-        tick();
+        const r = await (await fetch('/api/answer' + q(), { method:'POST', body: JSON.stringify({ nodeId: form.dataset.node, answers }) })).json().catch(() => ({}));
+        btn.textContent = r.ok ? '✓ Recorded — the build applies it now' : 'Failed — try again';
+        if (r.ok) setTimeout(() => { form.dataset.node = ''; tick(); }, 900);
+        else btn.disabled = false;
       };
     }
   } else { wg.style.display = 'none'; }
@@ -2181,7 +2236,7 @@ async function tick() {
     const d = window.__docs[Number(b.dataset.i)];
     openDoc(d.label, d.blurb, d.fetch);
   });
-  setHTML('raw', s.rawArtifacts.map(a => '<a class="mono" style="display:block;color:var(--ink2);text-decoration:none;font-size:.74rem;padding:.06rem 0" href="/artifact/' + a + '" target="_blank">' + esc(a) + '</a>').join(''));
+  setHTML('raw', s.rawArtifacts.map(a => '<a class="mono" style="display:block;color:var(--ink2);text-decoration:none;font-size:.74rem;padding:.06rem 0" href="/artifact/' + a + q() + '" target="_blank">' + esc(a) + '</a>').join(''));
 
   // activity: foldable groups per step
   const groups = [];
@@ -2211,10 +2266,10 @@ async function tick() {
     const name = meta[id] ? meta[id].name : id;
     const chosen = s.designChoice === id;
     return '<div class="design' + (chosen ? ' chosen' : '') + '">' + (chosen ? '<span class="sel">✓ Selected</span>' : '') +
-      '<div class="thumb"><iframe src="/artifact/' + p + '" loading="lazy" tabindex="-1"></iframe>' +
-      '<a href="/artifact/' + p + '" target="_blank" title="Open ' + esc(name) + ' full size"></a></div>' +
+      '<div class="thumb"><iframe src="/artifact/' + p + q() + '" loading="lazy" tabindex="-1"></iframe>' +
+      '<a href="/artifact/' + p + q() + '" target="_blank" title="Open ' + esc(name) + ' full size"></a></div>' +
       '<div class="bar"><b>' + esc(name) + '</b><span class="chip mono">' + esc(id) + '</span>' +
-      '<a href="/artifact/' + p + '" target="_blank">open</a>' +
+      '<a href="/artifact/' + p + q() + '" target="_blank">open</a>' +
       '<button data-id="' + esc(id) + '"' + (s.designChoice ? ' disabled' : '') + '>' + (chosen ? 'Chosen' : 'Choose') + '</button></div></div>';
   }).join(''));
   if (designsChanged) document.querySelectorAll('.design button:not([disabled])').forEach(b => b.onclick = () => {
@@ -2266,9 +2321,15 @@ async function tick() {
       wireUpload(form);
       form.onsubmit = async (ev) => {
         ev.preventDefault();
+        const btn = form.querySelector('button[type=submit]');
+        btn.disabled = true; btn.textContent = 'Recording…';
         const answers = Object.fromEntries(new FormData(form).entries());
-        await fetch('/api/answer' + q(), { method:'POST', body: JSON.stringify({ nodeId: form.dataset.node, answers }) });
-        form.dataset.node = '';
+        const r = await (await fetch('/api/answer' + q(), { method:'POST', body: JSON.stringify({ nodeId: form.dataset.node, answers }) })).json().catch(() => ({}));
+        btn.textContent = !r.ok ? 'Failed — try again'
+          : r.applied === 'resuming' ? '✓ Answer taken — resuming the run'
+          : '✓ Answer recorded — it applies at the next checkpoint';
+        if (r.ok) setTimeout(() => { form.dataset.node = ''; tick(); }, 1200);
+        else btn.disabled = false;
       };
     }
   } else panel.style.display = 'none';
