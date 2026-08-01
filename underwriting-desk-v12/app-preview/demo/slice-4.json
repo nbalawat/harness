@@ -1,0 +1,11 @@
+{
+  "screen": "screen-sla-dashboard",
+  "caption": "A credit officer approves Ironvale Fabrication ($900,000) from the decision desk: the server checks the exposure tier, confirms the deal has reached the approval gate with no open policy exception, records the decision under senior_credit_officer authority with its idempotency key, and moves the deal to closing — beside the live idle register, which counts each stalled deal's neglect in business days and names the desk it escalates to.",
+  "steps": [
+    { "action": "click", "selector": "[data-screen=\"sla-dashboard\"]" },
+    { "action": "fill", "selector": "#sla-decision-deal-code", "value": "DEAL-1004" },
+    { "action": "fill", "selector": "#sla-decision-officer-email", "value": "officer@bank.test" },
+    { "action": "fill", "selector": "#sla-decision-notes", "value": "Exposure $900,000 above the analyst ceiling; DSCR above the 1.25 policy floor." },
+    { "action": "click", "selector": "#sla-decision-approve-btn" }
+  ]
+}

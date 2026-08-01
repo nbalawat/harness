@@ -1,0 +1,18 @@
+{
+  "screen": "screen-chat",
+  "caption": "The Portfolio Desk answers plain-English questions from the stored deal book only: after Meridian Cold Storage is filed, it names the deals with no accepted spread and then totals the exposure in flight — real deal codes and real figures read from the live records, each answer printing the deal ids behind it and framed as a draft pending analyst approval.",
+  "steps": [
+    { "action": "click", "selector": "[data-screen=\"pipeline-board\"]" },
+    { "action": "fill", "selector": "#intake-borrower-name", "value": "Meridian Cold Storage" },
+    { "action": "fill", "selector": "#intake-industry", "value": "cold storage logistics" },
+    { "action": "fill", "selector": "#intake-requested", "value": "325000" },
+    { "action": "fill", "selector": "#intake-exposure", "value": "325000" },
+    { "action": "fill", "selector": "#intake-rm-email", "value": "rm@bank.test" },
+    { "action": "click", "selector": "#intake-submit-btn" },
+    { "action": "click", "selector": "[data-screen=\"chat\"]" },
+    { "action": "fill", "selector": "#input", "value": "Which deals lack an accepted spread?" },
+    { "action": "click", "selector": "#composer button[type=\"submit\"]" },
+    { "action": "fill", "selector": "#input", "value": "How much exposure is in flight and where is it?" },
+    { "action": "click", "selector": "#composer button[type=\"submit\"]" }
+  ]
+}

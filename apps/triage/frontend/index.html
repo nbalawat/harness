@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Triage — AI support-ticket board</title>
+<style>
+  :root{
+    --bg:#0f1115;--panel:#171a21;--panel2:#1e222b;--border:#2a2f3a;--fg:#e7eaf0;--muted:#9aa3b2;
+    --accent:#5b8cff;--font:'Inter',system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+    --low:#5c6675;--med:#3f7fb3;--high:#d99036;--urgent:#e05a5a;
+    --bug:#e05a5a;--question:#5b8cff;--feature:#3fb37f;--billing:#c07ad9;
+  }
+  @media (prefers-color-scheme: light){:root{--bg:#f4f6fb;--panel:#fff;--panel2:#eef2f8;--border:#e2e7f0;--fg:#141821;--muted:#5c6675}}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:var(--font);background:var(--bg);color:var(--fg);min-height:100vh}
+  header{display:flex;align-items:center;gap:.7rem;padding:.85rem 1.4rem;border-bottom:1px solid var(--border);background:var(--panel);position:sticky;top:0;z-index:5}
+  .logo{width:30px;height:30px;border-radius:9px;background:linear-gradient(135deg,#e05a5a,#d99036);display:grid;place-items:center;font-weight:800;color:#fff}
+  header h1{font-size:1.02rem;margin:0;font-weight:650}
+  header .sub{color:var(--muted);font-size:.78rem}
+  .stats{margin-left:auto;display:flex;gap:1.3rem;font-size:.8rem}
+  .stat b{font-size:1.1rem;display:block}.stat span{color:var(--muted)}
+  .mode{font-size:.72rem;color:var(--muted);padding:.3rem .6rem;border:1px solid var(--border);border-radius:999px;display:flex;align-items:center;gap:.4rem}
+  .mode .dot{width:7px;height:7px;border-radius:50%;background:#3fb37f}
+  .new{padding:1rem 1.4rem;border-bottom:1px solid var(--border);background:var(--panel2)}
+  .new form{display:flex;gap:.6rem;flex-wrap:wrap;max-width:1000px}
+  .new input,.new textarea{padding:.6rem .8rem;border:1px solid var(--border);border-radius:10px;background:var(--bg);color:var(--fg);font:inherit}
+  .new input{flex:1;min-width:240px}.new textarea{flex:2;min-width:280px;resize:vertical;min-height:42px;max-height:120px}
+  .new button{padding:.6rem 1.2rem;border:0;border-radius:10px;background:var(--accent);color:#fff;font-weight:600;cursor:pointer}
+  .new button:disabled{opacity:.5}
+  .board{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;padding:1.2rem 1.4rem;max-width:1400px}
+  .col{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:.8rem;min-height:200px}
+  .col h2{font-size:.78rem;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin:.2rem .2rem 1rem;display:flex;justify-content:space-between}
+  .card{background:var(--panel2);border:1px solid var(--border);border-radius:11px;padding:.8rem;margin-bottom:.7rem}
+  .card .top{display:flex;gap:.4rem;align-items:center;margin-bottom:.4rem;flex-wrap:wrap}
+  .badge{font-size:.68rem;font-weight:650;padding:.12rem .5rem;border-radius:6px;color:#fff}
+  .pri-Low{background:var(--low)}.pri-Medium{background:var(--med)}.pri-High{background:var(--high)}.pri-Urgent{background:var(--urgent)}
+  .cat{font-size:.68rem;font-weight:600;padding:.12rem .5rem;border-radius:6px;border:1px solid var(--border);color:var(--muted)}
+  .cat[data-c="Bug"]{color:var(--bug);border-color:var(--bug)}
+  .cat[data-c="Question"]{color:var(--question);border-color:var(--question)}
+  .cat[data-c="Feature request"]{color:var(--feature);border-color:var(--feature)}
+  .cat[data-c="Billing"]{color:var(--billing);border-color:var(--billing)}
+  .card h3{font-size:.9rem;margin:.1rem 0 .3rem;font-weight:600;line-height:1.35}
+  .card .body{font-size:.8rem;color:var(--muted);line-height:1.45;margin-bottom:.5rem;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .ai{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:.5rem .6rem;margin:.4rem 0;font-size:.78rem}
+  .ai .lbl{font-size:.64rem;text-transform:uppercase;letter-spacing:.06em;color:var(--accent);font-weight:700;margin-bottom:.2rem}
+  .actions{display:flex;gap:.4rem;margin-top:.5rem}
+  .actions button{flex:1;padding:.4rem;border:1px solid var(--border);border-radius:8px;background:var(--panel);color:var(--fg);font-size:.76rem;cursor:pointer}
+  .actions button:hover{border-color:var(--accent);color:var(--accent)}
+  .empty{color:var(--muted);font-size:.82rem;text-align:center;padding:1.4rem .5rem}
+  @media(max-width:900px){.board{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+  <header>
+    <div class="logo">T</div>
+    <div><h1>Triage</h1><div class="sub">AI support-ticket board</div></div>
+    <div class="stats" id="stats"></div>
+    <div class="mode"><span class="dot"></span><span id="mode">…</span></div>
+  </header>
+  <div class="new">
+    <form id="newForm">
+      <input id="t-title" placeholder="Ticket title (e.g. Login fails after deploy)" />
+      <textarea id="t-body" placeholder="Describe the issue…"></textarea>
+      <button id="t-submit" type="submit">Add &amp; auto-triage</button>
+    </form>
+  </div>
+  <div class="board" id="board"></div>
+  <script src="app.js" defer></script>
+</body>
+</html>

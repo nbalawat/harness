@@ -625,28 +625,20 @@ def _verify_narrative(narrative, retrieve):
     selected = retrieve["context_records"]
     if not selected:
         return False, "no_matching_records"
-    # Grounded either by a deal code OR by a borrower name we actually gave it —
-    # a good answer often refers to "Ironvale Fabrication", not "DEAL-1004".
-    names = {str(r.get("borrower_name", "")).lower() for r in selected if r.get("borrower_name")}
-    if not (any(r["deal_id"].lower() in low for r in selected) or any(n and n in low for n in names)):
+    if not any(r["deal_id"].lower() in low for r in selected):
         return False, "cited_none_of_the_records"
     # Any deal id it names must be one it was actually given.
     given = {r["deal_id"].lower() for r in selected} | {c.lower() for c in retrieve["scope_deal_ids"]}
     for code in _DEAL_CODE_RE.findall(low):
         if code not in given:
             return False, f"cited_out_of_scope_deal:{code}"
-    # Only FINANCIAL figures must be system-computed. Incidental numbers a
-    # natural answer uses — counts ("2 deals"), day thresholds ("5 business
-    # days"), grades ("grade 4") — are not financial claims and must not nuke
-    # an otherwise-grounded answer into the robotic digest. A financial figure
-    # is a monetary amount (>= 1000) or a decimal ratio.
+    # Any figure it quotes must be one THIS module computed.
     allowed = _system_computed_numbers(retrieve)
     for token in _NUMBER_RE.findall(_DEAL_CODE_RE.sub(" ", narrative)):
         value = _as_number(token)
         if value is None:
             continue
-        is_financial = value >= 1000 or (not float(value).is_integer())
-        if is_financial and value not in allowed:
+        if value not in allowed:
             return False, f"quoted_a_figure_the_system_did_not_compute:{token}"
     return True, "agent"
 
@@ -828,12 +820,7 @@ def ask_portfolio_qa(req: QaAskRequest):
     # honesty guard: an answer never claims a source it did not read, and never
     # hides the reading it did do).
     citable = retrieve["context_records"] or retrieve["scope_records"]
-    # The human-facing answer is CLEAN PROSE. Provenance travels structured in
-    # source_deal_ids (the UI renders it as a subtle sources footer) — never
-    # dumped as "[1][2]... Sources: DEAL-XXXX: <full raw state>" into the chat
-    # bubble, which is unreadable.
-    _rendered, cited_ids, _sourced = _build_answer(narrative, citable)
-    answer_text = narrative.strip()
+    answer_text, cited_ids, _sourced = _build_answer(narrative, citable)
     unsupported = [] if retrieve["context_records"] else [f"no deal in scope matches {retrieve['subject']}"]
 
     ground = verify_answer_grounding({
