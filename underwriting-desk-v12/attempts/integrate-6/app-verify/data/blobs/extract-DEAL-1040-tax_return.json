@@ -1,0 +1,16 @@
+{
+  "deal_code": "DEAL-1040",
+  "document_type": "tax_return",
+  "figures": [
+    {
+      "line_item_key": "annual_debt_service",
+      "period": "FY2025",
+      "value": 574200.0,
+      "unit": "USD",
+      "page_number": 3,
+      "section": "Schedule L",
+      "cell_locator": "row 6",
+      "quoted_text": null
+    }
+  ]
+}

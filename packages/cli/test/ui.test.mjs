@@ -537,3 +537,37 @@ test("remediation vs enhancement: a new-requirement wave is NOT labelled remedia
   assert.equal(w1.kind, "remediation", "a defect fix on a slice is a remediation");
   assert.equal(w2.kind, "enhancement", "a new requirement via the front door is an enhancement, not remediation");
 });
+
+test("remediation waves: robust across a MESSY span (multiple terminals + recovery)", () => {
+  // The real-world failure the boundary-fold fixes: a wave's span contains a
+  // failure, then a resume, then completion, then another completion (audit
+  // refresh) — and the wave RECOVERED after a budget-bump. Heuristic
+  // terminal-scanning got this wrong; folding to the boundary does not.
+  const ws = tmpDir("messy");
+  fs.writeFileSync(path.join(ws, "run.json"), JSON.stringify({ projectTypeDir: DEMO_DIR, mockAgents: true }));
+  const T = "2026-08-01T10:00:00.000Z";
+  const ev = (o) => JSON.stringify({ ts: T, ...o });
+  const L = [
+    ev({ type: "node.committed", nodeId: "intake", artifacts: {} }),
+    // wave 1: revise -> fail (budget) -> resume -> complete -> complete again
+    ev({ type: "node.reopened", nodeId: "intake", reason: "user_revision", feedback: "fix it" }),
+    ev({ type: "node.running", nodeId: "intake", attempt: 2 }),
+    ev({ type: "budget.exceeded", scope: "run" }),
+    ev({ type: "run.failed", nodeId: "intake" }),
+    // operator bump + resume: engine runs again, no new terminal fail
+    ev({ type: "node.running", nodeId: "intake", attempt: 3 }),
+    ev({ type: "node.committed", nodeId: "intake", artifacts: {} }),
+  ];
+  fs.writeFileSync(path.join(ws, "journal.jsonl"), L.join("\n") + "\n");
+  let s = buildState(ws);
+  assert.equal(s.remediation.length, 1);
+  assert.equal(s.remediation[0].ended.kind, "active", "recovered after the budget failure — not stuck on the stale 'failed'");
+  const a = s.remediation[0].actions.find((x) => x.nodeId === "intake");
+  assert.equal(a.outcome, "committed", "boundary fold shows the node rebuilt, not failed");
+
+  // Now the same wave truly completes.
+  fs.appendFileSync(path.join(ws, "journal.jsonl"), ev({ type: "run.completed" }) + "\n");
+  s = buildState(ws);
+  assert.equal(s.remediation[0].ended.kind, "completed");
+  assert.equal(s.remediation[0].remaining.length, 0);
+});

@@ -1,0 +1,55 @@
+{
+  "screens": [
+    {
+      "id": "screen-chat",
+      "title": "The Portfolio Desk",
+      "covered_by_slice": 5,
+      "present": true,
+      "elements_declared": 7,
+      "elements_present": 7,
+      "shot": "coverage/screen-chat.png"
+    },
+    {
+      "id": "screen-pipeline-board",
+      "title": "Pipeline Board",
+      "covered_by_slice": 1,
+      "present": true,
+      "elements_declared": 8,
+      "elements_present": 8,
+      "shot": "coverage/screen-pipeline-board.png"
+    },
+    {
+      "id": "screen-deal-detail",
+      "title": "Deal Dossier",
+      "covered_by_slice": 2,
+      "present": true,
+      "elements_declared": 8,
+      "elements_present": 8,
+      "shot": "coverage/screen-deal-detail.png"
+    },
+    {
+      "id": "screen-audit-timeline",
+      "title": "The Chronicle",
+      "covered_by_slice": 3,
+      "present": true,
+      "elements_declared": 1,
+      "elements_present": 1,
+      "shot": "coverage/screen-audit-timeline.png"
+    },
+    {
+      "id": "screen-sla-dashboard",
+      "title": "The Idle Register",
+      "covered_by_slice": 4,
+      "present": true,
+      "elements_declared": 2,
+      "elements_present": 2,
+      "shot": "coverage/screen-sla-dashboard.png"
+    }
+  ],
+  "totals": {
+    "screens": 5,
+    "screens_present": 5,
+    "elements_declared": 26,
+    "elements_present": 26
+  }
+}

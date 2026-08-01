@@ -1,0 +1,11 @@
+{
+  "screen": "screen-audit-timeline",
+  "caption": "On DEAL-1003 (Calder & Vance Millworks) the Credit Memo Agent drafts a fully cited memo from the accepted spread, ratios and grade; an analyst accepts it; the Policy Compliance Agent then tests the deal against lending policy v4.2, raising written exceptions for the 82.02% LTV and the 1.24x DSCR — and every one of those acts lands, sealed and in order, on the append-only chronicle beneath.",
+  "steps": [
+    { "action": "click", "selector": "[data-screen=\"audit-timeline\"]" },
+    { "action": "click", "selector": "#memo-run-btn" },
+    { "action": "click", "selector": "#memo-accept-btn" },
+    { "action": "click", "selector": "#policy-run-btn" },
+    { "action": "click", "selector": "#policy-accept-btn" }
+  ]
+}

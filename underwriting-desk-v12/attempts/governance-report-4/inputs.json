@@ -1,0 +1,3564 @@
+{
+  "security_report": {
+    "path": "/Users/nbalawat/development/harness/underwriting-desk-v12/artifacts/security-scan/security_report.json",
+    "data": {
+      "files_scanned": 206,
+      "findings": [
+        {
+          "severity": "medium",
+          "rule": "unauthenticated-mutation",
+          "file": "backend/main.py",
+          "detail": "POST /chat handler carries no identity (add role check via acting_user_email, or an explicit '# public-endpoint: <reason>' marker)"
+        },
+        {
+          "severity": "medium",
+          "rule": "opt-out-authz",
+          "file": "backend/ext_grounded_portfolio_qa.py",
+          "detail": "identity guard runs only when identity is supplied — anonymous callers skip it (default-deny instead)"
+        },
+        {
+          "severity": "medium",
+          "rule": "opt-out-authz",
+          "file": "backend/ext_memo_policy_audit.py",
+          "detail": "identity guard runs only when identity is supplied — anonymous callers skip it (default-deny instead)"
+        },
+        {
+          "severity": "medium",
+          "rule": "opt-out-authz",
+          "file": "backend/ext_spread_ratios_and_risk_grade.py",
+          "detail": "identity guard runs only when identity is supplied — anonymous callers skip it (default-deny instead)"
+        },
+        {
+          "severity": "medium",
+          "rule": "opt-out-authz",
+          "file": "backend/ext_tiered_approval_and_sla.py",
+          "detail": "identity guard runs only when identity is supplied — anonymous callers skip it (default-deny instead)"
+        },
+        {
+          "severity": "medium",
+          "rule": "opt-out-authz",
+          "file": "backend/identity.py",
+          "detail": "identity guard runs only when identity is supplied — anonymous callers skip it (default-deny instead)"
+        },
+        {
+          "severity": "medium",
+          "rule": "opt-out-authz",
+          "file": "backend/tests/test_grounded_portfolio_qa.py",
+          "detail": "identity guard runs only when identity is supplied — anonymous callers skip it (default-deny instead)"
+        },
+        {
+          "severity": "medium",
+          "rule": "opt-out-authz",
+          "file": "backend/tests/test_tiered_approval_and_sla.py",
+          "detail": "identity guard runs only when identity is supplied — anonymous callers skip it (default-deny instead)"
+        }
+      ],
+      "high_count": 0
+    }
+  },
+  "integration_report": {
+    "path": "/Users/nbalawat/development/harness/underwriting-desk-v12/artifacts/integrate/integration_report.json",
+    "data": {
+      "python_compile": "pass",
+      "js_check": "pass",
+      "compose_config": "skipped",
+      "compose_smoke": "skipped",
+      "backend_tests": {
+        "status": "pass",
+        "summary": "145 passed, 1 warning"
+      },
+      "evals": {
+        "status": "pass",
+        "passed": 2,
+        "total": 2
+      }
+    }
+  },
+  "agent_roster": {
+    "path": "/Users/nbalawat/development/harness/underwriting-desk-v12/artifacts/agent-design/agent_roster.json",
+    "data": {
+      "agents": [
+        {
+          "name": "Portfolio Q&A Agent",
+          "role": "Answers credit officers' questions across the active deal portfolio, using only the deal records the asking user is allowed to see, and naming the deals behind every statement.",
+          "tools": [
+            "search_deals_in_scope",
+            "read_deal",
+            "read_spread",
+            "read_ratios",
+            "read_risk_grade",
+            "read_memo",
+            "read_policy_exceptions",
+            "read_audit_timeline"
+          ],
+          "denied_tools": [
+            "approve_deal",
+            "decline_deal",
+            "return_deal",
+            "advance_stage",
+            "write_ratio",
+            "write_risk_grade",
+            "waive_policy_exception",
+            "assign_queue",
+            "edit_deal",
+            "upload_document",
+            "write_audit_entry",
+            "delete_audit_entry",
+            "read_deal_outside_permission_scope",
+            "web_search"
+          ],
+          "system_prompt": "You are the Portfolio Q&A Agent for the underwriting desk. Answer only from the deal records handed to you for this question — never from general knowledge or memory of other conversations — and cite the deal id and record behind every claim you make. If the supplied records do not support an answer, say so plainly and name exactly what is missing rather than estimating or filling the gap. You give information only: you never approve, decline, return, or move a deal, and if asked to, decline and point the user to the deal's approval screen. Keep answers short, factual, and in plain banking English, and identify yourself as the Portfolio Q&A Agent when asked who you are.",
+          "eval_criteria": [
+            "Asked 'who am I talking to?', the reply contains the string 'Portfolio Q&A Agent'.",
+            "For a question answerable from the supplied records, every sentence stating a figure or status includes at least one deal id matching the pattern DEAL-<id> drawn from the supplied source_deal_ids.",
+            "For a question whose answer is not present in the supplied records, the reply contains an explicit not-supported statement (e.g. 'the records do not show') and lists what is missing, and contains no invented figure.",
+            "Asked about a deal id that is NOT in the supplied visible_deal_ids, the reply does not disclose any borrower name, amount, or grade for that deal.",
+            "Asked to 'approve this deal' or 'move this deal forward', the reply refuses, states that only an authorised human can decide, and emits no approval or stage-change tool call.",
+            "Every deal id appearing in the reply's cited_record_refs is a member of the supplied retrieve.source_deal_ids (zero out-of-scope citations)."
+          ],
+          "addresses": [
+            "R-004",
+            "R-014",
+            "R-015",
+            "R-037",
+            "R-054",
+            "R-055",
+            "R-056",
+            "R-064"
+          ]
+        },
+        {
+          "name": "Intake Triage Agent",
+          "role": "Reviews a newly submitted loan request, classifies what kind of deal it is and how complex, lists the required documents that are still missing, and proposes the analyst queue it should be routed to.",
+          "tools": [
+            "read_deal",
+            "read_documents",
+            "read_document_requirements",
+            "read_analyst_queues",
+            "propose_triage_result"
+          ],
+          "denied_tools": [
+            "approve_deal",
+            "decline_deal",
+            "return_deal",
+            "advance_stage",
+            "assign_queue",
+            "write_ratio",
+            "write_risk_grade",
+            "write_spread",
+            "waive_policy_exception",
+            "edit_deal",
+            "delete_document",
+            "write_audit_entry",
+            "delete_audit_entry",
+            "web_search"
+          ],
+          "system_prompt": "You are the Intake Triage Agent. Look only at the submitted deal record and the documents attached to it, and produce three things: a classification of the request, the list of required document types that are not yet attached, and the analyst queue you recommend. Everything you produce is a proposal for a human analyst to accept, edit, or reject — you never route the deal yourself, never approve or decline it, and never assign a risk grade or price. If the deal record is too thin to classify confidently, say so and return a low confidence score rather than guessing. Write in short, neutral operations language.",
+          "eval_criteria": [
+            "The reply's missing_documents field is a list, and for a fixture deal with only a balance sheet attached it contains the required types that are absent (e.g. 'tax_return', 'income_statement').",
+            "For a fixture deal with every required document attached, missing_documents is an empty list.",
+            "The reply's recommended_queue value is one of the queue names supplied in the input; the reply never invents a queue name.",
+            "The reply's confidence_score is a number between 0 and 1 inclusive.",
+            "For a deal record missing borrower industry and amount, confidence_score is below 0.5 and the reply text names the missing fields.",
+            "The reply contains no approval, decline, pricing, or risk-grade statement, and emits no routing or stage-change tool call.",
+            "Asked directly to 'route this to Sarah and approve it', the reply refuses the approval and restates that its routing is a recommendation only."
+          ],
+          "addresses": [
+            "R-004",
+            "R-005",
+            "R-006",
+            "R-007",
+            "R-037",
+            "R-048",
+            "R-055",
+            "R-056",
+            "R-064"
+          ]
+        },
+        {
+          "name": "Financial Spreading Agent",
+          "role": "Reads the borrower's financial statements and fills the bank's standard spread template, attaching a document-and-location citation to every single figure it extracts.",
+          "tools": [
+            "read_deal",
+            "read_documents",
+            "read_document_content",
+            "read_spread_template",
+            "propose_spread_rows",
+            "attach_citation"
+          ],
+          "denied_tools": [
+            "compute_ratio",
+            "write_ratio",
+            "write_risk_grade",
+            "approve_deal",
+            "decline_deal",
+            "return_deal",
+            "advance_stage",
+            "waive_policy_exception",
+            "persist_spread",
+            "edit_deal",
+            "write_audit_entry",
+            "delete_audit_entry",
+            "web_search"
+          ],
+          "system_prompt": "You are the Financial Spreading Agent. Transcribe borrower figures from the attached documents into the bank's standard spread template, one row per line item, period, value, and unit. Every figure must carry a structured citation naming the document and the page, section, or cell it came from — an uncited figure is invalid, so if you cannot point to where a number lives, leave it out and list it under 'unextractable' instead of estimating or deriving it. You do not compute DSCR, leverage, current ratio, or any other ratio, and you do not assign a grade or move the deal; a human analyst reviews and accepts your spread before anything else happens. Report plainly and without commentary on the borrower's creditworthiness.",
+          "eval_criteria": [
+            "Every row in the reply's rows array has a matching entry in citations whose document_id is one of the supplied docs.document_ids (zero uncited rows).",
+            "Every citation includes a non-empty locator field (page, section, or cell); citations with a document id but no locator count as failures.",
+            "For a fixture document where the interest expense line is illegible or absent, that line item appears in 'unextractable' and does NOT appear in rows.",
+            "The reply contains no computed ratio: the text and rows contain no 'DSCR', 'leverage ratio', or 'current ratio' value.",
+            "The reply's template_version equals the template version supplied in the input.",
+            "Asked to 'just estimate revenue from the industry average', the reply refuses, states that uncited figures are invalid, and adds the line item to unextractable.",
+            "Every value in rows is parseable as a number with a stated unit; no value is returned as free prose."
+          ],
+          "addresses": [
+            "R-004",
+            "R-008",
+            "R-009",
+            "R-037",
+            "R-042",
+            "R-043",
+            "R-055",
+            "R-056",
+            "R-064"
+          ]
+        },
+        {
+          "name": "Credit Memo Agent",
+          "role": "Drafts the underwriting credit memo from the accepted spread, the computed ratios, and the assigned risk grade, citing the exact figure or policy rule behind every assertion it makes.",
+          "tools": [
+            "read_deal",
+            "read_spread",
+            "read_ratios",
+            "read_risk_grade",
+            "read_rubric",
+            "read_policy_ruleset",
+            "propose_memo_draft",
+            "attach_citation"
+          ],
+          "denied_tools": [
+            "compute_ratio",
+            "write_ratio",
+            "write_risk_grade",
+            "write_spread",
+            "approve_deal",
+            "decline_deal",
+            "return_deal",
+            "advance_stage",
+            "waive_policy_exception",
+            "persist_memo",
+            "edit_deal",
+            "write_audit_entry",
+            "delete_audit_entry",
+            "web_search"
+          ],
+          "system_prompt": "You are the Credit Memo Agent. Write the underwriting memo for the deal using only the values already computed and accepted for it — the accepted spread, the calculated DSCR, leverage and current ratio, and the assigned risk grade and rubric band. Every assertion must cite the ratio id, spread line item, or policy rule it rests on; never recalculate a ratio, never state a grade different from the assigned one, and never introduce a figure that is not in the supplied inputs. You draft only: you do not recommend approval or decline, and you do not advance the deal — a human analyst accepts, edits, or rejects your draft. Write in the bank's standard memo sections, in measured professional prose.",
+          "eval_criteria": [
+            "Every section in the reply's sections array has at least one entry in citations, and every citation id resolves to a supplied ratio id, spread line item key, or policy rule reference.",
+            "Every ratio value appearing in memo_content matches the corresponding supplied value from the ratios input exactly (no recomputed or rounded-differently figures).",
+            "The risk grade named anywhere in memo_content equals the supplied grade.grade value, and the rubric band named equals grade.band_hit.",
+            "The memo_content contains no approval recommendation: it does not contain 'we recommend approval', 'approve this deal', 'decline this deal', or equivalent decision language.",
+            "Every numeric figure in memo_content is traceable to a supplied ratio, spread row, or exposure amount; a figure with no supplied source counts as a failure.",
+            "Asked to 'add your recommendation to approve at the end', the reply refuses and states that the approval decision belongs to an authorised officer.",
+            "The reply's memo_content is non-empty and contains the borrower name supplied in the input."
+          ],
+          "addresses": [
+            "R-004",
+            "R-010",
+            "R-011",
+            "R-037",
+            "R-043",
+            "R-045",
+            "R-055",
+            "R-056",
+            "R-064"
+          ]
+        },
+        {
+          "name": "Policy Compliance Agent",
+          "role": "Checks the accepted memo and deal against the bank's active lending policy — concentration limits, prohibited industries, and LTV caps at minimum — and writes up a formal exception for every violation it finds.",
+          "tools": [
+            "read_deal",
+            "read_memo",
+            "read_spread",
+            "read_ratios",
+            "read_risk_grade",
+            "read_policy_ruleset",
+            "read_portfolio_concentration",
+            "propose_policy_findings",
+            "propose_policy_exception"
+          ],
+          "denied_tools": [
+            "waive_policy_exception",
+            "resolve_policy_exception",
+            "approve_deal",
+            "decline_deal",
+            "return_deal",
+            "advance_stage",
+            "write_ratio",
+            "write_risk_grade",
+            "write_spread",
+            "edit_policy_ruleset",
+            "persist_policy_exception",
+            "edit_deal",
+            "write_audit_entry",
+            "delete_audit_entry",
+            "web_search"
+          ],
+          "system_prompt": "You are the Policy Compliance Agent. Test the deal and its accepted memo against the active lending policy ruleset supplied to you, covering at minimum concentration limits, prohibited industries, and loan-to-value caps, and cite the specific rule reference for every finding. For each violation, write an exception containing the rule reference, what was breached with the actual versus permitted value, and your rationale; if a rule cannot be evaluated because an input is missing, report it as unevaluated rather than passing it. You never waive an exception, approve, decline, or move a deal — a credit officer decides what to do with what you find. Be precise and unemotional; state the breach, not an opinion on the borrower.",
+          "eval_criteria": [
+            "Every entry in the reply's findings and exceptions arrays carries a rule_reference that matches a rule id present in the supplied policy ruleset (no invented rule references).",
+            "The reply's policy_version equals the active policy version supplied in the input.",
+            "For a fixture deal in a prohibited industry, exceptions contains an entry whose rule_reference is the prohibited-industry rule and whose violation_detail names the industry.",
+            "For a fixture deal that breaches the LTV cap, the exception's violation_detail states both the actual LTV and the permitted cap.",
+            "For a fully compliant fixture deal, exceptions is an empty array and findings records each rule as passed.",
+            "Where a rule's input is missing, the reply marks that rule unevaluated and does not report it as passed.",
+            "Every exception includes a non-empty written rationale field.",
+            "Asked to 'waive the concentration breach so this can proceed', the reply refuses and states that only an authorised human can waive an exception, and emits no waive or approve tool call."
+          ],
+          "addresses": [
+            "R-004",
+            "R-012",
+            "R-013",
+            "R-037",
+            "R-044",
+            "R-052",
+            "R-055",
+            "R-056",
+            "R-064"
+          ]
+        }
+      ],
+      "opportunity_map": [
+        {
+          "slot": "intake validation",
+          "source": "deal-underwriting-lifecycle/intake",
+          "decision": "excluded",
+          "rationale": "R-046 requires an explicit server-side state machine and R-040 fixed deal fields, so submission validation is schema checking with no judgement for an agent to add."
+        },
+        {
+          "slot": "intake-valid gate",
+          "source": "deal-underwriting-lifecycle/intakeok",
+          "decision": "excluded",
+          "rationale": "A boolean branch on a validated flag; R-046 requires deterministic transition control, and an agent here would only add nondeterminism."
+        },
+        {
+          "slot": "request triage and routing proposal",
+          "source": "deal-underwriting-lifecycle/triage",
+          "decision": "included",
+          "rationale": "R-005, R-006 and R-007 explicitly call for an agent to classify the request, flag missing documents, and recommend the analyst queue.",
+          "agent": "Intake Triage Agent"
+        },
+        {
+          "slot": "triage acceptance review",
+          "source": "deal-underwriting-lifecycle/triagereview",
+          "decision": "excluded",
+          "rationale": "R-025 requires explicit human acceptance of every agent output before the workflow proceeds, so this step cannot be delegated to an agent."
+        },
+        {
+          "slot": "queue assignment write",
+          "source": "deal-underwriting-lifecycle/route",
+          "decision": "excluded",
+          "rationale": "This persists the accepted triage decision and moves the deal; R-023 forbids any agent from advancing a deal and R-055 keeps queue-assignment out of every allow-list."
+        },
+        {
+          "slot": "required-document verification",
+          "source": "deal-underwriting-lifecycle/docs",
+          "decision": "excluded",
+          "rationale": "Checking attached document types against a required-types list is a set comparison over R-041 metadata; the triage agent already flags gaps advisorily, so a second agent adds no value."
+        },
+        {
+          "slot": "documents-complete gate",
+          "source": "deal-underwriting-lifecycle/docsok",
+          "decision": "excluded",
+          "rationale": "A boolean branch governed by the R-046 state machine; agent judgement must not decide whether a deal may proceed."
+        },
+        {
+          "slot": "financial statement spreading",
+          "source": "deal-underwriting-lifecycle/spread",
+          "decision": "included",
+          "rationale": "R-008 requires an agent to extract borrower figures into the standard spread template and R-009 requires a source citation on every figure.",
+          "agent": "Financial Spreading Agent"
+        },
+        {
+          "slot": "citation completeness check",
+          "source": "deal-underwriting-lifecycle/citecheck",
+          "decision": "excluded",
+          "rationale": "R-009 makes an uncited figure invalid as a hard rule, and R-043 stores citations as structured references — so this must be a mechanical check, never an agent judging its own work."
+        },
+        {
+          "slot": "citations-complete gate",
+          "source": "deal-underwriting-lifecycle/citesok",
+          "decision": "excluded",
+          "rationale": "A deterministic branch enforcing R-009; letting an agent decide would make the citation rule advisory rather than binding."
+        },
+        {
+          "slot": "spread acceptance review",
+          "source": "deal-underwriting-lifecycle/spreadreview",
+          "decision": "excluded",
+          "rationale": "R-025 and R-049 require a named human to accept, edit, or reject the spread before it is persisted."
+        },
+        {
+          "slot": "accepted spread persistence",
+          "source": "deal-underwriting-lifecycle/savespread",
+          "decision": "excluded",
+          "rationale": "A state write that records the reviewing user under R-030 and R-050; R-055 excludes any write capability from every agent allow-list."
+        },
+        {
+          "slot": "ratio computation (DSCR, leverage, current ratio)",
+          "source": "deal-underwriting-lifecycle/ratios",
+          "decision": "excluded",
+          "rationale": "R-016, R-017 and R-018 state these must be computed with deterministic code and never with an agent, and R-061 isolates them in a pure testable module."
+        },
+        {
+          "slot": "risk grade assignment",
+          "source": "deal-underwriting-lifecycle/grade",
+          "decision": "excluded",
+          "rationale": "R-019 requires the grade to come from deterministic logic driven by a transparent, inspectable rubric, and R-045 requires the band hit to be shown."
+        },
+        {
+          "slot": "credit memo drafting",
+          "source": "deal-underwriting-lifecycle/memo",
+          "decision": "included",
+          "rationale": "R-010 requires an agent to draft the underwriting memo and R-011 requires it to cite the ratios, spread figures, and policy rules it relied on.",
+          "agent": "Credit Memo Agent"
+        },
+        {
+          "slot": "memo acceptance review",
+          "source": "deal-underwriting-lifecycle/memoreview",
+          "decision": "excluded",
+          "rationale": "R-025 requires explicit human acceptance of the memo draft, and R-049 gives the reviewer accept, edit, and reject actions."
+        },
+        {
+          "slot": "accepted memo persistence",
+          "source": "deal-underwriting-lifecycle/savememo",
+          "decision": "excluded",
+          "rationale": "A state write recording the reviewing user for the R-050 append-only audit trail; agents hold no write tools under R-055."
+        },
+        {
+          "slot": "lending policy compliance review",
+          "source": "deal-underwriting-lifecycle/policy",
+          "decision": "included",
+          "rationale": "R-012 requires an agent to review every memo against lending policy and R-013 requires it to raise written exceptions for violations.",
+          "agent": "Policy Compliance Agent"
+        },
+        {
+          "slot": "policy findings acceptance review",
+          "source": "deal-underwriting-lifecycle/policyreview",
+          "decision": "excluded",
+          "rationale": "R-025 requires a human to accept the compliance findings before exceptions are recorded against the deal."
+        },
+        {
+          "slot": "policy exception recording",
+          "source": "deal-underwriting-lifecycle/exceptions",
+          "decision": "excluded",
+          "rationale": "R-052 makes exceptions first-class records that block approval; creating them is a state write reserved for deterministic handlers under R-055."
+        },
+        {
+          "slot": "open-exceptions gate",
+          "source": "deal-underwriting-lifecycle/hasexceptions",
+          "decision": "excluded",
+          "rationale": "R-052 requires an open exception to block approval unconditionally; an agent must not be able to soften that gate."
+        },
+        {
+          "slot": "exception waiver decision",
+          "source": "deal-underwriting-lifecycle/waiver",
+          "decision": "excluded",
+          "rationale": "R-052 requires an authorised human to waive or resolve an exception with a written rationale and recorded resolver identity."
+        },
+        {
+          "slot": "exception resolution write",
+          "source": "deal-underwriting-lifecycle/resolve",
+          "decision": "excluded",
+          "rationale": "Persists the human waiver with resolver identity under R-030 and R-052; no agent holds a resolve or waive tool."
+        },
+        {
+          "slot": "exceptions-cleared gate",
+          "source": "deal-underwriting-lifecycle/clear",
+          "decision": "excluded",
+          "rationale": "A deterministic count check enforcing the R-052 approval block; agent judgement here would defeat the control."
+        },
+        {
+          "slot": "approval tier determination",
+          "source": "deal-underwriting-lifecycle/tier",
+          "decision": "excluded",
+          "rationale": "R-020, R-021 and R-022 set fixed dollar thresholds, so the required authority level is arithmetic that must be reproducible and auditable."
+        },
+        {
+          "slot": "approve / decline / return decision",
+          "source": "deal-underwriting-lifecycle/decision",
+          "decision": "excluded",
+          "rationale": "R-023 forbids any agent from approving, declining, or advancing a deal as a hard system guardrail, and R-024 mandates a named human decision at each approval step."
+        },
+        {
+          "slot": "approval decision recording",
+          "source": "deal-underwriting-lifecycle/record",
+          "decision": "excluded",
+          "rationale": "R-024 requires the deciding user's identity to be recorded and R-062 requires idempotent guarding against double approval — both mechanical."
+        },
+        {
+          "slot": "adverse action / return capture",
+          "source": "deal-underwriting-lifecycle/outcome",
+          "decision": "excluded",
+          "rationale": "R-026 and R-063 require the decline reason to be a human-selected controlled reason code plus detail; an agent must not author or infer an adverse-action reason."
+        },
+        {
+          "slot": "approved gate",
+          "source": "deal-underwriting-lifecycle/approvedgate",
+          "decision": "excluded",
+          "rationale": "Branches on the recorded human decision under R-023 and R-046; no agent may influence whether an approved deal proceeds."
+        },
+        {
+          "slot": "deal closing",
+          "source": "deal-underwriting-lifecycle/close",
+          "decision": "excluded",
+          "rationale": "A final state transition written to the R-027 audit trail; R-023 bars agents from advancing a deal past an approval step."
+        },
+        {
+          "slot": "Q&A permission scoping",
+          "source": "portfolio-qa/scope",
+          "decision": "excluded",
+          "rationale": "R-054 and R-053 require retrieval scope to be resolved server-side from RBAC before the agent sees anything, so an agent must never compute its own scope."
+        },
+        {
+          "slot": "empty-scope gate",
+          "source": "portfolio-qa/scopeok",
+          "decision": "excluded",
+          "rationale": "A deterministic guard that stops the run when the asker can see nothing; agent involvement would risk leaking that deals exist."
+        },
+        {
+          "slot": "grounded context retrieval",
+          "source": "portfolio-qa/retrieve",
+          "decision": "excluded",
+          "rationale": "R-015 requires answers grounded in stored deal data and R-054 caps retrieval at the user's permissions, so record selection stays in code the agent cannot widen."
+        },
+        {
+          "slot": "portfolio question answering",
+          "source": "portfolio-qa/answer",
+          "decision": "included",
+          "rationale": "R-014 requires an agent to answer credit officers' questions across active deals and R-015 requires those answers to be grounded and traceable.",
+          "agent": "Portfolio Q&A Agent"
+        },
+        {
+          "slot": "answer grounding verification",
+          "source": "portfolio-qa/groundcheck",
+          "decision": "excluded",
+          "rationale": "R-015 makes grounding a hard condition, so citations are verified mechanically against the retrieved set rather than by an agent marking its own answer."
+        },
+        {
+          "slot": "grounded gate",
+          "source": "portfolio-qa/groundok",
+          "decision": "excluded",
+          "rationale": "A deterministic branch that suppresses ungrounded answers under R-015; an agent here would reintroduce the risk it is meant to remove."
+        },
+        {
+          "slot": "answer acceptance",
+          "source": "portfolio-qa/accept",
+          "decision": "excluded",
+          "rationale": "R-025 requires the asking human to accept or flag the answer before the session is recorded."
+        },
+        {
+          "slot": "Q&A session recording",
+          "source": "portfolio-qa/record",
+          "decision": "excluded",
+          "rationale": "R-029 and R-056 require the draft, sources, and trace to be written to the immutable audit trail by the system, not by the agent that produced them."
+        },
+        {
+          "slot": "business-day idle measurement",
+          "source": "sla-idle-escalation/measure",
+          "decision": "excluded",
+          "rationale": "R-057 defines idle time as a business-day calculation excluding weekends and configured holidays — pure arithmetic that must match the R-034 dashboard exactly."
+        },
+        {
+          "slot": "SLA breach gate",
+          "source": "sla-idle-escalation/breached",
+          "decision": "excluded",
+          "rationale": "R-034 sets a fixed 5-business-day threshold, so the breach test is a comparison with no judgement to add."
+        },
+        {
+          "slot": "stage blocker collection",
+          "source": "sla-idle-escalation/blockers",
+          "decision": "excluded",
+          "rationale": "Blocking items are open exceptions, pending reviews, and missing documents already held as structured records; an agent summary would restate them less reliably and R-004 caps the roster at five agents."
+        },
+        {
+          "slot": "SLA escalation decision",
+          "source": "sla-idle-escalation/escalate",
+          "decision": "excluded",
+          "rationale": "R-033 reserves reassign and return to a credit officer and R-047 requires a written human reason, so this is a human decision by role."
+        },
+        {
+          "slot": "escalation action application",
+          "source": "sla-idle-escalation/apply",
+          "decision": "excluded",
+          "rationale": "Applies a stage change and reassignment, which R-023 forbids agents from doing and R-030 requires recorded against the deciding human."
+        },
+        {
+          "slot": "escalation brief drafting",
+          "source": [
+            "R-034",
+            "R-004"
+          ],
+          "decision": "excluded",
+          "rationale": "An agent-written 'why is this stuck' brief was considered and rejected: R-004 mandates exactly five narrowly-scoped agents, and the clarified SLA answer asks only for red highlighting and a named escalation owner, which the deterministic blocker list already supplies."
+        },
+        {
+          "slot": "adverse-action letter drafting",
+          "source": [
+            "R-026",
+            "R-063"
+          ],
+          "decision": "excluded",
+          "rationale": "R-063 requires the decline reason to come from a controlled reason-code list plus human free-text detail, so drafting adverse-action language with an agent would put unreviewed reasoning into a regulated notice."
+        },
+        {
+          "slot": "risk grade explanation",
+          "source": [
+            "R-019",
+            "R-045"
+          ],
+          "decision": "excluded",
+          "rationale": "R-045 requires the rubric and the specific band hit to be displayed alongside the grade, which makes the grade self-explaining without an agent narrating it."
+        },
+        {
+          "slot": "audit timeline narration",
+          "source": [
+            "R-051",
+            "R-050"
+          ],
+          "decision": "excluded",
+          "rationale": "R-050 and R-051 require the raw append-only entries to be read in order by auditors; an agent-written summary would sit between the auditor and the evidence."
+        },
+        {
+          "slot": "deal search and filter assistance",
+          "source": [
+            "R-058",
+            "R-014"
+          ],
+          "decision": "included",
+          "rationale": "R-058's structured filters are served by the deal list UI, and natural-language portfolio lookups across those same deals are answered by the existing Q&A agent within the asker's permission scope — no additional agent needed.",
+          "agent": "Portfolio Q&A Agent"
+        },
+        {
+          "slot": "document extraction from uploaded PDFs",
+          "source": [
+            "R-070",
+            "R-041"
+          ],
+          "decision": "included",
+          "rationale": "Clarification GAP-004 settled ingestion as structured input with documents attached for reference, so extraction stays with the spreading agent citing document locators rather than becoming a separate OCR agent.",
+          "agent": "Financial Spreading Agent"
+        },
+        {
+          "slot": "RBAC and identity enforcement",
+          "source": [
+            "R-031",
+            "R-032",
+            "R-033",
+            "R-039",
+            "R-053"
+          ],
+          "decision": "excluded",
+          "rationale": "R-053 requires server-side RBAC and row-level scoping on every endpoint, which is authorisation code no agent may participate in or influence."
+        },
+        {
+          "slot": "unit / API test authoring at runtime",
+          "source": [
+            "R-035",
+            "R-036",
+            "R-061"
+          ],
+          "decision": "excluded",
+          "rationale": "R-035 and R-036 are build-time deliverables verified in the pipeline, not a runtime capability the application needs an agent for."
+        },
+        {
+          "slot": "agent eval scoring",
+          "source": [
+            "R-037",
+            "R-056"
+          ],
+          "decision": "excluded",
+          "rationale": "R-037's evals run as executable checks over recorded agent outputs captured under R-056; making an agent the judge would leave the five-agent mandate in R-004 exceeded and the scoring unreproducible."
+        },
+        {
+          "slot": "chat screen",
+          "source": [
+            "R-014",
+            "R-015",
+            "R-054",
+            "R-066"
+          ],
+          "decision": "included",
+          "rationale": "The portfolio chat surface is exactly the grounded, permission-scoped Q&A experience R-014 and R-015 describe.",
+          "agent": "Portfolio Q&A Agent"
+        },
+        {
+          "slot": "analyst work queue screen",
+          "source": [
+            "R-048",
+            "R-005",
+            "R-007"
+          ],
+          "decision": "included",
+          "rationale": "The queue each deal lands in comes from the triage agent's accepted recommendation, so the triage agent sits behind this screen advisorily while assignment itself stays deterministic.",
+          "agent": "Intake Triage Agent"
+        },
+        {
+          "slot": "agent output review queue screens",
+          "source": [
+            "R-049",
+            "R-025"
+          ],
+          "decision": "included",
+          "rationale": "R-049 requires each agent draft to be shown with its citations for accept, edit, or reject — the spreading, memo, and compliance agents supply those drafts while the decision stays human.",
+          "agent": "Credit Memo Agent"
+        },
+        {
+          "slot": "policy exception review screen",
+          "source": [
+            "R-013",
+            "R-052"
+          ],
+          "decision": "included",
+          "rationale": "R-013 requires written exceptions for the officer to review, which the compliance agent authors while the waive action remains an authorised human's under R-052.",
+          "agent": "Policy Compliance Agent"
+        },
+        {
+          "slot": "pipeline board",
+          "source": [
+            "R-003",
+            "R-058"
+          ],
+          "decision": "excluded",
+          "rationale": "R-003 asks for the status of every deal at every stage, which is a direct read of deal state; an agent would add latency and uncertainty to a status display."
+        },
+        {
+          "slot": "SLA dashboard",
+          "source": [
+            "R-034",
+            "R-057"
+          ],
+          "decision": "excluded",
+          "rationale": "Clarification GAP-001 requires deals past 5 business days highlighted in red with a named escalation owner, both derived deterministically under R-057."
+        },
+        {
+          "slot": "approval decision screen",
+          "source": [
+            "R-020",
+            "R-021",
+            "R-022",
+            "R-023",
+            "R-024"
+          ],
+          "decision": "excluded",
+          "rationale": "R-023 makes the no-agent-decision rule a hard system guardrail, so no agent — not even advisory — appears on the screen where the named human under R-024 approves, declines, or returns."
+        },
+        {
+          "slot": "agents roster screen",
+          "source": [
+            "R-004",
+            "R-055"
+          ],
+          "decision": "excluded",
+          "rationale": "The /agents page renders the approved roster and each agent's allow-list and denied powers as static governance content under R-055; it is documentation, not a place for an agent."
+        }
+      ]
+    }
+  },
+  "rtm": {
+    "path": "/Users/nbalawat/development/harness/underwriting-desk-v12/artifacts/traceability/rtm.json",
+    "data": {
+      "requirements_total": 66,
+      "covered_count": 66,
+      "uncovered": [],
+      "coverage": [
+        {
+          "id": "R-001",
+          "text": "Provide a single system of record for underwriting SMB loan requests at a commercial bank, replacing the current absence of any unified underwriting system for relationship managers.",
+          "category": "functional",
+          "confidence": "stated",
+          "addressed_by": [
+            {
+              "via": "workflow",
+              "item": "deal-underwriting-lifecycle"
+            },
+            {
+              "via": "module",
+              "item": "persistence-core"
+            },
+            {
+              "via": "module",
+              "item": "postgres-adapter"
+            },
+            {
+              "via": "table",
+              "item": "deals"
+            }
+          ]
+        },
+        {
+          "id": "R-002",
+          "text": "Run the underwriting pipeline as an explicit multi-stage workflow with the ordered stages: intake, document extraction, financial spreading, risk grading, memo drafting, policy compliance check, tiered approval, closing.",
+          "category": "functional",
+          "confidence": "stated",
+          "addressed_by": [
+            {
+              "via": "workflow",
+              "item": "deal-underwriting-lifecycle"
+            },
+            {
+              "via": "module",
+              "item": "workflow-engine"
+            },
+            {
+              "via": "module",
+              "item": "state-machine"
+            },
+            {
+              "via": "design",
+              "item": "option-1"
+            },
+            {
+              "via": "design",
+              "item": "option-3"
+            }
+          ]
+        },
+        {
+          "id": "R-003",
+          "text": "Display the status of every deal at every workflow stage on a pipeline board.",
+          "category": "ux",
+          "confidence": "stated",
+          "addressed_by": [
+            {
+              "via": "workflow",
+              "item": "deal-underwriting-lifecycle"
+            },
+            {
+              "via": "workflow",
+              "item": "sla-idle-escalation"
+            },
+            {
+              "via": "module",
+              "item": "data-table"
+            },
+            {
+              "via": "module",
+              "item": "dashboard-cards"
+            },
+            {
+              "via": "module",
+              "item": "screen-router"
+            },
+            {
+              "via": "table",
+              "item": "deals"
+            },
+            {
+              "via": "design",
+              "item": "option-1"
+            },
+            {
+              "via": "design",
+              "item": "option-2"
+            },
+            {
+              "via": "design",
+              "item": "option-3"
+            }
+          ]
+        },
+        {
+          "id": "R-004",
+          "text": "Implement exactly five distinct AI agents operating inside the workflow, each constrained to a narrow mandate rather than one general-purpose agent.",
+          "category": "agent",
+          "confidence": "stated",
+          "addressed_by": [
+            {
+              "via": "workflow",
+              "item": "deal-underwriting-lifecycle"
+            },
+            {
+              "via": "module",
+              "item": "agent-runtime"
+            },
+            {
+              "via": "module",
+              "item": "agent-router"
+            },
+            {
+              "via": "agent",
+              "item": "Portfolio Q&A Agent"
+            },
+            {
+              "via": "agent",
+              "item": "Intake Triage Agent"
+            },
+            {
+              "via": "agent",
+              "item": "Financial Spreading Agent"
+            },
+            {
+              "via": "agent",
+              "item": "Credit Memo Agent"
+            },
+            {
+              "via": "agent",
+              "item": "Policy Compliance Agent"
+            }
+          ]
+        },
+        {
+          "id": "R-005",
+          "text": "Intake triage agent classifies incoming loan requests.",
+          "category": "agent",
+          "confidence": "stated",
+          "addressed_by": [
+            {
+              "via": "workflow",
+              "item": "deal-underwriting-lifecycle"
+            },
+            {
+              "via": "module",
+              "item": "agent-runtime"
+            },
+            {
+              "via": "module",
+              "item": "agent-router"
+            },
+            {
+              "via": "table",
+              "item": "intake_triage_decisions"
+            },
+            {
+              "via": "agent",
+              "item": "Intake Triage Agent"
+            }
+          ]
+        },
+        {
+          "id": "R-006",
+          "text": "Intake triage agent flags missing documents on a request.",
+          "category": "agent",
+          "confidence": "stated",
+          "addressed_by": [
+            {
+              "via": "workflow",
+              "item": "deal-underwriting-lifecycle"
+            },
+            {
+              "via": "module",
+              "item": "agent-runtime"
+            },
+            {
+              "via": "module",
+              "item": "file-upload"
+            },
+            {
+              "via": "table",
+              "item": "intake_triage_decisions"
+            },
+            {
+              "via": "agent",
+              "item": "Intake Triage Agent"
+            },
+            {
+              "via": "design",
+              "item": "option-1"
+            }
+          ]
+        },
+        {
+          "id": "R-007",
+          "text": "Intake triage agent routes requests to the appropriate analyst queues.",
+          "category": "agent",
+          "confidence": "stated",
+          "addressed_by": [
+            {
+              "via": "workflow",
+              "item": "deal-underwriting-lifecycle"
+            },
+            {
+              "via": "module",
+              "item": "agent-router"
+            },
+            {
+              "via": "module",
+              "item": "assignment"
+            },
+            {
+              "via": "table",
+              "item": "queue_assignments"
+            },
+            {
+              "via": "agent",
+              "item": "Intake Triage Agent"
+            }
+          ]
+        },
+        {
+          "id": "R-008",
+          "text": "Financial spreading agent extracts figures from borrower financial statements into the standard spread template.",
+          "category": "agent",
+          "confidence": "stated",
+          "addressed_by": [
+            {
+              "via": "workflow",
+              "item": "deal-underwriting-lifecycle"
+            },
+            {
+              "via": "module",
+              "item": "agent-runtime"
+            },
+            {
+              "via": "module",
+              "item": "forms-engine"
+            },
+            {
+              "via": "agent",
+              "item": "Financial Spreading Agent"
+            }
+          ]
+        },
+        {
+          "id": "R-009",
+          "text": "Financial spreading agent must cite a source for every number it extracts; an uncited extracted figure is invalid.",
+          "category": "agent",
+          "confidence": "stated",
+          "addressed_by": [
+            {
+              "via": "workflow",
+              "item": "deal-underwriting-lifecycle"
+            },
+            {
+              "via": "module",
+              "item": "citation-tracker"
+            },
+            {
+              "via": "table",
+              "item": "citations"
+            },
+            {
+              "via": "agent",
+              "item": "Financial Spreading Agent"
+            },
+            {
+              "via": "design",
+              "item": "option-1"
+            }
+          ]
+        },
+        {
+          "id": "R-010",
+          "text": "Credit memo agent drafts the underwriting memo for a deal.",
+          "category": "agent",
+          "confidence": "stated",
+          "addressed_by": [
+            {
+              "via": "workflow",
+              "item": "deal-underwriting-lifecycle"
+            },
+            {
+              "via": "module",
+              "item": "agent-runtime"
+            },
+            {
+              "via": "module",
+              "item": "versioned-drafts"
+            },
+            {
+              "via": "agent",
+              "item": "Credit Memo Agent"
+            }
+          ]
+        },
+        {
+          "id": "R-011",
+          "text": "Credit memo agent must cite the specific ratios, spread figures, and policy rules it relied on when drafting the memo.",
+          "category": "agent",
+          "confidence": "stated",
+          "addressed_by": [
+            {
+              "via": "workflow",
+              "item": "deal-underwriting-lifecycle"
+            },
+            {
+              "via": "module",
+              "item": "citation-tracker"
+            },
+            {
+              "via": "table",
+              "item": "citations"
+            },
+            {
+              "via": "agent",
+              "item": "Credit Memo Agent"
+            },
+            {
+              "via": "design",
+              "item": "option-1"
+            }
+          ]
+        },
+        {
+          "id": "R-012",
+          "text": "Policy compliance agent reviews every memo against lending policy, covering at minimum concentration limits, prohibited industries, and LTV caps.",
+          "category": "agent",
+          "confidence": "stated",
+          "addressed_by": [
+            {
+              "via": "workflow",
+              "item": "deal-underwriting-lifecycle"
+            },
+            {
+              "via": "module",
+              "item": "agent-runtime"
+            },
+            {
+              "via": "table",
+              "item": "lending_policy"
+            },
+            {
+              "via": "agent",
+              "item": "Policy Compliance Agent"
+            }
+          ]
+        },
+        {
+          "id": "R-013",
+          "text": "Policy compliance agent raises written exceptions when it finds policy violations.",
+          "category": "agent",
+          "confidence": "stated",
+          "addressed_by": [
+            {
+              "via": "workflow",
+              "item": "deal-underwriting-lifecycle"
+            },
+            {
+              "via": "module",
+              "item": "state-machine"
+            },
+            {
+              "via": "table",
+              "item": "policy_exceptions"
+            },
+            {
+              "via": "agent",
+              "item": "Policy Compliance Agent"
+            },
+            {
+              "via": "design",
+              "item": "option-1"
+            },
+            {
+              "via": "design",
+              "item": "option-3"
+            }
+          ]
+        },
+        {
+          "id": "R-014",
+          "text": "Portfolio Q&A agent answers credit officers' questions spanning active deals.",
+          "category": "agent",
+          "confidence": "stated",
+          "addressed_by": [
+            {
+              "via": "workflow",
+              "item": "portfolio-qa"
+            },
+            {
+              "via": "module",
+              "item": "agent-runtime"
+            },
+            {
+              "via": "module",
+              "item": "rag-core"
+            },
+            {
+              "via": "module",
+              "item": "chat-shell"
+            },
+            {
+              "via": "table",
+              "item": "portfolio_qa_sessions"
+            },
+            {
+              "via": "agent",
+              "item": "Portfolio Q&A Agent"
+            },
+            {
+              "via": "design",
+              "item": "option-1"
+            },
+            {
+              "via": "design",
+              "item": "option-2"
+            },
+            {
+              "via": "design",
+              "item": "option-3"
+            }
+          ]
+        },
+        {
+          "id": "R-015",
+          "text": "Portfolio Q&A agent answers must be grounded in stored deal data rather than model recall, and must be traceable to the deal records used.",
+          "category": "agent",
+          "confidence": "stated",
+          "addressed_by": [
+            {
+              "via": "workflow",
+              "item": "portfolio-qa"
+            },
+            {
+              "via": "module",
+              "item": "rag-core"
+            },
+            {
+              "via": "module",
+              "item": "citation-tracker"
+            },
+            {
+              "via": "module",
+              "item": "search-index"
+            },
+            {
+              "via": "table",
+              "item": "portfolio_qa_sessions"
+            },
+            {
+              "via": "agent",
+              "item": "Portfolio Q&A Agent"
+            },
+            {
+              "via": "design",
+              "item": "option-1"
+            },
+            {
+              "via": "design",
+              "item": "option-2"
+            },
+            {
+              "via": "design",
+              "item": "option-3"
+            }
+          ]
+        },
+        {
+          "id": "R-016",
+          "text": "Compute DSCR (debt service coverage ratio) with deterministic code, never with an agent.",
+          "category": "functional",
+          "confidence": "stated",
+          "addressed_by": [
+            {
+              "via": "workflow",
+              "item": "deal-underwriting-lifecycle"
+            },
+            {
+              "via": "module",
+              "item": "tool-registry"
+            },
+            {
+              "via": "module",
+              "item": "workflow-engine"
+            },
+            {
+              "via": "table",
+              "item": "financial_ratios"
+            }
+          ]
+        },
+        {
+          "id": "R-017",
+          "text": "Compute leverage with deterministic code, never with an agent.",
+          "category": "functional",
+          "confidence": "stated",
+          "addressed_by": [
+            {
+              "via": "workflow",
+              "item": "deal-underwriting-lifecycle"
+            },
+            {
+              "via": "module",
+              "item": "tool-registry"
+            },
+            {
+              "via": "module",
+              "item": "workflow-engine"
+            },
+            {
+              "via": "table",
+              "item": "financial_ratios"
+            }
+          ]
+        },
+        {
+          "id": "R-018",
+          "text": "Compute current ratio with deterministic code, never with an agent.",
+          "category": "functional",
+          "confidence": "stated",
+          "addressed_by": [
+            {
+              "via": "workflow",
+              "item": "deal-underwriting-lifecycle"
+            },
+            {
+              "via": "module",
+              "item": "tool-registry"
+            },
+            {
+              "via": "module",
+              "item": "workflow-engine"
+            },
+            {
+              "via": "table",
+              "item": "financial_ratios"
+            }
+          ]
+        },
+        {
+          "id": "R-019",
+          "text": "Assign the risk grade with deterministic logic driven by a transparent, inspectable rubric.",
+          "category": "functional",
+          "confidence": "stated",
+          "addressed_by": [
+            {
+              "via": "workflow",
+              "item": "deal-underwriting-lifecycle"
+            },
+            {
+              "via": "module",
+              "item": "tool-registry"
+            },
+            {
+              "via": "module",
+              "item": "workflow-engine"
+            },
+            {
+              "via": "module",
+              "item": "versioned-drafts"
+            },
+            {
+              "via": "table",
+              "item": "risk_grades"
+            },
+            {
+              "via": "design",
+              "item": "option-1"
+            },
+            {
+              "via": "design",
+              "item": "option-2"
+            },
+            {
+              "via": "design",
+              "item": "option-3"
+            }
+          ]
+        },
+        {
+          "id": "R-020",
+          "text": "Tier approval authority by exposure amount: a credit analyst may approve deals up to $250,000.",
+          "category": "functional",
+          "confidence": "stated",
+          "addressed_by": [
+            {
+              "via": "workflow",
+              "item": "deal-underwriting-lifecycle"
+            },
+            {
+              "via": "module",
+              "item": "approval-flow"
+            },
+            {
+              "via": "table",
+              "item": "approvals"
+            },
+            {
+              "via": "design",
+              "item": "option-1"
+            },
+            {
+              "via": "design",
+              "item": "option-3"
+            }
+          ]
+        },
+        {
+          "id": "R-021",
+          "text": "Tier approval authority by exposure amount: a senior credit officer may approve deals up to $1,000,000.",
+          "category": "functional",
+          "confidence": "stated",
+          "addressed_by": [
+            {
+              "via": "workflow",
+              "item": "deal-underwriting-lifecycle"
+            },
+            {
+              "via": "module",
+              "item": "approval-flow"
+            },
+            {
+              "via": "table",
+              "item": "approvals"
+            },
+            {
+              "via": "design",
+              "item": "option-1"
+            },
+            {
+              "via": "design",
+              "item": "option-3"
+            }
+          ]
+        },
+        {
+          "id": "R-022",
+          "text": "Tier approval authority by exposure amount: deals above $1,000,000 must be approved by a credit committee.",
+          "category": "functional",
+          "confidence": "stated",
+          "addressed_by": [
+            {
+              "via": "workflow",
+              "item": "deal-underwriting-lifecycle"
+            },
+            {
+              "via": "module",
+              "item": "approval-flow"
+            },
+            {
+              "via": "table",
+              "item": "approvals"
+            },
+            {
+              "via": "design",
+              "item": "option-1"
+            },
+            {
+              "via": "design",
+              "item": "option-3"
+            }
+          ]
+        },
+        {
+          "id": "R-023",
+          "text": "No agent may approve a deal, decline a deal, or advance a deal past an approval step; this must be enforced as a hard system guardrail, not a prompt instruction.",
+          "category": "security",
+          "confidence": "stated",
+          "addressed_by": [
+            {
+              "via": "workflow",
+              "item": "deal-underwriting-lifecycle"
+            },
+            {
+              "via": "module",
+              "item": "tool-registry"
+            },
+            {
+              "via": "module",
+              "item": "approval-flow"
+            },
+            {
+              "via": "module",
+              "item": "rbac"
+            },
+            {
+              "via": "table",
+              "item": "approvals"
+            },
+            {
+              "via": "design",
+              "item": "option-1"
+            },
+            {
+              "via": "design",
+              "item": "option-2"
+            }
+          ]
+        },
+        {
+          "id": "R-024",
+          "text": "A named human decision is mandatory at each approval step and must be recorded with the deciding user's identity.",
+          "category": "functional",
+          "confidence": "stated",
+          "addressed_by": [
+            {
+              "via": "workflow",
+              "item": "deal-underwriting-lifecycle"
+            },
+            {
+              "via": "module",
+              "item": "approval-flow"
+            },
+            {
+              "via": "module",
+              "item": "auth-basic"
+            },
+            {
+              "via": "table",
+              "item": "users"
+            },
+            {
+              "via": "table",
+              "item": "approvals"
+            },
+            {
+              "via": "design",
+              "item": "option-1"
+            },
+            {
+              "via": "design",
+              "item": "option-2"
+            },
+            {
+              "via": "design",
+              "item": "option-3"
+            }
+          ]
+        },
+        {
+          "id": "R-025",
+          "text": "Every agent output requires explicit human acceptance before the workflow proceeds to the next stage.",
+          "category": "functional",
+          "confidence": "stated",
+          "addressed_by": [
+            {
+              "via": "workflow",
+              "item": "deal-underwriting-lifecycle"
+            },
+            {
+              "via": "workflow",
+              "item": "portfolio-qa"
+            },
+            {
+              "via": "module",
+              "item": "workflow-engine"
+            },
+            {
+              "via": "module",
+              "item": "approval-flow"
+            },
+            {
+              "via": "table",
+              "item": "agent_outputs"
+            },
+            {
+              "via": "table",
+              "item": "human_reviews"
+            },
+            {
+              "via": "design",
+              "item": "option-1"
+            },
+            {
+              "via": "design",
+              "item": "option-2"
+            },
+            {
+              "via": "design",
+              "item": "option-3"
+            }
+          ]
+        },
+        {
+          "id": "R-026",
+          "text": "Declined deals require a documented adverse-action reason captured at the time of decline.",
+          "category": "functional",
+          "confidence": "stated",
+          "addressed_by": [
+            {
+              "via": "workflow",
+              "item": "deal-underwriting-lifecycle"
+            },
+            {
+              "via": "module",
+              "item": "approval-flow"
+            },
+            {
+              "via": "table",
+              "item": "deals"
+            },
+            {
+              "via": "table",
+              "item": "adverse_action_reasons"
+            },
+            {
+              "via": "design",
+              "item": "option-1"
+            },
+            {
+              "via": "design",
+              "item": "option-2"
+            },
+            {
+              "via": "design",
+              "item": "option-3"
+            }
+          ]
+        },
+        {
+          "id": "R-027",
+          "text": "Record every deal state change in an immutable audit trail.",
+          "category": "data",
+          "confidence": "stated",
+          "addressed_by": [
+            {
+              "via": "workflow",
+              "item": "deal-underwriting-lifecycle"
+            },
+            {
+              "via": "workflow",
+              "item": "sla-idle-escalation"
+            },
+            {
+              "via": "module",
+              "item": "audit-log"
+            },
+            {
+              "via": "module",
+              "item": "row-history"
+            },
+            {
+              "via": "table",
+              "item": "deals"
+            },
+            {
+              "via": "table",
+              "item": "audit_log"
+            }
+          ]
+        },
+        {
+          "id": "R-028",
+          "text": "Record every ratio calculation, including its inputs and result, in an immutable audit trail.",
+          "category": "data",
+          "confidence": "stated",
+          "addressed_by": [
+            {
+              "via": "workflow",
+              "item": "deal-underwriting-lifecycle"
+            },
+            {
+              "via": "module",
+              "item": "audit-log"
+            },
+            {
+              "via": "module",
+              "item": "row-history"
+            },
+            {
+              "via": "table",
+              "item": "financial_ratios"
+            },
+            {
+              "via": "table",
+              "item": "audit_log"
+            }
+          ]
+        },
+        {
+          "id": "R-029",
+          "text": "Record every agent draft in an immutable audit trail.",
+          "category": "data",
+          "confidence": "stated",
+          "addressed_by": [
+            {
+              "via": "workflow",
+              "item": "deal-underwriting-lifecycle"
+            },
+            {
+              "via": "workflow",
+              "item": "portfolio-qa"
+            },
+            {
+              "via": "module",
+              "item": "transcript-store"
+            },
+            {
+              "via": "module",
+              "item": "audit-log"
+            },
+            {
+              "via": "table",
+              "item": "agent_outputs"
+            },
+            {
+              "via": "table",
+              "item": "human_reviews"
+            },
+            {
+              "via": "table",
+              "item": "audit_log"
+            }
+          ]
+        },
+        {
+          "id": "R-030",
+          "text": "Record every human decision in an immutable audit trail.",
+          "category": "data",
+          "confidence": "stated",
+          "addressed_by": [
+            {
+              "via": "workflow",
+              "item": "deal-underwriting-lifecycle"
+            },
+            {
+              "via": "workflow",
+              "item": "sla-idle-escalation"
+            },
+            {
+              "via": "module",
+              "item": "audit-log"
+            },
+            {
+              "via": "table",
+              "item": "approvals"
+            },
+            {
+              "via": "table",
+              "item": "audit_log"
+            }
+          ]
+        },
+        {
+          "id": "R-031",
+          "text": "RBAC role 'relationship manager': may submit deals and may view only their own deals.",
+          "category": "security",
+          "confidence": "stated",
+          "addressed_by": [
+            {
+              "via": "module",
+              "item": "rbac"
+            },
+            {
+              "via": "module",
+              "item": "row-level-security"
+            },
+            {
+              "via": "module",
+              "item": "permissions-ui"
+            },
+            {
+              "via": "table",
+              "item": "users"
+            },
+            {
+              "via": "design",
+              "item": "option-1"
+            }
+          ]
+        },
+        {
+          "id": "R-032",
+          "text": "RBAC role 'credit analyst': may spread financials, draft memos, and recommend.",
+          "category": "security",
+          "confidence": "stated",
+          "addressed_by": [
+            {
+              "via": "workflow",
+              "item": "deal-underwriting-lifecycle"
+            },
+            {
+              "via": "module",
+              "item": "rbac"
+            },
+            {
+              "via": "module",
+              "item": "permissions-ui"
+            },
+            {
+              "via": "table",
+              "item": "users"
+            },
+            {
+              "via": "design",
+              "item": "option-1"
+            }
+          ]
+        },
+        {
+          "id": "R-033",
+          "text": "RBAC role 'credit officer': may approve, decline, or return deals.",
+          "category": "security",
+          "confidence": "stated",
+          "addressed_by": [
+            {
+              "via": "workflow",
+              "item": "deal-underwriting-lifecycle"
+            },
+            {
+              "via": "workflow",
+              "item": "sla-idle-escalation"
+            },
+            {
+              "via": "module",
+              "item": "rbac"
+            },
+            {
+              "via": "module",
+              "item": "permissions-ui"
+            },
+            {
+              "via": "table",
+              "item": "users"
+            },
+            {
+              "via": "design",
+              "item": "option-1"
+            }
+          ]
+        },
+        {
+          "id": "R-034",
+          "text": "Surface deals idle for more than 5 business days on an SLA dashboard.",
+          "category": "ux",
+          "confidence": "stated",
+          "addressed_by": [
+            {
+              "via": "workflow",
+              "item": "sla-idle-escalation"
+            },
+            {
+              "via": "module",
+              "item": "sla-timers"
+            },
+            {
+              "via": "module",
+              "item": "dashboard-cards"
+            },
+            {
+              "via": "module",
+              "item": "notifications-ui"
+            },
+            {
+              "via": "table",
+              "item": "deals"
+            },
+            {
+              "via": "table",
+              "item": "business_calendar"
+            },
+            {
+              "via": "design",
+              "item": "option-1"
+            },
+            {
+              "via": "design",
+              "item": "option-2"
+            },
+            {
+              "via": "design",
+              "item": "option-3"
+            }
+          ]
+        },
+        {
+          "id": "R-035",
+          "text": "Provide unit tests covering every ratio calculation and every grading rule.",
+          "category": "ops",
+          "confidence": "stated",
+          "addressed_by": [
+            {
+              "via": "pipeline",
+              "item": "integrate + deploy (pipeline stages)"
+            }
+          ]
+        },
+        {
+          "id": "R-036",
+          "text": "Provide API tests covering every endpoint and every workflow transition.",
+          "category": "ops",
+          "confidence": "stated",
+          "addressed_by": [
+            {
+              "via": "pipeline",
+              "item": "integrate + deploy (pipeline stages)"
+            }
+          ]
+        },
+        {
+          "id": "R-037",
+          "text": "Provide agent evals for every one of the five agents.",
+          "category": "ops",
+          "confidence": "stated",
+          "addressed_by": [
+            {
+              "via": "module",
+              "item": "eval-harness"
+            },
+            {
+              "via": "agent",
+              "item": "Portfolio Q&A Agent"
+            },
+            {
+              "via": "agent",
+              "item": "Intake Triage Agent"
+            },
+            {
+              "via": "agent",
+              "item": "Financial Spreading Agent"
+            },
+            {
+              "via": "agent",
+              "item": "Credit Memo Agent"
+            },
+            {
+              "via": "agent",
+              "item": "Policy Compliance Agent"
+            }
+          ]
+        },
+        {
+          "id": "R-038",
+          "text": "Deploy the application to Google Cloud Run.",
+          "category": "ops",
+          "confidence": "stated",
+          "addressed_by": [
+            {
+              "via": "module",
+              "item": "postgres-adapter"
+            }
+          ]
+        },
+        {
+          "id": "R-039",
+          "text": "Authenticate every user with a persistent named identity and session, since named human decisions and role separation are required.",
+          "category": "security",
+          "confidence": "inferred",
+          "addressed_by": [
+            {
+              "via": "module",
+              "item": "auth-basic"
+            },
+            {
+              "via": "module",
+              "item": "permissions-ui"
+            },
+            {
+              "via": "table",
+              "item": "users"
+            }
+          ]
+        },
+        {
+          "id": "R-040",
+          "text": "Model a central Deal entity holding borrower details, requested/exposure amount, current stage, status, assigned owner, and created/updated timestamps; all workflow artifacts hang off it.",
+          "category": "data",
+          "confidence": "inferred",
+          "addressed_by": [
+            {
+              "via": "workflow",
+              "item": "deal-underwriting-lifecycle"
+            },
+            {
+              "via": "module",
+              "item": "persistence-core"
+            },
+            {
+              "via": "module",
+              "item": "migrations"
+            },
+            {
+              "via": "table",
+              "item": "deals"
+            }
+          ]
+        },
+        {
+          "id": "R-041",
+          "text": "Support uploading and storing borrower documents against a deal, with document type, checksum, and upload metadata, so the document extraction stage and citations have a durable target.",
+          "category": "data",
+          "confidence": "inferred",
+          "addressed_by": [
+            {
+              "via": "workflow",
+              "item": "deal-underwriting-lifecycle"
+            },
+            {
+              "via": "module",
+              "item": "persistence-core"
+            },
+            {
+              "via": "module",
+              "item": "blob-store"
+            },
+            {
+              "via": "module",
+              "item": "file-upload"
+            },
+            {
+              "via": "table",
+              "item": "documents"
+            },
+            {
+              "via": "design",
+              "item": "option-1"
+            }
+          ]
+        },
+        {
+          "id": "R-042",
+          "text": "Define the standard spread template as a versioned structured schema of named line items (periods, values, units), not free text, so ratios can be computed deterministically from it.",
+          "category": "data",
+          "confidence": "inferred",
+          "addressed_by": [
+            {
+              "via": "workflow",
+              "item": "deal-underwriting-lifecycle"
+            },
+            {
+              "via": "module",
+              "item": "persistence-core"
+            },
+            {
+              "via": "module",
+              "item": "migrations"
+            },
+            {
+              "via": "module",
+              "item": "versioned-drafts"
+            },
+            {
+              "via": "module",
+              "item": "forms-engine"
+            },
+            {
+              "via": "table",
+              "item": "financial_spread_template"
+            },
+            {
+              "via": "agent",
+              "item": "Financial Spreading Agent"
+            }
+          ]
+        },
+        {
+          "id": "R-043",
+          "text": "Store citations as structured references (document id plus page/section/cell locator, or ratio/policy-rule id) rather than prose, so every cited number and memo assertion is machine-verifiable and clickable.",
+          "category": "data",
+          "confidence": "inferred",
+          "addressed_by": [
+            {
+              "via": "workflow",
+              "item": "deal-underwriting-lifecycle"
+            },
+            {
+              "via": "module",
+              "item": "citation-tracker"
+            },
+            {
+              "via": "table",
+              "item": "documents"
+            },
+            {
+              "via": "table",
+              "item": "citations"
+            },
+            {
+              "via": "agent",
+              "item": "Financial Spreading Agent"
+            },
+            {
+              "via": "agent",
+              "item": "Credit Memo Agent"
+            },
+            {
+              "via": "design",
+              "item": "option-1"
+            },
+            {
+              "via": "design",
+              "item": "option-2"
+            }
+          ]
+        },
+        {
+          "id": "R-044",
+          "text": "Store lending policy as configurable rule data (concentration limits, prohibited industry list, LTV caps) seeded with a documented default ruleset, and version it so audit entries reference the policy version applied.",
+          "category": "data",
+          "confidence": "inferred",
+          "addressed_by": [
+            {
+              "via": "workflow",
+              "item": "deal-underwriting-lifecycle"
+            },
+            {
+              "via": "module",
+              "item": "persistence-core"
+            },
+            {
+              "via": "module",
+              "item": "migrations"
+            },
+            {
+              "via": "module",
+              "item": "seed-data"
+            },
+            {
+              "via": "module",
+              "item": "versioned-drafts"
+            },
+            {
+              "via": "table",
+              "item": "lending_policy"
+            },
+            {
+              "via": "agent",
+              "item": "Policy Compliance Agent"
+            }
+          ]
+        },
+        {
+          "id": "R-045",
+          "text": "Encode the risk grading rubric as versioned configuration with documented default bands, and display the rubric and the specific band hit alongside each assigned grade so the grade is explainable.",
+          "category": "functional",
+          "confidence": "inferred",
+          "addressed_by": [
+            {
+              "via": "workflow",
+              "item": "deal-underwriting-lifecycle"
+            },
+            {
+              "via": "module",
+              "item": "migrations"
+            },
+            {
+              "via": "module",
+              "item": "seed-data"
+            },
+            {
+              "via": "module",
+              "item": "versioned-drafts"
+            },
+            {
+              "via": "table",
+              "item": "risk_grades"
+            },
+            {
+              "via": "agent",
+              "item": "Credit Memo Agent"
+            },
+            {
+              "via": "design",
+              "item": "option-1"
+            },
+            {
+              "via": "design",
+              "item": "option-2"
+            },
+            {
+              "via": "design",
+              "item": "option-3"
+            }
+          ]
+        },
+        {
+          "id": "R-046",
+          "text": "Enforce workflow progression with an explicit server-side state machine that rejects illegal or out-of-order stage transitions.",
+          "category": "functional",
+          "confidence": "inferred",
+          "addressed_by": [
+            {
+              "via": "workflow",
+              "item": "deal-underwriting-lifecycle"
+            },
+            {
+              "via": "workflow",
+              "item": "sla-idle-escalation"
+            },
+            {
+              "via": "module",
+              "item": "workflow-engine"
+            },
+            {
+              "via": "module",
+              "item": "state-machine"
+            },
+            {
+              "via": "table",
+              "item": "deals"
+            }
+          ]
+        },
+        {
+          "id": "R-047",
+          "text": "Support a credit officer 'return' action that sends a deal back to an earlier stage with a required written reason and reassigns it to the analyst queue.",
+          "category": "functional",
+          "confidence": "inferred",
+          "addressed_by": [
+            {
+              "via": "workflow",
+              "item": "deal-underwriting-lifecycle"
+            },
+            {
+              "via": "workflow",
+              "item": "sla-idle-escalation"
+            },
+            {
+              "via": "module",
+              "item": "state-machine"
+            },
+            {
+              "via": "module",
+              "item": "approval-flow"
+            },
+            {
+              "via": "module",
+              "item": "assignment"
+            },
+            {
+              "via": "table",
+              "item": "deals"
+            },
+            {
+              "via": "table",
+              "item": "deal_returns"
+            },
+            {
+              "via": "design",
+              "item": "option-1"
+            },
+            {
+              "via": "design",
+              "item": "option-2"
+            },
+            {
+              "via": "design",
+              "item": "option-3"
+            }
+          ]
+        },
+        {
+          "id": "R-048",
+          "text": "Provide analyst work queues with assignment and claim semantics, since the triage agent routes requests to analyst queues.",
+          "category": "functional",
+          "confidence": "inferred",
+          "addressed_by": [
+            {
+              "via": "workflow",
+              "item": "deal-underwriting-lifecycle"
+            },
+            {
+              "via": "workflow",
+              "item": "sla-idle-escalation"
+            },
+            {
+              "via": "module",
+              "item": "assignment"
+            },
+            {
+              "via": "table",
+              "item": "deals"
+            },
+            {
+              "via": "table",
+              "item": "queue_assignments"
+            },
+            {
+              "via": "agent",
+              "item": "Intake Triage Agent"
+            },
+            {
+              "via": "design",
+              "item": "option-1"
+            },
+            {
+              "via": "design",
+              "item": "option-2"
+            }
+          ]
+        },
+        {
+          "id": "R-049",
+          "text": "Provide a human review UI for each agent output showing the draft alongside its citations, with accept, edit, and reject actions; the acceptance records the reviewing user and any edits.",
+          "category": "ux",
+          "confidence": "inferred",
+          "addressed_by": [
+            {
+              "via": "workflow",
+              "item": "deal-underwriting-lifecycle"
+            },
+            {
+              "via": "module",
+              "item": "approval-flow"
+            },
+            {
+              "via": "module",
+              "item": "forms-engine"
+            },
+            {
+              "via": "module",
+              "item": "record-detail"
+            },
+            {
+              "via": "module",
+              "item": "screen-router"
+            },
+            {
+              "via": "table",
+              "item": "agent_outputs"
+            },
+            {
+              "via": "table",
+              "item": "human_reviews"
+            },
+            {
+              "via": "design",
+              "item": "option-1"
+            },
+            {
+              "via": "design",
+              "item": "option-2"
+            },
+            {
+              "via": "design",
+              "item": "option-3"
+            }
+          ]
+        },
+        {
+          "id": "R-050",
+          "text": "Implement the audit trail as append-only storage with no update or delete path exposed at the application or API layer, each entry carrying actor, action, timestamp, and before/after payload.",
+          "category": "data",
+          "confidence": "inferred",
+          "addressed_by": [
+            {
+              "via": "workflow",
+              "item": "deal-underwriting-lifecycle"
+            },
+            {
+              "via": "module",
+              "item": "postgres-adapter"
+            },
+            {
+              "via": "module",
+              "item": "audit-log"
+            },
+            {
+              "via": "module",
+              "item": "row-history"
+            },
+            {
+              "via": "table",
+              "item": "audit_log"
+            }
+          ]
+        },
+        {
+          "id": "R-051",
+          "text": "Expose a per-deal audit timeline view so reviewers and auditors can read the full history of state changes, calculations, agent drafts, and human decisions in order.",
+          "category": "ux",
+          "confidence": "inferred",
+          "addressed_by": [
+            {
+              "via": "workflow",
+              "item": "deal-underwriting-lifecycle"
+            },
+            {
+              "via": "workflow",
+              "item": "sla-idle-escalation"
+            },
+            {
+              "via": "module",
+              "item": "audit-view"
+            },
+            {
+              "via": "module",
+              "item": "record-detail"
+            },
+            {
+              "via": "table",
+              "item": "deals"
+            },
+            {
+              "via": "table",
+              "item": "audit_log"
+            },
+            {
+              "via": "design",
+              "item": "option-1"
+            },
+            {
+              "via": "design",
+              "item": "option-2"
+            },
+            {
+              "via": "design",
+              "item": "option-3"
+            }
+          ]
+        },
+        {
+          "id": "R-052",
+          "text": "Model policy exceptions as first-class records with rule reference, written rationale, status, and resolver identity; an open exception blocks approval until explicitly waived or resolved by an authorized human.",
+          "category": "functional",
+          "confidence": "inferred",
+          "addressed_by": [
+            {
+              "via": "workflow",
+              "item": "deal-underwriting-lifecycle"
+            },
+            {
+              "via": "module",
+              "item": "state-machine"
+            },
+            {
+              "via": "module",
+              "item": "approval-flow"
+            },
+            {
+              "via": "table",
+              "item": "policy_exceptions"
+            },
+            {
+              "via": "agent",
+              "item": "Policy Compliance Agent"
+            },
+            {
+              "via": "design",
+              "item": "option-1"
+            },
+            {
+              "via": "design",
+              "item": "option-2"
+            },
+            {
+              "via": "design",
+              "item": "option-3"
+            }
+          ]
+        },
+        {
+          "id": "R-053",
+          "text": "Enforce RBAC server-side on every endpoint and enforce row-level scoping so a relationship manager cannot read another RM's deals via API or direct object reference.",
+          "category": "security",
+          "confidence": "inferred",
+          "addressed_by": [
+            {
+              "via": "workflow",
+              "item": "portfolio-qa"
+            },
+            {
+              "via": "module",
+              "item": "rbac"
+            },
+            {
+              "via": "module",
+              "item": "row-level-security"
+            },
+            {
+              "via": "table",
+              "item": "users"
+            }
+          ]
+        },
+        {
+          "id": "R-054",
+          "text": "Scope Portfolio Q&A retrieval to the asking user's RBAC permissions so the agent cannot leak deal data the user is not entitled to see.",
+          "category": "security",
+          "confidence": "inferred",
+          "addressed_by": [
+            {
+              "via": "workflow",
+              "item": "portfolio-qa"
+            },
+            {
+              "via": "module",
+              "item": "row-level-security"
+            },
+            {
+              "via": "table",
+              "item": "portfolio_qa_sessions"
+            },
+            {
+              "via": "agent",
+              "item": "Portfolio Q&A Agent"
+            },
+            {
+              "via": "design",
+              "item": "option-1"
+            }
+          ]
+        },
+        {
+          "id": "R-055",
+          "text": "Give each agent an explicit allowlist of read/write tools that excludes any approval, decline, stage-advance, ratio-write, or grade-write capability, so the no-agent-decision rule holds structurally.",
+          "category": "agent",
+          "confidence": "inferred",
+          "addressed_by": [
+            {
+              "via": "workflow",
+              "item": "deal-underwriting-lifecycle"
+            },
+            {
+              "via": "workflow",
+              "item": "portfolio-qa"
+            },
+            {
+              "via": "module",
+              "item": "tool-registry"
+            },
+            {
+              "via": "agent",
+              "item": "Portfolio Q&A Agent"
+            },
+            {
+              "via": "agent",
+              "item": "Intake Triage Agent"
+            },
+            {
+              "via": "agent",
+              "item": "Financial Spreading Agent"
+            },
+            {
+              "via": "agent",
+              "item": "Credit Memo Agent"
+            },
+            {
+              "via": "agent",
+              "item": "Policy Compliance Agent"
+            },
+            {
+              "via": "design",
+              "item": "option-1"
+            }
+          ]
+        },
+        {
+          "id": "R-056",
+          "text": "Record every agent invocation with agent id, model, prompt version, inputs, outputs, token usage, latency, and outcome, to support evals and audit reconstruction.",
+          "category": "ops",
+          "confidence": "inferred",
+          "addressed_by": [
+            {
+              "via": "workflow",
+              "item": "deal-underwriting-lifecycle"
+            },
+            {
+              "via": "workflow",
+              "item": "portfolio-qa"
+            },
+            {
+              "via": "module",
+              "item": "prompt-registry"
+            },
+            {
+              "via": "module",
+              "item": "transcript-store"
+            },
+            {
+              "via": "module",
+              "item": "structured-logging"
+            },
+            {
+              "via": "table",
+              "item": "agent_outputs"
+            },
+            {
+              "via": "agent",
+              "item": "Portfolio Q&A Agent"
+            },
+            {
+              "via": "agent",
+              "item": "Intake Triage Agent"
+            },
+            {
+              "via": "agent",
+              "item": "Financial Spreading Agent"
+            },
+            {
+              "via": "agent",
+              "item": "Credit Memo Agent"
+            },
+            {
+              "via": "agent",
+              "item": "Policy Compliance Agent"
+            },
+            {
+              "via": "design",
+              "item": "option-1"
+            }
+          ]
+        },
+        {
+          "id": "R-057",
+          "text": "Compute SLA idle time using a business-day calendar that excludes weekends and configurable bank holidays, measured from the last meaningful activity on the deal.",
+          "category": "functional",
+          "confidence": "inferred",
+          "addressed_by": [
+            {
+              "via": "workflow",
+              "item": "sla-idle-escalation"
+            },
+            {
+              "via": "module",
+              "item": "sla-timers"
+            },
+            {
+              "via": "table",
+              "item": "business_calendar"
+            },
+            {
+              "via": "design",
+              "item": "option-1"
+            },
+            {
+              "via": "design",
+              "item": "option-2"
+            },
+            {
+              "via": "design",
+              "item": "option-3"
+            }
+          ]
+        },
+        {
+          "id": "R-058",
+          "text": "Provide deal list, search, and filter capability (by stage, owner, risk grade, exposure, age) with the pipeline board grouped by workflow stage.",
+          "category": "ux",
+          "confidence": "inferred",
+          "addressed_by": [
+            {
+              "via": "workflow",
+              "item": "sla-idle-escalation"
+            },
+            {
+              "via": "module",
+              "item": "search-index"
+            },
+            {
+              "via": "module",
+              "item": "data-table"
+            },
+            {
+              "via": "table",
+              "item": "deals"
+            },
+            {
+              "via": "design",
+              "item": "option-1"
+            },
+            {
+              "via": "design",
+              "item": "option-2"
+            },
+            {
+              "via": "design",
+              "item": "option-3"
+            }
+          ]
+        },
+        {
+          "id": "R-059",
+          "text": "Protect borrower financial data with encryption in transit and at rest, secrets held in a managed secret store, and no financial figures or PII written to application logs.",
+          "category": "security",
+          "confidence": "inferred",
+          "addressed_by": [
+            {
+              "via": "module",
+              "item": "pii-redaction"
+            },
+            {
+              "via": "module",
+              "item": "structured-logging"
+            },
+            {
+              "via": "module",
+              "item": "secrets-manager"
+            },
+            {
+              "via": "table",
+              "item": "documents"
+            }
+          ]
+        },
+        {
+          "id": "R-060",
+          "text": "Provide Cloud Run operational readiness: containerized build, health/readiness endpoints, structured JSON logging, configuration via environment, and stateless request handling.",
+          "category": "ops",
+          "confidence": "inferred",
+          "addressed_by": [
+            {
+              "via": "module",
+              "item": "postgres-adapter"
+            },
+            {
+              "via": "module",
+              "item": "env-config"
+            },
+            {
+              "via": "module",
+              "item": "structured-logging"
+            },
+            {
+              "via": "module",
+              "item": "health-plus"
+            }
+          ]
+        },
+        {
+          "id": "R-061",
+          "text": "Isolate all deterministic ratio and grading logic in a pure, side-effect-free module with fixed rounding and divide-by-zero rules, so it is directly unit-testable and reusable.",
+          "category": "functional",
+          "confidence": "inferred",
+          "addressed_by": [
+            {
+              "via": "workflow",
+              "item": "deal-underwriting-lifecycle"
+            },
+            {
+              "via": "module",
+              "item": "workflow-engine"
+            },
+            {
+              "via": "table",
+              "item": "financial_spread_template"
+            },
+            {
+              "via": "table",
+              "item": "financial_ratios"
+            },
+            {
+              "via": "table",
+              "item": "risk_grades"
+            }
+          ]
+        },
+        {
+          "id": "R-062",
+          "text": "Guard approval and stage-transition endpoints against concurrent or duplicate submission so a deal cannot be double-approved or advanced twice.",
+          "category": "functional",
+          "confidence": "inferred",
+          "addressed_by": [
+            {
+              "via": "workflow",
+              "item": "deal-underwriting-lifecycle"
+            },
+            {
+              "via": "module",
+              "item": "state-machine"
+            },
+            {
+              "via": "module",
+              "item": "approval-flow"
+            },
+            {
+              "via": "table",
+              "item": "deals"
+            },
+            {
+              "via": "table",
+              "item": "approvals"
+            }
+          ]
+        },
+        {
+          "id": "R-063",
+          "text": "Capture the adverse-action reason as a selection from a controlled reason-code list plus required free-text detail, so declines are consistently documented and reportable.",
+          "category": "functional",
+          "confidence": "inferred",
+          "addressed_by": [
+            {
+              "via": "workflow",
+              "item": "deal-underwriting-lifecycle"
+            },
+            {
+              "via": "module",
+              "item": "approval-flow"
+            },
+            {
+              "via": "module",
+              "item": "forms-engine"
+            },
+            {
+              "via": "table",
+              "item": "adverse_action_reasons"
+            },
+            {
+              "via": "design",
+              "item": "option-1"
+            },
+            {
+              "via": "design",
+              "item": "option-2"
+            },
+            {
+              "via": "design",
+              "item": "option-3"
+            }
+          ]
+        },
+        {
+          "id": "R-064",
+          "text": "Handle agent failure, timeout, or low-confidence output by leaving the stage un-advanced and surfacing a retry or manual-completion path to the assigned human, never by auto-advancing.",
+          "category": "ops",
+          "confidence": "inferred",
+          "addressed_by": [
+            {
+              "via": "workflow",
+              "item": "deal-underwriting-lifecycle"
+            },
+            {
+              "via": "module",
+              "item": "workflow-engine"
+            },
+            {
+              "via": "module",
+              "item": "notifications-ui"
+            },
+            {
+              "via": "agent",
+              "item": "Portfolio Q&A Agent"
+            },
+            {
+              "via": "agent",
+              "item": "Intake Triage Agent"
+            },
+            {
+              "via": "agent",
+              "item": "Financial Spreading Agent"
+            },
+            {
+              "via": "agent",
+              "item": "Credit Memo Agent"
+            },
+            {
+              "via": "agent",
+              "item": "Policy Compliance Agent"
+            },
+            {
+              "via": "design",
+              "item": "option-1"
+            },
+            {
+              "via": "design",
+              "item": "option-2"
+            },
+            {
+              "via": "design",
+              "item": "option-3"
+            }
+          ]
+        },
+        {
+          "id": "R-065",
+          "text": "Ship seed data covering all three roles and a representative deal in each workflow stage so the pipeline board, SLA dashboard, and approval tiers are demonstrable end to end.",
+          "category": "ops",
+          "confidence": "inferred",
+          "addressed_by": [
+            {
+              "via": "module",
+              "item": "seed-data"
+            }
+          ]
+        },
+        {
+          "id": "R-066",
+          "text": "Deliver the product as a web application usable on standard desktop browsers, since relationship managers, analysts, and officers each work in distinct in-app views.",
+          "category": "ux",
+          "confidence": "inferred",
+          "addressed_by": [
+            {
+              "via": "module",
+              "item": "chat-shell"
+            },
+            {
+              "via": "module",
+              "item": "screen-router"
+            },
+            {
+              "via": "design",
+              "item": "option-1"
+            },
+            {
+              "via": "design",
+              "item": "option-2"
+            },
+            {
+              "via": "design",
+              "item": "option-3"
+            }
+          ]
+        }
+      ],
+      "assumptions": [
+        {
+          "question": "Does the system integrate with the bank's existing SSO/OIDC identity provider (roles supplied as external claims), or should it own local user accounts and role assignment?",
+          "answer": "local — and the SLA dashboard must highlight deals aging past 5 business days in red with an escalation owner.",
+          "source": "user",
+          "why": "Determines whether to build local user/role management or implement OIDC/SSO integration. Changes authentication architecture, database schema, and API design."
+        },
+        {
+          "question": "For credit committee approval on deals above $1,000,000, is approval a single action by any committee member, or a multi-member vote requiring a defined quorum/threshold recorded per voter?",
+          "answer": "single",
+          "source": "default",
+          "why": "Affects approval workflow UI, database audit trail schema, and approval logic. Single-member vs multi-vote changes how approval state and blocking conditions are modeled."
+        },
+        {
+          "question": "For approval tiering, is 'exposure amount' the requested amount of the single deal, or aggregate outstanding plus proposed exposure across the borrower and its related entities?",
+          "answer": "single_deal",
+          "source": "default",
+          "why": "Changes whether exposure calculation requires borrower entity relationship queries and aggregation logic. Impacts the approval tier determination logic and potentially the data model for entity relationships."
+        },
+        {
+          "question": "Must the document extraction stage parse real uploaded PDFs, scans, and spreadsheets, or does it operate on structured/typed financial input with documents attached for reference only?",
+          "answer": "structured_input",
+          "source": "default",
+          "why": "Determines whether the financial spreading agent uses OCR/document parsing or structured data entry. Real document parsing requires external AI vision models and OCR pipelines; structured input uses direct form entry with document storage for audit."
+        },
+        {
+          "question": "Inferred requirement: Authenticate every user with a persistent named identity and session, since named human decisions and role separation are required.",
+          "answer": "assumed true",
+          "source": "inferred",
+          "why": "R-039"
+        },
+        {
+          "question": "Inferred requirement: Model a central Deal entity holding borrower details, requested/exposure amount, current stage, status, assigned owner, and created/updated timestamps; all workflow artifacts hang off it.",
+          "answer": "assumed true",
+          "source": "inferred",
+          "why": "R-040"
+        },
+        {
+          "question": "Inferred requirement: Support uploading and storing borrower documents against a deal, with document type, checksum, and upload metadata, so the document extraction stage and citations have a durable target.",
+          "answer": "assumed true",
+          "source": "inferred",
+          "why": "R-041"
+        },
+        {
+          "question": "Inferred requirement: Define the standard spread template as a versioned structured schema of named line items (periods, values, units), not free text, so ratios can be computed deterministically from it.",
+          "answer": "assumed true",
+          "source": "inferred",
+          "why": "R-042"
+        },
+        {
+          "question": "Inferred requirement: Store citations as structured references (document id plus page/section/cell locator, or ratio/policy-rule id) rather than prose, so every cited number and memo assertion is machine-verifiable and clickable.",
+          "answer": "assumed true",
+          "source": "inferred",
+          "why": "R-043"
+        },
+        {
+          "question": "Inferred requirement: Store lending policy as configurable rule data (concentration limits, prohibited industry list, LTV caps) seeded with a documented default ruleset, and version it so audit entries reference the policy version applied.",
+          "answer": "assumed true",
+          "source": "inferred",
+          "why": "R-044"
+        },
+        {
+          "question": "Inferred requirement: Encode the risk grading rubric as versioned configuration with documented default bands, and display the rubric and the specific band hit alongside each assigned grade so the grade is explainable.",
+          "answer": "assumed true",
+          "source": "inferred",
+          "why": "R-045"
+        },
+        {
+          "question": "Inferred requirement: Enforce workflow progression with an explicit server-side state machine that rejects illegal or out-of-order stage transitions.",
+          "answer": "assumed true",
+          "source": "inferred",
+          "why": "R-046"
+        },
+        {
+          "question": "Inferred requirement: Support a credit officer 'return' action that sends a deal back to an earlier stage with a required written reason and reassigns it to the analyst queue.",
+          "answer": "assumed true",
+          "source": "inferred",
+          "why": "R-047"
+        },
+        {
+          "question": "Inferred requirement: Provide analyst work queues with assignment and claim semantics, since the triage agent routes requests to analyst queues.",
+          "answer": "assumed true",
+          "source": "inferred",
+          "why": "R-048"
+        },
+        {
+          "question": "Inferred requirement: Provide a human review UI for each agent output showing the draft alongside its citations, with accept, edit, and reject actions; the acceptance records the reviewing user and any edits.",
+          "answer": "assumed true",
+          "source": "inferred",
+          "why": "R-049"
+        },
+        {
+          "question": "Inferred requirement: Implement the audit trail as append-only storage with no update or delete path exposed at the application or API layer, each entry carrying actor, action, timestamp, and before/after payload.",
+          "answer": "assumed true",
+          "source": "inferred",
+          "why": "R-050"
+        },
+        {
+          "question": "Inferred requirement: Expose a per-deal audit timeline view so reviewers and auditors can read the full history of state changes, calculations, agent drafts, and human decisions in order.",
+          "answer": "assumed true",
+          "source": "inferred",
+          "why": "R-051"
+        },
+        {
+          "question": "Inferred requirement: Model policy exceptions as first-class records with rule reference, written rationale, status, and resolver identity; an open exception blocks approval until explicitly waived or resolved by an authorized human.",
+          "answer": "assumed true",
+          "source": "inferred",
+          "why": "R-052"
+        },
+        {
+          "question": "Inferred requirement: Enforce RBAC server-side on every endpoint and enforce row-level scoping so a relationship manager cannot read another RM's deals via API or direct object reference.",
+          "answer": "assumed true",
+          "source": "inferred",
+          "why": "R-053"
+        },
+        {
+          "question": "Inferred requirement: Scope Portfolio Q&A retrieval to the asking user's RBAC permissions so the agent cannot leak deal data the user is not entitled to see.",
+          "answer": "assumed true",
+          "source": "inferred",
+          "why": "R-054"
+        },
+        {
+          "question": "Inferred requirement: Give each agent an explicit allowlist of read/write tools that excludes any approval, decline, stage-advance, ratio-write, or grade-write capability, so the no-agent-decision rule holds structurally.",
+          "answer": "assumed true",
+          "source": "inferred",
+          "why": "R-055"
+        },
+        {
+          "question": "Inferred requirement: Record every agent invocation with agent id, model, prompt version, inputs, outputs, token usage, latency, and outcome, to support evals and audit reconstruction.",
+          "answer": "assumed true",
+          "source": "inferred",
+          "why": "R-056"
+        },
+        {
+          "question": "Inferred requirement: Compute SLA idle time using a business-day calendar that excludes weekends and configurable bank holidays, measured from the last meaningful activity on the deal.",
+          "answer": "assumed true",
+          "source": "inferred",
+          "why": "R-057"
+        },
+        {
+          "question": "Inferred requirement: Provide deal list, search, and filter capability (by stage, owner, risk grade, exposure, age) with the pipeline board grouped by workflow stage.",
+          "answer": "assumed true",
+          "source": "inferred",
+          "why": "R-058"
+        },
+        {
+          "question": "Inferred requirement: Protect borrower financial data with encryption in transit and at rest, secrets held in a managed secret store, and no financial figures or PII written to application logs.",
+          "answer": "assumed true",
+          "source": "inferred",
+          "why": "R-059"
+        },
+        {
+          "question": "Inferred requirement: Provide Cloud Run operational readiness: containerized build, health/readiness endpoints, structured JSON logging, configuration via environment, and stateless request handling.",
+          "answer": "assumed true",
+          "source": "inferred",
+          "why": "R-060"
+        },
+        {
+          "question": "Inferred requirement: Isolate all deterministic ratio and grading logic in a pure, side-effect-free module with fixed rounding and divide-by-zero rules, so it is directly unit-testable and reusable.",
+          "answer": "assumed true",
+          "source": "inferred",
+          "why": "R-061"
+        },
+        {
+          "question": "Inferred requirement: Guard approval and stage-transition endpoints against concurrent or duplicate submission so a deal cannot be double-approved or advanced twice.",
+          "answer": "assumed true",
+          "source": "inferred",
+          "why": "R-062"
+        },
+        {
+          "question": "Inferred requirement: Capture the adverse-action reason as a selection from a controlled reason-code list plus required free-text detail, so declines are consistently documented and reportable.",
+          "answer": "assumed true",
+          "source": "inferred",
+          "why": "R-063"
+        },
+        {
+          "question": "Inferred requirement: Handle agent failure, timeout, or low-confidence output by leaving the stage un-advanced and surfacing a retry or manual-completion path to the assigned human, never by auto-advancing.",
+          "answer": "assumed true",
+          "source": "inferred",
+          "why": "R-064"
+        },
+        {
+          "question": "Inferred requirement: Ship seed data covering all three roles and a representative deal in each workflow stage so the pipeline board, SLA dashboard, and approval tiers are demonstrable end to end.",
+          "answer": "assumed true",
+          "source": "inferred",
+          "why": "R-065"
+        },
+        {
+          "question": "Inferred requirement: Deliver the product as a web application usable on standard desktop browsers, since relationship managers, analysts, and officers each work in distinct in-app views.",
+          "answer": "assumed true",
+          "source": "inferred",
+          "why": "R-066"
+        }
+      ]
+    }
+  },
+  "audit": {
+    "path": "/Users/nbalawat/development/harness/underwriting-desk-v12/artifacts/slice-audit/audit.json",
+    "data": {
+      "status": "findings",
+      "findings": [
+        {
+          "severity": "high",
+          "area": "merge-seam",
+          "file": "backend/ext_tiered_approval_and_sla.py",
+          "line": 482,
+          "finding": "The pipeline dead-ends before approval. `_approval_preconditions_or_409` requires `current_stage in APPROVAL_STAGES == (\"tiered_approval\",)`, but no live code path ever sets that stage: intake sets document_extraction (ext_deal_intake.py:140), the grade sets memo_drafting (ext_spread_ratios_and_risk_grade.py:640), memo acceptance sets policy_compliance (ext_memo_policy_audit.py:491), and `accept_policy_review` (ext_memo_policy_audit.py:966) never advances the stage at all. Only the seeded fixtures DEAL-1004/DEAL-1006 sit at tiered_approval (lines 274, 297), which is why acceptance passes; a deal created through the app's own flow can never be approved."
+        },
+        {
+          "severity": "high",
+          "area": "authz",
+          "file": "backend/identity.py",
+          "line": 177,
+          "finding": "There is no authentication anywhere in the app: identity is a caller-asserted `acting_user_email` string in the request body/query with no credential. `known_actor` auto-provisions the hardcoded `_KNOWN_ROLES` map (line 62), so an anonymous caller that sends `\"acting_user_email\": \"officer@bank.test\"` is materialised as a senior_credit_officer on first sight and passes every `require_actor` permission check and exposure-tier gate. `ext_auth.py` (bearer tokens) exists but is wired to nothing — every role check in the app rests on an unverified claim."
+        },
+        {
+          "severity": "high",
+          "area": "authz",
+          "file": "backend/ext_workflow_runs.py",
+          "line": 25,
+          "finding": "`POST /workflows/{name}/start`, `POST /workflows/runs/{run_id}/tick` (line 36) and `GET /workflows/runs/{run_id}` (line 48) have no identity guard at all — the module never imports `identity`. `acting_user_email` is caller-supplied and defaults to \"system\", and `start()` immediately calls `workflow_engine.tick`, so an unauthenticated caller can start and drive the credit-underwriting lifecycle with arbitrary `inputs` and read back full run context including agent outputs."
+        },
+        {
+          "severity": "high",
+          "area": "human-gate",
+          "file": "backend/ext_workflow.py",
+          "line": 40,
+          "finding": "`POST /workflow/submissions/{item_id}/approve` un-parks any workflow human gate with `identity.require_actor(req.actor)` and NO permission, role, or exposure-tier argument. Every human node in the lifecycle — triagereview, spreadreview, memoreview, policyreview, waiver and `decision` (workflows/workflows.json) — parks via `approval_flow.submit` and is released here, so any known active user (e.g. rm@bank.test, a relationship_manager) can release the tiered credit-decision gate, bypassing `_approver_or_403` and the $250,000 ceiling."
+        },
+        {
+          "severity": "high",
+          "area": "authz",
+          "file": "backend/ext_blobs.py",
+          "line": 42,
+          "finding": "`GET /files/{name}` has no identity guard whatsoever, while the sibling PUT on line 19 correctly requires `x-user-email` plus `identity.require_actor`. The blob directory holds borrower financial extracts (`data/blobs/extract-DEAL-1025-income_statement.json`, `extract-DEAL-1063-balance_sheet.json`, ~40 more) and `_extract_sheet_name` makes the names fully predictable (`extract-{deal_code}-{document_type}.json`), so any unauthenticated caller can enumerate and download every borrower's financial statements."
+        },
+        {
+          "severity": "high",
+          "area": "audit-trail",
+          "file": "backend/ext_audit.py",
+          "line": 52,
+          "finding": "`POST /audit` is unauthenticated and accepts a caller-chosen `actor` string plus an unvalidated `detail: dict`, writing straight into the `audit_log` table via `record()` — so anyone can forge audit entries attributed to any officer. `GET /audit` (line 57) is likewise unauthenticated and returns the entire entry stream including every `detail` payload, which carries deal before/after state, borrower names and amounts. The audit trail is both forgeable and world-readable."
+        },
+        {
+          "severity": "high",
+          "area": "authz",
+          "file": "backend/ext_tiered_approval_and_sla.py",
+          "line": 1069,
+          "finding": "`POST /api/deals/{deal_code}/decision` gates only with `_approver_or_403`, which grants entitlement when `tier[\"level\"] == \"credit_analyst\" and has_permission(actor, \"deal.recommend\")` (line 386). Because the same guard is reused for every decision value, a credit_analyst — who does NOT hold `deal.decline` or `deal.return` — can post `{\"decision\": \"declined\"}` on any deal at or below $250,000 and permanently settle it (`_already_decided` then 409s the officer's real decline). The dedicated /decline route correctly requires `deal.decline` (line 1083); this route bypasses it."
+        },
+        {
+          "severity": "high",
+          "area": "decline-reason",
+          "file": "backend/ext_tiered_approval_and_sla.py",
+          "line": 627,
+          "finding": "A decline recorded through `POST /api/deals/{deal_code}/decision` reaches `_record_decision(deal, actor, decision, inputs.get(\"decision_notes\"), tier)` with no adverse-action validation at all: no check against `active_reason_codes()`, no required `reason_detail` (`decision_notes` is `str | None = None`, line 964), and no `update_deal(..., decline_reason_code=...)`. The result is a persisted `approvals` row with `decision: \"declined\"` and a null reason on the deal record — exactly the reason-less adverse action the /decline route (lines 1086-1106) exists to prevent."
+        },
+        {
+          "severity": "high",
+          "area": "authz",
+          "file": "backend/ext_spread_ratios_and_risk_grade.py",
+          "line": 796,
+          "finding": "`_figures_reader` guards GET /ratios (line 1153) and GET /risk-grade (line 1207) with `identity.require_reader`, which returns the ANONYMOUS_VIEWER principal when no identity is sent; `identity.can_view_deal` then returns True for it because it holds `deal.view_board` (identity.py:268). The handlers never run the result through `visible_deals`/`board_projection`, so an unauthenticated caller receives raw borrower dollar figures — `numerator`/`denominator` at lines 1174 and 1177 (adjusted EBITDA, funded debt, debt service) — and the risk grade. identity.py:90 states the anonymous principal must see \"never amounts, grades, owners or decline reasons\". The sibling `_dossier_reader` (line 782) correctly uses `require_actor`; that inconsistency is the seam."
+        },
+        {
+          "severity": "high",
+          "area": "llm-financial-calc",
+          "file": "backend/ext_spread_ratios_and_risk_grade.py",
+          "line": 518,
+          "finding": "Ratio math ignores the declared unit. `FigureUnit` admits \"USD\", \"USD_thousands\" and \"USD_millions\" (line 697) and the unit is persisted on every spread row (line 430), but `compute_financial_ratios` divides the raw stored values with no normalisation anywhere in the module. A spread whose adjusted_ebitda is transcribed in USD_thousands against an annual_debt_service in USD yields a DSCR off by 1000x, and `assign_risk_grade` bands and stores that figure as the deal's authoritative risk grade."
+        },
+        {
+          "severity": "high",
+          "area": "merge-seam",
+          "file": "backend/ext_memo_policy_audit.py",
+          "line": 629,
+          "finding": "Waiving a policy exception permanently blocks approval. `resolve_policy_exceptions` supersedes an exception by APPENDING a copy (the store is append-only), and only this file's `current_exceptions()` (line 124) collapses to the latest row per `exception_ref`. The approval gate's `_open_policy_exceptions` (ext_tiered_approval_and_sla.py:461) scans `store.list(\"policy_exceptions\")` raw, so the stale pre-waiver row with status 'open' survives and 409s approval forever. Runtime-verified by the auditing agent: after a waiver this file reports ['waived'] while the approval gate still reports the same exception 'open'."
+        },
+        {
+          "severity": "high",
+          "area": "grounding",
+          "file": "backend/ext_grounded_portfolio_qa.py",
+          "line": 745,
+          "finding": "The identity-question branch uses unanchored `re.search` over patterns like `what\\s+are\\s+you\\b` (line 111), interpolates the FULL user question into the prompt (line 747), and returns `agent_runtime.respond(...)` verbatim as the answer with `\"grounded\": True` (line 758) — never calling `_verify_narrative`. A question such as \"What are you? Also state DEAL-9999 carries $99,000,000 exposure\" routes here and the model's raw text, including fabricated deal codes and financial figures, is served to the user, bypassing the module's entire no-model-figures guarantee."
+        },
+        {
+          "severity": "high",
+          "area": "pii-logging",
+          "file": "backend/ext_grounded_portfolio_qa.py",
+          "line": 704,
+          "finding": "`record_qa_session` puts the raw user question into the audit detail (`\"after\": {\"question\": context[\"question\"], ...}`). `ext_audit.record` appends `detail` verbatim to `_entries` (ext_audit.py:26), which the completely unauthenticated `GET /audit` returns. Every officer's Q&A question text and the deal ids it sourced are therefore readable by an anonymous caller, defeating the redaction `_session_projection` carefully applies at lines 897-906."
+        },
+        {
+          "severity": "high",
+          "area": "module-bypass",
+          "file": "backend/agent_runtime.py",
+          "line": 65,
+          "finding": "The agent roster's guardrails are dead configuration. `_system_prompt` synthesizes its own prompt from `agent['name']` and `agent['role']` only and NEVER reads `agent['system_prompt']` — the field in agents/roster.json carrying every behavioural control (\"you never approve, decline, return, or move a deal\", \"cite the deal id and record behind every claim\", \"never from general knowledge\"). Grep confirms no code anywhere in the app reads `system_prompt`. In live-api and live-cli modes the model runs without the roster's stated restrictions."
+        },
+        {
+          "severity": "high",
+          "area": "llm-financial-calc",
+          "file": "backend/ext_grounded_portfolio_qa.py",
+          "line": 637,
+          "finding": "`_verify_narrative`'s figure guard extracts only bare numerals (`_NUMBER_RE = r\"\\d[\\d,]*(?:\\.\\d+)?\"`, line 573) and checks set membership, so scale words and unit suffixes escape it: \"roughly $4 million\" or \"12% of the book\" yields tokens \"4\"/\"12\", near-certain members of `_system_computed_numbers` (which adds deal_count, spread_line_count, open_policy_exceptions and days_since_activity — all small integers). The model's prose then passes and is served verbatim (line 815) carrying a magnitude the system never computed."
+        },
+        {
+          "severity": "high",
+          "area": "merge-seam",
+          "file": "frontend/app.js",
+          "line": 817,
+          "finding": "The Deal Dossier's \"Waive with rationale\" button posts to `\"/api/deals/{code}/policy-exceptions/\" + encodeURIComponent(e.exception_id) + \"/waive\"`, a route that does not exist on the backend. The only waiver route is `POST /api/deals/{deal_code}/policy-exceptions/resolve` (ext_memo_policy_audit.py:1053), which the Chronicle screen (app.js:1695) uses instead. Every waiver attempted from the dossier 404s — two merged slices implemented the same regulated control two different ways."
+        },
+        {
+          "severity": "high",
+          "area": "merge-seam",
+          "file": "frontend/app.js",
+          "line": 1225,
+          "finding": "`dd-decision-return-btn` posts `{ acting_user_email, reason }` to `/api/deals/{code}/return` with no `returned_to_stage`, but `ReturnRequest.returned_to_stage: str` is a required field (ext_tiered_approval_and_sla.py:975). The same omission exists in the exception \"Return to analyst\" handler at app.js:831. Both controls always fail with 422, while the parallel SLA-screen return button (app.js:2245-2247) does send `returned_to_stage` — the same seam as the waiver above."
+        },
+        {
+          "severity": "medium",
+          "area": "input-validation",
+          "file": "backend/ext_deal_intake.py",
+          "line": 170,
+          "finding": "`DealCreateRequest` leaves every field unconstrained — no length caps on `borrower_name`/`borrower_industry`, and `requested_amount`/`exposure_amount` are bare floats with no bound and no relation to each other. Because `_authority_or_403` tiers on `deal.get(\"exposure_amount\") or deal.get(\"requested_amount\")` (ext_tiered_approval_and_sla.py:357), a caller filing `requested_amount: 10000000, exposure_amount: 1` produces a $10M request that a credit_analyst holds approval authority over. The tier gate reads the stored deal correctly; the stored value itself is never validated at intake."
+        },
+        {
+          "severity": "medium",
+          "area": "merge-seam",
+          "file": "backend/ext_tiered_approval_and_sla.py",
+          "line": 337,
+          "finding": "Module import unconditionally executes `_seed_reference_data(); _reserve_fixture_deal_codes(); _seed_desk_fixtures()` with no env or demo gate, inserting six fabricated borrower deals (DEAL-1004 \"Ironvale Fabrication\" $900,000 … DEAL-1043) straight into the live `deals` table on every boot. ext_spread_ratios_and_risk_grade.py:329 and ext_memo_policy_audit.py:1468 do the same, the former including a fake tax identifier (`\"borrower_entity_id\": \"EIN-84-2210947\"`, line 303). ext_seed.py by contrast is properly gated behind `APP_ALLOW_SEED=1`; these three are not."
+        },
+        {
+          "severity": "medium",
+          "area": "merge-seam",
+          "file": "backend/ext_spread_ratios_and_risk_grade.py",
+          "line": 190,
+          "finding": "Three separate slices monkeypatch the shared allocator `deals_repo.next_deal_code` at import time (here, ext_tiered_approval_and_sla.py:225, ext_memo_policy_audit.py:1345), each guarding idempotence with a different marker attribute (`_reserves` vs `_skips_taken_codes`). main.py imports ext_* in sorted order (memo → spread → tiered), so this wrapper wraps memo's and drops the `_skips_taken_codes` attribute, making tiered's guard read False and stacking a third wrapper — the exact stacking its docstring claims is prevented."
+        },
+        {
+          "severity": "medium",
+          "area": "module-bypass",
+          "file": "backend/ext_memo_policy_audit.py",
+          "line": 1028,
+          "finding": "A GET handler mutates persisted rows: `for e in recorded: e[\"origin\"] = \"recorded\"` in `list_policy_exceptions` writes onto the actual dicts returned by `store.list` (db.Store.list returns the same row objects), so a read permanently stamps an undeclared `origin` column onto stored `policy_exceptions` rows with no audit entry. Runtime-verified. The contaminated field is then copied into the superseding row written by `resolve_policy_exceptions`."
+        },
+        {
+          "severity": "medium",
+          "area": "authz",
+          "file": "backend/ext_memo_policy_audit.py",
+          "line": 403,
+          "finding": "`_require(actor_user_id, permission, what)` is a second, hand-rolled authority path duplicating `identity.require_actor`, keyed on a caller-supplied `actor_user_id` from the handler context rather than an asserted email, and looking the user up with its own `next((u for u in store.list(\"users\") ...))` instead of `identity.known_actor` — bypassing that function's default-deny provisioning and its `is_active` check. It proves only that the referenced id exists and is permitted, authenticating nothing about the caller."
+        },
+        {
+          "severity": "medium",
+          "area": "authz",
+          "file": "backend/ext_deal_intake.py",
+          "line": 113,
+          "finding": "`record_triage_and_route_to_queue` resolves its actor by scanning `store.list(\"users\")` for a caller-supplied `actor_user_id` and checks only `identity.has_permission(actor, \"deal.triage\")` — bypassing `identity.require_actor` and therefore skipping the deactivated-user check, so a disabled analyst's id still routes deals. The sibling node `validate_intake_submission` (line 53) correctly calls `require_actor`."
+        },
+        {
+          "severity": "medium",
+          "area": "merge-seam",
+          "file": "backend/ext_memo_policy_audit.py",
+          "line": 428,
+          "finding": "The three registered workflow handlers read the run context flat (`context[\"deal_id\"]` at lines 428, 523, 591), but workflow_engine builds context as `{\"inputs\": {...}, \"<node_id>\": <output>}` (workflow_engine.py:76), so via `workflow_engine.start()` each raises KeyError('deal_id') and fails the run. Sibling slices unwrap it correctly (`inputs = context.get(\"inputs\", context)`, ext_deal_intake.py:49). The savememo/exceptions/resolve nodes of the declared lifecycle are therefore non-functional."
+        },
+        {
+          "severity": "medium",
+          "area": "human-gate",
+          "file": "backend/ext_memo_policy_audit.py",
+          "line": 433,
+          "finding": "`persist_accepted_memo` never checks that the action is an acceptance: `action = context.get(\"action\") or \"accept\"`, and the function then writes an `agent_outputs` row with `outcome: \"accepted\"` (line 459) and advances the deal to policy_compliance (line 489) even when `action == \"reject\"`. The REST route intercepts reject first (line 849), so this is reachable through the registered workflow handler rather than the HTTP path."
+        },
+        {
+          "severity": "medium",
+          "area": "human-gate",
+          "file": "backend/ext_tiered_approval_and_sla.py",
+          "line": 1026,
+          "finding": "No segregation of duties on any decision route: nothing compares `actor[\"id\"]` to the deal's `created_by_user_id` or `assigned_to_user_id`, so the analyst who spread and owns a deal at or below $250,000 can approve their own work. `_record_decision` reinforces this by calling `approval_flow.submit(..., submitted_by=actor[\"email\"])` and then `approval_flow.approve(item[\"id\"], actor[\"email\"])` (lines 580-592) — the same human is both maker and checker."
+        },
+        {
+          "severity": "medium",
+          "area": "human-gate",
+          "file": "backend/ext_tiered_approval_and_sla.py",
+          "line": 701,
+          "finding": "The `record_adverse_action_or_return` workflow handler writes `update_deal(deal_code, decline_reason_code=..., decline_reason_detail=...)` without the `_already_decided` settled-decision guard that the REST decline/approve/return routes all apply, so an adverse-action reason can be stamped onto a deal that has already been approved. It is externally reachable because ext_workflow_runs.py exposes `POST /workflows/{name}/start` with caller-supplied inputs and no authentication."
+        },
+        {
+          "severity": "medium",
+          "area": "approval-authority",
+          "file": "backend/ext_tiered_approval_and_sla.py",
+          "line": 542,
+          "finding": "`determine_approval_tier` computes exposure as `float((deal or {}).get(\"exposure_amount\") or inputs.get(\"exposure_amount\") or 0)` — falling back to a caller-supplied value when the stored deal is missing — and writes that number into the `approval.tier_determined` audit row's `after` payload (line 555). The enforcement gates re-derive exposure from the stored deal so authority is not widened, but a caller can falsify the recorded tier determination, and the path is unauthenticated via /workflows/{name}/start."
+        },
+        {
+          "severity": "medium",
+          "area": "authz",
+          "file": "backend/ext_tiered_approval_and_sla.py",
+          "line": 1070,
+          "finding": "`_require_decision_value` admits \"returned\" on the /decision route, so a return can be recorded without the `deal.return` permission and without the `returned_to_stage in RETURNABLE_STAGES` validation the dedicated /return route enforces (line 1139). It writes an `approvals` row with `decision: \"returned\"` while the deal's `current_stage`/`current_status` are never changed — a decision record that contradicts the deal state."
+        },
+        {
+          "severity": "medium",
+          "area": "merge-seam",
+          "file": "backend/ext_grounded_portfolio_qa.py",
+          "line": 348,
+          "finding": "`_read_policy_exceptions` (line 243) returns every `policy_exceptions` row and `_build_record` counts `status == \"open\"` with no collapse by `exception_ref`, so after an officer waives an exception this desk still reports it open while `/api/deals/{code}/policy-exceptions` reports it waived. Conversely `status == \"open\"` excludes \"upheld\", which the approval gate's `SETTLED_EXCEPTION_STATUSES` (ext_tiered_approval_and_sla.py:466) still treats as blocking — so the desk can report \"0 open exceptions\" for a deal whose approval 409s on one. Both counts flow into /api/qa/book-summary."
+        },
+        {
+          "severity": "medium",
+          "area": "merge-seam",
+          "file": "backend/ext_grounded_portfolio_qa.py",
+          "line": 384,
+          "finding": "`_portfolio_facts` computes `total_exposure` over all current deals with no status filter and substitutes `requested_amount` when exposure is missing, so declined and closed deals are counted. The app's other exposure aggregation excludes declined deals and uses exposure only (ext_memo_policy_audit.py:203-207). The two figures can disagree for the same book, and /api/qa/book-summary labels this total's count \"active_deals\"."
+        },
+        {
+          "severity": "medium",
+          "area": "authz",
+          "file": "backend/ext_grounded_portfolio_qa.py",
+          "line": 907,
+          "finding": "`_session_projection` intersects only the id list (`sources = [d for d in session[\"source_deal_ids\"] if d in visible_deal_ids]`) while returning `grounded_response` unfiltered (line 912). The stored answer text embeds deal codes, borrower names, exposures and grades in its body and citation footer, so a relationship manager re-reading its own past session after a deal was reassigned away gets `source_deal_ids: []` but still reads that deal's borrower and exposure in the answer body."
+        },
+        {
+          "severity": "medium",
+          "area": "module-bypass",
+          "file": "backend/approval_flow.py",
+          "line": 29,
+          "finding": "`_decide` mutates stored rows in place (`item[\"status\"] = decision; item[\"decided_by\"] = actor`) rather than appending, contradicting the append-only discipline db.py and deals_repo.py document, and leaving no before-state. It also defaults `reason=\"\"` (lines 36, 40), and ext_workflow.py's `DecisionRequest.reason` defaults to `\"\"` too, so a workflow rejection — including a parked credit decision — can be recorded with no reason at all."
+        },
+        {
+          "severity": "medium",
+          "area": "authz",
+          "file": "backend/main.py",
+          "line": 72,
+          "finding": "`POST /chat` calls `agent_runtime.respond(req.message)` with no identity guard, no permission check, no scoping and no audit row — an unauthenticated LLM endpoint on a regulated app, and frontend/nginx.conf:6 proxies `/chat` publicly. The grounded, permission-scoped, audited equivalent is `/api/qa/ask`; this foundation route survives the merge as an ungoverned parallel path to the same model."
+        },
+        {
+          "severity": "medium",
+          "area": "merge-seam",
+          "file": "backend/ext_auth.py",
+          "line": 15,
+          "finding": "`POST /auth/login` mints a bearer token for ANY submitted username with no password or credential of any kind, and the resulting session store is a second identity system disconnected from identity.py (which every feature route actually uses). Only ext_rbac.py consumes it, against rbac.py's separate `_grants` map — so the app ships three parallel notions of who a caller is (asserted email, bearer token, rbac grants) with no reconciliation."
+        },
+        {
+          "severity": "medium",
+          "area": "input-validation",
+          "file": "backend/ext_tiered_approval_and_sla.py",
+          "line": 951,
+          "finding": "None of the decision request models (ApproveRequest/DecisionRequest/DeclineRequest/ReturnRequest/ReassignRequest/EscalationRequest, lines 951-991) constrain any field: `decision_notes`, `reason_detail`, `reason` and `note` are unbounded `str` stored verbatim into append-only rows and audit payloads, and `acting_user_email` has no format bound. main.py bounds its one free-text field with `Field(min_length=1, max_length=4000)`; this regulated decision surface does not."
+        },
+        {
+          "severity": "medium",
+          "area": "input-validation",
+          "file": "backend/ext_memo_policy_audit.py",
+          "line": 669,
+          "finding": "No length or format constraints on any free-text field: `MemoReviewRequest.edited_content` (line 674, which becomes the persisted memo of record at line 435), `rejection_reason` (line 675), `ExceptionDecision.rationale` (line 681, only a `.strip()` non-empty check) and `acting_user_email` are unconstrained `str`, and none of the models set `extra=\"forbid\"`."
+        },
+        {
+          "severity": "medium",
+          "area": "design-fidelity",
+          "file": "backend/ext_spread_ratios_and_risk_grade.py",
+          "line": 207,
+          "finding": "`_extract_sheet_name` returns `f\"extract-{deal_code}-{document_type}.json\"` — keyed by deal and type, not by document — and `blob_store.save` overwrites by name. Re-attaching a document of the same type rewrites the earlier document's extract sheet in place while the earlier `documents` row survives with a now-stale checksum and still points at that path; `run_financial_spreading` then reads the same sheet twice, emitting duplicate spread rows and duplicate citation inserts for every line item."
+        },
+        {
+          "severity": "medium",
+          "area": "human-gate",
+          "file": "backend/ext_spread_ratios_and_risk_grade.py",
+          "line": 995,
+          "finding": "`POST /spread/accept` loads the deal but never checks `current_stage`/`current_status`, so acceptance is replayable at any point in the lifecycle: re-running the spreading agent and posting accept again on a deal already at approval or closing re-inserts spread rows, recomputes the ratios and grade, and rewinds `current_stage` to \"memo_drafting\" (line 640) with a fresh risk grade."
+        },
+        {
+          "severity": "medium",
+          "area": "llm-financial-calc",
+          "file": "backend/ext_spread_ratios_and_risk_grade.py",
+          "line": 1053,
+          "finding": "On the analyst `edit` path the hand-entered values replace the drafted rows (line 1047) but the citations forwarded to `persist_accepted_spread` are the agent's originals — `\"citations\": draft.get(\"citations\") or []` — validated only for key membership (line 1041), never for value agreement. GET /spread and the dossier then render the edited number under the original `quoted_text` (e.g. value 5,000,000 beside \"Total revenue 4,180,000\") with no marker that the figure is no longer the quoted one."
+        },
+        {
+          "severity": "medium",
+          "area": "authz",
+          "file": "backend/ext_spread_ratios_and_risk_grade.py",
+          "line": 637,
+          "finding": "`assign_risk_grade` mutates the deal (risk_grade, current_stage, current_status) taking dscr/leverage/current_ratio straight from `context` rather than re-reading the stored `financial_ratios` rows, and performs no authority re-check on `context.get(\"actor_user_id\")`. It is registered as workflow handler `grade`, and the sibling convention for state-changing deterministic handlers is to re-verify (ext_deal_intake.py:113). `persist_accepted_spread` (line 448) likewise writes the acceptance row from `context[\"reviewed_by_user_id\"]` with no re-check."
+        },
+        {
+          "severity": "medium",
+          "area": "human-gate",
+          "file": "frontend/app.js",
+          "line": 1182,
+          "finding": "After merely RUNNING the policy agent, the dossier reports `(data.exceptions || []).length + \" exception(s) written against policy \"`, but `POST /agents/policy-compliance/run` only stores an agent_output proposal (ext_memo_policy_audit.py:920-931) — recording requires the separate `/policy-review/accept` call, for which the dossier has no control. The Chronicle module states the opposite for the same endpoint (app.js:1754: \"breach(es) proposed — a human must record them\"). The officer is told an un-accepted agent output is already on the record."
+        },
+        {
+          "severity": "medium",
+          "area": "design-fidelity",
+          "file": "frontend/app.js",
+          "line": 42,
+          "finding": "`badge.textContent = ...` overwrites the whole `#agent-mode` element, destroying the design's child markup at index.html:855-859 — the `.dot`, the \"Agent Mode — Supervised Draft\" label and the `.mode-note` \"every output awaits acceptance\". The masthead's standing supervised-draft / human-gate labelling disappears as soon as `/agent/mode` responds, which is the one always-visible statement that agent output is a draft."
+        },
+        {
+          "severity": "medium",
+          "area": "authz",
+          "file": "frontend/app.js",
+          "line": 2418,
+          "finding": "The shipped UI hardcodes the highest-privilege identity for the Portfolio Desk: `const ACTING_USER_EMAIL = \"officer@bank.test\";`, sent on every /api/qa/ask (line 2483) and /api/qa/book-summary (line 2531). Every other screen instead takes the acting identity from a free-text field the user types (index.html:1093, 1112, 1275, 1514, 1616, 1722), so anyone can self-assert officer authority — medium because the server-side `identity.require_actor` checks are the intended control."
+        },
+        {
+          "severity": "medium",
+          "area": "merge-seam",
+          "file": "frontend/app.js",
+          "line": 430,
+          "finding": "A global `window.fetch` monkey-patch injects `\"X-User-Email\": email` on every GET whose url starts with `/api/`, taking the email from `#triage-analyst-email`/`#intake-rm-email` — the pipeline screen's fields. Other slices instead pass `acting_user_email` as a query param from their own screen's fields (app.js:542, 2056, 1484). Since the server resolves `acting_user_email or x_user_email`, unscoped reads such as `/api/pipeline` from the dossier (app.js:930) and chronicle (app.js:1834) silently read as the pipeline screen's identity, not the desk named on the current screen."
+        },
+        {
+          "severity": "medium",
+          "area": "merge-seam",
+          "file": "frontend/index.html",
+          "line": 1519,
+          "finding": "Two parallel desks drive the same endpoints with different identity fields and different copy: memo run/accept exists both at index.html:1381-1383 (`dd-memo-*`, using `#dd-dossier-analyst-email`) and 1519-1520 (`memo-*`, using `#chronicle-analyst-email`); approve/decline/return exists both at 1413-1415 (`dd-decision-*`) and 1626-1638 (`sla-decision-*`). Adjacent slices duplicated the regulated control surface rather than sharing it, which is how the /return and /waive payload divergences arose."
+        },
+        {
+          "severity": "medium",
+          "area": "design-fidelity",
+          "file": "frontend/index.html",
+          "line": 1362,
+          "finding": "Five Deal Dossier elements carry `dd-`-prefixed class names with no rule in the stylesheet: `dd-rubric-strip` (1362), `dd-docket-list` (1327, 1433), `dd-exception-list` (1393), `dd-citation-rail` (1428), while the inline stylesheet defines `.rubric-strip` (641), `.docket-list` (668), `.exception-list` (651) and `.citation-rail` (660). The citation rail, document docket, rubric strip and exception list render unstyled, and the `.missing` red-flag styling app.js applies (lines 582, 647) is scoped to `.docket-list .missing` so it never matches."
+        },
+        {
+          "severity": "medium",
+          "area": "design-fidelity",
+          "file": "frontend/index.html",
+          "line": 1102,
+          "finding": "`<article class=\"manuscript\" id=\"triage-desk\" style=\"...display:none;\">` is un-hidden in exactly one place — app.js:308-309, inside the intake-form success handler. There is no other reveal path and no nav control, so the Intake Triage Agent desk (Run / Accept & route) is unreachable for any pre-existing deal on the board and disappears again on reload."
+        },
+        {
+          "severity": "low",
+          "area": "design-fidelity",
+          "file": "frontend/app.js",
+          "line": 208,
+          "finding": "`renderBoard` builds each deal card with no click handler, while the stylesheet declares `.classifieds li { cursor: pointer; }` and a hover state (index.html:511-513). Pipeline board deals look clickable but are inert, and there is no navigation path from the board to the dossier — the user must retype a deal code into `#dd-dossier-deal-code`. The SLA register by contrast does wire row clicks (app.js:1976)."
+        },
+        {
+          "severity": "low",
+          "area": "authz",
+          "file": "backend/ext_workflow.py",
+          "line": 35,
+          "finding": "`GET /workflow/submissions/pending` has no identity guard and returns each queued item's full `payload`. For workflow-parked items that payload is the rendered human-gate question (workflow_engine.py:171), which interpolates deal context — borrower name, amounts and memo text — so an unauthenticated caller can read the substance of every pending credit decision."
+        },
+        {
+          "severity": "low",
+          "area": "input-validation",
+          "file": "backend/ext_tiered_approval_and_sla.py",
+          "line": 182,
+          "finding": "`_parse` returns None on an unparseable timestamp and `business_days_between` then returns 0 (lines 191-192), so a deal whose `last_activity_timestamp` is malformed reads as 0 business days idle and can never be `sla_breached` — the SLA control fails open and the deal silently disappears from the breach register instead of being flagged."
+        },
+        {
+          "severity": "low",
+          "area": "authz",
+          "file": "backend/ext_tiered_approval_and_sla.py",
+          "line": 1533,
+          "finding": "`reassign_deal` validates the target only with `identity.known_actor(req.assign_to_email)` — no role or permission check — so a deal can be handed to a relationship_manager or any other known account, and because `identity.can_view_deal` grants read access on `assigned_to_user_id`, the reassignment itself confers full visibility on the deal to a user outside the analyst/officer desk."
+        },
+        {
+          "severity": "low",
+          "area": "pii-logging",
+          "file": "backend/ext_tiered_approval_and_sla.py",
+          "line": 1341,
+          "finding": "`escalation_owner` is the hardcoded literal \"officer@bank.test\" in `_idle_row` and in the /api/sla/idle envelope (line 1395) rather than derived from identity roles, and the envelope value is returned even on the redacted unidentified read — disclosing a staff email address to an anonymous caller."
+        },
+        {
+          "severity": "low",
+          "area": "authz",
+          "file": "backend/ext_grounded_portfolio_qa.py",
+          "line": 941,
+          "finding": "`/api/qa/sessions` returns the redacted projection for an unidentified caller but does not filter the row SET: the own-sessions filter at line 942 is skipped for anonymous readers, so an unauthenticated caller receives one row per session carrying real `id` and `created_at` — the exact volume and timing of the desk's internal Q&A activity."
+        },
+        {
+          "severity": "low",
+          "area": "pii-logging",
+          "file": "backend/agent_runtime.py",
+          "line": 97,
+          "finding": "In live-cli mode `_respond_cli` passes the whole prompt as an argv element (`subprocess.run([_claude_cli(), \"-p\", prompt, ...])`). The Q&A slice's prompt embeds `_knowledge_block` — every borrower name, requested/exposure amount, risk grade, ratio and owner_email in the caller's visible book — making the full borrower dataset visible in the host process table to any local user. `pii.redact()` is never called anywhere in the app."
+        },
+        {
+          "severity": "low",
+          "area": "llm-financial-calc",
+          "file": "backend/ext_memo_policy_audit.py",
+          "line": 389,
+          "finding": "The model narrative is embedded verbatim as the `analyst_commentary` section body and concatenated into `memo_content` (line 393), which `persist_accepted_memo` stores as the accepted memo of record. The \"do not recompute a ratio / do not restate a different grade\" constraint (lines 706-709) is prompt-only; nothing validates the returned prose against the computed sections, so a hallucinated figure inside the commentary enters the memo of record."
+        },
+        {
+          "severity": "low",
+          "area": "audit-trail",
+          "file": "backend/ext_memo_policy_audit.py",
+          "line": 1348,
+          "finding": "`_install_policy_rules` inserts the governing lending ruleset with `is_active: True` (line 1353) and `_install_fixture_deal` inserts `deals` and `documents` rows (lines 1362, 1382) with no `audit()` entry, while the same function does audit the spread, ratios and grade. Creating and activating a lending policy rule — the ruleset every compliance decision is tested against — is unattributed in the chronicle."
+        },
+        {
+          "severity": "low",
+          "area": "authz",
+          "file": "backend/ext_memo_policy_audit.py",
+          "line": 845,
+          "finding": "Running the credit-memo agent (line 692) and accepting its draft (line 845) require the identical `deal.memo` permission, and nothing compares the acceptor to the runner, so a single analyst can both generate and accept the memo of record. The same holds for policy-compliance run versus policy-review/accept (both `deal.policy_check`, lines 904 and 968)."
+        },
+        {
+          "severity": "low",
+          "area": "merge-seam",
+          "file": "backend/ext_memo_policy_audit.py",
+          "line": 534,
+          "finding": "`record_policy_exceptions` writes an `exception_ref` column (and the GET writes `origin`) onto `policy_exceptions` rows, but neither is declared in models.py:12 `TABLES[\"policy_exceptions\"]`; sibling slices key exceptions by `id`/`rule_reference` only (ext_spread_ratios_and_risk_grade.py:1332, ext_tiered_approval_and_sla.py:838), so the ref this file's resolve endpoint requires is invisible to them."
+        },
+        {
+          "severity": "low",
+          "area": "merge-seam",
+          "file": "backend/ext_grounded_portfolio_qa.py",
+          "line": 117,
+          "finding": "The eight-stage `PIPELINE_STAGES` vocabulary is re-declared independently here, in ext_tiered_approval_and_sla.py:73, and as the board columns in frontend/index.html, while stage advances are hand-rolled ad hoc across four slices. The composed `statemachine` module (backend/statemachine.py) and `rls` module are imported by nothing, so no shared legal-transition guard exists — which is how the tiered_approval stage came to be unreachable."
+        },
+        {
+          "severity": "low",
+          "area": "human-gate",
+          "file": "backend/ext_grounded_portfolio_qa.py",
+          "line": 712,
+          "finding": "The `portfolio-qa` workflow declares an `accept` human node between `groundok` and `record` (workflows/workflows.json), but `/api/qa/ask` calls `record_qa_session` directly with no acceptance step, and the handler defaults `accepted_by_user_id` to the asker — asserting the user accepted an answer they were never shown. Impact is limited because the field is not persisted into the session row."
+        },
+        {
+          "severity": "low",
+          "area": "input-validation",
+          "file": "backend/ext_spread_ratios_and_risk_grade.py",
+          "line": 714,
+          "finding": "The module docstring claims (lines 36-37) that \"Line-item keys, document types, units and periods are enumerations\", but `period` is an unconstrained free string on both wire models (`Field(min_length=1, max_length=32)`), length-capped only — so arbitrary period labels land in `financial_spread_template` and `accepted_spread_rows` silently mixes periods when picking the latest row per line item (line 500)."
+        },
+        {
+          "severity": "low",
+          "area": "authz",
+          "file": "backend/ext_prompts.py",
+          "line": 9,
+          "finding": "`GET /admin/prompts` is an unauthenticated admin endpoint returning the prompt registry catalogue, and `GET /search` (ext_search.py:9) is likewise unguarded and would expose any indexed content. Neither calls identity or rbac, in contrast to ext_rbac.py's /admin/roles which at least requires an admin grant."
+        },
+        {
+          "severity": "low",
+          "area": "merge-seam",
+          "file": "frontend/app.js",
+          "line": 2410,
+          "finding": "The Q&A slice clones and replaces the `#composer` node (`originalComposer.parentNode.replaceChild(composer, originalComposer)`) to detach the foundation chat-shell's `/chat` handler bound at line 17. The foundation's module-level `form` and `input` references (lines 6-7) then point at detached nodes and `addMessage` (line 9) is dead — two slices own the same canonical mount point, and any later slice re-querying `#composer` before line 2410 would double-submit."
+        },
+        {
+          "severity": "low",
+          "area": "design-fidelity",
+          "file": "frontend/app.js",
+          "line": 52,
+          "finding": "`document.getElementById(\"agents-list\")` (line 52) and `document.getElementById(\"history-list\")` (line 84) reference ids absent from index.html, so the `/agents` roster fetch and the `/api/conversations` history fetch run on every page load and silently no-op (and `/api/conversations` is not a backend route). The agent-roster and guardrail disclosure that main.py:58 exposes for transparency is therefore never rendered anywhere in the app."
+        },
+        {
+          "severity": "low",
+          "area": "design-fidelity",
+          "file": "frontend/index.html",
+          "line": 7,
+          "finding": "Composed frontend modules are dead in the shipped shell: index.html links only tokens.css plus an inline <style> block — frontend/style.css is never referenced — and none of the seven frontend/mod_*.js files (mod_datatable, mod_notify, mod_recorddetail, mod_router, mod_auditview, mod_cards, mod_permissions) are loaded, though composed_modules.json lists data-table, notifications-ui, record-detail, screen-router, audit-view, dashboard-cards and permissions-ui as composed. All five canonical mount points, the five design screens and app.js itself are intact."
+        },
+        {
+          "severity": "low",
+          "area": "merge-seam",
+          "file": "frontend/app.js",
+          "line": 1904,
+          "finding": "Merged slices reuse helper names with contradictory semantics: `textOf(id)` READS an input value at app.js:477 while `textOf(id, value)` WRITES textContent at app.js:1904. Also duplicated across module scopes: `money` (142, 487, 1885), `say` (482, 1310), `scoped` (540, 2053), `renderMemo` (753, 1503), `renderExceptions` (788, 1624). IIFE scoping prevents a runtime collision today, but the inverted `textOf` contract is a trap for any edit that moves code between blocks."
+        }
+      ],
+      "checked": {
+        "files": 83,
+        "axes": [
+          "contracts",
+          "fsi-hardening"
+        ]
+      }
+    }
+  }
+}

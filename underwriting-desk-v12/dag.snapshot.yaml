@@ -30,7 +30,7 @@ cost:
   # observed p95 so legitimate heavy work never stalls a build. The envelope
   # is the real spend control; finished work always commits (never shredded);
   # budgets only block STARTING further attempts.
-  run_budget_usd: 150.00
+  run_budget_usd: 260.00
   nodes:
     ingest: { budget_usd: 6.00 }
     requirements-synthesis: { budget_usd: 9.00 }

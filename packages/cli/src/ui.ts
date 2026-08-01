@@ -429,32 +429,75 @@ export function buildState(workspace: string): Record<string, unknown> {
         break;
       }
     }
-    // Terminal outcome WITHIN the wave's span.
-    let ended: { kind: string; nodeId?: string; summary?: string } = { kind: globalIdx + 1 < waves.length ? "superseded" : "active" };
-    for (let i = (startIdx < 0 ? 0 : startIdx) + 1; i < capIdx; i++) {
+    // ROBUST per-wave state: fold the journal UP TO the wave boundary — the
+    // exact same fold the engine uses. This is the ground-truth state at the
+    // moment the wave's span ended, immune to messy spans that contain several
+    // terminal events (multiple resumes, operator bumps, manual reopens). No
+    // heuristic terminal-scanning, no current-state leakage.
+    const atEnd = foldState(events.slice(0, capIdx));
+    const stillRunning = (id: string) => {
+      // A node whose last event before the boundary is node.running (no
+      // matching commit/fail after) is mid-flight at the boundary.
+      for (let i = capIdx - 1; i >= startIdx; i--) {
+        const e = events[i];
+        if (e.nodeId !== id) continue;
+        return e.type === "node.running";
+      }
+      return false;
+    };
+    const nodeOutcome = (id: string): string =>
+      atEnd.committed.has(id) ? "committed"
+        : atEnd.failed.has(id) ? "failed"
+          : atEnd.skipped.has(id) ? "skipped"
+            : stillRunning(id) ? "re-running"
+              : "pending";
+
+    // Terminal verdict = the LAST run-lifecycle event WITHIN this wave's own
+    // span (never the whole DAG's stale state). No terminal in span means the
+    // wave never reached one — the user filed more feedback first (superseded),
+    // or it's the live wave still running (active).
+    let ended: { kind: string; nodeId?: string; summary?: string } = {
+      kind: globalIdx + 1 < waves.length ? "superseded" : "active",
+    };
+    let lastTerminalIdx = -1;
+    for (let i = startIdx + 1; i < capIdx; i++) {
       const e = events[i];
-      if (e.type === "run.completed") ended = { kind: "completed" };
-      if (e.type === "node.failed") {
-        const err = events.slice(0, i + 1).reverse().find((x) => x.type === "node.attempt_failed" && x.nodeId === e.nodeId);
-        ended = { kind: "failed", nodeId: String(e.nodeId), summary: pickErrorLine(err?.error) };
+      if (e.type === "run.completed") { ended = { kind: "completed" }; lastTerminalIdx = i; }
+      else if (e.type === "run.failed") {
+        const failedId = String(e.nodeId ?? def.nodes.find((n) => atEnd.failed.has(n.id))?.id ?? "");
+        const err = events.slice(0, i + 1).reverse().find((x) => x.type === "node.attempt_failed" && x.nodeId === failedId);
+        ended = { kind: "failed", nodeId: failedId, summary: pickErrorLine(err?.error) };
+        lastTerminalIdx = i;
       }
     }
+    // Recovery: if the engine ran again AFTER the last terminal (e.g. a budget
+    // bump + resume) with no new terminal since, a stale failed/completed must
+    // not stand — the wave is live again.
+    if (lastTerminalIdx >= 0 && ended.kind !== "completed") {
+      for (let i = capIdx - 1; i > lastTerminalIdx; i--) {
+        if (events[i].type === "node.running" || events[i].type === "node.committed") {
+          ended = { kind: globalIdx + 1 < waves.length ? "superseded" : "active" };
+          break;
+        }
+      }
+    }
+
     const actions = w.reopened.map((id) => {
       let attempts = 0;
       let costUsd = 0;
-      let outcome = "pending";
       let cached = false;
       let firstRunIdx = Number.MAX_SAFE_INTEGER;
       for (let i = w.endIdx + 1; i < capIdx; i++) {
         const e = events[i];
         if (e.nodeId !== id) continue;
-        if (e.type === "node.running") { attempts++; outcome = "re-running"; if (i < firstRunIdx) firstRunIdx = i; }
+        if (e.type === "node.running") { attempts++; if (i < firstRunIdx) firstRunIdx = i; }
         if (e.type === "cost.recorded") costUsd += (e.cost as { costUsd?: number })?.costUsd ?? 0;
-        if (e.type === "node.committed") { outcome = "committed"; cached = e.cached === true; if (i < firstRunIdx) firstRunIdx = i; }
-        if (e.type === "node.failed") outcome = "failed";
-        if (e.type === "node.skipped") { outcome = "skipped"; if (i < firstRunIdx) firstRunIdx = i; }
+        if (e.type === "node.committed") { cached = e.cached === true; if (i < firstRunIdx) firstRunIdx = i; }
+        if ((e.type === "node.skipped" || e.type === "node.failed") && i < firstRunIdx) firstRunIdx = i;
       }
-      return { nodeId: id, outcome, cached, attempts, costUsd: Number(costUsd.toFixed(2)), firstRunIdx };
+      // Outcome is the BOUNDARY-FOLD truth, never the span-scan (a node re-run
+      // in a LATER wave must not read as this wave's outcome).
+      return { nodeId: id, outcome: nodeOutcome(id), cached, attempts, costUsd: Number(costUsd.toFixed(2)), firstRunIdx };
     });
     // The propagation chain reads in EXECUTION order (the order the engine
     // actually re-derived things), never reopen order — pending steps trail
@@ -465,7 +508,9 @@ export function buildState(workspace: string): Record<string, unknown> {
         ? a.firstRunIdx - b.firstRunIdx
         : (dagOrder.get(a.nodeId) ?? 0) - (dagOrder.get(b.nodeId) ?? 0),
     );
-    const remaining = w.reopened.filter((id) => !state.committed.has(id) && !state.skipped.has(id));
+    // Remaining = not satisfied AT THE BOUNDARY (not current state — else a
+    // later wave's fixes retroactively empty an earlier wave's remaining).
+    const remaining = w.reopened.filter((id) => !atEnd.committed.has(id) && !atEnd.skipped.has(id));
     // KIND: a wave that fixes a DEFECT is a remediation; a wave that adds/changes
     // a REQUIREMENT is an enhancement. The signal is the entry point — feedback
     // routed to the requirements node (the CR front door) is a change of intent,
