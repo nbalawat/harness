@@ -207,7 +207,25 @@ async function main() {
   for (const cache of ["__pycache__", ".pytest_cache"]) {
     spawnSync("find", [app, "-name", cache, "-type", "d", "-exec", "rm", "-rf", "{}", "+"]);
   }
-  console.log(`slice ${sliceIndex} verified: cumulative acceptance + tests green`);
+
+  // SHIFT-LEFT SECURITY: run the deterministic security scan on THIS slice's
+  // tree now, in its own retry loop — the cheapest place to catch an authz /
+  // unauthenticated-mutation hole. Waiting for the merge-time scan means the
+  // whole parallel wave rebuilds; catching it here is one slice retry. A high
+  // finding fails the slice with the exact rule + file so the agent fixes it.
+  const scanDir = fs.mkdtempSync(path.join(require("node:os").tmpdir(), "slice-sec-"));
+  fs.writeFileSync(path.join(scanDir, "inputs.json"), JSON.stringify({ app: { path: app } }));
+  const scan = spawnSync("node", [path.join(process.env.HARNESS_PROJECT_DIR, "scripts", "security-scan.cjs")], {
+    cwd: scanDir,
+    encoding: "utf8",
+  });
+  if (scan.status !== 0) {
+    fail(
+      "SECURITY SCAN failed for this slice (fix before finishing — the fsi-hardening skill has the correct patterns):\n" +
+        (scan.stderr || scan.stdout).slice(-1200),
+    );
+  }
+  console.log(`slice ${sliceIndex} verified: cumulative acceptance + tests + security scan green`);
 }
 
 main().catch((e) => fail(String(e)));

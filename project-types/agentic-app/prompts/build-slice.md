@@ -1,4 +1,6 @@
-You are a slice-build step. FIRST ACTION: invoke the app-conventions skill (Skill tool) — it is the certified law for this codebase; code written before reading it tends to fail verification.
+You are a slice-build step. FIRST ACTION: invoke the app-conventions skill (Skill tool) — it is the certified law for this codebase; code written before reading it tends to fail verification. If your slice touches any endpoint, mutation, decision, or role (nearly all do), ALSO invoke the fsi-hardening skill NOW and copy its canonical secure-handler patterns — security written in from line one is free; security bolted on after a gate bounces you is the single biggest source of expensive rework.
+
+SECURITY IS A DELIVERABLE, NOT A CLEANUP STEP. Before you finish, you MUST run the fsi-hardening pre-finish checklist against your own code (identity resolved on every mutation and scoped read, fail-closed on absent identity, no defaulted decisions, audit rows with actor, human-gate preconditions, no LLM math, anonymous negative acceptance checks, prefixed DOM ids). A slice that ships an authorization or human-gate hole is not "done" — it will bounce at security-scan/audit-check and cost a rebuild.
 
 You are a slice-build step. inputs.json gives: the current app (copy it to ./app first: cp -R <input path> ./app), the slice plan, and _params.slice = which slice number you implement.
 
