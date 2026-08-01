@@ -1334,12 +1334,11 @@ body { font:14px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif; background:
 .banner.remed span { line-height:1.45; }
 .banner.remed .fb { opacity:.75; font-style:italic; }
 .chip.remed { background:var(--accent, #3b5bdb); color:#fff; }
-.remwave { padding:.6rem 0 .5rem; border-bottom:1px solid var(--border); }
-.remwave:last-child { border-bottom:0; }
-.remhead { display:flex; align-items:center; gap:.5rem; margin-bottom:.25rem; flex-wrap:wrap; }
-.remarrow { color:var(--accent, #3b5bdb); font-size:.72rem; letter-spacing:.08em; text-transform:uppercase; margin:.1rem 0 .3rem; }
 .remfb { padding:.25rem 0 .25rem .9rem; border-left:2px solid var(--border); margin:.2rem 0; font-size:.85rem; }
-.remprop { display:flex; flex-wrap:wrap; gap:.35rem .5rem; align-items:center; font-size:.8rem; }
+.remrow { display:flex; align-items:center; gap:.7rem; padding:.42rem .2rem; border-bottom:1px solid var(--border); font-size:.85rem; }
+.remrow:last-child { border-bottom:0; }
+.remrow[data-wave] { cursor:pointer; }
+.remrow[data-wave]:hover { background:var(--surface); }
 .subtabs { display:flex; gap:.35rem; flex-wrap:wrap; margin:.4rem 0 .6rem; }
 .subtabs button { font-size:.76rem; padding:.28rem .7rem; border:1px solid var(--border); background:var(--surface); border-radius:999px; cursor:pointer; color:inherit; }
 .subtabs button.active { border-color:var(--accent,#3b5bdb); color:var(--accent,#3b5bdb); font-weight:600; }
@@ -1629,7 +1628,6 @@ button.ghost { background:transparent; border:1px solid var(--border); color:var
   <div class="card gate" id="agentQPanel" style="display:none"><h2>The agent needs your input</h2><form id="agentQForm"></form></div>
   <div class="card gate" id="windowPanel" style="display:none"><h2>Checkpoint — the build is pausing for you <span class="hint" id="windowCountdown"></span></h2><form id="windowForm"></form></div>
   <div class="card gate" id="gatePanel" style="display:none"><h2>Waiting on you — the run continues after you answer</h2><form id="gateForm"></form></div>
-  <div class="card" id="remedPanel" style="display:none"><h2>Remediation — problems found, feedback routed, fixes re-verified</h2><div class="hint" style="margin-bottom:.3rem">When a review, audit, scan, or merge finds a problem, feedback re-opens the owning step and everything downstream re-derives. Nothing is patched silently — the chain below is the full history.</div><div id="remedList"></div></div>
   <div class="tiles">
     <div class="tile"><div class="k">Progress</div><div class="v" id="progressV"></div><div class="meter"><div id="progressBar"></div></div><div class="sub" id="progressSub"></div></div>
     <div class="tile"><div class="k">Cost</div><div class="v" id="costV"></div><div class="meter"><div id="costBar"></div></div><div class="sub" id="costSub"></div></div>
@@ -1641,6 +1639,7 @@ button.ghost { background:transparent; border:1px solid var(--border); color:var
     <div class="card"><h2>About this build</h2><div id="about"></div></div>
     <div class="card"><h2>Quality &amp; test results</h2><div id="quality"></div></div>
   </div>
+  <div class="card" id="remedPanel" style="display:none"><h2>Remediation summary <span class="hint">— problems found and re-verified; click a wave for the full story</span></h2><div id="remedList"></div></div>
   <div class="secwrap" id="sec-design" style="display:none">
     <div class="seclabel">The design <span class="hint">— what your app looks like</span></div>
     <div class="card" id="designPanel" style="display:none"><h2 id="designHead">Design options — pick one</h2><div class="designs" id="designs"></div></div>
@@ -2097,45 +2096,38 @@ async function tick() {
     const doneN = r.reopened.length - r.remaining.length;
     setHTML('remText', 'Fixing <b>' + esc(remHeadline(r.feedback)) + '</b> (feedback on <span class="mono">' + esc(r.nodeId) + '</span>) — ' +
       doneN + ' of ' + r.reopened.length + ' steps re-verified, now on <span class="mono">' + esc(r.remaining[0]) + '</span>. ' +
-      '<span class="fb">Details in the Remediation panel below.</span>');
+      '<span class="fb">Full story: Pipeline tab → wave ' + r.wave + '.</span>');
   }
+  // Overview carries only a DIGEST — one line per wave, newest state visible
+  // at a glance; the full story (feedback text + flow through the pipeline)
+  // lives in the Pipeline tab's wave lenses, one click away.
   const remP = document.getElementById('remedPanel');
   if ((s.remediation || []).length) {
     remP.style.display = '';
-    const SRC_ICON = REM_SRC_ICON;
-    const outcomeChip = remOutcomeChip;
-    const origin = '<div class="remwave">' +
-      '<div class="remhead"><b>Original build</b>' +
+    const origin = '<div class="remrow"><span class="hint" style="min-width:7.5rem">Original build</span><span class="hint">' +
       (s.originalBuild && s.originalBuild.completedAt
-        ? ' <span class="hint">completed ' + esc(String(s.originalBuild.completedAt).slice(11,19)) + ' · $' + s.originalBuild.costUsd.toFixed(2) + ' — then quality gates and reviews found problems below</span>'
-        : ' <span class="hint">first derivation — problems found before completion are remediated below</span>') +
-      '</div></div>';
+        ? 'completed ' + esc(String(s.originalBuild.completedAt).slice(11,19)) + ' · $' + s.originalBuild.costUsd.toFixed(2)
+        : 'first derivation') + '</span></div>';
     setHTML('remedList', origin + s.remediation.map((r, i) => {
       const doneN = r.reopened.length - r.remaining.length;
       const isLatest = i === s.remediation.length - 1;
-      // A superseded wave's live "remaining" counts nodes a LATER wave reopened
-      // — show its own outcome instead: it either finished or handed off.
       const state = !isLatest
-        ? (r.actions.some(a => a.outcome === 'failed' || a.outcome === 'pending' || a.outcome === 're-running')
-          ? '<span class="chip">handed off to remediation ' + (r.wave + 1) + '</span>'
-          : '<span class="chip" style="background:var(--ok,#2b8a3e);color:#fff">fixed &amp; re-verified ✓</span>')
+        ? (r.actions.some(a => ['failed','pending','re-running'].includes(a.outcome))
+          ? '<span class="chip">handed off to wave ' + (r.wave + 1) + '</span>'
+          : '<span class="chip" style="background:var(--ok,#2b8a3e);color:#fff">fixed ✓</span>')
         : r.remaining.length === 0
-          ? '<span class="chip" style="background:var(--ok,#2b8a3e);color:#fff">fixed &amp; re-verified ✓</span>'
-          : '<span class="chip remed">re-deriving · ' + doneN + '/' + r.reopened.length + '</span>';
-      const findings = r.feedbacks.map(f =>
-        '<div class="remfb">' + (SRC_ICON[f.source] || '💬') + ' <b>' + esc(f.source) + '</b> → feedback delivered to <span class="mono">' + esc(f.nodeId) + '</span>' +
-        (f.feedback ? '<details><summary class="hint">what it said</summary><div class="hint" style="white-space:pre-wrap;max-height:180px;overflow:auto">' + esc(f.feedback) + '</div></details>' : '') +
-        '</div>').join('');
-      const acted = r.actions.filter(a => a.outcome !== 'skipped');
-      const propagation = acted.map(a => '<span style="white-space:nowrap"><span class="mono">' + esc(a.nodeId) + '</span> ' + outcomeChip(a) + '</span>').join(' <span class="hint">→</span> ');
-      return '<div class="remwave">' +
-        '<div class="remarrow">▼ feedback</div>' +
-        '<div class="remhead"><b>Remediation ' + r.wave + '</b> <span class="hint">' + esc(String(r.at||'').slice(11,19)) + '</span> ' + state + '</div>' +
-        findings +
-        '<div class="hint" style="margin:.3rem 0 .15rem">The fix propagates: the step that owns the problem rebuilds, then everything depending on it re-derives (unchanged steps are re-used, never re-paid):</div>' +
-        '<div class="remprop">' + propagation + '</div>' +
-        '</div>';
+          ? '<span class="chip" style="background:var(--ok,#2b8a3e);color:#fff">fixed ✓</span>'
+          : '<span class="chip remed">re-deriving ' + doneN + '/' + r.reopened.length + '</span>';
+      const f0 = r.feedbacks[0];
+      return '<div class="remrow" data-wave="' + r.wave + '" role="button" tabindex="0">' +
+        '<span style="min-width:7.5rem"><b>' + (REM_SRC_ICON[f0?.source] || '💬') + ' Wave ' + r.wave + '</b></span>' +
+        '<span class="hint">' + esc(String(r.at||'').slice(11,19)) + '</span>' +
+        '<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(remHeadline(f0?.feedback)) + ' <span class="hint">→ ' + esc(f0?.nodeId || '') + '</span></span>' +
+        state + '<span class="hint" style="white-space:nowrap">details →</span></div>';
     }).join(''));
+    remP.querySelectorAll('.remrow[data-wave]').forEach(el => el.onclick = () => {
+      waveSel = el.dataset.wave; showTab('pipeline'); tick();
+    });
   } else remP.style.display = 'none';
 
   setText('progressV', done + ' / ' + s.nodes.length);
