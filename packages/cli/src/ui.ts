@@ -2359,7 +2359,7 @@ async function tick() {
   const waves = s.remediation || [];
   if (waves.length) {
     wt.style.display = '';
-    const tabHtml = '<button data-wave="all" class="' + (waveSel === 'all' ? 'active' : '') + '">Full build</button>' +
+    const tabHtml = '<button data-wave="all" class="' + (waveSel === 'all' ? 'active' : '') + '">Live pipeline</button>' +
       waves.map(r => '<button data-wave="' + r.wave + '" class="' + (String(waveSel) === String(r.wave) ? 'active' : '') + '">' +
         (REM_SRC_ICON[r.feedbacks[0]?.source] || '💬') + ' Remediation ' + r.wave +
         (r.remaining.length ? ' <span class="dot"></span>' : '') + '</button>').join('');
@@ -2369,7 +2369,15 @@ async function tick() {
     }
   } else { wt.style.display = 'none'; waveSel = 'all'; }
   const activeWave = waveSel === 'all' ? null : waves.find(r => String(r.wave) === String(waveSel));
-  if (activeWave) {
+  if (!activeWave && s.remediationActive) {
+    // The live view during a wave: say WHY completed work looks in-flight
+    // again, or "queued" steps read as the build going backwards.
+    wi.style.display = '';
+    const act = waves.filter(r => r.remaining.length > 0).pop();
+    setHTML('waveInfo', '⟳ <b>This is the live state.</b> Remediation ' + (act ? act.wave : '') +
+      ' is re-deriving previously completed steps (they re-verify from scratch — nothing is patched in place). ' +
+      'Select the wave tab above to see what was found and why these steps re-run.');
+  } else if (activeWave) {
     wi.style.display = '';
     setHTML('waveInfo',
       '<div style="margin-bottom:.3rem"><b>Remediation ' + activeWave.wave + '</b> <span class="hint">started ' + esc(String(activeWave.at||'').slice(11,19)) + '</span> ' +
