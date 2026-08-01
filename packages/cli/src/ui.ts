@@ -404,9 +404,38 @@ export function buildState(workspace: string): Record<string, unknown> {
   }
   // Per wave: what actually happened to each reopened step (scan events after
   // the wave, capped at the next wave's start so actions attribute correctly).
+  // A wave's verdict is IN-SPAN truth — what happened during THAT wave — never
+  // the current state, or history retroactively turns green once later waves fix it.
+  const pickErrorLine = (err: unknown): string => {
+    const lines = String(err ?? "").split("\n").map((l) => l.trim()).filter(Boolean);
+    return (lines.find((l) => /conflict|blocked|failed|error/i.test(l) && l.length > 12) ?? lines[0] ?? "").slice(0, 160);
+  };
   const remediation = waves.slice(-8).map((w, wi, arr) => {
     const globalIdx = waves.indexOf(w);
     const capIdx = globalIdx + 1 < waves.length ? events.findIndex((e) => e.ts === waves[globalIdx + 1].startedAt && e.type === "node.reopened") : events.length;
+    // Trigger: the failure that provoked this wave (nearest failed event
+    // before its first reopen; absent for pure user-initiated feedback).
+    const startIdx = events.findIndex((e) => e.ts === w.startedAt && e.type === "node.reopened");
+    let trigger: { nodeId: string; summary: string } | null = null;
+    for (let i = startIdx - 1; i >= 0; i--) {
+      const e = events[i];
+      if (e.type === "node.running" || e.type === "node.committed") break; // engine activity precedes: no immediate failure trigger
+      if (e.type === "node.attempt_failed" || e.type === "node.failed") {
+        const err = events.slice(0, i + 1).reverse().find((x) => x.type === "node.attempt_failed" && x.nodeId === e.nodeId);
+        trigger = { nodeId: String(e.nodeId), summary: pickErrorLine(err?.error) };
+        break;
+      }
+    }
+    // Terminal outcome WITHIN the wave's span.
+    let ended: { kind: string; nodeId?: string; summary?: string } = { kind: globalIdx + 1 < waves.length ? "superseded" : "active" };
+    for (let i = (startIdx < 0 ? 0 : startIdx) + 1; i < capIdx; i++) {
+      const e = events[i];
+      if (e.type === "run.completed") ended = { kind: "completed" };
+      if (e.type === "node.failed") {
+        const err = events.slice(0, i + 1).reverse().find((x) => x.type === "node.attempt_failed" && x.nodeId === e.nodeId);
+        ended = { kind: "failed", nodeId: String(e.nodeId), summary: pickErrorLine(err?.error) };
+      }
+    }
     const actions = w.reopened.map((id) => {
       let attempts = 0;
       let costUsd = 0;
@@ -441,6 +470,8 @@ export function buildState(workspace: string): Record<string, unknown> {
       reopened: w.reopened,
       remaining,
       actions,
+      trigger,
+      ended,
       // legacy fields the banner uses
       nodeId: w.feedbacks[0]?.nodeId ?? w.reopened[0],
       feedback: w.feedbacks[0]?.feedback ?? null,
@@ -1787,6 +1818,16 @@ function remHeadline(fb) {
   const head = fb.split(/[:.]/)[0].trim();
   return (head.length >= 8 && head.length <= 90 ? head : fb.slice(0, 90)).toLowerCase();
 }
+function waveVerdict(r) {
+  // IN-SPAN verdict: what happened during THAT wave — a later wave's success
+  // must never retroactively turn a failed wave green.
+  if (r.ended && r.ended.kind === 'completed') return '<span class="chip" style="background:var(--ok,#2b8a3e);color:#fff">re-verified through completion ✓</span>';
+  if (r.ended && r.ended.kind === 'failed') return '<span class="chip" style="border:1px solid var(--bad,#c92a2a);color:var(--bad,#c92a2a)">⛔ ended: ' + esc(r.ended.nodeId) + ' failed → wave ' + (r.wave + 1) + '</span>';
+  if (r.ended && r.ended.kind === 'superseded') return '<span class="chip">superseded by wave ' + (r.wave + 1) + '</span>';
+  return r.remaining.length === 0
+    ? '<span class="chip" style="background:var(--ok,#2b8a3e);color:#fff">all steps re-verified ✓</span>'
+    : '<span class="chip remed">re-deriving · ' + (r.reopened.length - r.remaining.length) + '/' + r.reopened.length + '</span>';
+}
 function remOutcomeChip(a) {
   return a.outcome === 'committed' ? (a.cached
       ? '<span class="chip" title="inputs unchanged — previous result re-used">unchanged · reused</span>'
@@ -2173,15 +2214,7 @@ async function tick() {
         ? 'completed ' + esc(String(s.originalBuild.completedAt).slice(11,19)) + ' · $' + s.originalBuild.costUsd.toFixed(2)
         : 'first derivation') + '</span></div>';
     setHTML('remedList', origin + s.remediation.map((r, i) => {
-      const doneN = r.reopened.length - r.remaining.length;
-      const isLatest = i === s.remediation.length - 1;
-      const state = !isLatest
-        ? (r.actions.some(a => ['failed','pending','re-running'].includes(a.outcome))
-          ? '<span class="chip">handed off to wave ' + (r.wave + 1) + '</span>'
-          : '<span class="chip" style="background:var(--ok,#2b8a3e);color:#fff">fixed ✓</span>')
-        : r.remaining.length === 0
-          ? '<span class="chip" style="background:var(--ok,#2b8a3e);color:#fff">fixed ✓</span>'
-          : '<span class="chip remed">re-deriving ' + doneN + '/' + r.reopened.length + '</span>';
+      const state = waveVerdict(r);
       const f0 = r.feedbacks[0];
       return '<div class="remrow" data-wave="' + r.wave + '" role="button" tabindex="0">' +
         '<span style="min-width:7.5rem"><b>' + (REM_SRC_ICON[f0?.source] || '💬') + ' Wave ' + r.wave + '</b></span>' +
@@ -2446,12 +2479,18 @@ async function tick() {
   } else if (activeWave) {
     wi.style.display = '';
     setHTML('waveInfo',
-      '<div style="margin-bottom:.3rem"><b>Remediation ' + activeWave.wave + '</b> <span class="hint">started ' + esc(String(activeWave.at||'').slice(11,19)) + '</span> ' +
-      (activeWave.remaining.length === 0 ? '<span class="chip" style="background:var(--ok,#2b8a3e);color:#fff">fixed &amp; re-verified ✓</span>'
-        : '<span class="chip remed">re-deriving · ' + (activeWave.reopened.length - activeWave.remaining.length) + '/' + activeWave.reopened.length + '</span>') + '</div>' +
+      '<div style="margin-bottom:.3rem"><b>Remediation ' + activeWave.wave + '</b> <span class="hint">started ' + esc(String(activeWave.at||'').slice(11,19)) + '</span> ' + waveVerdict(activeWave) + '</div>' +
+      (activeWave.trigger
+        ? '<div class="remfb">⛔ <b>Triggered by</b> <span class="mono">' + esc(activeWave.trigger.nodeId) + '</span> failing: <span class="hint">' + esc(activeWave.trigger.summary) + '</span></div>'
+        : '') +
       activeWave.feedbacks.map(f =>
         '<div class="remfb">' + (REM_SRC_ICON[f.source] || '💬') + ' <b>' + esc(f.source) + '</b> found the problem → feedback delivered to <span class="mono">' + esc(f.nodeId) + '</span>' +
         (f.feedback ? '<details><summary class="hint">what it said</summary><div class="hint" style="white-space:pre-wrap;max-height:160px;overflow:auto">' + esc(f.feedback) + '</div></details>' : '') + '</div>').join('') +
+      (activeWave.ended && activeWave.ended.kind === 'failed'
+        ? '<div class="remfb">⛔ <b>How this wave ended:</b> <span class="mono">' + esc(activeWave.ended.nodeId) + '</span> failed — <span class="hint">' + esc(activeWave.ended.summary || '') + '</span> → remediation ' + (activeWave.wave + 1) + ' picks it up.</div>'
+        : activeWave.ended && activeWave.ended.kind === 'completed'
+          ? '<div class="remfb">✓ <b>How this wave ended:</b> the whole pipeline re-verified through to completion.</div>'
+          : '') +
       '<div class="hint" style="margin-top:.25rem">Highlighted steps below are re-derived by this wave, in place in the pipeline; dimmed steps were untouched.</div>');
   } else wi.style.display = 'none';
   const waveAction = (id) => activeWave ? activeWave.actions.find(a => a.nodeId === id) : null;

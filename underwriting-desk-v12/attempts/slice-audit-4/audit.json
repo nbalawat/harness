@@ -1,0 +1,485 @@
+{
+  "status": "findings",
+  "findings": [
+    {
+      "severity": "high",
+      "area": "fsi-authz",
+      "file": "backend/identity.py",
+      "line": 141,
+      "finding": "The entire server-side role model rests on a self-asserted identity: require_actor() trusts `acting_user_email`, an ordinary unauthenticated field in the request body or query string, and never binds it to a session. ext_auth.py issues bearer tokens but no feature endpoint consumes them (only ext_rbac does), so any anonymous caller can POST {\"acting_user_email\": \"officer@bank.test\"} to /api/deals/{code}/approve and exercise senior-credit-officer authority, including above the $250,000 exposure ceiling."
+    },
+    {
+      "severity": "high",
+      "area": "fsi-authz",
+      "file": "backend/ext_spread_ratios_and_risk_grade.py",
+      "line": 679,
+      "finding": "_readable_deal makes authorization OPT-OUT: require_actor and can_view_deal run only inside `if acting_user_email:`. Because the parameter is optional on every consuming route, omitting it is strictly MORE privileged than supplying it, inverting the default-deny contract. This single helper unguards GET /spread (961), /ratios (1010), /risk-grade (1056) and /dossier (1087) — the last returning borrower name, borrower_entity_id (EIN), exposure, spread, ratios, grade, memo and policy exceptions to an unidentified caller."
+    },
+    {
+      "severity": "high",
+      "area": "fsi-authz",
+      "file": "backend/ext_memo_policy_audit.py",
+      "line": 720,
+      "finding": "_scoped_deal repeats the same opt-out pattern (`if acting_user_email:`) and is the sole read guard for all three GETs in the slice: /memo (727), /policy-exceptions (864) and /audit (923). Anonymous callers receive the full credit memo, every recorded policy breach with its rationale, and the deal's audit timeline."
+    },
+    {
+      "severity": "high",
+      "area": "fsi-authz",
+      "file": "backend/ext_memo_policy_audit.py",
+      "line": 924,
+      "finding": "GET /api/deals/{deal_code}/audit serves before_payload/after_payload verbatim (lines 954-955), so the anonymously-readable audit timeline discloses other slices' decline reason codes and detail, approval decision notes, the full memo body, and each actor's email, name and role. The audit trail leaks strictly more than the endpoints it records."
+    },
+    {
+      "severity": "high",
+      "area": "fsi-authz",
+      "file": "backend/ext_deal_intake.py",
+      "line": 208,
+      "finding": "GET /api/pipeline (pipeline_board) accepts no actor parameter at all and calls no identity guard, returning every deal in the book — borrower_name, borrower_industry, requested_amount, exposure_amount, risk_grade, decline_reason_code/detail — to any unauthenticated caller. This is a total bypass of the relationship-manager scoping that identity.visible_deals enforces elsewhere."
+    },
+    {
+      "severity": "high",
+      "area": "fsi-authz",
+      "file": "backend/ext_deal_intake.py",
+      "line": 196,
+      "finding": "GET /api/deals (list_deals) is opt-out: with acting_user_email omitted the `if acting_user_email:` branch is skipped and deals_repo.all_current_deals() is returned unfiltered, so an RM who supplies identity sees less than an anonymous caller who supplies none."
+    },
+    {
+      "severity": "high",
+      "area": "fsi-authz",
+      "file": "backend/ext_grounded_portfolio_qa.py",
+      "line": 716,
+      "finding": "GET /api/qa/sessions (list_qa_sessions) guards scoping behind `if acting_user_email:` with a None default, so an anonymous caller reads the whole portfolio_qa_sessions table: every officer's question text, grounded answers containing borrower names and exposures, source_deal_ids and full trace_data. The session log leaks exactly the permission-scoped corpus that /api/qa/ask protects."
+    },
+    {
+      "severity": "high",
+      "area": "fsi-authz",
+      "file": "backend/ext_tiered_approval_and_sla.py",
+      "line": 960,
+      "finding": "GET /api/deals/{deal_code}/decisions is opt-out via `if acting_user_email:`, so an unidentified caller reads any deal's approver emails, decision notes and the adverse-action decline_reason_code/decline_reason_detail — the regulated content of an adverse action notice."
+    },
+    {
+      "severity": "high",
+      "area": "fsi-authz",
+      "file": "backend/ext_tiered_approval_and_sla.py",
+      "line": 1078,
+      "finding": "GET /api/sla/idle (idle_register) applies identity.visible_deals only when acting_user_email is supplied. Dropping the parameter returns the full idle register — borrower names, exposure amounts, per-deal blocking items and the assigned owner's email address (staff PII) — for every active deal."
+    },
+    {
+      "severity": "high",
+      "area": "fsi-authz",
+      "file": "backend/ext_tiered_approval_and_sla.py",
+      "line": 1011,
+      "finding": "GET /api/approval-tiers is opt-out in the same way; called anonymously it returns pending_decisions for every non-final deal in the book with borrower name, exposure amount, stage and required authority level — an unauthenticated index of every deal awaiting a credit decision."
+    },
+    {
+      "severity": "high",
+      "area": "fsi-human-gate",
+      "file": "backend/ext_workflow.py",
+      "line": 31,
+      "finding": "POST /workflow/submissions/{item_id}/approve and /reject perform NO identity check whatsoever — DecisionRequest.actor is arbitrary caller-supplied text. workflow_engine.tick() resolves every `human` node through approval_flow (lines 134-143), so all human gates in deal-underwriting-lifecycle — triage review, spread review, memo review, policy review, exception waiver and the tiered credit decision — can be satisfied anonymously, and the unverified actor string is what lands in the node output and the workflow.approved audit entry."
+    },
+    {
+      "severity": "high",
+      "area": "fsi-human-gate",
+      "file": "backend/ext_tiered_approval_and_sla.py",
+      "line": 796,
+      "finding": "approve_deal imposes no precondition on stage, status, or blockers: it checks only exposure-tier authority and prior decline. A deal at `intake` with missing required documents, no accepted spread, no reviewed memo and open policy exceptions can be approved and closed in one call. workflows.json states \"Open exceptions block approval\", but _blockers_for is consulted only by the SLA register (lines 643, 1051) and never by the approval path, so that stated control does not exist on the REST route the UI actually calls."
+    },
+    {
+      "severity": "high",
+      "area": "fsi-validation",
+      "file": "backend/ext_tiered_approval_and_sla.py",
+      "line": 498,
+      "finding": "record_approval_decision reads `decision = inputs.get(\"decision\") or \"approved\"` — the credit outcome DEFAULTS TO APPROVED when the caller omits it, and any arbitrary string is accepted and persisted into approvals.decision with no membership check against {approved, declined}. It is reachable through POST /workflows/deal-underwriting-lifecycle/start, which requires no authentication."
+    },
+    {
+      "severity": "high",
+      "area": "merge-seam",
+      "file": "frontend/index.html",
+      "line": 1626,
+      "finding": "Parallel slices emitted 11 duplicate element ids into the shared shell — decision-approve-btn, decision-decline-btn, decision-return-btn, decision-notes, decision-reason-code, decision-status, memo-run-btn, memo-accept-btn, memo-status, policy-run-btn, policy-status — once in screen-deal-detail (1381-1413) and again in screen-audit-timeline (1519-1526) and screen-sla-dashboard (1626-1629). getElementById resolves only the first, so the audit-timeline and SLA-dashboard copies of these controls are permanently inert."
+    },
+    {
+      "severity": "high",
+      "area": "merge-seam",
+      "file": "frontend/app.js",
+      "line": 2108,
+      "finding": "Because the ids are duplicated, two independent slice blocks addEventListener to the SAME element: memo-run-btn is bound at 1095 and 1503, policy-run-btn at 1132 and 1685, decision-approve-btn at 1150 and 2108. One operator click fires both handlers, issuing two POSTs to /agents/credit-memo/run or /api/deals/{code}/approve with different deal codes and actor emails, and the two handlers race to overwrite the same status element."
+    },
+    {
+      "severity": "high",
+      "area": "fsi-authz",
+      "file": "backend/ext_spread_ratios_and_risk_grade.py",
+      "line": 1021,
+      "finding": "GET /api/deals/{deal_code}/ratios computes and persists when no ratio rows exist, so a read route reachable with no acting_user_email performs writes: compute_financial_ratios inserts financial_ratios rows and audit rows. An unauthenticated GET mutates regulated financial records, and it passes actor_user_id=None so the DSCR/leverage/current-ratio computation is unattributable in the trail."
+    },
+    {
+      "severity": "high",
+      "area": "fsi-validation",
+      "file": "backend/ext_spread_ratios_and_risk_grade.py",
+      "line": 752,
+      "finding": "run_financial_spreading rejects only a deal with zero documents; verify_required_documents' missing_document_types result is returned but never enforced, and review_spread (866) never re-checks it. A spread can therefore be drafted, accepted, ratio'd and risk-graded with the balance sheet, income statement or tax return absent — the `docs` gate the workflow defines is not implemented on the REST path."
+    },
+    {
+      "severity": "medium",
+      "area": "fsi-authz",
+      "file": "backend/ext_workflow_runs.py",
+      "line": 25,
+      "finding": "POST /workflows/{name}/start, POST /workflows/runs/{id}/tick and GET /workflows/runs/{id} have no identity guard; acting_user_email defaults to the literal \"system\" and is never verified. GET /workflows/runs/{id} returns workflow_engine.state(), whose context holds the accumulated node outputs — borrower details, spread figures, ratios, grade and memo text — for any run id."
+    },
+    {
+      "severity": "medium",
+      "area": "fsi-authz",
+      "file": "backend/ext_blobs.py",
+      "line": 42,
+      "finding": "GET /files/{name} serves any stored blob with no identity check, while the matching PUT is identity-guarded. Borrower financial documents written through blob_store are therefore downloadable by an unauthenticated caller who can guess or enumerate a name."
+    },
+    {
+      "severity": "medium",
+      "area": "merge-seam",
+      "file": "backend/ext_uploads.py",
+      "line": 24,
+      "finding": "PUT /uploads/{name} and PUT /files/{name} (ext_blobs.py:19) write the same blob_store key space through the same _safe(name) normalisation, but enforce contradictory validation: /uploads applies an extension allow-list and rejects an empty body, /files applies neither. /files is an unpoliced alias for /uploads, and because blob_store.save overwrites in place, a write through either route silently replaces a document stored via the other."
+    },
+    {
+      "severity": "medium",
+      "area": "merge-seam",
+      "file": "backend/ext_memo_policy_audit.py",
+      "line": 407,
+      "finding": "persist_accepted_memo (407), record_policy_exceptions (484) and resolve_policy_exceptions (550) read flat keys such as context[\"deal_id\"], but workflow_engine.state() nests run inputs under context[\"inputs\"]. The sibling slice handles this correctly with `inputs = context.get(\"inputs\", context)` (ext_deal_intake.py:49). The savememo/exceptions/resolve nodes therefore raise KeyError whenever the deal-underwriting-lifecycle workflow actually executes — two slices disagreeing on the shared handler calling convention."
+    },
+    {
+      "severity": "medium",
+      "area": "merge-seam",
+      "file": "backend/ext_memo_policy_audit.py",
+      "line": 575,
+      "finding": "resolve_policy_exceptions records a waiver by appending a new row keyed by exception_ref while leaving the original status:\"open\" row in place (db.Store has no update). ext_tiered_approval_and_sla._blockers_for (615-618) filters raw policy_exceptions rows by status with no latest-per-ref fold, so a waived exception still counts as open in the SLA idle register and the collect_stage_blockers node. The two slices model exception state incompatibly."
+    },
+    {
+      "severity": "medium",
+      "area": "fsi-human-gate",
+      "file": "backend/ext_tiered_approval_and_sla.py",
+      "line": 496,
+      "finding": "record_approval_decision omits the settled-decision check that approve_deal performs at 802-807, so driving the lifecycle workflow records an `approved` row on an already-declined deal; close_approved_deal then sets current_status=\"approved\" while the row still carries decline_reason_code/detail, silently overturning an issued adverse action."
+    },
+    {
+      "severity": "medium",
+      "area": "fsi-authz",
+      "file": "backend/ext_tiered_approval_and_sla.py",
+      "line": 555,
+      "finding": "close_approved_deal performs the terminal state change (current_stage=\"closing\", current_status=\"approved\") with no require_actor call, no permission check and no verification that an approvals row exists for the deal. It trusts workflow node ordering alone and audits the mutation as actor \"system\" when acting_user_email is absent."
+    },
+    {
+      "severity": "medium",
+      "area": "fsi-decline-reason",
+      "file": "backend/ext_tiered_approval_and_sla.py",
+      "line": 527,
+      "finding": "record_adverse_action_or_return takes adverse_action_reason_code and adverse_action_detail straight from workflow inputs with no validation against the controlled adverse_action_reasons register and no non-empty check on the detail — precisely the validation decline_deal enforces at 834-841. The same adverse action is therefore governed by two different standards depending on which path issued it."
+    },
+    {
+      "severity": "medium",
+      "area": "fsi-authz",
+      "file": "backend/ext_tiered_approval_and_sla.py",
+      "line": 522,
+      "finding": "record_adverse_action_or_return never calls identity.require_actor; it attributes the recorded decline or return to a caller-supplied acting_user_email string from workflow inputs, falling back to \"system\", so the adverse-action audit entry names an unverified actor."
+    },
+    {
+      "severity": "medium",
+      "area": "fsi-authz",
+      "file": "backend/ext_memo_policy_audit.py",
+      "line": 398,
+      "finding": "_require authorizes by looking up a caller-supplied actor_user_id integer in the users table instead of calling identity.require_actor(email, ...), skipping the is_active check. The three workflow handlers it guards accept identity as an unauthenticated integer taken from workflow context that the unauthenticated POST /workflows/{name}/start populates from caller input, and user ids are enumerable from the anonymously-readable audit timeline."
+    },
+    {
+      "severity": "medium",
+      "area": "fsi-human-gate",
+      "file": "backend/ext_tiered_approval_and_sla.py",
+      "line": 1136,
+      "finding": "escalate_idle_deal starts the sla-idle-escalation run and, in the same request, auto-approves the `escalate` human park point with the requester's own email before ticking to the deterministic apply node. The party requesting the reassign or return is recorded as its own approver, so the human gate is a formality and no independent review occurs."
+    },
+    {
+      "severity": "medium",
+      "area": "fsi-human-gate",
+      "file": "backend/ext_spread_ratios_and_risk_grade.py",
+      "line": 873,
+      "finding": "review_spread re-fetches the latest agent output on every call and never checks whether it was already reviewed. A draft rejected with a reason can be accepted immediately afterwards, and an accepted spread can be re-accepted repeatedly, each time rewriting template rows, ratios and a new risk grade."
+    },
+    {
+      "severity": "medium",
+      "area": "fsi-human-gate",
+      "file": "backend/ext_spread_ratios_and_risk_grade.py",
+      "line": 594,
+      "finding": "assign_risk_grade unconditionally forces current_stage=\"memo_drafting\" and current_status=\"graded_pending_memo\" with no check of the deal's present stage. Combined with the re-reviewable spread above, a deal already approved, declined or escalated by another slice is silently dragged back to memo_drafting."
+    },
+    {
+      "severity": "medium",
+      "area": "fsi-human-gate",
+      "file": "backend/ext_deal_intake.py",
+      "line": 317,
+      "finding": "accept_triage's request carries no agent_output_id or triage_decision_id, so acceptance binds to outputs[-1]/decisions[-1] — the latest agent run rather than the proposal the human actually reviewed. A re-run between display and acceptance routes the deal on unreviewed agent output, and the handler falls back to ANALYST_QUEUES[0] when no agent output exists, routing on a default nobody proposed."
+    },
+    {
+      "severity": "medium",
+      "area": "fsi-human-gate",
+      "file": "backend/ext_deal_intake.py",
+      "line": 306,
+      "finding": "accept_triage applies no state precondition and no idempotency guard: it never verifies the deal is still at intake before calling record_triage_and_route_to_queue, which unconditionally sets the stage to document_extraction. Repeated calls create duplicate queue_assignments and can regress a deal already in memo, approval or closing back to document collection."
+    },
+    {
+      "severity": "medium",
+      "area": "fsi-validation",
+      "file": "backend/ext_spread_ratios_and_risk_grade.py",
+      "line": 921,
+      "finding": "In review_spread's edit path, edited_rows values replace the transcribed figures while persist_accepted_spread re-attaches the ORIGINAL agent citation for that line_item_key (391). Only the key is checked against cited_keys, so an analyst can store any number — including a negative one — under a citation whose quoted_text attests a different figure, defeating the module's \"no figure without a citation\" rule."
+    },
+    {
+      "severity": "medium",
+      "area": "fsi-validation",
+      "file": "backend/ext_spread_ratios_and_risk_grade.py",
+      "line": 635,
+      "finding": "FigureIn.value is an unbounded `float | None` and line_item_key is an unconstrained string never checked against TEMPLATE_LINE_ITEMS, so attach_document accepts negative or arbitrarily large amounts and unknown line items which flow unvalidated into financial_spread_template and into the DSCR, leverage and grade computation."
+    },
+    {
+      "severity": "medium",
+      "area": "fsi-validation",
+      "file": "backend/ext_spread_ratios_and_risk_grade.py",
+      "line": 647,
+      "finding": "DocumentAttachRequest.figures defaults to an empty list and document_type is unconstrained, while verify_required_documents checks only that a document_type string is present. Attaching three empty documents typed balance_sheet/income_statement/tax_return makes documents_complete report true with no financial data behind it."
+    },
+    {
+      "severity": "medium",
+      "area": "fsi-validation",
+      "file": "backend/ext_memo_policy_audit.py",
+      "line": 613,
+      "finding": "MemoReviewRequest.action is an unconstrained str with no enum; in accept_memo any value that is not exactly \"reject\" falls through to acceptance, and persist_accepted_memo stores it verbatim in human_reviews.action and advances the deal to policy_compliance/memo_accepted. A typo or malformed action silently becomes a human acceptance of record."
+    },
+    {
+      "severity": "medium",
+      "area": "fsi-decline-reason",
+      "file": "backend/ext_memo_policy_audit.py",
+      "line": 757,
+      "finding": "In accept_memo's reject branch rejection_reason is optional and is defaulted to the literal \"no reason given\", while the memo.rejected audit payload stores the raw None. A human rejection of a credit memo is persisted with no stored rationale."
+    },
+    {
+      "severity": "medium",
+      "area": "fsi-validation",
+      "file": "backend/ext_deal_intake.py",
+      "line": 170,
+      "finding": "DealCreateRequest constrains nothing beyond types: requested_amount and exposure_amount are bare floats with no upper bound (only a >0 check inside validate_intake_submission) and borrower_name/borrower_industry/borrower_entity_id have no max_length. A 1e18 requested_amount is accepted and drives the complexity branch at 236 and all downstream approval tiering."
+    },
+    {
+      "severity": "medium",
+      "area": "fsi-validation",
+      "file": "backend/ext_grounded_portfolio_qa.py",
+      "line": 569,
+      "finding": "QaAskRequest.question has no min_length or max_length; POST /api/qa/ask concatenates it verbatim into the agent_runtime prompt and stores it. An empty question falls through _select_records to WHOLE_BOOK and returns a digest of the caller's entire book, and an unbounded one is passed straight to the model."
+    },
+    {
+      "severity": "medium",
+      "area": "fsi-llm-math",
+      "file": "backend/ext_grounded_portfolio_qa.py",
+      "line": 650,
+      "finding": "ask_portfolio_qa returns the raw model narrative as `answer` whenever _model_ignored_the_records() is false, and that guard checks only for refusal markers and whether any deal id string appears — never that figures in the narrative match _portfolio_facts. The module's claim that every figure is computed here and never by the model is unenforced, so a model-invented exposure or ratio reaches a credit officer labelled as grounded."
+    },
+    {
+      "severity": "medium",
+      "area": "design-fidelity",
+      "file": "backend/ext_grounded_portfolio_qa.py",
+      "line": 518,
+      "finding": "verify_answer_grounding is tautological as wired: _build_answer derives cited_ids from the retrieved in-scope record list rather than from what the narrative actually references, so `cited` is always non-empty and `out_of_scope` always empty when records exist. The hard grounding condition can never fail, and source_deal_ids reflects what was retrieved rather than what the answer used."
+    },
+    {
+      "severity": "medium",
+      "area": "fsi-logging",
+      "file": "backend/ext_memo_policy_audit.py",
+      "line": 694,
+      "finding": "run_credit_memo embeds the entire generated memo body in the memo.agent_drafted audit after-payload, copying a full PII and financial document body into the audit_log sink rather than referencing the agent_outputs.id the route already records at 687. Combined with the anonymously-readable audit timeline this is the largest single PII disclosure in the app."
+    },
+    {
+      "severity": "medium",
+      "area": "module-bypass",
+      "file": "backend/ext_memo_policy_audit.py",
+      "line": 1042,
+      "finding": "_install_fixture_deal writes the DEAL-1003 fixture directly via store.insert, bypassing deals_repo.create_deal, and runs unconditionally at import with no APP_ALLOW_SEED gate — contrast ext_seed.py:20, which establishes that convention. The synthetic borrower enters the live deal book and pipeline and is counted in the single-obligor concentration aggregate in evaluate_policy."
+    },
+    {
+      "severity": "medium",
+      "area": "merge-seam",
+      "file": "backend/ext_tiered_approval_and_sla.py",
+      "line": 251,
+      "finding": "Three slices independently seed borrower-shaped rows into the production deals table at import time — _seed_desk_fixtures here (DEAL-1004/1005/1006/1041/1042), _ensure_demonstration_dossier in ext_spread_ratios_and_risk_grade.py:249 (DEAL-1002, EIN-84-2210947) and _install_fixture_deal in ext_memo_policy_audit.py:1042 (DEAL-1003), none of them gated. The book of record is populated with fabricated deals on every boot, and no slice is aware of the others' fixtures."
+    },
+    {
+      "severity": "medium",
+      "area": "merge-seam",
+      "file": "backend/ext_spread_ratios_and_risk_grade.py",
+      "line": 148,
+      "finding": "Two slices monkey-patch the shared module global deals_repo.next_deal_code at import time — _install_deal_code_reservation here and _reserve_fixture_deal_codes at ext_tiered_approval_and_sla.py:210. deals_repo.next_deal_code already skips codes carried by stored rows (deals_repo.py:35-39), so both wrappers are redundant, and the resulting behaviour depends on ext_*.py import order, which main.py fixes only by filename sort."
+    },
+    {
+      "severity": "medium",
+      "area": "fsi-audit",
+      "file": "backend/ext_spread_ratios_and_risk_grade.py",
+      "line": 164,
+      "finding": "_extract_sheet_name keys the blob on deal_code plus document_type only, and blob_store.save overwrites in place. Attaching a second document of the same type silently replaces the first document's extract sheet, so previously stored citations pointing at the older documents row now resolve to different content and the cited figure can no longer be reproduced."
+    },
+    {
+      "severity": "medium",
+      "area": "fsi-audit",
+      "file": "backend/ext_memo_policy_audit.py",
+      "line": 557,
+      "finding": "resolve_policy_exceptions applies no precondition on the exception's current status, so an already-waived or upheld exception can be re-dispositioned repeatedly, and the audit entry hardcodes \"before\": {\"status\": \"open\"} at 584, writing a false prior state into the append-only trail on every re-resolution."
+    },
+    {
+      "severity": "medium",
+      "area": "fsi-audit",
+      "file": "backend/ext_memo_policy_audit.py",
+      "line": 852,
+      "finding": "accept_policy_review de-duplicates proposed breaches against current_exceptions regardless of status, so a rule previously waived or upheld can never raise a new exception even when a later run breaches it with different figures; list_policy_exceptions applies the same filter at 877, hiding the fresh breach from the proposed list too."
+    },
+    {
+      "severity": "medium",
+      "area": "merge-seam",
+      "file": "frontend/index.html",
+      "line": 1410,
+      "finding": "The two duplicated decline inputs point at different datalists — the deal-detail copy at 1410 uses list=\"decision-reason-list\" while the SLA copy at 1629 uses list=\"decision-reason-codes\". app.js populates decision-reason-codes from the server at 2072 but only fills decision-reason-list from a separate path at 907, so the input that actually wins getElementById can be left with an unpopulated adverse-action code list while the populated one is unreachable."
+    },
+    {
+      "severity": "low",
+      "area": "fsi-authz",
+      "file": "backend/ext_deal_intake.py",
+      "line": 113,
+      "finding": "record_triage_and_route_to_queue resolves the actor by scanning store.list(\"users\") for a matching id and calls identity.has_permission directly rather than identity.require_actor, skipping the is_active check. A deactivated analyst's user id still passes the routing authority check on this state-changing handler."
+    },
+    {
+      "severity": "low",
+      "area": "fsi-authz",
+      "file": "backend/ext_tiered_approval_and_sla.py",
+      "line": 342,
+      "finding": "_authority_or_403 derives exposure as `exposure_amount or requested_amount or 0` with no guard rejecting an unknown amount, so a deal row lacking both fields is classified into the credit_analyst tier at $0 and becomes analyst-approvable rather than being refused pending a known exposure."
+    },
+    {
+      "severity": "low",
+      "area": "fsi-authz",
+      "file": "backend/ext_tiered_approval_and_sla.py",
+      "line": 1125,
+      "finding": "POST /api/sla/{deal_code}/escalate requires only \"deal.reassign\", yet action=\"return\" reaches apply_sla_escalation_action (680) which rewrites current_stage/current_status and inserts a deal_returns row — work the dedicated /api/deals/{code}/return route gates on \"deal.return\". Two paths enforce different permissions for the same mutation; latent today only because officer and admin hold both."
+    },
+    {
+      "severity": "low",
+      "area": "fsi-authz",
+      "file": "backend/ext_grounded_portfolio_qa.py",
+      "line": 188,
+      "finding": "The read tools (_read_deal, _read_spread, _read_risk_grade, _read_policy_exceptions, _read_audit_timeline) are registered into the process-global tools registry at import and accept any deal_id with no entitlement check; tools.invoke validates only the agent's roster allow-list, not the caller's scope. Any other agent whose roster lists these names can read deals outside the asking user's permission scope."
+    },
+    {
+      "severity": "low",
+      "area": "fsi-audit",
+      "file": "backend/ext_deal_intake.py",
+      "line": 145,
+      "finding": "All three audit() calls in this file (81, 145, 291) omit the actor= argument, so ext_audit.record defaults the event stream actor to \"system\" for human-caused state changes including deal.triage_accepted_and_routed. The domain audit_log row still carries actor_user_id from detail, but the event stream misattributes the routing decision to the machine — contrast record_qa_session, which passes actor explicitly."
+    },
+    {
+      "severity": "low",
+      "area": "fsi-audit",
+      "file": "backend/ext_tiered_approval_and_sla.py",
+      "line": 322,
+      "finding": "Import-time seeding inserts six deals rows plus the adverse-action and bank-holiday reference tables directly via store.insert, bypassing deals_repo.create_deal and writing no ext_audit row, so these deal records appear in the book with no provenance in the audit trail. The same omission applies to the DEAL-1002 fixture at ext_spread_ratios_and_risk_grade.py:255 and DEAL-1003 at ext_memo_policy_audit.py:1061."
+    },
+    {
+      "severity": "low",
+      "area": "fsi-validation",
+      "file": "backend/ext_tiered_approval_and_sla.py",
+      "line": 737,
+      "finding": "ApproveRequest, DeclineRequest, ReturnRequest, ReassignRequest and EscalationRequest declare every free-text field (decision_notes, reason_detail, reason, note) as unbounded str with no max_length, and acting_user_email/assign_to_email as bare str with no EmailStr constraint; these values are persisted into approvals and deal_returns and echoed back verbatim."
+    },
+    {
+      "severity": "low",
+      "area": "fsi-validation",
+      "file": "backend/ext_memo_policy_audit.py",
+      "line": 620,
+      "finding": "ExceptionDecision.disposition is an unconstrained str and line 563 treats any value that is not exactly \"waive\" as \"upheld\", so a malformed disposition such as \"waived\" is silently recorded as the opposite decision with no validation error returned."
+    },
+    {
+      "severity": "low",
+      "area": "fsi-decline-reason",
+      "file": "backend/ext_memo_policy_audit.py",
+      "line": 493,
+      "finding": "record_policy_exceptions inserts policy_exceptions rows straight from caller-supplied context[\"breaches\"] with no check that rule_reference, violation_detail or rationale are present, so an exception of record can be persisted with all three set to None when the node is driven from anything other than accept_policy_review."
+    },
+    {
+      "severity": "low",
+      "area": "fsi-decline-reason",
+      "file": "backend/ext_memo_policy_audit.py",
+      "line": 571,
+      "finding": "resolve_policy_exceptions overwrites the exception's rationale with the officer's disposition rationale, so the current-state view produced by current_exceptions no longer carries the policy engine's original explanation of why the rule was breached."
+    },
+    {
+      "severity": "low",
+      "area": "fsi-decline-reason",
+      "file": "backend/ext_deal_intake.py",
+      "line": 187,
+      "finding": "create_deal rejects an invalid submission with a generic 400 and no persisted reason: validate_intake_submission writes a deal.intake_submitted audit row with deal_id None and after None, recording neither which field failed nor the submitted borrower and amount. A refused intake leaves no reviewable record of what was refused or why."
+    },
+    {
+      "severity": "low",
+      "area": "merge-seam",
+      "file": "backend/ext_spread_ratios_and_risk_grade.py",
+      "line": 669,
+      "finding": "Four slices define their own _deal_or_404 (ext_deal_intake.py:218, ext_memo_policy_audit.py:73, here at 668, ext_tiered_approval_and_sla.py:382). Three are identical, but this one also calls _ensure_demonstration_dossier(), so a plain read or write against a deal route can create fixture deals and documents as a side effect, and the same deal code resolves differently depending on which slice's helper was reached first."
+    },
+    {
+      "severity": "low",
+      "area": "merge-seam",
+      "file": "backend/ext_memo_policy_audit.py",
+      "line": 130,
+      "finding": "_next_exception_ref allocates refs by inserting into an undeclared _exception_ref_seq pseudo-table and counting rows, and the resulting exception_ref is not a column of models.TABLES[\"policy_exceptions\"]. The identity this slice keys exception state on is off the approved data model and invisible to any consumer reading the declared schema."
+    },
+    {
+      "severity": "low",
+      "area": "fsi-human-gate",
+      "file": "backend/ext_memo_policy_audit.py",
+      "line": 882,
+      "finding": "list_policy_exceptions returns a merged `exceptions` array combining human-recorded rows with agent-proposed breaches no human has accepted. Each proposed item carries status:\"proposed\", but any consumer reading the `exceptions` key rather than `recorded` presents un-accepted model output as exceptions of record."
+    },
+    {
+      "severity": "low",
+      "area": "design-fidelity",
+      "file": "backend/ext_memo_policy_audit.py",
+      "line": 385,
+      "finding": "The \"Agent Commentary\" section attaches an auto-generated citation (DEAL-REF-{code}-commentary quoting borrower_name) to whatever free prose agent_runtime.respond returned, so the module's \"citation on every section\" guarantee is nominal for the only section containing unvalidated model output, which is then concatenated into the persisted memo body at 388."
+    },
+    {
+      "severity": "low",
+      "area": "design-fidelity",
+      "file": "backend/ext_grounded_portfolio_qa.py",
+      "line": 654,
+      "finding": "When no record matches the question, ask_portfolio_qa sets `citable` to every deal in the caller's scope, so source_deal_ids and the rendered citation block list deals that have no bearing on the answer, diluting the traceability claim from \"the deals the answer used\" to \"everything you may see\"."
+    },
+    {
+      "severity": "low",
+      "area": "fsi-audit",
+      "file": "backend/ext_spread_ratios_and_risk_grade.py",
+      "line": 841,
+      "finding": "run_financial_spreading calls validate_spread_citations first, which already inserts citations rows and an audit row, and only then raises 422 when a figure is uncited. There is no rollback, so citation rows persist for a draft that was refused and never offered for acceptance."
+    },
+    {
+      "severity": "low",
+      "area": "module-bypass",
+      "file": "backend/ext_audit.py",
+      "line": 39,
+      "finding": "record() wraps the store.insert(\"audit_log\", ...) call in a bare `except Exception: pass`, so a failure to persist the durable audit row is silent and the mutation it documents still succeeds. In a regulated app the audit write should be as load-bearing as the state change, not best-effort."
+    },
+    {
+      "severity": "low",
+      "area": "fsi-validation",
+      "file": "backend/main.py",
+      "line": 66,
+      "finding": "POST /chat takes an unbounded ChatRequest.message, passes it to agent_runtime.respond with no identity check and no audit row, and is reachable anonymously. It is the chat-shell default rather than a slice route, but it is a live unauthenticated LLM entry point on a regulated deployment."
+    }
+  ],
+  "checked": {
+    "files": 171,
+    "axes": ["contracts", "fsi-hardening"]
+  }
+}
