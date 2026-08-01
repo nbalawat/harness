@@ -542,6 +542,9 @@ export function buildState(workspace: string): Record<string, unknown> {
       trigger,
       ended,
       nodeStates,
+      // What THIS wave cost — the reconciliation the user asked for: every
+      // remediation/enhancement cycle's spend, attributed and summable.
+      costUsd: Number(actions.reduce((s, a) => s + (a.costUsd || 0), 0).toFixed(2)),
       // legacy fields the banner uses
       nodeId: w.feedbacks[0]?.nodeId ?? w.reopened[0],
       feedback: w.feedbacks[0]?.feedback ?? null,
@@ -659,6 +662,14 @@ export function buildState(workspace: string): Record<string, unknown> {
     windowGate,
     remediation,
     originalBuild,
+    // Cost reconciliation across the whole run: what the first build cost vs
+    // what remediation/enhancement cycles added — the money story, itemized.
+    costBreakdown: {
+      originalUsd: originalBuild.costUsd,
+      remediationUsd: Number(remediation.reduce((s, r) => s + (r.costUsd || 0), 0).toFixed(2)),
+      totalUsd: Number(state.totalCostUsd.toFixed(2)),
+      waves: remediation.length,
+    },
     remediationActive: remediation.some((r) => r.ended.kind === "active"),
     designDelivery,
     appAgents: Array.isArray(rosterDoc?.agents) ? rosterDoc!.agents : null,
@@ -1574,6 +1585,7 @@ body { font:14px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif; background:
 .remrow:last-child { border-bottom:0; }
 .remrow[data-wave] { cursor:pointer; }
 .remrow[data-wave]:hover { background:var(--surface); }
+.remrecon { display:flex; align-items:center; gap:.6rem; padding:.5rem .1rem .7rem; font-size:.9rem; flex-wrap:wrap; border-bottom:2px solid var(--border); margin-bottom:.3rem; }
 .phasedivider { font-size:.72rem; letter-spacing:.06em; text-transform:uppercase; color:var(--ink2,#888); margin:.7rem 0 .3rem; padding-bottom:.15rem; border-bottom:1px solid var(--border); }
 .phasedivider.rem { color:var(--accent,#3b5bdb); border-color:var(--accent,#3b5bdb); }
 .findrow { display:flex; align-items:baseline; gap:.5rem; padding:.35rem .1rem; border-bottom:1px solid var(--border); font-size:.83rem; }
@@ -2386,18 +2398,28 @@ async function tick() {
   const remP = document.getElementById('remedPanel');
   if ((s.remediation || []).length) {
     remP.style.display = '';
-    const origin = '<div class="remrow"><span class="hint" style="min-width:7.5rem">Original build</span><span class="hint">' +
+    const cb = s.costBreakdown || {};
+    // The money story, reconciled: original build vs what cycles ADDED.
+    const recon = '<div class="remrecon">' +
+      '<span>First build <b>$' + (cb.originalUsd||0).toFixed(2) + '</b></span>' +
+      '<span class="hint">+</span>' +
+      '<span>' + (cb.waves||0) + ' cycle(s) <b style="color:var(--warn,#e08e0b)">$' + (cb.remediationUsd||0).toFixed(2) + '</b></span>' +
+      '<span class="hint">=</span>' +
+      '<span>total <b>$' + (cb.totalUsd||0).toFixed(2) + '</b>' +
+      (cb.originalUsd ? ' <span class="hint">(' + Math.round(100*(cb.remediationUsd||0)/(cb.totalUsd||1)) + '% spent on rework)</span>' : '') + '</span></div>';
+    const origin = '<div class="remrow"><span style="min-width:8.5rem"><b>Original build</b></span><span class="hint">' +
       (s.originalBuild && s.originalBuild.completedAt
-        ? 'completed ' + esc(String(s.originalBuild.completedAt).slice(11,19)) + ' · $' + s.originalBuild.costUsd.toFixed(2)
-        : 'first derivation') + '</span></div>';
-    setHTML('remedList', origin + s.remediation.map((r, i) => {
+        ? 'completed ' + esc(String(s.originalBuild.completedAt).slice(11,19)) : 'first derivation') + '</span>' +
+      '<span style="flex:1"></span><span class="mono" style="white-space:nowrap">$' + (cb.originalUsd||0).toFixed(2) + '</span></div>';
+    setHTML('remedList', recon + origin + s.remediation.map((r, i) => {
       const state = waveVerdict(r);
       const f0 = r.feedbacks[0];
       return '<div class="remrow" data-wave="' + r.wave + '" role="button" tabindex="0">' +
         '<span style="min-width:8.5rem"><b>' + (waveIcon(r)) + ' ' + waveNoun(r) + ' ' + r.wave + '</b></span>' +
         '<span class="hint">' + esc(String(r.at||'').slice(11,19)) + '</span>' +
         '<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(remHeadline(f0?.feedback)) + ' <span class="hint">→ ' + esc(f0?.nodeId || '') + '</span></span>' +
-        state + '<span class="hint" style="white-space:nowrap">details →</span></div>';
+        state + '<span class="mono" style="white-space:nowrap;min-width:3.5rem;text-align:right">$' + (r.costUsd||0).toFixed(2) + '</span>' +
+        '<span class="hint" style="white-space:nowrap">details →</span></div>';
     }).join(''));
     remP.querySelectorAll('.remrow[data-wave]').forEach(el => el.onclick = () => {
       waveSel = el.dataset.wave; showTab('pipeline'); tick();
