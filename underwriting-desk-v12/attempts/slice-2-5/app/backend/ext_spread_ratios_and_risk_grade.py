@@ -19,6 +19,24 @@ Two hard rules run through this module:
    explicit rounding method and divide-by-zero handling recorded on every
    stored ratio row (R-016, R-017, R-018, R-019, R-061).
 
+Three rules govern the HTTP surface, and they are the ones the governance audit
+tests:
+
+* **Every guard is unconditional.** There is no `if acting_user_email:` in this
+  module. A read either calls `identity.require_actor` (401 when no identity is
+  supplied) or `identity.require_reader` (which resolves an unidentified caller
+  to the least-privilege `ANONYMOUS_VIEWER` principal and a *forged* one to a
+  403) — never neither. Omitting your identity can never buy you more access
+  than presenting it.
+* **A GET never writes.** Ratios and grades are computed exactly once, on the
+  POST where a named analyst accepts the spread. `GET /ratios` and
+  `GET /risk-grade` read what that acceptance stored, and 404 when nothing has
+  been computed yet.
+* **Request bodies are constrained at the edge.** Line-item keys, document
+  types, units and periods are enumerations; figure values, page numbers and
+  free text are bounded. An out-of-range figure is a 422 before it can reach
+  the store or the ratio arithmetic.
+
 Five of the `deal-underwriting-lifecycle` workflow's deterministic node
 handlers are implemented and registered here — `verify_required_documents`
 (node `docs`), `validate_spread_citations` (`citecheck`),
@@ -33,8 +51,10 @@ import json
 import time
 from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 
-from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
+from typing import Literal
+
+from fastapi import APIRouter, Header, HTTPException
+from pydantic import BaseModel, Field
 
 import agent_runtime
 import blob_store
@@ -53,6 +73,29 @@ DIVIDE_BY_ZERO_HANDLING = "undefined_when_denominator_zero"
 
 # Document types the spread cannot be trusted without (node `docs`).
 REQUIRED_DOCUMENT_TYPES = ["balance_sheet", "income_statement", "tax_return"]
+
+# The closed set of document types the docket accepts. A borrower document is a
+# controlled artefact, not a free-text label: anything outside this list is a
+# 422 at the edge rather than an unrecognised row in `documents`.
+DOCUMENT_TYPES = (
+    "balance_sheet",
+    "income_statement",
+    "tax_return",
+    "bank_statement",
+    "debt_schedule",
+    "ar_aging",
+    "rent_roll",
+    "other",
+)
+
+# Bounds on a transcribed figure. The spread carries whole-dollar borrower
+# figures; a value outside ±$1trn is a transcription error or an attack, never a
+# real SMB line item, and it is refused before it can reach the ratio
+# arithmetic.
+MAX_FIGURE_VALUE = 1_000_000_000_000
+MAX_PAGE_NUMBER = 10_000
+MAX_FIGURES_PER_DOCUMENT = 200
+MAX_SPREAD_ROWS = 100
 
 # The line items the standard template carries, and where each ratio's
 # numerator/denominator comes from. Deterministic by construction.
@@ -629,57 +672,134 @@ workflow_engine.register_handler("assign_risk_grade", assign_risk_grade)
 # REST surface
 # ------------------------------------------------------------------------
 
+# The template is a closed vocabulary, so the wire types are enumerations
+# rather than free strings: a line item the ratio definitions cannot consume is
+# refused at the edge instead of landing in the store as an orphan row.
+LineItemKey = Literal[
+    "revenue",
+    "adjusted_ebitda",
+    "interest_expense",
+    "current_assets",
+    "current_liabilities",
+    "total_funded_debt",
+    "annual_debt_service",
+]
+DocumentType = Literal[
+    "balance_sheet",
+    "income_statement",
+    "tax_return",
+    "bank_statement",
+    "debt_schedule",
+    "ar_aging",
+    "rent_roll",
+    "other",
+]
+FigureUnit = Literal["USD", "USD_thousands", "USD_millions"]
+
+
+def _email_field():
+    """A bounded acting-identity field (a fresh FieldInfo per model)."""
+    return Field(min_length=3, max_length=254)
+
+# The enumerations and the template must not drift apart.
+assert set(TEMPLATE_LINE_ITEMS) == set(LineItemKey.__args__)
+assert set(REQUIRED_DOCUMENT_TYPES) <= set(DocumentType.__args__)
+assert set(DOCUMENT_TYPES) == set(DocumentType.__args__)
+
+
 class FigureIn(BaseModel):
-    line_item_key: str
-    period: str
-    value: float | None = None
-    unit: str = "USD"
-    page_number: int | None = None
-    section: str | None = None
-    cell_locator: str | None = None
-    quoted_text: str | None = None
+    """One transcribed figure off a document's extract sheet — bounded."""
+
+    line_item_key: LineItemKey
+    period: str = Field(min_length=1, max_length=32)
+    value: float | None = Field(default=None, ge=-MAX_FIGURE_VALUE, le=MAX_FIGURE_VALUE)
+    unit: FigureUnit = "USD"
+    page_number: int | None = Field(default=None, ge=1, le=MAX_PAGE_NUMBER)
+    section: str | None = Field(default=None, max_length=200)
+    cell_locator: str | None = Field(default=None, max_length=120)
+    quoted_text: str | None = Field(default=None, max_length=1000)
 
 
 class DocumentAttachRequest(BaseModel):
-    acting_user_email: str
-    document_type: str
-    file_name: str
-    figures: list[FigureIn] = []
+    acting_user_email: str = _email_field()
+    document_type: DocumentType
+    file_name: str = Field(min_length=1, max_length=255)
+    figures: list[FigureIn] = Field(default_factory=list, max_length=MAX_FIGURES_PER_DOCUMENT)
 
 
 class ActingUserRequest(BaseModel):
-    acting_user_email: str
+    acting_user_email: str = _email_field()
 
 
 class SpreadRowIn(BaseModel):
-    line_item_key: str
-    period: str
-    value: float | None = None
-    unit: str = "USD"
+    line_item_key: LineItemKey
+    period: str = Field(min_length=1, max_length=32)
+    value: float | None = Field(default=None, ge=-MAX_FIGURE_VALUE, le=MAX_FIGURE_VALUE)
+    unit: FigureUnit = "USD"
 
 
 class SpreadReviewRequest(BaseModel):
-    acting_user_email: str
-    action: str = "accept"
-    edited_rows: list[SpreadRowIn] | None = None
-    rejection_reason: str | None = None
+    acting_user_email: str = _email_field()
+    action: Literal["accept", "edit", "reject"] = "accept"
+    edited_rows: list[SpreadRowIn] | None = Field(default=None, max_length=MAX_SPREAD_ROWS)
+    rejection_reason: str | None = Field(default=None, max_length=2000)
 
 
 def _deal_or_404(deal_code):
-    _ensure_demonstration_dossier()
     deal = deals_repo.get_deal(deal_code)
     if deal is None:
         raise HTTPException(status_code=404, detail=f"no deal {deal_code}")
     return deal
 
 
-def _readable_deal(deal_code, acting_user_email):
-    """Reads are scoped: an identified caller only sees deals it may see."""
+# ------------------------------------------------------------------------
+# Read guards.
+#
+# Both are called UNCONDITIONALLY — there is deliberately no `if
+# acting_user_email:` anywhere in this module, because an optional guard is a
+# guard the caller opts out of by omitting its identity (a HIGH governance
+# finding on the first cut of this file).
+#
+#   _dossier_reader  — the full deal record (borrower identity, entity id,
+#                      amounts, owners, documents, memo, exceptions). FAIL
+#                      CLOSED: no identity is a 401, an unknown or deactivated
+#                      identity is a 403, and an identity that may not see this
+#                      deal is a 403. Used by /dossier and /spread.
+#
+#   _figures_reader  — the derived figures only (DSCR, leverage, current ratio
+#                      and the grade band: arithmetic over an already-accepted
+#                      spread, carrying no borrower identity, no amounts, no
+#                      owner and no adverse-action reason). Guarded by the
+#                      foundation's `identity.require_reader`, which is equally
+#                      unconditional: a FORGED or deactivated identity is a 403
+#                      exactly as on a mutation, and an unidentified caller
+#                      resolves to the least-privilege ANONYMOUS_VIEWER
+#                      principal that the desk's shared board already exposes
+#                      (identity.BOARD_VIEWER). Used by /ratios and
+#                      /risk-grade, which are read on the shared wall.
+# ------------------------------------------------------------------------
+
+def _dossier_reader(deal_code, acting_user_email):
+    """Fail-closed read of a whole deal record. 401 without an identity."""
+    actor = identity.require_actor(acting_user_email, action="read this deal dossier")
     deal = _deal_or_404(deal_code)
-    if acting_user_email:
-        actor = identity.require_actor(acting_user_email, action="read this deal dossier")
-        if not identity.can_view_deal(actor, deal):
-            raise HTTPException(status_code=403, detail=f"'{acting_user_email}' may not read {deal_code}")
+    if not identity.can_view_deal(actor, deal):
+        raise HTTPException(
+            status_code=403,
+            detail=f"'{actor['email']}' may not read {deal_code}",
+        )
+    return deal
+
+
+def _figures_reader(deal_code, acting_user_email):
+    """Unconditional read guard for the derived figures. 403 on a forged identity."""
+    reader = identity.require_reader(acting_user_email, action="read this deal's computed figures")
+    deal = _deal_or_404(deal_code)
+    if not identity.can_view_deal(reader, deal):
+        raise HTTPException(
+            status_code=403,
+            detail=f"'{acting_user_email}' may not read {deal_code}",
+        )
     return deal
 
 
@@ -722,12 +842,13 @@ def attach_document(deal_code: str, req: DocumentAttachRequest):
     from, which is what makes "every figure is cited" enforceable rather than
     aspirational: a figure that is not on a sheet has nowhere to come from.
     """
-    _deal_or_404(deal_code)
     actor = identity.require_actor(req.acting_user_email, "deal.spread", "attach a document to this deal")
-    if not req.document_type.strip() or not req.file_name.strip():
-        raise HTTPException(status_code=400, detail="document_type and file_name are required")
+    _deal_or_404(deal_code)
+    file_name = req.file_name.strip()
+    if not file_name:
+        raise HTTPException(status_code=400, detail="file_name is required")
     figures = [f.model_dump() for f in req.figures]
-    document = _record_document(deal_code, req.document_type.strip(), req.file_name.strip(), figures, actor["id"])
+    document = _record_document(deal_code, req.document_type, file_name, figures, actor["id"])
     audit("deal.document_attached", {
         "deal_id": deal_code,
         "actor_user_id": actor["id"],
@@ -744,16 +865,23 @@ def attach_document(deal_code: str, req: DocumentAttachRequest):
 @router.post("/api/deals/{deal_code}/agents/financial-spreading/run")
 def run_financial_spreading(deal_code: str, req: ActingUserRequest):
     """Draft the spread: one row per line item, every row citing its source."""
-    deal = _deal_or_404(deal_code)
     actor = identity.require_actor(req.acting_user_email, "deal.spread", "run the financial spreading agent")
+    deal = _deal_or_404(deal_code)
 
+    # Completeness, not merely presence: the `docs` node of the lifecycle
+    # workflow says the spread may not start until the whole required pack is
+    # in, and this endpoint enforces exactly that verdict. A spread drawn from
+    # a partial pack would silently under-report leverage or debt service.
     docs_check = verify_required_documents({"deal_id": deal_code, "actor_user_id": actor["id"]})
-    documents = _documents_for(deal_code)
-    if not documents:
+    if not docs_check["all_required_present"]:
         raise HTTPException(
             status_code=409,
-            detail=f"{deal_code} has no documents to spread from — attach the borrower's financial pack first",
+            detail=(
+                f"{deal_code} cannot be spread yet — its financial pack is incomplete; "
+                f"attach: {', '.join(docs_check['missing_document_types'])}"
+            ),
         )
+    documents = _documents_for(deal_code)
 
     rows = []
     citations = []
@@ -863,12 +991,10 @@ def review_spread(deal_code: str, req: SpreadReviewRequest):
     Acceptance is the gate: only here do figures reach the template, and only
     then are the ratios and the grade computed — both in deterministic code.
     """
-    _deal_or_404(deal_code)
     actor = identity.require_actor(req.acting_user_email, "deal.spread", "accept or reject a drafted spread")
+    _deal_or_404(deal_code)
 
-    action = (req.action or "accept").strip().lower()
-    if action not in ("accept", "edit", "reject"):
-        raise HTTPException(status_code=400, detail="action must be one of: accept, edit, reject")
+    action = req.action
 
     output = _latest_agent_output(deal_code, "financial-spreading")
     if output is None:
@@ -959,9 +1085,13 @@ def review_spread(deal_code: str, req: SpreadReviewRequest):
 
 
 @router.get("/api/deals/{deal_code}/spread")
-def get_spread(deal_code: str, acting_user_email: str | None = None):
+def get_spread(
+    deal_code: str,
+    acting_user_email: str | None = None,
+    x_user_email: str | None = Header(default=None),
+):
     """The accepted spread with the citation behind every figure."""
-    _readable_deal(deal_code, acting_user_email)
+    _dossier_reader(deal_code, acting_user_email or x_user_email)
     accepted = accepted_spread_rows(deal_code)
     citations = _spread_citations(deal_code)
     by_source = {}
@@ -1008,18 +1138,28 @@ def get_spread(deal_code: str, acting_user_email: str | None = None):
 
 
 @router.get("/api/deals/{deal_code}/ratios")
-def get_ratios(deal_code: str, acting_user_email: str | None = None):
-    """DSCR, leverage and the current ratio — with the arithmetic shown."""
-    _readable_deal(deal_code, acting_user_email)
+def get_ratios(
+    deal_code: str,
+    acting_user_email: str | None = None,
+    x_user_email: str | None = Header(default=None),
+):
+    """DSCR, leverage and the current ratio — with the arithmetic shown.
+
+    A pure read. The figures are computed once, in `compute_financial_ratios`,
+    on the POST where a named analyst accepts the spread — this endpoint never
+    computes and never writes, so nothing can be brought into existence by
+    looking at it.
+    """
+    _figures_reader(deal_code, acting_user_email or x_user_email)
     stored = _latest_ratios(deal_code)
     if not stored:
-        if not accepted_spread_rows(deal_code):
-            raise HTTPException(
-                status_code=409,
-                detail=f"{deal_code} has no accepted spread yet — ratios are computed only from accepted figures",
-            )
-        compute_financial_ratios({"deal_id": deal_code, "actor_user_id": None})
-        stored = _latest_ratios(deal_code)
+        raise HTTPException(
+            status_code=404,
+            detail=(
+                f"{deal_code} has no computed ratios — they are computed when an analyst "
+                "accepts the financial spread"
+            ),
+        )
 
     ratios = {}
     for definition in RATIO_DEFINITIONS:
@@ -1054,14 +1194,22 @@ def get_ratios(deal_code: str, acting_user_email: str | None = None):
 
 
 @router.get("/api/deals/{deal_code}/risk-grade")
-def get_risk_grade(deal_code: str, acting_user_email: str | None = None):
-    """The assigned grade, the rubric version, and the exact band it struck."""
-    _readable_deal(deal_code, acting_user_email)
+def get_risk_grade(
+    deal_code: str,
+    acting_user_email: str | None = None,
+    x_user_email: str | None = Header(default=None),
+):
+    """The assigned grade, the rubric version, and the exact band it struck.
+
+    A pure read, like `/ratios`: the grade is assigned in `assign_risk_grade`
+    when the spread is accepted, never on the way out.
+    """
+    _figures_reader(deal_code, acting_user_email or x_user_email)
     grade = _latest_grade(deal_code)
     if grade is None:
         raise HTTPException(
-            status_code=409,
-            detail=f"{deal_code} is ungraded — accept a financial spread first",
+            status_code=404,
+            detail=f"{deal_code} is ungraded — a grade is assigned when a financial spread is accepted",
         )
     return {
         "deal_id": deal_code,
@@ -1085,9 +1233,13 @@ def get_risk_grade(deal_code: str, acting_user_email: str | None = None):
 
 
 @router.get("/api/deals/{deal_code}/dossier")
-def get_dossier(deal_code: str, acting_user_email: str | None = None):
+def get_dossier(
+    deal_code: str,
+    acting_user_email: str | None = None,
+    x_user_email: str | None = Header(default=None),
+):
     """Everything the dossier screen renders for one deal, in one read."""
-    deal = _readable_deal(deal_code, acting_user_email)
+    deal = _dossier_reader(deal_code, acting_user_email or x_user_email)
     documents = _documents_for(deal_code)
     present = {d.get("document_type") for d in documents}
     spread_output = _latest_agent_output(deal_code, "financial-spreading")

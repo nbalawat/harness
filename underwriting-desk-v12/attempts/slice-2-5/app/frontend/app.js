@@ -403,6 +403,44 @@ fetch("/api/conversations")
 })();
 
 // ============================================================
+// Desk identity on reads (foundation).
+// The backend read guard is fail-closed: a read that carries no identity
+// resolves to the least-privilege board viewer, and its rows come back
+// redacted (stage, status and borrower name only — no amounts, owners, grades
+// or decline reasons). So the desk UI states who it is on every same-origin
+// API read, using the analyst/RM email the operator has entered on the board.
+// This is convenience, not authorization: the server still resolves that email
+// against stored users and refuses an unknown or deactivated one.
+// ============================================================
+(function () {
+  function deskEmail() {
+    for (const id of ["triage-analyst-email", "intake-rm-email"]) {
+      const el = document.getElementById(id);
+      const value = el ? String(el.value || "").trim() : "";
+      if (value) return value;
+    }
+    return "";
+  }
+
+  const nativeFetch = window.fetch.bind(window);
+  window.fetch = function (resource, init) {
+    const url = typeof resource === "string" ? resource : (resource && resource.url) || "";
+    const method = String((init && init.method) || (resource && resource.method) || "GET").toUpperCase();
+    const email = deskEmail();
+    if (email && method === "GET" && url.indexOf("/api/") === 0) {
+      const options = Object.assign({}, init);
+      options.headers = Object.assign({}, (init && init.headers) || {}, { "X-User-Email": email });
+      return nativeFetch(resource, options);
+    }
+    return nativeFetch(resource, init);
+  };
+
+  // The board's first load ran before this block was parsed, so it came back
+  // redacted — re-read it now that reads identify the desk.
+  document.dispatchEvent(new CustomEvent("screen:shown", { detail: { screen: "screen-pipeline-board" } }));
+})();
+
+// ============================================================
 // Deal dossier (slice: spread-ratios-and-risk-grade)
 //   - opens a deal's dossier          (GET  /api/deals/{code}/dossier)
 //   - attaches a document + its extract sheet
@@ -496,7 +534,7 @@ fetch("/api/conversations")
   }
 
   function actor() {
-    return textOf("dossier-analyst-email");
+    return textOf("dd-dossier-analyst-email");
   }
 
   function scoped(path) {
@@ -507,9 +545,9 @@ fetch("/api/conversations")
   // ---------------- rendering ----------------
 
   function renderHead(deal) {
-    say("dossier-borrower", deal.borrower_name || deal.deal_code);
+    say("dd-dossier-borrower", deal.borrower_name || deal.deal_code);
     say(
-      "dossier-sub",
+      "dd-dossier-sub",
       [
         deal.deal_code,
         deal.borrower_industry || "unclassified",
@@ -518,12 +556,12 @@ fetch("/api/conversations")
         deal.risk_grade ? "risk grade " + deal.risk_grade : "ungraded",
       ].join(" · ")
     );
-    say("dossier-exposure", money(deal.exposure_amount || deal.requested_amount));
-    say("dossier-tier", deal.approval_tier || "");
+    say("dd-dossier-exposure", money(deal.exposure_amount || deal.requested_amount));
+    say("dd-dossier-tier", deal.approval_tier || "");
   }
 
   function renderDocket(documents, missing) {
-    const list = el("docket-list");
+    const list = el("dd-docket-list");
     if (!list) return;
     list.replaceChildren();
     documents.forEach((d) => {
@@ -555,7 +593,7 @@ fetch("/api/conversations")
   }
 
   function renderSpreadRows(rows, citationsByKey, editable) {
-    const body = el("spread-rows");
+    const body = el("dd-spread-rows");
     if (!body) return;
     body.replaceChildren();
     rows.forEach((row) => {
@@ -598,7 +636,7 @@ fetch("/api/conversations")
   }
 
   function renderUnextractable(items) {
-    const list = el("spread-unextractable");
+    const list = el("dd-spread-unextractable");
     if (!list) return;
     list.replaceChildren();
     (items || []).forEach((u) => {
@@ -620,7 +658,7 @@ fetch("/api/conversations")
   }
 
   function renderCitationRail(rows) {
-    const rail = el("citation-rail");
+    const rail = el("dd-citation-rail");
     if (!rail) return;
     rail.replaceChildren();
     rows.forEach((row, index) => {
@@ -650,7 +688,7 @@ fetch("/api/conversations")
   }
 
   function renderRatios(ratios) {
-    const body = el("ratios-rows");
+    const body = el("dd-ratios-rows");
     if (!body) return;
     body.replaceChildren();
     const keys = ["dscr", "leverage", "current_ratio"];
@@ -682,7 +720,7 @@ fetch("/api/conversations")
       body.appendChild(tr);
     }
     say(
-      "ratios-caption",
+      "dd-ratios-caption",
       any
         ? "Computed in deterministic code · half-up to two decimals · undefined when a denominator is zero"
         : "Ratios are computed only from an accepted spread"
@@ -690,11 +728,11 @@ fetch("/api/conversations")
   }
 
   function renderGrade(grade) {
-    const strip = el("rubric-strip");
+    const strip = el("dd-rubric-strip");
     if (!strip) return;
     strip.replaceChildren();
     if (!grade) {
-      say("grade-note", "Ungraded. The grade is assigned from the rubric the moment a spread is accepted.");
+      say("dd-grade-note", "Ungraded. The grade is assigned from the rubric the moment a spread is accepted.");
       strip.setAttribute("aria-label", "No risk grade assigned yet");
       return;
     }
@@ -709,11 +747,11 @@ fetch("/api/conversations")
       strip.appendChild(div);
     });
     strip.setAttribute("aria-label", "Risk grade " + grade.grade + " of 8 on rubric " + grade.rubric_version);
-    say("grade-note", grade.rubric_version + " · " + grade.band_hit + ". " + (grade.reasoning || ""));
+    say("dd-grade-note", grade.rubric_version + " · " + grade.band_hit + ". " + (grade.reasoning || ""));
   }
 
   function renderMemo(memo) {
-    const body = el("memo-body");
+    const body = el("dd-memo-body");
     if (!body) return;
     body.replaceChildren();
     if (!memo) {
@@ -722,7 +760,7 @@ fetch("/api/conversations")
       p.textContent =
         "No memo drafted yet. The Credit Memo Agent writes from the accepted spread, the computed ratios and the assigned grade, citing the record behind every assertion.";
       body.appendChild(p);
-      say("memo-stamp", "awaiting a run");
+      say("dd-memo-stamp", "awaiting a run");
       return;
     }
     const sections = memo.sections || [];
@@ -744,11 +782,11 @@ fetch("/api/conversations")
       p.textContent = memo.memo_content || JSON.stringify(memo);
       body.appendChild(p);
     }
-    say("memo-stamp", "drafted");
+    say("dd-memo-stamp", "drafted");
   }
 
   function renderExceptions(exceptions) {
-    const list = el("exception-list");
+    const list = el("dd-exception-list");
     if (!list) return;
     list.replaceChildren();
     (exceptions || []).forEach((e) => {
@@ -768,17 +806,17 @@ fetch("/api/conversations")
       waive.className = "btn btn--sm";
       waive.textContent = "Waive with rationale";
       waive.addEventListener("click", () => {
-        const rationale = textOf("decision-notes");
+        const rationale = textOf("dd-decision-notes");
         if (!rationale) {
-          say("policy-status", "A waiver needs a written rationale — type one in the decision notes below.");
+          say("dd-policy-status", "A waiver needs a written rationale — type one in the decision notes below.");
           return;
         }
         stageCall(
-          "policy-status",
+          "dd-policy-status",
           "POST",
           "/api/deals/{code}/policy-exceptions/" + encodeURIComponent(e.exception_id) + "/waive",
           { acting_user_email: actor(), rationale: rationale },
-          () => say("policy-status", "Exception " + e.rule_reference + " waived, with your name on the record.")
+          () => say("dd-policy-status", "Exception " + e.rule_reference + " waived, with your name on the record.")
         );
       });
 
@@ -788,14 +826,14 @@ fetch("/api/conversations")
       back.textContent = "Return to analyst";
       back.addEventListener("click", () => {
         stageCall(
-          "policy-status",
+          "dd-policy-status",
           "POST",
           "/api/deals/{code}/return",
           {
             acting_user_email: actor(),
-            reason: textOf("decision-notes") || "returned to the analyst over " + e.rule_reference,
+            reason: textOf("dd-decision-notes") || "returned to the analyst over " + e.rule_reference,
           },
-          () => say("policy-status", "Returned to the analyst over " + e.rule_reference + ".")
+          () => say("dd-policy-status", "Returned to the analyst over " + e.rule_reference + ".")
         );
       });
 
@@ -817,9 +855,9 @@ fetch("/api/conversations")
   }
 
   function setSpreadButtons(hasDraft, accepted) {
-    const accept = el("spread-accept-btn");
-    const edit = el("spread-edit-btn");
-    const reject = el("spread-reject-btn");
+    const accept = el("dd-spread-accept-btn");
+    const edit = el("dd-spread-edit-btn");
+    const reject = el("dd-spread-reject-btn");
     if (accept) accept.disabled = !hasDraft || accepted;
     if (edit) edit.disabled = !hasDraft || accepted;
     if (reject) reject.disabled = !hasDraft || accepted;
@@ -845,8 +883,8 @@ fetch("/api/conversations")
       });
       renderSpreadRows(accepted, acceptedCitations, false);
       renderCitationRail(accepted);
-      say("spread-caption", spread.template_version + " · accepted · every figure cited");
-      say("spread-stamp", "accepted");
+      say("dd-spread-caption", spread.template_version + " · accepted · every figure cited");
+      say("dd-spread-stamp", "accepted");
     } else if (draft) {
       const byKey = {};
       (draft.citations || []).forEach((c) => {
@@ -854,13 +892,13 @@ fetch("/api/conversations")
       });
       renderSpreadRows(draft.rows || [], byKey, false);
       renderCitationRail([]);
-      say("spread-caption", draft.template_version + " · agent draft, awaiting acceptance");
-      say("spread-stamp", "drafted, not accepted");
+      say("dd-spread-caption", draft.template_version + " · agent draft, awaiting acceptance");
+      say("dd-spread-stamp", "drafted, not accepted");
     } else {
       renderSpreadRows([], {}, false);
       renderCitationRail([]);
-      say("spread-caption", "Standard spread template · no draft yet");
-      say("spread-stamp", "awaiting a run");
+      say("dd-spread-caption", "Standard spread template · no draft yet");
+      say("dd-spread-stamp", "awaiting a run");
     }
     renderUnextractable(draft ? draft.unextractable : []);
     setSpreadButtons(!!draft, !!accepted.length && !!acceptedReview);
@@ -868,29 +906,29 @@ fetch("/api/conversations")
     renderGrade(d.risk_grade);
     renderMemo(d.memo);
     renderExceptions(d.policy_exceptions);
-    const stamp = el("spread-desk");
+    const stamp = el("dd-spread-desk");
     if (stamp) stamp.dataset.deal = d.deal ? d.deal.deal_code : "";
   }
 
   function loadDossier(code) {
     if (!code) {
-      say("dossier-status", "Enter a deal id to open its dossier.");
+      say("dd-dossier-status", "Enter a deal id to open its dossier.");
       return Promise.resolve();
     }
     return api("GET", scoped("/api/deals/" + encodeURIComponent(code) + "/dossier")).then((res) => {
       if (!res.ok) {
-        say("dossier-status", "Could not open " + code + ": " + detailOf(res));
+        say("dd-dossier-status", "Could not open " + code + ": " + detailOf(res));
         return;
       }
       dealCode = code;
       renderDossier(res.data);
-      say("dossier-status", "Dossier " + code + " open, read live from the server.");
+      say("dd-dossier-status", "Dossier " + code + " open, read live from the server.");
     });
   }
 
   function loadDealList() {
     return api("GET", "/api/pipeline").then((res) => {
-      const list = el("dossier-deal-list");
+      const list = el("dd-dossier-deal-list");
       if (!list || !res.ok) return;
       list.replaceChildren();
       (res.data.deals || []).forEach((d) => {
@@ -904,7 +942,7 @@ fetch("/api/conversations")
 
   function loadDeclineReasons() {
     return api("GET", "/api/adverse_action_reasons").then((res) => {
-      const list = el("decision-reason-list");
+      const list = el("dd-decision-reason-list");
       if (!list || !res.ok || !Array.isArray(res.data)) return;
       list.replaceChildren();
       res.data.forEach((r) => {
@@ -918,23 +956,23 @@ fetch("/api/conversations")
 
   // ---------------- actions ----------------
 
-  const openForm = el("dossier-open-form");
+  const openForm = el("dd-dossier-open-form");
   if (openForm) {
     openForm.addEventListener("submit", (event) => {
       event.preventDefault();
-      loadDossier(textOf("dossier-deal-code"));
+      loadDossier(textOf("dd-dossier-deal-code"));
     });
   }
 
-  const attachForm = el("document-attach-form");
+  const attachForm = el("dd-document-attach-form");
   if (attachForm) {
     attachForm.addEventListener("submit", (event) => {
       event.preventDefault();
       if (!dealCode) {
-        say("document-status", "Open a dossier first.");
+        say("dd-document-status", "Open a dossier first.");
         return;
       }
-      const figures = textOf("document-figures")
+      const figures = textOf("dd-document-figures")
         .split("\n")
         .map((line) => line.split("|").map((part) => part.trim()))
         .filter((parts) => parts.length && parts[0])
@@ -950,16 +988,16 @@ fetch("/api/conversations")
         }));
       api("POST", "/api/deals/" + encodeURIComponent(dealCode) + "/documents", {
         acting_user_email: actor(),
-        document_type: textOf("document-type"),
-        file_name: textOf("document-file-name"),
+        document_type: textOf("dd-document-type"),
+        file_name: textOf("dd-document-file-name"),
         figures: figures,
       }).then((res) => {
         if (!res.ok) {
-          say("document-status", "Could not attach: " + detailOf(res));
+          say("dd-document-status", "Could not attach: " + detailOf(res));
           return;
         }
         say(
-          "document-status",
+          "dd-document-status",
           "Attached " +
             res.data.document.file_name +
             (res.data.documents_complete
@@ -971,20 +1009,20 @@ fetch("/api/conversations")
     });
   }
 
-  const runBtn = el("spread-run-btn");
+  const runBtn = el("dd-spread-run-btn");
   if (runBtn) {
     runBtn.addEventListener("click", () => {
-      const code = dealCode || textOf("dossier-deal-code");
+      const code = dealCode || textOf("dd-dossier-deal-code");
       if (!code) {
-        say("spread-status", "Open a dossier first.");
+        say("dd-spread-status", "Open a dossier first.");
         return;
       }
-      say("spread-status", "Transcribing from the attached documents…");
+      say("dd-spread-status", "Transcribing from the attached documents…");
       api("POST", "/api/deals/" + encodeURIComponent(code) + "/agents/financial-spreading/run", {
         acting_user_email: actor(),
       }).then((res) => {
         if (!res.ok) {
-          say("spread-status", "Spreading failed: " + detailOf(res));
+          say("dd-spread-status", "Spreading failed: " + detailOf(res));
           return;
         }
         dealCode = code;
@@ -996,11 +1034,11 @@ fetch("/api/conversations")
         });
         renderSpreadRows(draft.rows || [], byKey, false);
         renderUnextractable(draft.unextractable);
-        say("spread-caption", draft.template_version + " · agent draft, awaiting acceptance");
-        say("spread-stamp", "drafted, not accepted");
+        say("dd-spread-caption", draft.template_version + " · agent draft, awaiting acceptance");
+        say("dd-spread-stamp", "drafted, not accepted");
         setSpreadButtons(true, false);
         say(
-          "spread-status",
+          "dd-spread-status",
           (draft.rows || []).length +
             " line items transcribed, every one cited to a document and locator; " +
             (draft.unextractable || []).length +
@@ -1010,7 +1048,7 @@ fetch("/api/conversations")
     });
   }
 
-  const editBtn = el("spread-edit-btn");
+  const editBtn = el("dd-spread-edit-btn");
   if (editBtn) {
     editBtn.addEventListener("click", () => {
       if (!draft) return;
@@ -1021,10 +1059,10 @@ fetch("/api/conversations")
       });
       renderSpreadRows(draft.rows || [], byKey, editing);
       editBtn.textContent = editing ? "Cancel edit" : "Edit before accepting";
-      const accept = el("spread-accept-btn");
+      const accept = el("dd-spread-accept-btn");
       if (accept) accept.textContent = editing ? "Accept edited spread" : "Accept draft";
       say(
-        "spread-status",
+        "dd-spread-status",
         editing
           ? "Editing the draft. Only line items the agent cited may be accepted — an edited figure keeps its citation."
           : "Edit cancelled; the agent's transcription is restored."
@@ -1033,19 +1071,19 @@ fetch("/api/conversations")
   }
 
   function submitReview(action, body) {
-    const code = dealCode || textOf("dossier-deal-code");
+    const code = dealCode || textOf("dd-dossier-deal-code");
     if (!code) return;
     api("POST", "/api/deals/" + encodeURIComponent(code) + "/spread/accept", body).then((res) => {
       if (!res.ok) {
-        say("spread-status", "Could not " + action + ": " + detailOf(res));
+        say("dd-spread-status", "Could not " + action + ": " + detailOf(res));
         return;
       }
-      say("spread-status", res.data.message || "Recorded.");
+      say("dd-spread-status", res.data.message || "Recorded.");
       loadDossier(code);
     });
   }
 
-  const acceptBtn = el("spread-accept-btn");
+  const acceptBtn = el("dd-spread-accept-btn");
   if (acceptBtn) {
     acceptBtn.addEventListener("click", () => {
       if (!editing) {
@@ -1062,12 +1100,12 @@ fetch("/api/conversations")
     });
   }
 
-  const rejectBtn = el("spread-reject-btn");
+  const rejectBtn = el("dd-spread-reject-btn");
   if (rejectBtn) {
     rejectBtn.addEventListener("click", () => {
-      const reason = textOf("spread-reject-reason");
+      const reason = textOf("dd-spread-reject-reason");
       if (!reason) {
-        say("spread-status", "A rejected spread needs a written reason — type one beside these buttons.");
+        say("dd-spread-status", "A rejected spread needs a written reason — type one beside these buttons.");
         return;
       }
       submitReview("reject", { acting_user_email: actor(), action: "reject", rejection_reason: reason });
@@ -1077,7 +1115,7 @@ fetch("/api/conversations")
   // ---- memo, policy and decision desks: later stages of the same dossier ----
 
   function stageCall(statusId, method, path, body, done) {
-    const code = dealCode || textOf("dossier-deal-code");
+    const code = dealCode || textOf("dd-dossier-deal-code");
     if (!code) {
       say(statusId, "Open a dossier first.");
       return;
@@ -1092,101 +1130,101 @@ fetch("/api/conversations")
     });
   }
 
-  const memoRun = el("memo-run-btn");
+  const memoRun = el("dd-memo-run-btn");
   if (memoRun) {
     memoRun.addEventListener("click", () => {
-      say("memo-status", "Drafting the memo from the accepted spread, ratios and grade…");
-      stageCall("memo-status", "POST", "/api/deals/{code}/agents/credit-memo/run", { acting_user_email: actor() }, () =>
-        say("memo-status", "Draft ready — it cites the ratios, spread lines and rules it relied on. Accept or reject it.")
+      say("dd-memo-status", "Drafting the memo from the accepted spread, ratios and grade…");
+      stageCall("dd-memo-status", "POST", "/api/deals/{code}/agents/credit-memo/run", { acting_user_email: actor() }, () =>
+        say("dd-memo-status", "Draft ready — it cites the ratios, spread lines and rules it relied on. Accept or reject it.")
       );
     });
   }
 
-  const memoAccept = el("memo-accept-btn");
+  const memoAccept = el("dd-memo-accept-btn");
   if (memoAccept) {
     memoAccept.addEventListener("click", () => {
       stageCall(
-        "memo-status",
+        "dd-memo-status",
         "POST",
         "/api/deals/{code}/memo/accept",
         { acting_user_email: actor(), action: "accept" },
-        () => say("memo-status", "Memo accepted; your name and the time are on the record.")
+        () => say("dd-memo-status", "Memo accepted; your name and the time are on the record.")
       );
     });
   }
 
-  const memoReject = el("memo-reject-btn");
+  const memoReject = el("dd-memo-reject-btn");
   if (memoReject) {
     memoReject.addEventListener("click", () => {
-      const reason = textOf("decision-notes") || "returned to the agent for redrafting";
+      const reason = textOf("dd-decision-notes") || "returned to the agent for redrafting";
       stageCall(
-        "memo-status",
+        "dd-memo-status",
         "POST",
         "/api/deals/{code}/memo/accept",
         { acting_user_email: actor(), action: "reject", rejection_reason: reason },
-        () => say("memo-status", "Memo rejected — nothing was recorded as accepted.")
+        () => say("dd-memo-status", "Memo rejected — nothing was recorded as accepted.")
       );
     });
   }
 
-  const policyRun = el("policy-run-btn");
+  const policyRun = el("dd-policy-run-btn");
   if (policyRun) {
     policyRun.addEventListener("click", () => {
-      say("policy-status", "Testing the deal against the active lending ruleset…");
+      say("dd-policy-status", "Testing the deal against the active lending ruleset…");
       stageCall(
-        "policy-status",
+        "dd-policy-status",
         "POST",
         "/api/deals/{code}/agents/policy-compliance/run",
         { acting_user_email: actor() },
         (data) =>
           say(
-            "policy-status",
+            "dd-policy-status",
             (data.exceptions || []).length + " exception(s) written against policy " + (data.policy_version || "")
           )
       );
     });
   }
 
-  const approveBtn = el("decision-approve-btn");
+  const approveBtn = el("dd-decision-approve-btn");
   if (approveBtn) {
     approveBtn.addEventListener("click", () => {
       stageCall(
-        "decision-status",
+        "dd-decision-status",
         "POST",
         "/api/deals/{code}/approve",
-        { acting_user_email: actor(), decision_notes: textOf("decision-notes") },
-        (data) => say("decision-status", "Approved by " + (data.approved_by || actor()) + ".")
+        { acting_user_email: actor(), decision_notes: textOf("dd-decision-notes") },
+        (data) => say("dd-decision-status", "Approved by " + (data.approved_by || actor()) + ".")
       );
     });
   }
 
-  const declineBtn = el("decision-decline-btn");
+  const declineBtn = el("dd-decision-decline-btn");
   if (declineBtn) {
     declineBtn.addEventListener("click", () => {
-      const code = textOf("decision-reason-code");
+      const code = textOf("dd-decision-reason-code");
       if (!code) {
-        say("decision-status", "A decline needs a controlled adverse-action reason code.");
+        say("dd-decision-status", "A decline needs a controlled adverse-action reason code.");
         return;
       }
       stageCall(
-        "decision-status",
+        "dd-decision-status",
         "POST",
         "/api/deals/{code}/decline",
-        { acting_user_email: actor(), reason_code: code, reason_detail: textOf("decision-notes") },
-        () => say("decision-status", "Declined with adverse-action reason " + code + ".")
+        { acting_user_email: actor(), reason_code: code, reason_detail: textOf("dd-decision-notes") },
+        () => say("dd-decision-status", "Declined with adverse-action reason " + code + ".")
       );
     });
   }
 
-  const returnBtn = el("decision-return-btn");
+  const returnBtn = el("dd-decision-return-btn");
   if (returnBtn) {
     returnBtn.addEventListener("click", () => {
       stageCall(
-        "decision-status",
+        "dd-decision-status",
         "POST",
         "/api/deals/{code}/return",
-        { acting_user_email: actor(), reason: textOf("decision-notes") || "returned for further work" },
-        () => say("decision-status", "Returned to an earlier stage with your written reason.")
+        { acting_user_email: actor(), reason: textOf("dd-decision-notes") || "returned for further work" },
+        () => say("dd-decision-status", "Returned to an earlier stage with your written reason.")
       );
     });
   }
@@ -1195,11 +1233,11 @@ fetch("/api/conversations")
     if (event.detail && event.detail.screen === "screen-deal-detail") {
       loadDealList();
       loadDeclineReasons();
-      loadDossier(dealCode || textOf("dossier-deal-code"));
+      loadDossier(dealCode || textOf("dd-dossier-deal-code"));
     }
   });
 
   loadDealList();
   loadDeclineReasons();
-  loadDossier(textOf("dossier-deal-code"));
+  loadDossier(textOf("dd-dossier-deal-code"));
 })();

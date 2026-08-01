@@ -15,6 +15,8 @@ client = TestClient(app)
 DEAL = "DEAL-1003"
 ANALYST = {"acting_user_email": "analyst@bank.test"}
 OFFICER = {"acting_user_email": "officer@bank.test"}
+AS_ANALYST = {"acting_user_email": "analyst@bank.test"}  # query params for reads
+FIXTURE_CODE = DEAL
 
 
 # ---------------------------------------------------------------------------
@@ -54,13 +56,13 @@ def test_memo_states_the_assigned_grade_and_the_computed_ratios_verbatim():
 
 def test_memo_draft_is_not_accepted_until_a_human_accepts_it():
     client.post(f"/api/deals/{DEAL}/agents/credit-memo/run", json=ANALYST)
-    assert client.get(f"/api/deals/{DEAL}/memo").json()["status"] == "proposed"
+    assert client.get(f"/api/deals/{DEAL}/memo", params=AS_ANALYST).json()["status"] == "proposed"
     accepted = client.post(f"/api/deals/{DEAL}/memo/accept", json=ANALYST)
     assert accepted.status_code == 200
     body = accepted.json()
     assert body["status"] == "accepted"
     assert body["memo_id"] and body["review_id"] and body["citation_ids"]
-    assert client.get(f"/api/deals/{DEAL}/memo").json()["status"] == "accepted"
+    assert client.get(f"/api/deals/{DEAL}/memo", params=AS_ANALYST).json()["status"] == "accepted"
 
 
 def test_memo_accept_without_a_draft_is_rejected():
@@ -253,6 +255,133 @@ def test_unknown_deal_404s_on_every_surface_of_this_slice():
     assert client.get("/api/deals/DEAL-9999/audit").status_code == 404
     assert client.get("/api/deals/DEAL-9999/policy-exceptions").status_code == 404
     assert client.post("/api/deals/DEAL-9999/agents/credit-memo/run", json=ANALYST).status_code == 404
+
+
+def test_an_unidentified_read_of_the_memo_is_refused_outright():
+    """Negative acceptance: the memo is continuous borrower prose with no
+    board-safe projection, so an anonymous read is a 401, not a redaction."""
+    anonymous = client.get(f"/api/deals/{DEAL}/memo")
+    assert anonymous.status_code == 401
+    assert "identify yourself" in anonymous.json()["detail"]
+    forged = client.get(f"/api/deals/{DEAL}/memo", params={"acting_user_email": "nobody@evil.test"})
+    assert forged.status_code == 403
+    named = client.get(f"/api/deals/{DEAL}/memo", headers={"x-user-email": "analyst@bank.test"})
+    assert named.status_code == 200
+
+
+def test_the_chronicle_never_serves_a_raw_audit_payload_body():
+    """An audit row's before/after can hold a whole record body. The timeline
+    serves a derived, scalar-only summary to EVERY caller, so it can never be
+    used as a back door around the endpoints that guard those records."""
+    client.post(f"/api/deals/{DEAL}/agents/credit-memo/run", json=ANALYST)
+    body = client.get(f"/api/deals/{DEAL}/audit", params=AS_ANALYST).json()
+    assert body["entries"]
+    for entry in body["entries"]:
+        assert "before_payload" not in entry
+        assert "after_payload" not in entry
+        assert isinstance(entry["summary"], str)
+        for payload in (entry["before"], entry["after"]):
+            for value in payload.values():
+                assert not isinstance(value, dict), "a nested body reached the timeline"
+                if isinstance(value, str):
+                    assert len(value) <= 121
+    # the drafted memo prose itself is nowhere in the timeline
+    memo = client.get(f"/api/deals/{DEAL}/memo", params=AS_ANALYST).json()
+    prose = (memo["draft"] or memo["accepted"])["memo_content"][:60]
+    assert prose not in client.get(f"/api/deals/{DEAL}/audit", params=AS_ANALYST).text
+
+
+def test_an_unidentified_chronicle_read_is_redacted_not_trusted():
+    client.post(f"/api/deals/{DEAL}/agents/credit-memo/run", json=ANALYST)
+    body = client.get(f"/api/deals/{DEAL}/audit").json()
+    assert body["redacted"] is True
+    assert body["entries"]
+    for entry in body["entries"]:
+        assert entry["actor_email"] is None
+        assert entry["actor_user_id"] is None
+        assert entry["resource_id"] is None
+        assert entry["before"] == {} and entry["after"] == {}
+    # an identified reader sees the actors and the derived summaries
+    named = client.get(f"/api/deals/{DEAL}/audit", params=AS_ANALYST).json()
+    assert named["redacted"] is False
+    assert any(e["actor_email"] == "analyst@bank.test" for e in named["entries"])
+
+
+def test_an_unidentified_exception_register_read_withholds_detail_and_rationale():
+    client.post(f"/api/deals/{DEAL}/agents/policy-compliance/run", json=ANALYST)
+    client.post(f"/api/deals/{DEAL}/policy-review/accept", json=ANALYST)
+    anonymous = client.get(f"/api/deals/{DEAL}/policy-exceptions").json()
+    assert anonymous["redacted"] is True
+    assert anonymous["exceptions"]
+    for row in anonymous["exceptions"]:
+        assert row["rule_reference"]  # the shape survives
+        assert "redacted" in row["rationale"]
+        assert "redacted" in row["violation_detail"]
+        assert row["raised_by_user_id"] is None
+    named = client.get(f"/api/deals/{DEAL}/policy-exceptions", params=AS_ANALYST).json()
+    assert named["redacted"] is False
+    assert any("82.02" in row["violation_detail"] for row in named["exceptions"])
+    forged = client.get(f"/api/deals/{DEAL}/policy-exceptions", params={"acting_user_email": "nobody@evil.test"})
+    assert forged.status_code == 403
+
+
+def test_an_exception_cannot_be_disposed_of_twice():
+    client.post(f"/api/deals/{DEAL}/agents/policy-compliance/run", json=ANALYST)
+    client.post(f"/api/deals/{DEAL}/policy-review/accept", json=ANALYST)
+    listed = client.get(f"/api/deals/{DEAL}/policy-exceptions", params=AS_ANALYST).json()["recorded"]
+    ref = next(e["exception_ref"] for e in listed if e["status"] == "open")
+    decision = {
+        **OFFICER,
+        "decisions": [{"exception_ref": ref, "disposition": "waive", "rationale": "Guarantor pledge covers the gap."}],
+    }
+    first = client.post(f"/api/deals/{DEAL}/policy-exceptions/resolve", json=decision)
+    assert first.status_code == 200
+    assert first.json()["dispositions"][0] == {"exception_ref": ref, "from": "open", "to": "waived"}
+
+    second = client.post(f"/api/deals/{DEAL}/policy-exceptions/resolve", json=decision)
+    assert second.status_code == 409
+    assert "already" in second.json()["detail"]
+    # the officer and rationale of record are untouched by the refused attempt
+    current = {e["exception_ref"]: e for e in client.get(f"/api/deals/{DEAL}/policy-exceptions", params=AS_ANALYST).json()["recorded"]}
+    assert current[ref]["status"] == "waived"
+    assert current[ref]["rationale"] == "Guarantor pledge covers the gap."
+
+
+def test_rejecting_a_memo_draft_requires_a_written_reason():
+    client.post(f"/api/deals/{DEAL}/agents/credit-memo/run", json=ANALYST)
+    blank = client.post(f"/api/deals/{DEAL}/memo/accept", json={**ANALYST, "action": "reject"})
+    assert blank.status_code == 400
+    whitespace = client.post(f"/api/deals/{DEAL}/memo/accept", json={**ANALYST, "action": "reject", "rejection_reason": "   "})
+    assert whitespace.status_code == 400
+    given = client.post(
+        f"/api/deals/{DEAL}/memo/accept",
+        json={**ANALYST, "action": "reject", "rejection_reason": "Ratio section quotes a stale DSCR."},
+    )
+    assert given.status_code == 200
+    assert given.json()["reviewed_by_email"] == "analyst@bank.test"
+
+
+def test_an_unrecognised_review_action_is_refused_at_the_edge():
+    client.post(f"/api/deals/{DEAL}/agents/credit-memo/run", json=ANALYST)
+    assert client.post(f"/api/deals/{DEAL}/memo/accept", json={**ANALYST, "action": "rubber_stamp"}).status_code == 422
+    assert client.post(f"/api/deals/{DEAL}/memo/accept", json={**ANALYST, "action": "accept_with_edits"}).status_code == 400
+
+
+def test_an_accepted_memo_names_the_human_who_accepted_it():
+    client.post(f"/api/deals/{DEAL}/agents/credit-memo/run", json=ANALYST)
+    client.post(f"/api/deals/{DEAL}/memo/accept", json=ANALYST)
+    accepted = client.get(f"/api/deals/{DEAL}/memo", params=AS_ANALYST).json()["accepted"]
+    assert accepted["accepted_by_email"] == "analyst@bank.test"
+    assert accepted["accepted_by_role"] == "credit_analyst"
+    assert accepted["accepted_at"]
+
+
+def test_a_fixture_deal_code_is_never_handed_to_a_freshly_filed_deal():
+    """The fixture holds DEAL-1003 without consuming the sequence, so the
+    sequence must skip it rather than issue it twice."""
+    codes = {_file_deal(f"Sequence Probe {n}") for n in range(4)}
+    assert FIXTURE_CODE not in codes
+    assert len(codes) == 4
 
 
 def test_workflow_handlers_for_this_slice_are_registered():

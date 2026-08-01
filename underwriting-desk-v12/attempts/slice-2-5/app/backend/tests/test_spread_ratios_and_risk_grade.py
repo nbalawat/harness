@@ -14,6 +14,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from fastapi.testclient import TestClient  # noqa: E402
 
 import ext_spread_ratios_and_risk_grade as spread_mod  # noqa: E402
+from db import store  # noqa: E402
 from main import app  # noqa: E402
 
 client = TestClient(app)
@@ -148,8 +149,10 @@ def test_nothing_reaches_the_template_before_acceptance():
     client.post(f"/api/deals/{deal_code}/agents/financial-spreading/run",
                 json={"acting_user_email": ANALYST})
     assert spread_mod.accepted_spread_rows(deal_code) == {}
-    assert client.get(f"/api/deals/{deal_code}/ratios").status_code == 409
-    assert client.get(f"/api/deals/{deal_code}/risk-grade").status_code == 409
+    # nothing computed yet -> 404, and the GET must not bring it into existence
+    assert client.get(f"/api/deals/{deal_code}/ratios").status_code == 404
+    assert client.get(f"/api/deals/{deal_code}/risk-grade").status_code == 404
+    assert not [r for r in store.list("financial_ratios") if r.get("deal_id") == deal_code]
 
 
 # ---------------------------- human review ----------------------------
@@ -272,11 +275,33 @@ def test_risk_grade_prints_the_band_it_struck():
     assert "Watch" in body["band_hit"]
     assert [b for b in body["rubric"] if b["is_band_hit"]][0]["grade"] == 4
     # the grade is carried on the deal itself, so the board can filter on it
-    deals = client.get("/api/pipeline").json()["deals"]
+    # (an identified read — the foundation's board redacts grades for an
+    # unidentified caller)
+    deals = client.get("/api/pipeline", params={"acting_user_email": ANALYST}).json()["deals"]
     assert [d for d in deals if d["deal_code"] == deal_code][0]["risk_grade"] == 4
 
 
 # ------------------------- audit + read scoping -------------------------
+
+def test_a_ratios_read_never_computes_or_persists():
+    """A GET is a read. The figures exist because an analyst accepted a spread,
+    never because somebody looked at the endpoint."""
+    deal_code = _spread_deal("Read Only Co")
+    client.post(f"/api/deals/{deal_code}/agents/financial-spreading/run",
+                json={"acting_user_email": ANALYST})
+
+    before = len(store.list("financial_ratios")), len(store.list("risk_grades"))
+    assert client.get(f"/api/deals/{deal_code}/ratios").status_code == 404
+    assert client.get(f"/api/deals/{deal_code}/risk-grade").status_code == 404
+    assert (len(store.list("financial_ratios")), len(store.list("risk_grades"))) == before
+
+    client.post(f"/api/deals/{deal_code}/spread/accept",
+                json={"acting_user_email": ANALYST, "action": "accept"})
+    after_accept = len(store.list("financial_ratios"))
+    for _ in range(3):
+        assert client.get(f"/api/deals/{deal_code}/ratios").status_code == 200
+    assert len(store.list("financial_ratios")) == after_accept
+
 
 def test_every_step_leaves_an_audit_trail():
     deal_code = _spread_deal("Audited Co")
@@ -313,7 +338,8 @@ def test_dossier_assembles_the_whole_screen():
                 json={"acting_user_email": ANALYST})
     client.post(f"/api/deals/{deal_code}/spread/accept",
                 json={"acting_user_email": ANALYST, "action": "accept"})
-    body = client.get(f"/api/deals/{deal_code}/dossier").json()
+    body = client.get(f"/api/deals/{deal_code}/dossier",
+                      params={"acting_user_email": ANALYST}).json()
 
     assert body["deal"]["deal_code"] == deal_code
     assert len(body["documents"]) == 3
@@ -335,3 +361,110 @@ def test_workflow_handlers_for_this_slice_are_registered():
     for handler in ("verify_required_documents", "validate_spread_citations",
                     "persist_accepted_spread", "compute_financial_ratios", "assign_risk_grade"):
         assert handler in workflow_engine._handlers
+
+
+# ------------------- negative acceptance: fail-closed reads -------------------
+#
+# Every guard in this slice is called unconditionally. These tests prove the
+# thing the governance audit asked for: omitting your identity can never buy
+# you more access than presenting it.
+
+def test_anonymous_dossier_read_is_401_not_a_silent_downgrade():
+    deal_code = _spread_deal("Fail Closed Co")
+    resp = client.get(f"/api/deals/{deal_code}/dossier")
+    assert resp.status_code == 401
+    assert "identify yourself" in resp.json()["detail"]
+
+
+def test_anonymous_spread_read_is_401():
+    deal_code = _spread_deal("Fail Closed Spread Co")
+    client.post(f"/api/deals/{deal_code}/agents/financial-spreading/run",
+                json={"acting_user_email": ANALYST})
+    assert client.get(f"/api/deals/{deal_code}/spread").status_code == 401
+    assert client.get(f"/api/deals/{deal_code}/spread",
+                      params={"acting_user_email": ANALYST}).status_code == 200
+
+
+def test_a_whitespace_identity_is_not_an_identity():
+    deal_code = _spread_deal("Blank Identity Co")
+    assert client.get(f"/api/deals/{deal_code}/dossier",
+                      params={"acting_user_email": "   "}).status_code == 401
+
+
+def test_a_forged_identity_is_refused_on_every_read():
+    """Unknown users are never provisioned by a read — default deny."""
+    deal_code = _spread_deal("Forged Reader Co")
+    client.post(f"/api/deals/{deal_code}/agents/financial-spreading/run",
+                json={"acting_user_email": ANALYST})
+    client.post(f"/api/deals/{deal_code}/spread/accept",
+                json={"acting_user_email": ANALYST, "action": "accept"})
+    forged = {"acting_user_email": "intruder@elsewhere.test"}
+    for path in ("dossier", "spread", "ratios", "risk-grade"):
+        assert client.get(f"/api/deals/{deal_code}/{path}", params=forged).status_code == 403, path
+
+
+def test_an_anonymous_mutation_is_401_before_anything_is_written():
+    deal_code = _spread_deal("Anonymous Mutation Co")
+    before = len(store.list("agent_outputs"))
+    resp = client.post(f"/api/deals/{deal_code}/agents/financial-spreading/run",
+                       json={"acting_user_email": ""})
+    assert resp.status_code == 422  # bounded at the edge before the guard
+    resp = client.post(f"/api/deals/{deal_code}/spread/accept",
+                       json={"acting_user_email": "   ", "action": "accept"})
+    assert resp.status_code == 401
+    assert len(store.list("agent_outputs")) == before
+
+
+def test_a_scoped_read_is_refused_before_the_deal_is_disclosed():
+    """An unauthenticated caller cannot use 404-vs-401 to probe which deal
+    codes exist."""
+    assert client.get("/api/deals/DEAL-NOT-REAL/dossier").status_code == 401
+
+
+# ------------------- negative acceptance: bounded input -------------------
+
+def test_an_unknown_line_item_cannot_be_attached():
+    deal_code = _new_deal("Bad Line Item Co")
+    resp = client.post(f"/api/deals/{deal_code}/documents", json={
+        "acting_user_email": ANALYST,
+        "document_type": "balance_sheet",
+        "file_name": "BS.pdf",
+        "figures": [{"line_item_key": "goodwill_addback", "period": "FY2025", "value": 1}],
+    })
+    assert resp.status_code == 422
+
+
+def test_an_unknown_document_type_is_refused():
+    deal_code = _new_deal("Bad Doc Type Co")
+    resp = client.post(f"/api/deals/{deal_code}/documents", json={
+        "acting_user_email": ANALYST,
+        "document_type": "../../etc/passwd",
+        "file_name": "BS.pdf",
+        "figures": [],
+    })
+    assert resp.status_code == 422
+
+
+def test_an_out_of_range_figure_never_reaches_the_arithmetic():
+    deal_code = _new_deal("Absurd Figure Co")
+    resp = client.post(f"/api/deals/{deal_code}/documents", json={
+        "acting_user_email": ANALYST,
+        "document_type": "balance_sheet",
+        "file_name": "BS.pdf",
+        "figures": [{"line_item_key": "current_assets", "period": "FY2025",
+                     "value": spread_mod.MAX_FIGURE_VALUE * 10}],
+    })
+    assert resp.status_code == 422
+
+
+def test_spreading_needs_the_whole_required_pack_not_just_a_document():
+    """R-008: the `docs` node's completeness verdict gates the spread."""
+    deal_code = _new_deal("Half Pack Co")
+    _attach(deal_code, pack=FULL_PACK[:2])  # income statement + balance sheet
+    resp = client.post(f"/api/deals/{deal_code}/agents/financial-spreading/run",
+                       json={"acting_user_email": ANALYST})
+    assert resp.status_code == 409
+    assert "tax_return" in resp.json()["detail"]
+    _attach(deal_code, pack=FULL_PACK[2:])
+    assert client.post(f"/api/deals/{deal_code}/agents/financial-spreading/run",
+                       json={"acting_user_email": ANALYST}).status_code == 200

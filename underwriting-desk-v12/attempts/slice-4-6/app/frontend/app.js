@@ -450,8 +450,8 @@ fetch("/api/conversations")
 // refusal — using textContent only.
 // ============================================================
 (function () {
-  const register = document.getElementById("idle-register-body");
-  const decisionDesk = document.getElementById("decision-desk");
+  const register = document.getElementById("sla-idle-register-body");
+  const decisionDesk = document.getElementById("sla-decision-desk");
   if (!register && !decisionDesk) return;
 
   let idleDeals = [];
@@ -528,7 +528,7 @@ fetch("/api/conversations")
   function selectDeal(code) {
     const slaField = document.getElementById("sla-deal-code");
     if (slaField) slaField.value = code;
-    const decisionField = document.getElementById("decision-deal-code");
+    const decisionField = document.getElementById("sla-decision-deal-code");
     if (decisionField) decisionField.value = code;
     describeAuthority();
   }
@@ -589,34 +589,50 @@ fetch("/api/conversations")
     }
 
     const counts = data.counts || {};
-    textOf("plate-past-line", String(counts.past_service_line || 0));
-    textOf("plate-past-line-caption", "of " + (counts.active_deals || 0) + " active deals");
-    textOf("plate-idle-exposure", money(data.idle_exposure));
-    textOf("plate-approaching", String(counts.approaching || 0));
+    textOf("sla-plate-past-line", String(counts.past_service_line || 0));
+    textOf("sla-plate-past-line-caption", "of " + (counts.active_deals || 0) + " active deals");
+    textOf("sla-plate-idle-exposure", money(data.idle_exposure));
+    textOf("sla-plate-approaching", String(counts.approaching || 0));
     textOf(
-      "plate-approaching-caption",
+      "sla-plate-approaching-caption",
       "idle 3 – " + (data.sla_threshold_business_days || 5) + " business days"
     );
     if (data.longest_idle) {
-      textOf("plate-longest", String(data.longest_idle.business_days_idle) + "d");
+      textOf("sla-plate-longest", String(data.longest_idle.business_days_idle) + "d");
       textOf(
-        "plate-longest-caption",
+        "sla-plate-longest-caption",
         data.longest_idle.borrower_name + ", " + titleCase(data.longest_idle.current_stage)
       );
     } else {
-      textOf("plate-longest", "—");
-      textOf("plate-longest-caption", "nothing past the line");
+      textOf("sla-plate-longest", "—");
+      textOf("sla-plate-longest-caption", "nothing past the line");
     }
-    fillCountList("idle-by-stage", data.by_stage);
-    fillCountList("idle-by-desk", data.by_owner);
+    fillCountList("sla-idle-by-stage", data.by_stage);
+    fillCountList("sla-idle-by-desk", data.by_owner);
     fillDatalist("sla-deal-codes", idleDeals.map((d) => d.deal_code));
 
     const slaField = document.getElementById("sla-deal-code");
     if (slaField && !slaField.value && idleDeals.length) slaField.value = idleDeals[0].deal_code;
   }
 
+  // Every read on this screen names the desk it is reading as. The backend
+  // read guards are fail-closed: without an identity the idle register comes
+  // back redacted (no exposures, no owning desks) and the decision record and
+  // approval queue are refused outright. This is convenience, not
+  // authorization — the server still resolves the email and refuses an unknown
+  // or deactivated one.
+  function asWho() {
+    return valueOf("sla-officer-email") || valueOf("sla-decision-officer-email");
+  }
+
+  function scoped(path) {
+    const email = asWho();
+    if (!email) return path;
+    return path + (path.indexOf("?") === -1 ? "?" : "&") + "acting_user_email=" + encodeURIComponent(email);
+  }
+
   function loadRegister() {
-    return fetch("/api/sla/idle")
+    return fetch(scoped("/api/sla/idle"))
       .then((r) => (r.ok ? r.json() : { deals: [], counts: {} }))
       .then(renderRegister)
       .catch(() => {});
@@ -625,15 +641,15 @@ fetch("/api/conversations")
   let authorityToken = 0;
 
   function describeAuthority() {
-    const code = valueOf("decision-deal-code");
+    const code = valueOf("sla-decision-deal-code");
     if (!code) {
-      textOf("decision-authority", "");
+      textOf("sla-decision-authority", "");
       return;
     }
     const deal = pendingDecisions.find((d) => d.deal_code === code);
     if (deal) {
       textOf(
-        "decision-authority",
+        "sla-decision-authority",
         deal.deal_code +
           " · " +
           deal.borrower_name +
@@ -649,17 +665,17 @@ fetch("/api/conversations")
     }
     // Already settled (or filed elsewhere): read its decision record.
     const token = ++authorityToken;
-    fetch("/api/deals/" + encodeURIComponent(code) + "/decisions")
+    fetch(scoped("/api/deals/" + encodeURIComponent(code) + "/decisions"))
       .then((r) => (r.ok ? r.json() : null))
       .then((rec) => {
         if (token !== authorityToken) return;
         if (!rec) {
-          textOf("decision-authority", code + " — no such deal on the book.");
+          textOf("sla-decision-authority", code + " — no such deal on the book.");
           return;
         }
         const settled = (rec.approvals || []).filter((a) => a.decision).slice(-1)[0];
         textOf(
-          "decision-authority",
+          "sla-decision-authority",
           rec.deal_id +
             " · " +
             rec.borrower_name +
@@ -678,21 +694,21 @@ fetch("/api/conversations")
   }
 
   function loadTiers() {
-    return fetch("/api/approval-tiers")
+    return fetch(scoped("/api/approval-tiers"))
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
         if (!data) return;
         pendingDecisions = data.pending_decisions || [];
-        fillDatalist("decision-deal-codes", pendingDecisions.map((d) => d.deal_code));
-        fillDatalist("decision-reason-codes", (data.adverse_action_reasons || []).map((r) => r.reason_code));
-        fillDatalist("decision-return-stages", data.returnable_stages || []);
+        fillDatalist("sla-decision-deal-codes", pendingDecisions.map((d) => d.deal_code));
+        fillDatalist("sla-decision-reason-codes", (data.adverse_action_reasons || []).map((r) => r.reason_code));
+        fillDatalist("sla-decision-return-stages", data.returnable_stages || []);
         describeAuthority();
       })
       .catch(() => {});
   }
 
   function renderReceipt(rows) {
-    const list = document.getElementById("decision-receipt");
+    const list = document.getElementById("sla-decision-receipt");
     if (!list) return;
     list.replaceChildren();
     rows.forEach(([label, value]) => {
@@ -720,22 +736,22 @@ fetch("/api/conversations")
     loadTiers();
   }
 
-  const approveBtn = document.getElementById("decision-approve-btn");
+  const approveBtn = document.getElementById("sla-decision-approve-btn");
   if (approveBtn) {
     approveBtn.addEventListener("click", () => {
-      const code = valueOf("decision-deal-code");
+      const code = valueOf("sla-decision-deal-code");
       if (!code) {
-        textOf("decision-status", "Name the deal you are deciding.");
+        textOf("sla-decision-status", "Name the deal you are deciding.");
         return;
       }
       post("/api/deals/" + encodeURIComponent(code) + "/approve", {
-        acting_user_email: valueOf("decision-officer-email"),
-        decision_notes: valueOf("decision-notes"),
+        acting_user_email: valueOf("sla-decision-officer-email"),
+        decision_notes: valueOf("sla-decision-notes"),
       })
         .then((res) => {
           if (!res.ok) {
             renderReceipt([["Refused", res.data.detail || "error"]]);
-            textOf("decision-status", "Refused by the server: " + (res.data.detail || "error"));
+            textOf("sla-decision-status", "Refused by the server: " + (res.data.detail || "error"));
             return;
           }
           renderReceipt([
@@ -749,7 +765,7 @@ fetch("/api/conversations")
             ["Idempotency key", res.data.idempotency_key],
           ]);
           textOf(
-            "decision-status",
+            "sla-decision-status",
             res.data.deal_id +
               " approved by " +
               res.data.decided_by +
@@ -759,23 +775,23 @@ fetch("/api/conversations")
           );
           afterDecision();
         })
-        .catch((err) => textOf("decision-status", "Request failed: " + err.message));
+        .catch((err) => textOf("sla-decision-status", "Request failed: " + err.message));
     });
   }
 
-  const declineBtn = document.getElementById("decision-decline-btn");
+  const declineBtn = document.getElementById("sla-decision-decline-btn");
   if (declineBtn) {
     declineBtn.addEventListener("click", () => {
-      const code = valueOf("decision-deal-code");
+      const code = valueOf("sla-decision-deal-code");
       post("/api/deals/" + encodeURIComponent(code) + "/decline", {
-        acting_user_email: valueOf("decision-officer-email"),
-        reason_code: valueOf("decision-reason-code"),
-        reason_detail: valueOf("decision-notes"),
+        acting_user_email: valueOf("sla-decision-officer-email"),
+        reason_code: valueOf("sla-decision-reason-code"),
+        reason_detail: valueOf("sla-decision-notes"),
       })
         .then((res) => {
           if (!res.ok) {
             renderReceipt([["Refused", res.data.detail || "error"]]);
-            textOf("decision-status", "Refused by the server: " + (res.data.detail || "error"));
+            textOf("sla-decision-status", "Refused by the server: " + (res.data.detail || "error"));
             return;
           }
           renderReceipt([
@@ -788,28 +804,28 @@ fetch("/api/conversations")
             ["Now at", titleCase(res.data.current_stage) + " · " + res.data.current_status],
           ]);
           textOf(
-            "decision-status",
+            "sla-decision-status",
             res.data.deal_id + " declined — adverse action " + res.data.adverse_action_reason_code + " issued."
           );
           afterDecision();
         })
-        .catch((err) => textOf("decision-status", "Request failed: " + err.message));
+        .catch((err) => textOf("sla-decision-status", "Request failed: " + err.message));
     });
   }
 
-  const returnBtn = document.getElementById("decision-return-btn");
+  const returnBtn = document.getElementById("sla-decision-return-btn");
   if (returnBtn) {
     returnBtn.addEventListener("click", () => {
-      const code = valueOf("decision-deal-code");
+      const code = valueOf("sla-decision-deal-code");
       post("/api/deals/" + encodeURIComponent(code) + "/return", {
-        acting_user_email: valueOf("decision-officer-email"),
-        returned_to_stage: valueOf("decision-return-stage"),
-        reason: valueOf("decision-notes"),
+        acting_user_email: valueOf("sla-decision-officer-email"),
+        returned_to_stage: valueOf("sla-decision-return-stage"),
+        reason: valueOf("sla-decision-notes"),
       })
         .then((res) => {
           if (!res.ok) {
             renderReceipt([["Refused", res.data.detail || "error"]]);
-            textOf("decision-status", "Refused by the server: " + (res.data.detail || "error"));
+            textOf("sla-decision-status", "Refused by the server: " + (res.data.detail || "error"));
             return;
           }
           renderReceipt([
@@ -821,17 +837,31 @@ fetch("/api/conversations")
             ["Returned by", res.data.returned_by],
           ]);
           textOf(
-            "decision-status",
+            "sla-decision-status",
             res.data.deal_id + " returned to " + titleCase(res.data.returned_to_stage) + "."
           );
           afterDecision();
         })
-        .catch((err) => textOf("decision-status", "Request failed: " + err.message));
+        .catch((err) => textOf("sla-decision-status", "Request failed: " + err.message));
     });
   }
 
-  const dealField = document.getElementById("decision-deal-code");
+  const dealField = document.getElementById("sla-decision-deal-code");
   if (dealField) dealField.addEventListener("input", describeAuthority);
+
+  // The escalation is a TWO-STEP human gate on purpose. Step one opens the
+  // sla-idle-escalation run, which measures the idle time, collects the
+  // blocking work and then PARKS. Nothing has touched the deal yet. The
+  // officer reads the measurement and the blockers, and only a second,
+  // separate decision (confirm / refuse) releases the deterministic apply
+  // handler. A request that signed off its own park point would not be a
+  // human gate at all.
+  let parkedRun = null;
+
+  function showGate(visible) {
+    const gate = document.getElementById("sla-escalation-gate");
+    if (gate) gate.hidden = !visible;
+  }
 
   function escalate(action) {
     const code = valueOf("sla-deal-code");
@@ -847,6 +877,8 @@ fetch("/api/conversations")
     })
       .then((res) => {
         if (!res.ok) {
+          parkedRun = null;
+          showGate(false);
           textOf("sla-action-status", "Refused by the server: " + (res.data.detail || "error"));
           return;
         }
@@ -856,21 +888,69 @@ fetch("/api/conversations")
           res.data.deal_id +
             " — " +
             res.data.business_days_idle +
-            " business days idle · action " +
-            res.data.action_taken +
-            " · workflow " +
+            " business days idle · proposed " +
+            (res.data.proposed_action || action) +
+            " · run " +
             res.data.status +
             (blockers ? " · blocking: " + blockers : "")
         );
+        if (res.data.awaiting_human_decision) {
+          parkedRun = res.data.run_id;
+          showGate(true);
+          textOf(
+            "sla-escalation-gate-status",
+            "Run " + res.data.run_id + " is parked for you. Nothing has been applied to " +
+              res.data.deal_id + " yet — confirm to apply the " + (res.data.proposed_action || action) +
+              ", or refuse to close the run untouched."
+          );
+        } else {
+          parkedRun = null;
+          showGate(false);
+          textOf("sla-escalation-gate-status", res.data.next_step || "");
+        }
         loadRegister();
       })
       .catch((err) => textOf("sla-action-status", "Request failed: " + err.message));
+  }
+
+  function decideEscalation(confirm) {
+    if (!parkedRun) {
+      textOf("sla-escalation-gate-status", "No escalation is waiting on you.");
+      return;
+    }
+    post("/api/sla/runs/" + encodeURIComponent(parkedRun) + "/decide", {
+      acting_user_email: valueOf("sla-officer-email"),
+      confirm: confirm,
+      reason: valueOf("sla-note"),
+    })
+      .then((res) => {
+        if (!res.ok) {
+          textOf("sla-escalation-gate-status", "Refused by the server: " + (res.data.detail || "error"));
+          return;
+        }
+        parkedRun = null;
+        showGate(false);
+        textOf(
+          "sla-escalation-gate-status",
+          confirm
+            ? res.data.deal_id + " — " + res.data.action_taken + " applied by " + res.data.decided_by +
+              " · workflow " + res.data.status
+            : res.data.deal_id + " — escalation refused by " + res.data.decided_by +
+              "; the deal was left untouched."
+        );
+        loadRegister();
+      })
+      .catch((err) => textOf("sla-escalation-gate-status", "Request failed: " + err.message));
   }
 
   const reassignBtn = document.getElementById("sla-reassign-btn");
   if (reassignBtn) reassignBtn.addEventListener("click", () => escalate("reassign"));
   const ackBtn = document.getElementById("sla-acknowledge-btn");
   if (ackBtn) ackBtn.addEventListener("click", () => escalate("acknowledge"));
+  const confirmBtn = document.getElementById("sla-escalation-confirm-btn");
+  if (confirmBtn) confirmBtn.addEventListener("click", () => decideEscalation(true));
+  const refuseBtn = document.getElementById("sla-escalation-refuse-btn");
+  if (refuseBtn) refuseBtn.addEventListener("click", () => decideEscalation(false));
 
   document.addEventListener("screen:shown", (event) => {
     if (event.detail && event.detail.screen === "screen-sla-dashboard") {

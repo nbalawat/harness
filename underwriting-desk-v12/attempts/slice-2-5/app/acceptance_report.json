@@ -1,6 +1,5 @@
 {
-  "proven_through_slice": 2,
-  "scope": "foundation+self",
+  "proven_through_slice": 1,
   "slices": [
     {
       "slice": "deal-intake-and-triage",
@@ -74,78 +73,6 @@
           "contains": [
             "document_extraction",
             "queue"
-          ],
-          "ok": true
-        }
-      ]
-    },
-    {
-      "slice": "spread-ratios-and-risk-grade",
-      "name": "Cited financial spread, deterministic ratios, and risk grade",
-      "objective": "As a credit analyst I open a deal dossier, run the Financial Spreading Agent to fill the standard spread template with a document-and-locator citation on every figure, accept or edit the draft, and the system then computes DSCR, leverage, and current ratio in deterministic code and assigns the risk grade from the versioned rubric, showing the exact band hit.",
-      "addresses": [
-        "R-008",
-        "R-009",
-        "R-016",
-        "R-017",
-        "R-018",
-        "R-019",
-        "R-025",
-        "R-028",
-        "R-029",
-        "R-035",
-        "R-042",
-        "R-043",
-        "R-045",
-        "R-049",
-        "R-061",
-        "R-064",
-        "R-070"
-      ],
-      "checks": [
-        {
-          "method": "POST",
-          "path": "/api/deals/DEAL-1002/agents/financial-spreading/run",
-          "expected_status": 200,
-          "contains": [
-            "rows",
-            "citations",
-            "template_version",
-            "document_id"
-          ],
-          "ok": true
-        },
-        {
-          "method": "POST",
-          "path": "/api/deals/DEAL-1002/spread/accept",
-          "expected_status": 200,
-          "contains": [
-            "accepted",
-            "analyst@bank.test"
-          ],
-          "ok": true
-        },
-        {
-          "method": "GET",
-          "path": "/api/deals/DEAL-1002/ratios",
-          "expected_status": 200,
-          "contains": [
-            "dscr",
-            "leverage",
-            "current_ratio",
-            "numerator",
-            "denominator"
-          ],
-          "ok": true
-        },
-        {
-          "method": "GET",
-          "path": "/api/deals/DEAL-1002/risk-grade",
-          "expected_status": 200,
-          "contains": [
-            "grade",
-            "rubric_version",
-            "band_hit"
           ],
           "ok": true
         }

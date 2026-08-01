@@ -83,7 +83,7 @@ def test_officer_declines_with_a_controlled_adverse_action_reason():
 
 
 def test_idle_register_lists_deals_past_the_service_line():
-    resp = client.get("/api/sla/idle")
+    resp = client.get("/api/sla/idle?acting_user_email=officer@bank.test")
     assert resp.status_code == 200
     body = resp.json()
     codes = [d["deal_code"] for d in body["deals"]]
@@ -141,7 +141,11 @@ def test_approval_is_idempotent():
     ).json()
     assert first["approval_id"] == second["approval_id"]
     assert second["replayed"] is True
-    rows = [r for r in client.get(f"/api/deals/{code}/decisions").json()["approvals"]]
+    rows = [
+        r for r in client.get(
+            f"/api/deals/{code}/decisions?acting_user_email=officer@bank.test"
+        ).json()["approvals"]
+    ]
     assert len(rows) == 1
 
 
@@ -199,7 +203,7 @@ def test_analyst_cannot_issue_an_adverse_action():
 def test_reason_codes_are_published_as_reference_data():
     codes = [r["reason_code"] for r in client.get("/api/adverse_action_reasons").json()]
     assert "INSUFFICIENT_DSCR" in codes
-    tiers = client.get("/api/approval-tiers").json()
+    tiers = client.get("/api/approval-tiers?acting_user_email=officer@bank.test").json()
     assert tiers["ceiling"] == 250000
     assert [t["level"] for t in tiers["tiers"]] == ["credit_analyst", "senior_credit_officer"]
 
@@ -221,7 +225,7 @@ def test_officer_returns_a_deal_to_an_earlier_stage():
     assert resp.status_code == 200
     assert resp.json()["current_stage"] == "financial_spreading"
     assert resp.json()["current_status"] == "returned"
-    record = client.get(f"/api/deals/{code}/decisions").json()
+    record = client.get(f"/api/deals/{code}/decisions?acting_user_email=officer@bank.test").json()
     assert record["returns"][0]["reason"].startswith("Spread omits")
 
 
@@ -251,7 +255,7 @@ def test_business_day_math_excludes_weekends_and_holidays():
 
 
 def test_reassigning_an_idle_deal_resets_its_clock_and_moves_the_desk():
-    before = client.get("/api/sla/idle").json()
+    before = client.get("/api/sla/idle?acting_user_email=officer@bank.test").json()
     assert any(d["deal_code"] == "DEAL-1042" for d in before["deals"])
     resp = client.post(
         "/api/deals/DEAL-1042/reassign",
@@ -263,7 +267,7 @@ def test_reassigning_an_idle_deal_resets_its_clock_and_moves_the_desk():
     )
     assert resp.status_code == 200
     assert resp.json()["assigned_to"] == "analyst@bank.test"
-    after = client.get("/api/sla/idle").json()
+    after = client.get("/api/sla/idle?acting_user_email=officer@bank.test").json()
     assert not any(d["deal_code"] == "DEAL-1042" for d in after["deals"])
 
 
@@ -276,9 +280,14 @@ def test_analyst_cannot_reassign_from_the_register():
     assert "authority" in resp.json()["detail"]
 
 
-def test_escalation_runs_the_sla_workflow_end_to_end():
-    """measure -> breached -> blockers -> human park -> apply, through the engine."""
-    resp = client.post(
+def test_escalation_parks_for_a_human_and_only_applies_after_a_separate_decision():
+    """measure -> breached -> blockers -> human park -> (SECOND ACT) -> apply.
+
+    Opening the escalation must NOT apply it: a request that signs off its own
+    park point is not a human gate. The deal must be untouched until the
+    officer confirms in a separate call.
+    """
+    opened = client.post(
         "/api/sla/DEAL-1041/escalate",
         json={
             "acting_user_email": "officer@bank.test",
@@ -287,17 +296,75 @@ def test_escalation_runs_the_sla_workflow_end_to_end():
             "note": "Sitting on missing statements — send it back for documents",
         },
     )
-    assert resp.status_code == 200
-    body = resp.json()
+    assert opened.status_code == 200
+    body = opened.json()
     assert body["sla_breached"] is True
-    assert body["action_taken"] == "return"
-    assert body["returned_to_stage"] == "document_extraction"
     assert body["blocking_items"]
-    assert body["status"] == "completed"
+    assert body["status"] == "parked"
+    assert body["awaiting_human_decision"] is True
+    assert body["action_taken"] == "none"
+    # Nothing has happened to the deal yet.
+    assert deals_repo.get_deal("DEAL-1041")["current_stage"] == "policy_compliance"
+
+    decided = client.post(
+        f"/api/sla/runs/{body['run_id']}/decide",
+        json={"acting_user_email": "officer@bank.test", "confirm": True, "reason": "send it back"},
+    )
+    assert decided.status_code == 200
+    applied = decided.json()
+    assert applied["status"] == "completed"
+    assert applied["action_taken"] == "return"
+    assert applied["returned_to_stage"] == "document_extraction"
     state = client.get(f"/workflows/runs/{body['run_id']}").json()
     assert state["status"] == "completed"
     assert state["context"]["apply"]["decided_by_user_id"]
     assert deals_repo.get_deal("DEAL-1041")["current_stage"] == "document_extraction"
+
+
+def test_a_refused_escalation_leaves_the_deal_untouched():
+    opened = client.post(
+        "/api/sla/DEAL-1005/escalate",
+        json={
+            "acting_user_email": "officer@bank.test",
+            "action": "return",
+            "returned_to_stage": "intake",
+            "note": "proposed",
+        },
+    ).json()
+    assert opened["awaiting_human_decision"] is True
+    before = deals_repo.get_deal("DEAL-1005")["current_stage"]
+    refused = client.post(
+        f"/api/sla/runs/{opened['run_id']}/decide",
+        json={"acting_user_email": "officer@bank.test", "confirm": False, "reason": "leave it with the owner"},
+    )
+    assert refused.status_code == 200
+    assert refused.json()["action_taken"] == "none"
+    assert deals_repo.get_deal("DEAL-1005")["current_stage"] == before
+    # ...and the run cannot be decided twice.
+    assert client.post(
+        f"/api/sla/runs/{opened['run_id']}/decide",
+        json={"acting_user_email": "officer@bank.test", "confirm": True},
+    ).status_code == 409
+
+
+def test_only_an_officer_can_decide_a_parked_escalation():
+    opened = client.post(
+        "/api/sla/DEAL-1042/escalate",
+        json={"acting_user_email": "officer@bank.test", "action": "acknowledge", "note": "watching"},
+    ).json()
+    if opened.get("awaiting_human_decision"):
+        assert client.post(
+            f"/api/sla/runs/{opened['run_id']}/decide",
+            json={"acting_user_email": "analyst@bank.test", "confirm": True},
+        ).status_code == 403
+        assert client.post(
+            f"/api/sla/runs/{opened['run_id']}/decide",
+            json={"acting_user_email": "", "confirm": True},
+        ).status_code == 401
+    assert client.post(
+        "/api/sla/runs/wf-does-not-exist/decide",
+        json={"acting_user_email": "officer@bank.test", "confirm": True},
+    ).status_code == 404
 
 
 def test_escalation_requires_officer_authority():
@@ -351,6 +418,25 @@ def test_registered_workflow_handlers_satisfy_their_output_contracts():
     for field in tier_node["output_schema"]["required"]:
         assert field in out, field
     assert out["required_authority_level"] == "senior_credit_officer"
+
+    record_node = next(n for n in lifecycle["nodes"] if n["id"] == "record")
+    recorded = approvals.record_approval_decision({"inputs": {
+        "deal_id": code,
+        "acting_user_email": "officer@bank.test",
+        "decision": "approved",
+        "decision_notes": "inside policy",
+    }})
+    for field in record_node["output_schema"]["required"]:
+        assert field in recorded, field
+
+    outcome_node = next(n for n in lifecycle["nodes"] if n["id"] == "outcome")
+    outcome = approvals.record_adverse_action_or_return({"inputs": {
+        "deal_id": code,
+        "acting_user_email": "officer@bank.test",
+        "outcome": "approved",
+    }})
+    for field in outcome_node["output_schema"]["required"]:
+        assert field in outcome, field
 
     close_node = next(n for n in lifecycle["nodes"] if n["id"] == "close")
     closed = approvals.close_approved_deal({"inputs": {"deal_id": code, "acting_user_email": "officer@bank.test"}})

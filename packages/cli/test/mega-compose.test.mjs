@@ -88,7 +88,7 @@ def test_cross_module_journey():
     assert "workflow.approved" in events
 
     # blob-store + file-upload + export + search + seed coexist.
-    assert client.put("/uploads/notes.txt", content=b"mega").status_code == 200
+    assert client.put("/uploads/notes.txt", content=b"mega", headers={"x-user-email": "ana@test"}).status_code == 200
     assert client.get("/files/notes.txt").content == b"mega"
     assert client.post("/admin/seed").json()["seeded"] is True
     assert client.get("/export/conversations.csv").text.startswith("id,")

@@ -25,19 +25,21 @@ def record(event: str, detail: dict | None = None, actor: str = "system") -> dic
     detail = detail or {}
     entry = {"id": next(_counter), "seq": len(_entries) + 1, "event": event, "detail": detail, "actor": actor, "at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())}
     _entries.append(entry)
-    try:
-        store.insert("audit_log", {
-            "deal_id": detail.get("deal_id"),
-            "actor_user_id": detail.get("actor_user_id") or detail.get("by"),
-            "action": event,
-            "resource_type": detail.get("resource_type"),
-            "resource_id": detail.get("resource_id") or detail.get("id"),
-            "before_payload": detail.get("before"),
-            "after_payload": detail.get("after"),
-            "timestamp": entry["at"],
-        })
-    except Exception:
-        pass  # the lightweight event stream above is the load-bearing record
+    # No try/except here on purpose. An audit row that fails to persist must
+    # NOT be swallowed: silently dropping the durable record while the caller's
+    # state change succeeds is exactly how an action becomes unauditable. A
+    # store failure propagates, the mutation that triggered it fails loudly,
+    # and the trail stays complete.
+    store.insert("audit_log", {
+        "deal_id": detail.get("deal_id"),
+        "actor_user_id": detail.get("actor_user_id") or detail.get("by"),
+        "action": event,
+        "resource_type": detail.get("resource_type"),
+        "resource_id": detail.get("resource_id") or detail.get("id"),
+        "before_payload": detail.get("before"),
+        "after_payload": detail.get("after"),
+        "timestamp": entry["at"],
+    })
     return entry
 
 

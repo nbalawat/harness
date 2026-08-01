@@ -619,10 +619,37 @@ export function buildState(workspace: string): Record<string, unknown> {
     activeMs,
     startedAt: firstTs ?? null,
     rawArtifacts: walk(path.join(workspace, "artifacts"), path.join(workspace, "artifacts")),
+    // Every event carries WHICH run phase it belongs to — original build or
+    // remediation wave N — so the activity log can group and label it.
     events: events
-      .map((e) => ({ ts: e.ts, type: e.type, nodeId: e.nodeId ?? null, text: narrate(e, costMap) }))
+      .map((e, i) => ({
+        ts: e.ts,
+        type: e.type,
+        nodeId: e.nodeId ?? null,
+        phase: waves.length === 0 || (waves[0] && i < waves[0].startIdx)
+          ? "build"
+          : "wave-" + ((waves.filter((w) => w.startIdx <= i).pop()?.startIdx ?? -1) >= 0
+              ? waves.indexOf(waves.filter((w) => w.startIdx <= i).pop()!) + 1
+              : 0),
+        text: narrate(e, costMap),
+      }))
       .filter((e) => e.text !== null)
-      .slice(-160),
+      .slice(-200),
+    // Security findings surfaced directly (was only reachable as raw JSON).
+    securityReport: security
+      ? {
+          high: (security.high_count as number | undefined) ?? 0,
+          findings: Array.isArray(security.findings) ? (security.findings as Array<Record<string, unknown>>).slice(0, 200) : [],
+          filesScanned: (security.files_scanned as number | undefined) ?? null,
+        }
+      : null,
+    // Code-audit findings (the deeper opus review), likewise surfaced.
+    auditReport: (() => {
+      const a = readArtifactJson(workspace, state.artifacts, "audit") as Record<string, unknown> | null;
+      return a && Array.isArray(a.findings)
+        ? { status: a.status, findings: (a.findings as Array<Record<string, unknown>>).slice(0, 200), files: (a.checked as { files?: number })?.files ?? null }
+        : null;
+    })(),
   };
 }
 
@@ -1437,6 +1464,10 @@ body { font:14px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif; background:
 .remrow:last-child { border-bottom:0; }
 .remrow[data-wave] { cursor:pointer; }
 .remrow[data-wave]:hover { background:var(--surface); }
+.phasedivider { font-size:.72rem; letter-spacing:.06em; text-transform:uppercase; color:var(--ink2,#888); margin:.7rem 0 .3rem; padding-bottom:.15rem; border-bottom:1px solid var(--border); }
+.phasedivider.rem { color:var(--accent,#3b5bdb); border-color:var(--accent,#3b5bdb); }
+.findrow { display:flex; align-items:baseline; gap:.5rem; padding:.35rem .1rem; border-bottom:1px solid var(--border); font-size:.83rem; }
+.findrow:last-child { border-bottom:0; }
 .subtabs { display:flex; gap:.35rem; flex-wrap:wrap; margin:.4rem 0 .6rem; }
 .subtabs button { font-size:.76rem; padding:.28rem .7rem; border:1px solid var(--border); background:var(--surface); border-radius:999px; cursor:pointer; color:inherit; }
 .subtabs button.active { border-color:var(--accent,#3b5bdb); color:var(--accent,#3b5bdb); font-weight:600; }
@@ -1739,6 +1770,7 @@ button.ghost { background:transparent; border:1px solid var(--border); color:var
     <div class="card"><h2>Quality &amp; test results</h2><div id="quality"></div></div>
   </div>
   <div class="card" id="remedPanel" style="display:none"><h2>Remediation summary <span class="hint">— problems found and re-verified; click a wave for the full story</span></h2><div id="remedList"></div></div>
+  <div class="card" id="findingsPanel" style="display:none"><h2>Security &amp; audit findings <span class="hint" id="findingsCount"></span></h2><div id="findingsList"></div></div>
   <div class="secwrap" id="sec-design" style="display:none">
     <div class="seclabel">The design <span class="hint">— what your app looks like</span></div>
     <div class="card" id="designPanel" style="display:none"><h2 id="designHead">Design options — pick one</h2><div class="designs" id="designs"></div></div>
@@ -2578,7 +2610,10 @@ async function tick() {
     if (e.nodeId && last && last.nodeId === e.nodeId) last.items.push(e);
     else groups.push({ nodeId: e.nodeId, items: [e] });
   }
-  setHTML('events', groups.slice().reverse().map(g => {
+  // Phase dividers: label each run phase in the activity stream so the user
+  // sees "Remediation 3" begin, not an unexplained burst of re-runs.
+  const phaseLabel = (p) => p === 'build' ? 'Original build' : 'Remediation ' + String(p).replace('wave-', '');
+  const groupHtml = (g) => {
     const bad = g.items.some(e => e.type.includes('failed') || e.type.includes('exceeded'));
     const lastE = g.items[g.items.length - 1];
     if (!g.nodeId || g.items.length === 1) {
@@ -2586,7 +2621,41 @@ async function tick() {
     }
     return '<details class="egroup"' + (bad ? ' open' : '') + '><summary><span class="arrow">▶</span><span class="t mono">' + (g.items[0].ts||'').slice(11,19) + '</span><b class="mono">' + esc(g.nodeId) + '</b><span class="hint">' + g.items.length + ' events</span><span class="outcome ' + (bad ? 'chip bad' : 'chip') + '">' + esc(lastE.text.length > 60 ? lastE.text.slice(0,60) + '…' : lastE.text) + '</span></summary>' +
       '<div class="inner">' + g.items.map(e => '<div class="event' + (e.type.includes('failed')||e.type.includes('exceeded') ? ' bad' : '') + '"><span class="t mono">' + (e.ts||'').slice(11,19) + '</span><span>' + esc(e.text) + '</span></div>').join('') + '</div></details>';
-  }).join(''));
+  };
+  const rows = [];
+  let seenPhase = null;
+  for (const g of groups.slice().reverse()) {
+    const gp = (g.items[g.items.length - 1].phase) || 'build';
+    if (gp !== seenPhase) {
+      const isRem = gp !== 'build';
+      rows.push('<div class="phasedivider' + (isRem ? ' rem' : '') + '">' + (isRem ? '⟳ ' : '▸ ') + esc(phaseLabel(gp)) + '</div>');
+      seenPhase = gp;
+    }
+    rows.push(groupHtml(g));
+  }
+  setHTML('events', rows.join(''));
+
+  // Security + code-audit findings, surfaced (was only raw JSON before).
+  const fp = document.getElementById('findingsPanel');
+  const sec = s.securityReport, aud = s.auditReport;
+  const allFindings = []
+    .concat((sec?.findings || []).map(f => ({ ...f, _src: 'scan' })))
+    .concat((aud?.findings || []).map(f => ({ ...f, _src: 'audit' })));
+  if (allFindings.length) {
+    fp.style.display = '';
+    const sev = f => (f.severity || 'medium');
+    const order = { high: 0, medium: 1, low: 2 };
+    allFindings.sort((a, b) => (order[sev(a)] ?? 1) - (order[sev(b)] ?? 1));
+    const highN = allFindings.filter(f => sev(f) === 'high').length;
+    setText('findingsCount', '— ' + highN + ' high, ' + allFindings.length + ' total' + (sec?.filesScanned ? ' · ' + sec.filesScanned + ' files scanned' : ''));
+    const sevChip = v => '<span class="chip" style="' + (v === 'high' ? 'background:var(--bad,#c92a2a);color:#fff' : v === 'medium' ? 'border:1px solid var(--warn,#e08e0b);color:var(--warn,#e08e0b)' : 'border:1px solid var(--border)') + '">' + v + '</span>';
+    setHTML('findingsList', allFindings.slice(0, 120).map(f =>
+      '<div class="findrow">' + sevChip(sev(f)) +
+      '<span class="chip">' + esc(f._src === 'scan' ? (f.rule || 'scan') : (f.area || 'audit')) + '</span>' +
+      '<span class="mono hint" style="white-space:nowrap">' + esc((f.file || '') + (f.line ? ':' + f.line : '')) + '</span>' +
+      '<span style="flex:1">' + esc(f.finding || f.detail || '') + '</span></div>').join('') +
+      (allFindings.length > 120 ? '<div class="hint" style="margin-top:.3rem">showing 120 of ' + allFindings.length + '</div>' : ''));
+  } else fp.style.display = 'none';
 
   // designs (locked once chosen)
   const meta = {};
