@@ -36,8 +36,9 @@ real, callable functions.
 import datetime
 import time
 from decimal import Decimal, ROUND_HALF_UP
+from typing import Literal
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Header, HTTPException
 from pydantic import BaseModel
 
 import agent_runtime
@@ -52,6 +53,10 @@ router = APIRouter()
 POLICY_VERSION = "v4.2"
 MEMO_TEMPLATE_VERSION = "memo-v1.7"
 FIXTURE_DEAL = "DEAL-1003"
+
+# The exception states that are still open to disposition. Anything else has
+# already been decided by a named officer and is final on the record.
+OPEN_EXCEPTION_STATUSES = ("open", "waiver_requested")
 
 
 def _now():
@@ -396,9 +401,25 @@ def build_memo_sections(deal, ratios, spread, grade, findings, narrative):
 # ---------------------------------------------------------------------------
 
 def _require(actor_user_id, permission, what):
+    """Fail-closed authority check at the point of the state change.
+
+    These handlers are also reachable through `workflow_engine.start()`, where
+    no HTTP guard has run, so the check is UNCONDITIONAL: a missing actor is a
+    401, an actor that resolves to no stored user, to a deactivated user, or to
+    a role without `permission` is a 403. It never returns None.
+    """
+    if actor_user_id is None:
+        raise HTTPException(status_code=401, detail=f"identify yourself to {what}")
     actor = next((u for u in store.list("users") if u.get("id") == actor_user_id), None)
+    if actor is None:
+        raise HTTPException(status_code=403, detail=f"unknown user has no authority to {what}")
+    if not actor.get("is_active", True):
+        raise HTTPException(status_code=403, detail=f"user '{actor.get('email')}' is deactivated and may not {what}")
     if not identity.has_permission(actor, permission):
-        raise HTTPException(status_code=403, detail=f"lacks the authority to {what}")
+        raise HTTPException(
+            status_code=403,
+            detail=f"role '{actor.get('role')}' lacks the authority to {what}",
+        )
     return actor
 
 
@@ -406,12 +427,13 @@ def persist_accepted_memo(context):
     """Node `savememo`: an analyst has accepted (or edited) the memo draft."""
     deal_code = context["deal_id"]
     actor_user_id = context.get("reviewed_by_user_id")
-    _require(actor_user_id, "deal.memo", "accept a credit memo")
+    actor = _require(actor_user_id, "deal.memo", "accept a credit memo")
 
     draft = context.get("memo_draft") or {}
     action = context.get("action") or "accept"
     edited = context.get("edited_content")
     final_content = edited if (action == "accept_with_edits" and edited) else draft.get("memo_content")
+    accepted_at = _now()
 
     memo = store.insert("agent_outputs", {
         "deal_id": deal_code,
@@ -420,11 +442,22 @@ def persist_accepted_memo(context):
         "model": agent_runtime.mode().get("detail"),
         "prompt_version": MEMO_TEMPLATE_VERSION,
         "input_data": draft.get("input_data"),
-        "output_content": {**draft, "memo_content": final_content},
+        # The accepted memo carries the named human who took responsibility for
+        # it: an accepted agent draft with no attributable acceptor is an
+        # unattributable decision (R-025/R-055).
+        "output_content": {
+            **draft,
+            "memo_content": final_content,
+            "accepted_by_user_id": actor_user_id,
+            "accepted_by_email": actor.get("email"),
+            "accepted_by_role": actor.get("role"),
+            "accepted_at": accepted_at,
+            "review_action": action,
+        },
         "token_usage": None,
         "latency_ms": None,
         "outcome": "accepted_with_edits" if (action == "accept_with_edits" and edited) else "accepted",
-        "generated_at": _now(),
+        "generated_at": accepted_at,
     })
 
     citation_ids = []
@@ -465,13 +498,19 @@ def persist_accepted_memo(context):
         "resource_type": "credit_memo",
         "resource_id": memo["id"],
         "before": {"current_stage": (before or {}).get("current_stage"), "memo": "draft"},
-        "after": {"current_stage": updated["current_stage"], "memo": memo["outcome"], "citation_ids": citation_ids},
+        "after": {
+            "current_stage": updated["current_stage"],
+            "memo": memo["outcome"],
+            "citation_count": len(citation_ids),
+            "accepted_by": actor.get("email"),
+        },
     })
     return {
         "memo_id": memo["id"],
         "citation_ids": citation_ids,
         "review_id": review["id"],
         "reviewed_by_user_id": actor_user_id,
+        "reviewed_by_email": actor.get("email"),
         "audit_entry_id": entry["id"],
     }
 
@@ -483,7 +522,7 @@ def record_policy_exceptions(context):
     """Node `exceptions`: writes one formal exception row per breach."""
     deal_code = context["deal_id"]
     actor_user_id = context.get("reviewed_by_user_id")
-    _require(actor_user_id, "deal.policy_check", "record policy exceptions")
+    actor = _require(actor_user_id, "deal.policy_check", "record policy exceptions")
 
     breaches = context.get("breaches") or []
     exception_ids = []
@@ -526,8 +565,8 @@ def record_policy_exceptions(context):
         "after": {
             "policy_version": POLICY_VERSION,
             "exception_refs": refs,
-            "exception_ids": exception_ids,
             "open_exception_count": open_count,
+            "recorded_by": actor.get("email"),
         },
     })
     return {
@@ -537,6 +576,8 @@ def record_policy_exceptions(context):
         "open_exception_count": open_count,
         "has_open_exceptions": open_count > 0,
         "review_id": review["id"],
+        "raised_by_user_id": actor_user_id,
+        "raised_by_email": actor.get("email"),
         "audit_entry_id": entry["id"],
     }
 
@@ -554,12 +595,25 @@ def resolve_policy_exceptions(context):
     decisions = context.get("decisions") or []
     resolved_at = _now()
     resolved_ids = []
+    dispositions = []
     by_ref = {e.get("exception_ref"): e for e in current_exceptions(deal_code)}
     for decision in decisions:
         ref = decision.get("exception_ref")
         current = by_ref.get(ref)
         if current is None:
             raise HTTPException(status_code=404, detail=f"no policy exception {ref} on {deal_code}")
+        # An exception is disposed of ONCE. Re-waiving one that is already
+        # waived or upheld would silently overwrite the officer and rationale
+        # of record on the version that governs, so a second disposition is
+        # refused outright rather than layered on top.
+        if current.get("status") not in OPEN_EXCEPTION_STATUSES:
+            raise HTTPException(
+                status_code=409,
+                detail=(
+                    f"policy exception {ref} is already '{current.get('status')}' and cannot be "
+                    "disposed of again; its disposition of record stands"
+                ),
+            )
         status = "waived" if decision.get("disposition") == "waive" else "upheld"
         rationale = (decision.get("rationale") or "").strip()
         if not rationale:
@@ -574,6 +628,7 @@ def resolve_policy_exceptions(context):
         })
         store.insert("policy_exceptions", row)
         resolved_ids.append(ref)
+        dispositions.append({"exception_ref": ref, "from": current.get("status"), "to": status})
 
     open_count = len([e for e in current_exceptions(deal_code) if e.get("status") == "open"])
     entry = audit("policy.exceptions_resolved", {
@@ -581,17 +636,20 @@ def resolve_policy_exceptions(context):
         "actor_user_id": actor_user_id,
         "resource_type": "policy_exception",
         "resource_id": resolved_ids[0] if resolved_ids else None,
-        "before": {"status": "open"},
+        "before": {"status": "open", "exception_refs": resolved_ids},
         "after": {
             "resolved_exception_refs": resolved_ids,
+            "dispositions": [f"{d['exception_ref']}: {d['from']} → {d['to']}" for d in dispositions],
             "open_exception_count": open_count,
-            "resolved_by": (actor or {}).get("email"),
+            "resolved_by": actor.get("email"),
         },
     })
     return {
         "resolved_exception_ids": resolved_ids,
+        "dispositions": dispositions,
         "open_exception_count": open_count,
         "resolved_by_user_id": actor_user_id,
+        "resolved_by_email": actor.get("email"),
         "resolved_at": resolved_at,
         "audit_entry_id": entry["id"],
     }
@@ -610,14 +668,16 @@ class ActingUserRequest(BaseModel):
 
 class MemoReviewRequest(BaseModel):
     acting_user_email: str
-    action: str = "accept"
+    # A closed set, validated at the edge: an unrecognised review action is a
+    # 422, never a silent fall-through to "accept".
+    action: Literal["accept", "accept_with_edits", "reject"] = "accept"
     edited_content: str | None = None
     rejection_reason: str | None = None
 
 
 class ExceptionDecision(BaseModel):
     exception_ref: str
-    disposition: str  # "waive" | "uphold"
+    disposition: Literal["waive", "uphold"]
     rationale: str
 
 
@@ -682,16 +742,19 @@ def run_credit_memo(deal_code: str, req: ActingUserRequest):
     })
     audit("memo.agent_drafted", {
         "deal_id": deal_code,
-        "actor_user_id": actor["id"] if actor else None,
+        "actor_user_id": actor["id"],
         "resource_type": "agent_output",
         "resource_id": output["id"],
+        # The audit row records THAT the draft was produced and by what, not the
+        # draft prose: the memo body lives on the agent_outputs row this entry
+        # points at, behind its own access-controlled endpoint.
         "after": {
             "agent": "Credit Memo Agent",
             "template_version": MEMO_TEMPLATE_VERSION,
             "section_count": len(sections),
             "citation_count": len(citations),
             "latency_ms": latency_ms,
-            "memo_content": memo_content,
+            "run_by": actor.get("email"),
         },
     })
     return {
@@ -706,27 +769,64 @@ def run_credit_memo(deal_code: str, req: ActingUserRequest):
     }
 
 
-def _scoped_deal(deal_code, acting_user_email):
-    """Read guard shared by this slice's GETs.
+def _scoped_deal(deal_code, acting_user_email, x_user_email=None, action="read this deal"):
+    """The read guard every GET in this file calls — UNCONDITIONALLY.
 
-    A caller that identifies itself is resolved and checked against the deal's
-    visibility rules before anything is returned; an anonymous read follows the
-    same contract as the foundation's `GET /api/deals` / `GET /api/pipeline`,
-    which the desk UI and the recorded acceptance checks call without
-    credentials. Every WRITE on this slice is identity-guarded without
-    exception.
+    It is never written behind an `if acting_user_email:`, because a guard the
+    caller opts out of by omitting its identity is not a guard (that was a HIGH
+    governance finding on this app). It is the foundation's fail-closed reader
+    contract, applied per deal:
+
+      * identity may arrive as the `acting_user_email` query parameter or the
+        `x-user-email` header;
+      * an identity that resolves to no stored user, or to a deactivated one,
+        is a 403 — never a silent downgrade to wider access;
+      * an unidentified caller is resolved to the least-privilege
+        ANONYMOUS_VIEWER principal, and every route below hands that principal a
+        REDACTED projection only (see `_redact_*`), exactly as the foundation's
+        board does;
+      * an identified caller outside the deal's visibility (an RM looking at
+        somebody else's deal) is a 403.
+
+    Returns (deal, reader) so the caller can project by principal.
     """
     deal = _deal_or_404(deal_code)
-    if acting_user_email:
-        actor = identity.require_actor(acting_user_email, action=f"read {deal_code}")
-        if not identity.can_view_deal(actor, deal):
-            raise HTTPException(status_code=403, detail=f"role '{actor.get('role')}' may not read {deal_code}")
-    return deal
+    reader = identity.require_reader(acting_user_email or x_user_email, action=action)
+    if not identity.can_view_deal(reader, deal):
+        raise HTTPException(
+            status_code=403,
+            detail=f"role '{reader.get('role')}' may not read {deal_code}",
+        )
+    return deal, reader
+
+
+def _named_scoped_deal(deal_code, acting_user_email, x_user_email=None, action="read this deal"):
+    """The stricter read guard, for a body that cannot be meaningfully redacted.
+
+    The memo is continuous borrower prose — figures, guarantor detail and
+    commentary in one blob — so there is no board-safe projection of it. An
+    unidentified caller is refused outright (401) rather than served a
+    redaction, and an identified one still has to clear the deal's visibility
+    rules.
+    """
+    deal = _deal_or_404(deal_code)
+    reader = identity.require_actor(acting_user_email or x_user_email, action=action)
+    if not identity.can_view_deal(reader, deal):
+        raise HTTPException(
+            status_code=403,
+            detail=f"role '{reader.get('role')}' may not read {deal_code}",
+        )
+    return deal, reader
 
 
 @router.get("/api/deals/{deal_code}/memo")
-def get_memo(deal_code: str, acting_user_email: str | None = None):
-    _scoped_deal(deal_code, acting_user_email)
+def get_memo(
+    deal_code: str,
+    acting_user_email: str | None = None,
+    x_user_email: str | None = Header(default=None),
+):
+    """The memo itself — identity REQUIRED (401 unidentified, 403 unentitled)."""
+    _named_scoped_deal(deal_code, acting_user_email, x_user_email, f"read the credit memo for {deal_code}")
     draft = _latest_output(deal_code, "credit-memo-draft")
     accepted = _latest_output(deal_code, "credit-memo")
     return {
@@ -747,6 +847,15 @@ def accept_memo(deal_code: str, req: MemoReviewRequest):
     if draft is None:
         raise HTTPException(status_code=409, detail="run the credit memo agent before accepting its draft")
     if req.action == "reject":
+        # Rejecting an agent draft is a decision on the record, so it carries a
+        # written reason from the named reviewer. There is no "no reason given"
+        # default: a blank reason is refused.
+        reason = (req.rejection_reason or "").strip()
+        if not reason:
+            raise HTTPException(
+                status_code=400,
+                detail="a written rejection_reason is required to reject a credit memo draft",
+            )
         review = store.insert("human_reviews", {
             "agent_output_id": draft["id"],
             "deal_id": deal_code,
@@ -754,7 +863,7 @@ def accept_memo(deal_code: str, req: MemoReviewRequest):
             "action": "reject",
             "original_content": draft["output_content"].get("memo_content"),
             "edited_content": None,
-            "rejection_reason": req.rejection_reason or "no reason given",
+            "rejection_reason": reason,
             "reviewed_at": _now(),
         })
         audit("memo.rejected", {
@@ -762,9 +871,20 @@ def accept_memo(deal_code: str, req: MemoReviewRequest):
             "actor_user_id": actor["id"],
             "resource_type": "agent_output",
             "resource_id": draft["id"],
-            "after": {"action": "reject", "rejection_reason": req.rejection_reason},
+            "after": {"action": "reject", "rejected_by": actor.get("email")},
         })
-        return {"deal_id": deal_code, "status": "rejected", "review_id": review["id"]}
+        return {
+            "deal_id": deal_code,
+            "status": "rejected",
+            "review_id": review["id"],
+            "reviewed_by_email": actor.get("email"),
+        }
+
+    if req.action == "accept_with_edits" and not (req.edited_content or "").strip():
+        raise HTTPException(
+            status_code=400,
+            detail="accept_with_edits requires the edited memo text in edited_content",
+        )
 
     result = persist_accepted_memo({
         "deal_id": deal_code,
@@ -819,7 +939,7 @@ def run_policy_compliance(deal_code: str, req: ActingUserRequest):
     })
     audit("policy.agent_reviewed", {
         "deal_id": deal_code,
-        "actor_user_id": actor["id"] if actor else None,
+        "actor_user_id": actor["id"],
         "resource_type": "agent_output",
         "resource_id": output["id"],
         "after": {
@@ -828,6 +948,7 @@ def run_policy_compliance(deal_code: str, req: ActingUserRequest):
             "rules_tested": [f["rule_reference"] for f in findings],
             "breached": [b["rule_reference"] for b in breaches],
             "latency_ms": latency_ms,
+            "run_by": actor.get("email"),
         },
     })
     return {
@@ -861,11 +982,48 @@ def accept_policy_review(deal_code: str, req: ActingUserRequest):
     return {**result, "deal_id": deal_code, "status": "recorded"}
 
 
+REDACTED = "[redacted — identify yourself to read this]"
+
+
+def _redact_exception(row):
+    """The board-safe projection of a policy exception.
+
+    Which rule a deal tripped and whether it is still open is board-level
+    information; the written violation detail and the officer's rationale are
+    not — they quote borrower figures and name the humans who decided. Shape is
+    preserved (an unidentified caller can see that a rationale exists and that
+    it is withheld) but no content crosses.
+    """
+    return {
+        "deal_id": row.get("deal_id"),
+        "exception_ref": row.get("exception_ref"),
+        "rule_reference": row.get("rule_reference"),
+        "status": row.get("status"),
+        "origin": row.get("origin"),
+        "created_at": row.get("created_at"),
+        "violation_detail": REDACTED,
+        "rationale": REDACTED,
+        "raised_by_user_id": None,
+        "resolved_by_user_id": None,
+    }
+
+
 @router.get("/api/deals/{deal_code}/policy-exceptions")
-def list_policy_exceptions(deal_code: str, acting_user_email: str | None = None):
+def list_policy_exceptions(
+    deal_code: str,
+    acting_user_email: str | None = None,
+    x_user_email: str | None = Header(default=None),
+):
     """Recorded exceptions plus, clearly marked, any breach the latest agent
-    run proposed that a human has not yet accepted onto the record."""
-    _scoped_deal(deal_code, acting_user_email)
+    run proposed that a human has not yet accepted onto the record.
+
+    Scoped through the unconditional reader guard: an unidentified caller sees
+    the redacted register (which rules, what status) and never the written
+    detail, rationale or the people behind either.
+    """
+    _deal, reader = _scoped_deal(
+        deal_code, acting_user_email, x_user_email, f"read the policy exceptions on {deal_code}"
+    )
     recorded = current_exceptions(deal_code)
     for e in recorded:
         e["origin"] = "recorded"
@@ -876,13 +1034,19 @@ def list_policy_exceptions(deal_code: str, acting_user_email: str | None = None)
         for b in output["output_content"]["exceptions"]:
             if b["rule_reference"] not in already:
                 proposed.append({**b, "status": "proposed", "origin": "pending_human_review", "deal_id": deal_code})
+    open_count = len([e for e in recorded if e.get("status") == "open"])
+    anonymous = identity.is_anonymous(reader)
+    if anonymous:
+        recorded = [_redact_exception(e) for e in recorded]
+        proposed = [_redact_exception(e) for e in proposed]
     return {
         "deal_id": deal_code,
         "policy_version": POLICY_VERSION,
+        "redacted": anonymous,
         "exceptions": recorded + proposed,
         "recorded": recorded,
         "proposed": proposed,
-        "open_exception_count": len([e for e in recorded if e.get("status") == "open"]),
+        "open_exception_count": open_count,
     }
 
 
@@ -920,16 +1084,119 @@ def classify_entry(action):
     return "state_change"
 
 
+# The only payload fields the chronicle ever serves. An audit row's
+# before/after payload can hold a whole record body — borrower figures, memo
+# prose, an adverse-action reason — and serving it verbatim would turn the
+# timeline into a back door around every endpoint that guards those records
+# (that was a HIGH governance finding). The chronicle therefore serves a
+# DERIVED summary built only from these scalar, state-describing fields, plus
+# the resource id needed to fetch the record itself through its own
+# access-controlled endpoint.
+_SUMMARY_SAFE_FIELDS = (
+    "current_stage",
+    "current_status",
+    "stage",
+    "status",
+    "queue",
+    "classification",
+    "confidence_score",
+    "grade",
+    "rubric_version",
+    "band_hit",
+    "template_version",
+    "policy_version",
+    "spread",
+    "memo",
+    "outcome",
+    "action",
+    "agent",
+    "rounding_method",
+    "line_items",
+    "section_count",
+    "citation_count",
+    "open_exception_count",
+    "exception_refs",
+    "resolved_exception_refs",
+    "dispositions",
+    "rules_tested",
+    "breached",
+    "accepted_by",
+    "recorded_by",
+    "run_by",
+    "resolved_by",
+    "rejected_by",
+    "assigned_to",
+    "latency_ms",
+    "dscr",
+    "leverage",
+    "current_ratio",
+)
+
+_MAX_SUMMARY_VALUE_CHARS = 120
+
+
+def summarize_payload(payload):
+    """A scalar-only, length-bounded projection of an audit payload.
+
+    Whitelisted fields only, and never a nested body: anything that is not a
+    scalar (or a short list of scalars) is dropped rather than passed through.
+    """
+    if not isinstance(payload, dict):
+        return {}
+    summary = {}
+    for field in _SUMMARY_SAFE_FIELDS:
+        if field not in payload:
+            continue
+        value = payload[field]
+        if isinstance(value, str):
+            summary[field] = value if len(value) <= _MAX_SUMMARY_VALUE_CHARS else value[:_MAX_SUMMARY_VALUE_CHARS] + "…"
+        elif isinstance(value, (int, float, bool)) or value is None:
+            summary[field] = value
+        elif isinstance(value, list):
+            scalars = [v for v in value if isinstance(v, (str, int, float, bool))]
+            if scalars:
+                summary[field] = scalars[:10]
+    return summary
+
+
+def _describe(action, before, after):
+    """One human sentence for the entry — derived, never quoted."""
+    parts = []
+    for field in ("current_stage", "current_status", "status", "grade", "memo", "spread"):
+        old, new = before.get(field), after.get(field)
+        if new is not None and old is not None and old != new:
+            parts.append(f"{field} {old} → {new}")
+        elif new is not None and old is None and field in after:
+            parts.append(f"{field} {new}")
+    return f"{action}" + (f" ({'; '.join(parts)})" if parts else "")
+
+
 @router.get("/api/deals/{deal_code}/audit")
-def deal_audit_timeline(deal_code: str, acting_user_email: str | None = None, kind: str | None = None):
+def deal_audit_timeline(
+    deal_code: str,
+    acting_user_email: str | None = None,
+    kind: str | None = None,
+    x_user_email: str | None = Header(default=None),
+):
     """The per-deal chronicle, oldest first. Append-only: this router exposes
     no update or delete path for an audit row, and none exists elsewhere.
 
-    Read scoping follows the same contract as `GET /api/deals`: a caller that
-    identifies itself is checked against the deal's visibility rules before a
-    single entry is returned.
+    Two guards, both unconditional:
+      * `_scoped_deal` resolves the caller through the foundation's fail-closed
+        reader contract and checks it against the deal's visibility rules
+        before a single entry is returned (403 for a forged identity, 403 for
+        an RM outside its own book);
+      * NO entry ever carries a raw `before_payload` / `after_payload`. Every
+        caller — identified or not — gets the derived `summary` projection
+        above, so the timeline cannot be used to read record bodies that their
+        own endpoints guard. An unidentified caller is redacted further still:
+        it sees that something happened, when, and of what kind, but not who
+        did it or to which record.
     """
-    deal = _scoped_deal(deal_code, acting_user_email)
+    deal, reader = _scoped_deal(
+        deal_code, acting_user_email, x_user_email, f"read the audit timeline for {deal_code}"
+    )
+    anonymous = identity.is_anonymous(reader)
 
     users = {u["id"]: u for u in store.list("users")}
     entries = []
@@ -938,8 +1205,9 @@ def deal_audit_timeline(deal_code: str, acting_user_email: str | None = None, ki
             continue
         user = users.get(row.get("actor_user_id")) or {}
         entry_kind = classify_entry(row.get("action"))
-        after = row.get("after_payload") or {}
-        entries.append({
+        before = summarize_payload(row.get("before_payload"))
+        after = summarize_payload(row.get("after_payload"))
+        entry = {
             "id": row["id"],
             "seq": len(entries) + 1,
             "deal_id": deal_code,
@@ -951,11 +1219,26 @@ def deal_audit_timeline(deal_code: str, acting_user_email: str | None = None, ki
             "actor_role": user.get("role") or "system",
             "resource_type": row.get("resource_type"),
             "resource_id": row.get("resource_id"),
-            "before_payload": row.get("before_payload"),
-            "after_payload": row.get("after_payload"),
+            "before": before,
+            "after": after,
+            "changed_fields": sorted(set(before) | set(after)),
+            "summary": _describe(row.get("action"), before, after),
             "agent_draft": after.get("agent") if entry_kind == "agent_draft" else None,
             "timestamp": row.get("timestamp"),
-        })
+        }
+        if anonymous:
+            entry.update({
+                "actor_user_id": None,
+                "actor_email": None,
+                "actor_name": REDACTED,
+                "resource_id": None,
+                "before": {},
+                "after": {},
+                "changed_fields": [],
+                "summary": row.get("action"),
+                "agent_draft": "agent" if entry_kind == "agent_draft" else None,
+            })
+        entries.append(entry)
 
     counts = {"all": len(entries)}
     for k in ("human_decision", "agent_draft", "calculation", "state_change"):
@@ -963,8 +1246,11 @@ def deal_audit_timeline(deal_code: str, acting_user_email: str | None = None, ki
     shown = [e for e in entries if not kind or kind == "all" or e["entry_kind"] == kind] if kind else entries
     return {
         "deal_id": deal_code,
+        # borrower_name is board-safe (identity.BOARD_SAFE_FIELDS) — it is the
+        # name on the card, and the board already shows it.
         "borrower_name": deal.get("borrower_name"),
         "append_only": True,
+        "redacted": anonymous,
         "entries": shown,
         "counts": counts,
     }
@@ -1023,6 +1309,40 @@ FIXTURE_RATIOS = [
     ("leverage", 2207000, 712000),
     ("current_ratio", 611000, 430300),
 ]
+
+
+def _install_deal_code_collision_guard():
+    """Make the shared deal-code sequence SKIP a code a fixture already holds.
+
+    Fixture deals are inserted with an explicit `deal_code` (never through
+    `deals_repo.create_deal`), so they deliberately do not consume the
+    DEAL-1001+ sequence — that is what keeps the first *filed* deal DEAL-1001
+    for slice 1's acceptance. The sequence, though, hands out its next number
+    without checking whether a stored row already answers to it, so on a desk
+    carrying a DEAL-1003 fixture the third deal filed would be issued that same
+    code: two borrowers under one deal_code, which silently corrupts every read
+    that resolves "the latest row for a code" (it did, reproducibly, once the
+    test suite filed its third deal).
+
+    The guard only ever SKIPS a code that is already taken — nothing is
+    renumbered, reused or issued twice — and it is installed from this file
+    rather than by editing the shared module. It is idempotent, so sibling
+    slices seeding their own fixtures can install the same guard without
+    stacking wrappers.
+    """
+    if getattr(deals_repo.next_deal_code, "_skips_taken_codes", False):
+        return
+    issue_next = deals_repo.next_deal_code
+
+    def next_deal_code():
+        for _ in range(1000):
+            code = issue_next()
+            if not any(r.get("deal_code") == code for r in store.list("deals")):
+                return code
+        raise RuntimeError("deal-code sequence exhausted without reaching a free code")
+
+    next_deal_code._skips_taken_codes = True
+    deals_repo.next_deal_code = next_deal_code
 
 
 def _install_policy_rules():
@@ -1143,5 +1463,6 @@ def _install_fixture_deal():
     })
 
 
+_install_deal_code_collision_guard()
 _install_policy_rules()
 _install_fixture_deal()

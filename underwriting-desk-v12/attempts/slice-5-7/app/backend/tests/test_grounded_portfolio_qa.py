@@ -186,3 +186,183 @@ def test_book_summary_is_scoped_and_computed_server_side():
     assert body["total_exposure"] > 0
     assert isinstance(body["by_stage"], dict)
     assert client.get("/api/qa/book-summary", params={"acting_user_email": "stranger@elsewhere.test"}).status_code == 403
+
+
+# ---------------------------------------------------------------------------
+# Security remediation: identity is fail-closed and unconditional on every
+# surface of this desk, and no figure the desk serves comes from the model.
+# ---------------------------------------------------------------------------
+
+def test_anonymous_ask_is_401_not_an_answer():
+    """NEGATIVE ACCEPTANCE: an unidentified caller cannot ask the desk at all —
+    401 'identify yourself', never a 422 and never a grounded answer."""
+    resp = client.post("/api/qa/ask", json={"question": "Which deals lack an accepted spread?"})
+    assert resp.status_code == 401, resp.text
+    assert "identify yourself" in resp.text.lower()
+    assert "DEAL-" not in resp.text
+
+    # An explicitly empty identity is the same refusal, not a fallback to open
+    # access — the guard is never behind an `if acting_user_email:`.
+    blank = client.post(
+        "/api/qa/ask",
+        json={"question": "Which deals lack an accepted spread?", "acting_user_email": "   "},
+    )
+    assert blank.status_code == 401, blank.text
+
+
+def test_anonymous_book_summary_is_401():
+    resp = client.get("/api/qa/book-summary")
+    assert resp.status_code == 401, resp.text
+    assert client.get("/api/qa/book-summary", params={"acting_user_email": ""}).status_code == 401
+
+
+def test_anonymous_session_log_is_redacted_not_unscoped():
+    """The audit read-back keeps its shape for an unidentified caller — it must
+    never hand out the questions asked, the answers given, who asked, or which
+    deals were read."""
+    deal = _submit_deal("Redaction Fixture Mills")
+    asked = client.post(
+        "/api/qa/ask",
+        json={"question": "Which deals are sitting in intake?", "acting_user_email": "officer@bank.test"},
+    )
+    assert asked.status_code == 200
+
+    resp = client.get("/api/qa/sessions")
+    assert resp.status_code == 200
+    sessions = resp.json()
+    assert sessions
+    for field in ("question", "source_deal_ids", "user_id"):
+        assert field in sessions[0]
+    for row in sessions:
+        assert row["redacted"] is True
+        assert row["user_id"] is None
+        assert row["source_deal_ids"] == []
+        assert "[redacted" in row["question"]
+    assert deal["deal_code"] not in resp.text
+    assert "Which deals are sitting in intake?" not in resp.text
+
+
+def test_identified_reader_sees_the_log_and_a_forged_one_is_refused():
+    client.post(
+        "/api/qa/ask",
+        json={"question": "Which deals lack an accepted spread?", "acting_user_email": "officer@bank.test"},
+    )
+    resp = client.get("/api/qa/sessions", params={"acting_user_email": "officer@bank.test"})
+    assert resp.status_code == 200
+    sessions = resp.json()
+    assert sessions and sessions[0]["user_id"] is not None
+    assert not sessions[0].get("redacted")
+
+    # The x-user-email header is the other identity channel the desk UI uses.
+    via_header = client.get("/api/qa/sessions", headers={"x-user-email": "officer@bank.test"})
+    assert via_header.status_code == 200
+    assert via_header.json()[0]["user_id"] is not None
+
+    # You cannot read as somebody who does not exist.
+    assert client.get("/api/qa/sessions", params={"acting_user_email": "stranger@elsewhere.test"}).status_code == 403
+
+
+def test_relationship_manager_reads_only_its_own_sessions():
+    import identity as identity_module
+
+    identity_module.resolve_user("rm-log@bank.test", default_role="relationship_manager")
+    _submit_deal("RM Log Fixture", rm_email="rm-log@bank.test")
+    client.post("/api/qa/ask", json={"question": "What is in my book?", "acting_user_email": "rm-log@bank.test"})
+    client.post("/api/qa/ask", json={"question": "What is in the whole book?", "acting_user_email": "officer@bank.test"})
+
+    me = client.get("/api/qa/sessions", params={"acting_user_email": "rm-log@bank.test"})
+    assert me.status_code == 200
+    rows = me.json()
+    assert rows
+    mine = {r["user_id"] for r in rows}
+    assert len(mine) == 1
+    assert "What is in the whole book?" not in me.text
+
+
+def test_read_tools_refuse_a_deal_outside_the_bound_scope():
+    """The roster's read tools are structurally scope-guarded: reading with no
+    resolved scope, or a deal outside it, raises rather than returning data."""
+    import ext_grounded_portfolio_qa as qa
+    from fastapi import HTTPException
+
+    deal = _submit_deal("Scope Guard Fixture")
+    code = deal["deal_code"]
+
+    for reader in (qa._read_deal, qa._read_spread, qa._read_ratios, qa._read_risk_grade,
+                   qa._read_policy_exceptions, qa._read_audit_timeline, qa._read_memo):
+        try:
+            reader(code)
+            raise AssertionError(f"{reader.__name__} read outside a permission scope")
+        except HTTPException as exc:
+            assert exc.status_code == 403
+
+    with qa.permitted_scope(["DEAL-DOES-NOT-EXIST"]):
+        try:
+            qa._read_deal(code)
+            raise AssertionError("read_deal returned a deal outside the bound scope")
+        except HTTPException as exc:
+            assert exc.status_code == 403
+
+    with qa.permitted_scope([code]):
+        assert qa._read_deal(code)["deal_code"] == code
+        # search never widens past the bound scope, whatever it is handed
+        found = qa._search_deals_in_scope([code, "DEAL-9999"], None)
+        assert {d["deal_code"] for d in found} == {code}
+
+
+def test_question_length_is_bounded_at_the_edge():
+    assert client.post(
+        "/api/qa/ask", json={"question": "", "acting_user_email": "officer@bank.test"}
+    ).status_code == 422
+    assert client.post(
+        "/api/qa/ask", json={"question": "x" * 5000, "acting_user_email": "officer@bank.test"}
+    ).status_code == 422
+
+
+def test_answer_never_carries_a_figure_the_system_did_not_compute():
+    """The model's prose is a candidate, not the answer: an ungrounded or
+    invented-figure narrative is replaced by the records-derived digest, and
+    the raw reply survives only in the audit trace."""
+    import ext_grounded_portfolio_qa as qa
+
+    deal = _submit_deal("Verification Fixture Co", amount=777000)
+    resp = client.post(
+        "/api/qa/ask",
+        json={"question": "Which deals are sitting in intake?", "acting_user_email": "officer@bank.test"},
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["narrative_source"] == "deterministic_records_digest"
+    assert deal["deal_code"] in body["source_deal_ids"]
+    # figures in the digest are formatted from the stored records, never by the
+    # model — the newly filed deal's own line proves it when it is on screen
+    assert "Automated draft pending analyst approval." in body["answer"]
+
+    solo = client.post(
+        "/api/qa/ask",
+        json={"question": "What is the status of Verification Fixture Co?", "acting_user_email": "officer@bank.test"},
+    ).json()
+    assert "$777,000" in solo["answer"]  # the stored figure, quoted back verbatim
+
+    retrieve = qa.retrieve_grounded_deal_context({
+        "visible_deal_ids": [deal["deal_code"]],
+        "question": "Which deals are sitting in intake?",
+    })
+    # A narrative quoting a figure nobody computed is rejected...
+    ok, reason = qa._verify_narrative(
+        f"{deal['deal_code']} carries $1,234,567 of exposure.", retrieve
+    )
+    assert ok is False and reason.startswith("quoted_a_figure_the_system_did_not_compute")
+    # ...as is one that names a deal it was never given...
+    ok, reason = qa._verify_narrative(
+        f"{deal['deal_code']} and DEAL-99999 are both at intake.", retrieve
+    )
+    assert ok is False and reason.startswith("cited_out_of_scope_deal")
+    # ...and one that ignores the records entirely.
+    ok, reason = qa._verify_narrative("That is not covered by my knowledge.", retrieve)
+    assert ok is False
+    # A narrative that names the record and quotes only stored figures passes.
+    ok, reason = qa._verify_narrative(
+        f"{deal['deal_code']} is at intake with exposure of 777000.", retrieve
+    )
+    assert ok is True, reason

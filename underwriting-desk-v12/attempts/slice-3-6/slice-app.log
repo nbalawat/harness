@@ -1,43 +1,45 @@
-INFO:     Started server process [71906]
+INFO:     Started server process [7651]
 INFO:     Waiting for application startup.
 INFO:     Application startup complete.
-INFO:     Uvicorn running on http://127.0.0.1:52119 (Press CTRL+C to quit)
-INFO:     127.0.0.1:52121 - "GET /health HTTP/1.1" 200 OK
-INFO:     127.0.0.1:52122 - "POST /api/deals HTTP/1.1" 201 Created
-INFO:     127.0.0.1:52121 - "GET /api/pipeline HTTP/1.1" 200 OK
-INFO:     127.0.0.1:52122 - "POST /api/deals/DEAL-1001/agents/intake-triage/run HTTP/1.1" 200 OK
-INFO:     127.0.0.1:52133 - "POST /api/deals/DEAL-1001/triage/accept HTTP/1.1" 200 OK
-INFO:     127.0.0.1:52122 - "POST /api/deals/DEAL-1003/agents/credit-memo/run HTTP/1.1" 200 OK
-INFO:     127.0.0.1:52146 - "POST /api/deals/DEAL-1003/agents/policy-compliance/run HTTP/1.1" 200 OK
-INFO:     127.0.0.1:52161 - "GET /api/deals/DEAL-1003/policy-exceptions HTTP/1.1" 200 OK
-INFO:     127.0.0.1:52146 - "GET /api/deals/DEAL-1003/audit HTTP/1.1" 200 OK
-INFO:     127.0.0.1:52170 - "GET / HTTP/1.1" 200 OK
-INFO:     127.0.0.1:52171 - "GET /app.js HTTP/1.1" 200 OK
-INFO:     127.0.0.1:52170 - "GET /tokens.css HTTP/1.1" 200 OK
-INFO:     127.0.0.1:52170 - "GET /agent/mode HTTP/1.1" 200 OK
-INFO:     127.0.0.1:52171 - "GET /agents HTTP/1.1" 200 OK
-INFO:     127.0.0.1:52172 - "GET /api/conversations HTTP/1.1" 404 Not Found
-INFO:     127.0.0.1:52173 - "GET /api/pipeline HTTP/1.1" 200 OK
-INFO:     127.0.0.1:52172 - "GET /api/pipeline HTTP/1.1" 200 OK
-INFO:     127.0.0.1:52170 - "GET /favicon.ico HTTP/1.1" 404 Not Found
-INFO:     127.0.0.1:52170 - "GET /api/deals/DEAL-1003/memo HTTP/1.1" 200 OK
-INFO:     127.0.0.1:52172 - "GET /api/deals/DEAL-1003/policy-exceptions HTTP/1.1" 200 OK
-INFO:     127.0.0.1:52173 - "GET /api/deals/DEAL-1003/audit HTTP/1.1" 200 OK
-INFO:     127.0.0.1:52172 - "GET / HTTP/1.1" 304 Not Modified
-INFO:     127.0.0.1:52172 - "GET /agent/mode HTTP/1.1" 200 OK
-INFO:     127.0.0.1:52170 - "GET /agents HTTP/1.1" 200 OK
-INFO:     127.0.0.1:52171 - "GET /api/conversations HTTP/1.1" 404 Not Found
-INFO:     127.0.0.1:52186 - "GET /api/pipeline HTTP/1.1" 200 OK
-INFO:     127.0.0.1:52171 - "GET /api/pipeline HTTP/1.1" 200 OK
-INFO:     127.0.0.1:52171 - "GET /api/deals/DEAL-1003/memo HTTP/1.1" 200 OK
-INFO:     127.0.0.1:52186 - "GET /api/deals/DEAL-1003/policy-exceptions HTTP/1.1" 200 OK
-INFO:     127.0.0.1:52170 - "GET /api/deals/DEAL-1003/audit HTTP/1.1" 200 OK
-INFO:     127.0.0.1:52170 - "GET /api/pipeline HTTP/1.1" 200 OK
-INFO:     127.0.0.1:52170 - "GET /api/deals/DEAL-1003/memo HTTP/1.1" 200 OK
-INFO:     127.0.0.1:52186 - "GET /api/deals/DEAL-1003/policy-exceptions HTTP/1.1" 200 OK
-INFO:     127.0.0.1:52171 - "GET /api/deals/DEAL-1003/audit HTTP/1.1" 200 OK
+INFO:     Uvicorn running on http://127.0.0.1:55837 (Press CTRL+C to quit)
+INFO:     127.0.0.1:55840 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55841 - "POST /api/deals HTTP/1.1" 201 Created
+INFO:     127.0.0.1:55840 - "GET /api/pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55841 - "POST /api/deals/DEAL-1001/agents/intake-triage/run HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55853 - "POST /api/deals/DEAL-1001/triage/accept HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55841 - "POST /api/deals/DEAL-1003/agents/credit-memo/run HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55865 - "POST /api/deals/DEAL-1003/agents/policy-compliance/run HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55877 - "GET /api/deals/DEAL-1003/policy-exceptions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55865 - "GET /api/deals/DEAL-1003/audit HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55886 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55887 - "GET /app.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55886 - "GET /tokens.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55886 - "GET /agent/mode HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55887 - "GET /agents HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55889 - "GET /api/pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55888 - "GET /api/conversations HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:55887 - "GET /api/pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55888 - "GET /api/pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55886 - "GET /favicon.ico HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:55886 - "GET /api/deals/DEAL-1003/memo?acting_user_email=analyst%40bank.test HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55888 - "GET /api/deals/DEAL-1003/policy-exceptions?acting_user_email=analyst%40bank.test HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55887 - "GET /api/deals/DEAL-1003/audit?acting_user_email=analyst%40bank.test HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55888 - "GET / HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:55888 - "GET /agent/mode HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55889 - "GET /api/conversations HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:55886 - "GET /agents HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55899 - "GET /api/pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55886 - "GET /api/pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55899 - "GET /api/pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55899 - "GET /api/deals/DEAL-1003/memo?acting_user_email=analyst%40bank.test HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55886 - "GET /api/deals/DEAL-1003/policy-exceptions?acting_user_email=analyst%40bank.test HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55889 - "GET /api/deals/DEAL-1003/audit?acting_user_email=analyst%40bank.test HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55889 - "GET /api/pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55889 - "GET /api/deals/DEAL-1003/memo?acting_user_email=analyst%40bank.test HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55886 - "GET /api/deals/DEAL-1003/policy-exceptions?acting_user_email=analyst%40bank.test HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55899 - "GET /api/deals/DEAL-1003/audit?acting_user_email=analyst%40bank.test HTTP/1.1" 200 OK
 INFO:     Shutting down
 INFO:     Waiting for background tasks to complete. (CTRL+C to force quit)
 INFO:     Waiting for application shutdown.
 INFO:     Application shutdown complete.
-INFO:     Finished server process [71906]
+INFO:     Finished server process [7651]

@@ -80,7 +80,7 @@ def test_triage_run_then_accept_routes_deal():
     assert accept_body["current_stage"] == "document_extraction"
     assert "queue_name" in accept_body
 
-    pipeline = client.get("/api/pipeline").json()
+    pipeline = client.get("/api/pipeline", headers={"x-user-email": "analyst@bank.test"}).json()
     routed = next(d for d in pipeline["deals"] if d["deal_code"] == code)
     assert routed["current_stage"] == "document_extraction"
     assert routed["assigned_to_user_id"] is not None
@@ -226,3 +226,143 @@ def test_upload_extension_guard_still_applies_to_identified_callers():
 
 def test_seed_endpoint_stays_hard_gated():
     assert client.post("/admin/seed").status_code == 403
+
+
+# ---------------------------------------------------------------------------
+# Fail-closed identity (governance code_audit HIGHs): reads are guarded
+# unconditionally, approval decisions require a resolvable actor, the chat
+# message is bounded, and a dropped audit row is never swallowed.
+# ---------------------------------------------------------------------------
+
+REDACTED_FIELDS = (
+    "requested_amount",
+    "exposure_amount",
+    "risk_grade",
+    "assigned_to_user_id",
+    "created_by_user_id",
+    "decline_reason_code",
+)
+
+
+def test_unidentified_reads_get_the_redacted_board_projection():
+    """Omitting identity is not a way to read the whole book: the guard runs
+    unconditionally and hands an unidentified caller stage + borrower name
+    only — never amounts, owners, grades or adverse-action reasons."""
+    _submit_deal(borrower_name="Redaction Co", amount=400000)
+
+    board = client.get("/api/pipeline")
+    assert board.status_code == 200
+    body = board.json()
+    assert body["scoped_to"] == "board_viewer"
+    card = next(d for d in body["deals"] if d["borrower_name"] == "Redaction Co")
+    assert card["current_stage"] == "intake"
+    for field in REDACTED_FIELDS:
+        assert field not in card, field
+
+    book = client.get("/api/deals")
+    assert book.status_code == 200
+    assert book.json(), "the board projection is still a readable board"
+    for row in book.json():
+        for field in REDACTED_FIELDS:
+            assert field not in row, field
+
+
+def test_identified_desk_reads_are_unredacted():
+    created = _submit_deal(borrower_name="Full Read Co", amount=400000).json()
+
+    for read in (
+        client.get("/api/pipeline", headers={"x-user-email": "analyst@bank.test"}),
+        client.get("/api/pipeline", params={"acting_user_email": "officer@bank.test"}),
+    ):
+        assert read.status_code == 200
+        assert read.json()["scoped_to"] in ("credit_analyst", "senior_credit_officer")
+        card = next(d for d in read.json()["deals"] if d["deal_code"] == created["deal_code"])
+        assert card["requested_amount"] == 400000
+        assert "created_by_user_id" in card
+
+
+def test_reads_by_an_unknown_identity_are_refused_not_downgraded():
+    """A forged identity must 403 — never fall back to a wider view."""
+    for path in ("/api/deals", "/api/pipeline"):
+        forged = client.get(path, headers={"x-user-email": "nobody@evil.test"})
+        assert forged.status_code == 403, path
+        assert "authority" in forged.json()["detail"]
+
+
+def test_relationship_manager_reads_stay_scoped_on_the_board_too():
+    import identity as identity_module
+
+    _submit_deal(borrower_name="RM Scope Co")
+    rm = identity_module.find_user("rm@bank.test")
+    board = client.get("/api/pipeline", headers={"x-user-email": "rm@bank.test"})
+    assert board.status_code == 200
+    deals = board.json()["deals"]
+    assert deals, "the RM still sees the deals it filed"
+    assert all(
+        d["created_by_user_id"] == rm["id"] or d["assigned_to_user_id"] == rm["id"]
+        for d in deals
+    )
+
+
+def test_approval_decisions_require_a_resolvable_actor():
+    submitted = client.post(
+        "/workflow/submissions",
+        json={"kind": "deal", "payload": {"note": "x"}, "by": "analyst@bank.test"},
+    )
+    assert submitted.status_code == 200
+    item_id = submitted.json()["id"]
+
+    for action in ("approve", "reject"):
+        path = f"/workflow/submissions/{item_id}/{action}"
+        assert client.post(path, json={"reason": "no actor"}).status_code == 422
+        anonymous = client.post(path, json={"actor": "", "reason": "anonymous"})
+        assert anonymous.status_code == 401, action
+        forged = client.post(path, json={"actor": "nobody@evil.test"})
+        assert forged.status_code == 403, action
+
+    decided = client.post(
+        f"/workflow/submissions/{item_id}/approve",
+        json={"actor": "officer@bank.test", "reason": "within policy"},
+    )
+    assert decided.status_code == 200
+    assert decided.json()["decided_by"] == "officer@bank.test"
+
+
+def test_approval_submission_requires_a_resolvable_submitter():
+    anonymous = client.post("/workflow/submissions", json={"kind": "deal", "payload": {}, "by": ""})
+    assert anonymous.status_code == 401
+    forged = client.post("/workflow/submissions", json={"kind": "deal", "payload": {}, "by": "nobody@evil.test"})
+    assert forged.status_code == 403
+
+
+def test_chat_message_length_is_bounded():
+    import main
+
+    too_long = "x" * (main.MAX_CHAT_MESSAGE_CHARS + 1)
+    assert client.post("/chat", json={"message": too_long}).status_code == 422
+    assert client.post("/chat", json={"message": ""}).status_code == 422
+    assert client.post("/chat", json={"message": "hello"}).status_code == 200
+
+
+def test_audit_store_failures_are_not_swallowed():
+    """A durable audit row that cannot be written must fail loudly."""
+    import ext_audit
+    from db import store as real_store
+
+    original = real_store.insert
+
+    def exploding_insert(table, row):
+        if table == "audit_log":
+            raise RuntimeError("audit store unavailable")
+        return original(table, row)
+
+    real_store.insert = exploding_insert
+    try:
+        try:
+            ext_audit.record("deal.something", {"deal_id": "DEAL-0000"}, actor="officer@bank.test")
+        except RuntimeError as exc:
+            assert "audit store unavailable" in str(exc)
+        else:
+            raise AssertionError("record() swallowed a failed audit write")
+    finally:
+        real_store.insert = original

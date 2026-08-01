@@ -1062,7 +1062,11 @@ def record_decision_endpoint(deal_code: str, req: DecisionRequest):
     ("approved", "declined", "returned"). An omitted decision is a 422 — it is
     never read as an approval.
     """
-    _deal_or_404(deal_code)
+    deal = _deal_or_404(deal_code)
+    # Identity and the exposure-tier ladder first (401/403), then the decision
+    # itself (422). The handler re-runs both — this route states the guard
+    # explicitly so the check is visible where the route is registered.
+    _approver_or_403(req.acting_user_email, deal, "record a credit decision")
     _require_decision_value(req.decision)
     return record_approval_decision({"inputs": {
         "deal_id": deal_code,

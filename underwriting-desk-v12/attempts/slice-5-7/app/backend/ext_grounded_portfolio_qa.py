@@ -7,24 +7,42 @@ the deal ids actually retrieved (R-015); the whole exchange — question,
 answer, sources, and trace — is written to the immutable
 `portfolio_qa_sessions` table for audit (R-029/R-056).
 
-GROUNDING (revision): the agent's knowledge is assembled at question time from
-the STORED deal records — pipeline stage, status, requested/exposure amounts,
-risk grade, whether a spread has been accepted, open policy exceptions, key
-ratios and ownership — for exactly the deals the asking user's role may see.
-That record set is handed to `agent_runtime.respond()` as the provided
-knowledge for the question, so portfolio questions ("which deals await tiered
-approval", "what is sitting in intake", "who is carrying open exceptions")
-are answered with real deal codes and real figures instead of being refused
-as uncovered. Two safety properties are preserved deterministically, in code:
+GROUNDING: the agent's knowledge is assembled at question time from the STORED
+deal records — pipeline stage, status, requested/exposure amounts, risk grade,
+whether a spread has been accepted, open policy exceptions, key ratios and
+ownership — for exactly the deals the asking user's role may see. That record
+set is handed to `agent_runtime.respond()` as the provided knowledge for the
+question, so portfolio questions ("which deals await tiered approval", "what is
+sitting in intake") are answered with real deal codes and real figures instead
+of being refused as uncovered.
 
-  * every figure quoted back is computed here, never by the model
-    (`_portfolio_facts`), and the answer is always framed as an automated
-    draft pending analyst approval;
-  * when the stored records genuinely do not contain an answer — no deals in
-    scope at all — the desk says so and cites nothing rather than inventing
-    figures. A model reply that refuses or cites nothing while records DO
-    exist is replaced by the deterministic digest of those records, and the
-    raw model text is kept in the session trace for audit.
+Three properties are guaranteed deterministically, in code — never by trusting
+the model:
+
+  * IDENTITY IS FAIL-CLOSED AND UNCONDITIONAL. Every route here resolves the
+    caller before it touches a record: `/api/qa/ask` and `/api/qa/book-summary`
+    through `identity.require_actor` (no identity → 401, unknown/deactivated →
+    403, wrong role → 403) and `/api/qa/sessions` through
+    `identity.require_reader` (an unidentified caller reads the *redacted*
+    session log — row shape and timing only, never a question, an answer or a
+    deal id). No guard on this module sits behind an `if acting_user_email:`;
+    scope is ALWAYS resolved through `identity.visible_deals`. On top of that
+    the roster's read tools are themselves scope-guarded (`permitted_scope` /
+    `_in_scope`), so a read of a deal outside the resolved scope raises even if
+    a future caller reaches the tools directly.
+
+  * NO FIGURE IS EVER PRODUCED BY THE MODEL. Every number the desk quotes is
+    computed here (`_portfolio_facts`), and the model's narrative is only
+    allowed through when `_verify_narrative` confirms it cites the retrieved
+    records AND that every numeral in it is one this module computed.
+    Otherwise the answer IS the deterministic, records-derived digest
+    (`_deterministic_digest`); the raw model text is kept in the session trace
+    for audit but is never served as the answer.
+
+  * WHEN THE RECORDS DO NOT CONTAIN AN ANSWER THE DESK SAYS SO. An asker with
+    nothing in scope is told there is nothing to ground an answer in and is
+    given no figures at all; a "none match" answer still cites the deals that
+    were actually read to reach it (the citable-ids honesty guard).
 
 The `portfolio-qa` workflow's (workflows/workflows.json) four deterministic
 nodes are implemented and registered here as real handlers
@@ -40,13 +58,15 @@ the asking officer accepting the drafted answer is what triggers recording,
 mirroring triage/spread acceptance elsewhere in this app, just without a
 second round trip since a Q&A answer never changes deal state.
 """
+import contextlib
+import contextvars
 import datetime
 import json
 import os
 import re
 
-from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
+from fastapi import APIRouter, Header, HTTPException
+from pydantic import BaseModel, Field
 
 import agent_runtime
 import citations
@@ -61,13 +81,22 @@ router = APIRouter()
 
 PORTFOLIO_AGENT_NAME = "Portfolio Q&A Agent"
 # Server-side authority to use the desk at all; scope within it is resolved
-# per-role below. identity.require_actor is DEFAULT-DENY, so an unrecognised
-# caller reads nothing.
+# per-role below. identity.require_actor is FAIL-CLOSED, so a caller with no
+# identity is a 401 and an unrecognised one reads nothing.
 QA_PERMISSION = "portfolio.query"
-BROAD_VISIBILITY_ROLES = {"credit_analyst", "senior_credit_officer", "admin"}
+# The permission that widens read scope from "my own deals" to the whole book.
+BOOK_WIDE_PERMISSION = "deal.view_all"
+
+# An unbounded question is a denial-of-service and a prompt-injection surface,
+# so it is length-bounded at the edge (same standard as main.ChatRequest).
+MIN_QUESTION_CHARS = 1
+MAX_QUESTION_CHARS = 2000
 
 # Every answer this desk produces is a draft for a human, never a decision.
 DRAFT_FRAMING = "Automated draft pending analyst approval."
+
+# What an unidentified caller sees in place of a recorded session's content.
+REDACTED = "[redacted — identify yourself to read the Q&A session log]"
 
 # A request to act on a deal is refused before it ever reaches retrieval or
 # the model — the read-only Q&A agent holds no write tools at all (R-055),
@@ -141,43 +170,94 @@ def _money(amount):
 
 
 # ------------------------------------------------------------------------
+# read scope: the roster's declared read tools are themselves fail-closed.
+#
+# A permission scope resolved by `resolve_qa_permission_scope` is bound for the
+# duration of a retrieval; every read tool asserts the deal it is asked for is
+# inside it. So the scope check is not something a caller can forget to make —
+# reading OUTSIDE a resolved scope, or with no scope bound at all, raises.
+# ------------------------------------------------------------------------
+
+_READ_SCOPE = contextvars.ContextVar("qa_read_scope", default=None)
+
+
+@contextlib.contextmanager
+def permitted_scope(deal_ids):
+    """Bind the deal ids the current caller is permitted to read."""
+    token = _READ_SCOPE.set(frozenset(deal_ids or ()))
+    try:
+        yield
+    finally:
+        _READ_SCOPE.reset(token)
+
+
+def _in_scope(deal_id):
+    allowed = _READ_SCOPE.get()
+    if allowed is None:
+        raise HTTPException(
+            status_code=403,
+            detail="portfolio read tools may only be used inside a resolved permission scope",
+        )
+    if deal_id not in allowed:
+        raise HTTPException(
+            status_code=403,
+            detail=f"deal '{deal_id}' is outside this caller's permission scope",
+        )
+    return deal_id
+
+
+# ------------------------------------------------------------------------
 # tool-registry: the roster's declared read tools, enforced through
 # tools.invoke() so the agent's allow/deny list is a structural guarantee
 # rather than just documentation (R-055).
 # ------------------------------------------------------------------------
 
 def _read_deal(deal_id):
-    return deals_repo.get_deal(deal_id)
+    return deals_repo.get_deal(_in_scope(deal_id))
 
 
 def _read_spread(deal_id):
+    _in_scope(deal_id)
     return [r for r in store.list("financial_spread_template") if r.get("deal_id") == deal_id]
 
 
 def _read_ratios(deal_id):
+    _in_scope(deal_id)
     return [r for r in store.list("financial_ratios") if r.get("deal_id") == deal_id]
 
 
 def _read_risk_grade(deal_id):
+    _in_scope(deal_id)
     rows = [r for r in store.list("risk_grades") if r.get("deal_id") == deal_id]
     return rows[-1] if rows else None
 
 
 def _read_memo(deal_id):
+    _in_scope(deal_id)
     rows = [o for o in store.list("agent_outputs") if o.get("deal_id") == deal_id and o.get("agent_id") == "credit-memo"]
     return rows[-1] if rows else None
 
 
 def _read_policy_exceptions(deal_id):
+    _in_scope(deal_id)
     return [r for r in store.list("policy_exceptions") if r.get("deal_id") == deal_id]
 
 
 def _read_audit_timeline(deal_id):
+    _in_scope(deal_id)
     return [r for r in store.list("audit_log") if r.get("deal_id") == deal_id]
 
 
 def _search_deals_in_scope(visible_deal_ids, keyword=None):
-    visible = set(visible_deal_ids or [])
+    """Search is bounded by the intersection of the caller's stated visibility
+    and the scope actually bound for this read — never by the argument alone."""
+    bound = _READ_SCOPE.get()
+    if bound is None:
+        raise HTTPException(
+            status_code=403,
+            detail="portfolio read tools may only be used inside a resolved permission scope",
+        )
+    visible = set(visible_deal_ids or ()) & set(bound)
     found = [d for d in deals_repo.all_current_deals() if d.get("deal_code") in visible]
     if keyword:
         k = keyword.lower()
@@ -205,25 +285,28 @@ for _name, _fn in {
 def resolve_qa_permission_scope(context):
     """Node `scope`: R-053/R-054 — retrieval scope is resolved from server-
     side RBAC before the agent sees anything; the agent never computes its
-    own scope. A relationship manager only ever sees deals they created
-    (R-053); analysts, officers, and admins see the whole active book, which
-    is what R-014's "spanning active deals" portfolio question requires.
+    own scope. A relationship manager only ever sees deals they created or
+    hold (R-053); analysts, officers, and admins hold `deal.view_all` and so
+    see the whole active book, which is what R-014's "spanning active deals"
+    portfolio question requires.
 
-    Guarded with identity.require_actor so this handler is safe even when it
-    is reached through workflow_engine.start() rather than the endpoint."""
+    UNCONDITIONALLY guarded with identity.require_actor — no identity is a
+    401, an unknown or deactivated one a 403 — and scoping always runs through
+    `identity.visible_deals`, the app's single read-scoping helper, rather than
+    a role list this module keeps for itself. Safe when reached through
+    workflow_engine.start() as well as through the endpoint."""
     inputs = context.get("inputs", context)
     user = identity.require_actor(
         inputs.get("acting_user_email"), QA_PERMISSION, "ask the portfolio desk"
     )
-    role = user.get("role")
-    all_deals = deals_repo.all_current_deals()
-    if role in BROAD_VISIBILITY_ROLES:
-        visible = [d["deal_code"] for d in all_deals]
-    else:
-        visible = [d["deal_code"] for d in identity.visible_deals(user, all_deals)]
+    visible = [
+        d["deal_code"]
+        for d in identity.visible_deals(user, deals_repo.all_current_deals())
+        if d.get("deal_code")
+    ]
     return {
         "user_id": user["id"],
-        "role": role,
+        "role": user.get("role"),
         "question": inputs.get("question"),
         "visible_deal_ids": sorted(visible),
         "scope_is_empty": len(visible) == 0,
@@ -254,7 +337,7 @@ def _days_since(timestamp):
 
 def _build_record(agent, deal_code):
     """The live knowledge row for one deal, read only through the roster's
-    declared read tools."""
+    declared read tools — which refuse a deal outside the bound scope."""
     deal = tools.invoke(agent, "read_deal", deal_id=deal_code)
     if deal is None:
         return None
@@ -283,6 +366,14 @@ def _build_record(agent, deal_code):
     }
 
 
+def _records_for(scope_deal_ids):
+    """Build the knowledge rows for a resolved scope, with that scope bound so
+    the read tools can enforce it."""
+    agent = _agent()
+    with permitted_scope(scope_deal_ids):
+        return [rec for rec in (_build_record(agent, code) for code in scope_deal_ids) if rec is not None]
+
+
 def _portfolio_facts(records):
     """Every figure the desk ever quotes is computed HERE, in deterministic
     code — no financial arithmetic is ever delegated to the model (R-042)."""
@@ -290,12 +381,13 @@ def _portfolio_facts(records):
     for r in records:
         stage = r.get("current_stage") or "intake"
         by_stage[stage] = by_stage.get(stage, 0) + 1
+    total_exposure = sum(
+        float(r.get("exposure_amount") or r.get("requested_amount") or 0) for r in records
+    )
     return {
         "deal_count": len(records),
-        "total_exposure": sum(float(r.get("exposure_amount") or r.get("requested_amount") or 0) for r in records),
-        "total_exposure_display": _money(
-            sum(float(r.get("exposure_amount") or r.get("requested_amount") or 0) for r in records)
-        ),
+        "total_exposure": total_exposure,
+        "total_exposure_display": _money(total_exposure),
         "by_stage": {s: by_stage[s] for s in PIPELINE_STAGES if s in by_stage},
         "open_exception_count": sum(int(r.get("open_policy_exceptions") or 0) for r in records),
         "without_accepted_spread": len([r for r in records if not r.get("has_accepted_spread")]),
@@ -345,12 +437,11 @@ def retrieve_grounded_deal_context(context):
     grows. The only truncation anywhere in this module is a display one in
     `_deterministic_digest`, applied AFTER relevance filtering, disclosed in
     the prose ("+N more"), and never applied to `source_deal_ids` — so a
-    relevant deal is never silently dropped from the answer's sources."""
+    relevant deal is never silently dropped from an answer's sources."""
     visible = context.get("visible_deal_ids", [])
     question = context.get("question")
-    agent = _agent()
 
-    scope_records = [rec for rec in (_build_record(agent, code) for code in visible) if rec is not None]
+    scope_records = _records_for(visible)
     selected, subject = _select_records(question, scope_records)
 
     return {
@@ -359,6 +450,7 @@ def retrieve_grounded_deal_context(context):
         "record_count": len(selected),
         "subject": subject,
         "scope_deal_ids": [r["deal_id"] for r in scope_records],
+        "scope_records": scope_records,
         "scope_facts": _portfolio_facts(scope_records),
         "selection_facts": _portfolio_facts(selected),
     }
@@ -423,9 +515,10 @@ def _knowledge_block(retrieve):
 
 def _deterministic_digest(question, retrieve):
     """The grounded answer written straight from the stored records, in code.
-    Used when the model declines to use the records it was given, so a
+    This — not the model's prose — is what the desk serves whenever the model's
+    narrative cannot be verified against the records it was handed, so a
     portfolio question is answered with real deal codes and real figures
-    instead of a refusal — and never with a figure nobody computed."""
+    instead of a refusal, and never with a figure nobody computed."""
     selected = retrieve["context_records"]
     subject = retrieve["subject"]
     if not selected:
@@ -465,6 +558,10 @@ def _deterministic_digest(question, retrieve):
     )
 
 
+# ------------------------------------------------------------------------
+# narrative verification — the model's prose is a CANDIDATE, never the answer
+# ------------------------------------------------------------------------
+
 _REFUSAL_MARKERS = (
     "not covered", "does not cover", "doesn't cover", "hand off", "hand this off",
     "handing off", "no information", "cannot answer", "can't answer", "unable to answer",
@@ -472,20 +569,78 @@ _REFUSAL_MARKERS = (
     "no data available", "i don't have", "i do not have",
 )
 
+_DEAL_CODE_RE = re.compile(r"deal-\d+", re.I)
+_NUMBER_RE = re.compile(r"\d[\d,]*(?:\.\d+)?")
 
-def _model_ignored_the_records(narrative, selected):
-    """True when the model's reply cites none of the records it was handed and
-    reads like a refusal — i.e. the answer is not grounded in live data."""
+
+def _as_number(token):
+    try:
+        return round(float(str(token).replace(",", "").replace("$", "").strip()), 4)
+    except (TypeError, ValueError):
+        return None
+
+
+def _system_computed_numbers(retrieve):
+    """Every numeral this module computed or read from a stored record. A
+    narrative may only be served if every number in it is in this set — that is
+    what "no financial math is delegated to the model" means mechanically."""
+    allowed = set()
+
+    def add(value):
+        n = _as_number(value)
+        if n is not None:
+            allowed.add(n)
+
+    for facts in (retrieve["selection_facts"], retrieve["scope_facts"]):
+        add(facts["deal_count"])
+        add(facts["total_exposure"])
+        add(facts["open_exception_count"])
+        add(facts["without_accepted_spread"])
+        for count in facts["by_stage"].values():
+            add(count)
+    for r in retrieve["context_records"] + retrieve.get("scope_records", []):
+        for key in (
+            "requested_amount", "exposure_amount", "open_policy_exceptions",
+            "spread_line_count", "days_since_activity",
+        ):
+            add(r.get(key))
+        for value in (r.get("key_ratios") or {}).values():
+            add(value)
+    return allowed
+
+
+def _verify_narrative(narrative, retrieve):
+    """Decide whether the model's prose may be served as the answer.
+
+    Returns (ok, reason). FAIL-CLOSED — anything unverifiable falls back to the
+    deterministic digest, and the raw text is kept only in the audit trace.
+    """
     if not narrative or not narrative.strip():
-        return True
+        return False, "empty_reply"
     low = narrative.lower()
-    # An echo of the knowledge block back at us is not an answer (the
-    # deterministic offline responder does exactly this).
     if "provided knowledge for this question" in low:
-        return True
-    if any(r["deal_id"].lower() in low for r in selected):
-        return False
-    return any(marker in low for marker in _REFUSAL_MARKERS)
+        return False, "echoed_the_prompt"
+    if any(marker in low for marker in _REFUSAL_MARKERS):
+        return False, "refused_despite_records"
+    selected = retrieve["context_records"]
+    if not selected:
+        return False, "no_matching_records"
+    if not any(r["deal_id"].lower() in low for r in selected):
+        return False, "cited_none_of_the_records"
+    # Any deal id it names must be one it was actually given.
+    given = {r["deal_id"].lower() for r in selected} | {c.lower() for c in retrieve["scope_deal_ids"]}
+    for code in _DEAL_CODE_RE.findall(low):
+        if code not in given:
+            return False, f"cited_out_of_scope_deal:{code}"
+    # Any figure it quotes must be one THIS module computed.
+    allowed = _system_computed_numbers(retrieve)
+    for token in _NUMBER_RE.findall(_DEAL_CODE_RE.sub(" ", narrative)):
+        value = _as_number(token)
+        if value is None:
+            continue
+        if value not in allowed:
+            return False, f"quoted_a_figure_the_system_did_not_compute:{token}"
+    return True, "agent"
 
 
 def _summarize(record):
@@ -567,13 +722,19 @@ workflow_engine.register_handler("record_qa_session", record_qa_session)
 # ------------------------------------------------------------------------
 
 class QaAskRequest(BaseModel):
-    question: str
-    acting_user_email: str
+    # Bounded at the edge: an empty or unbounded question is a 422 before it
+    # ever reaches identity resolution or the model.
+    question: str = Field(min_length=MIN_QUESTION_CHARS, max_length=MAX_QUESTION_CHARS)
+    # Optional in the schema so that an anonymous ask is answered by the
+    # identity guard with 401 ("identify yourself") rather than by FastAPI with
+    # a 422 that says nothing about authority.
+    acting_user_email: str | None = None
 
 
 @router.post("/api/qa/ask")
 def ask_portfolio_qa(req: QaAskRequest):
-    # Default-deny server-side authority check before any record is read.
+    # FAIL-CLOSED authority check before any record is read: no identity → 401,
+    # unknown/deactivated → 403, role without portfolio.query → 403.
     identity.require_actor(req.acting_user_email, QA_PERMISSION, "ask the portfolio desk")
 
     scope = resolve_qa_permission_scope({"inputs": {"acting_user_email": req.acting_user_email, "question": req.question}})
@@ -646,14 +807,19 @@ def ask_portfolio_qa(req: QaAskRequest):
     )
     raw_narrative = agent_runtime.respond(prompt, agent_name=PORTFOLIO_AGENT_NAME)
 
-    fell_back = _model_ignored_the_records(raw_narrative, retrieve["context_records"])
-    narrative = _deterministic_digest(question, retrieve) if fell_back else raw_narrative
+    # The model's prose is only a candidate. It is served ONLY when it is
+    # verifiably grounded in the retrieved records and quotes no figure this
+    # module did not compute; otherwise the answer is the records-derived
+    # digest and the raw reply survives only in the audit trace.
+    narrative_ok, narrative_verdict = _verify_narrative(raw_narrative, retrieve)
+    narrative = raw_narrative if narrative_ok else _deterministic_digest(question, retrieve)
+    narrative_source = "agent" if narrative_ok else "deterministic_records_digest"
 
     # Deals were examined even when none matched — the "none match" claim is
-    # itself grounded in those records, so they are cited.
-    citable = retrieve["context_records"] or [
-        rec for rec in (_build_record(_agent(), code) for code in retrieve["scope_deal_ids"]) if rec
-    ]
+    # itself grounded in those records, so they are cited (the citable-ids
+    # honesty guard: an answer never claims a source it did not read, and never
+    # hides the reading it did do).
+    citable = retrieve["context_records"] or retrieve["scope_records"]
     answer_text, cited_ids, _sourced = _build_answer(narrative, citable)
     unsupported = [] if retrieve["context_records"] else [f"no deal in scope matches {retrieve['subject']}"]
 
@@ -670,9 +836,10 @@ def ask_portfolio_qa(req: QaAskRequest):
         "source_deal_ids": cited_ids,
         "trace_data": {
             "scope": scope,
-            "retrieve": retrieve,
+            "retrieve": {k: v for k, v in retrieve.items() if k != "scope_records"},
             "groundcheck": ground,
-            "narrative_source": "deterministic_records_digest" if fell_back else "agent",
+            "narrative_source": narrative_source,
+            "narrative_verdict": narrative_verdict,
             "agent_raw_answer": raw_narrative,
         },
     })
@@ -685,7 +852,7 @@ def ask_portfolio_qa(req: QaAskRequest):
         "grounded": ground["grounded"],
         "record_count": retrieve["record_count"],
         "subject": retrieve["subject"],
-        "narrative_source": "deterministic_records_digest" if fell_back else "agent",
+        "narrative_source": narrative_source,
         "session_id": rec["session_id"],
         "user_id": scope["user_id"],
         "role": scope["role"],
@@ -693,13 +860,20 @@ def ask_portfolio_qa(req: QaAskRequest):
 
 
 @router.get("/api/qa/book-summary")
-def qa_book_summary(acting_user_email: str):
+def qa_book_summary(
+    acting_user_email: str | None = None,
+    x_user_email: str | None = Header(default=None),
+):
     """The desk's "Book at a Glance" tallies, computed from the same stored,
-    permission-scoped deal records the answers are grounded in."""
-    identity.require_actor(acting_user_email, QA_PERMISSION, "read the portfolio book summary")
-    scope = resolve_qa_permission_scope({"inputs": {"acting_user_email": acting_user_email, "question": ""}})
-    agent = _agent()
-    records = [r for r in (_build_record(agent, code) for code in scope["visible_deal_ids"]) if r]
+    permission-scoped deal records the answers are grounded in.
+
+    These are portfolio figures (exposure, exception counts), so this read is
+    guarded exactly like the ask: identity is required — 401 with none, 403 for
+    an unknown caller or a role without `portfolio.query`."""
+    email = acting_user_email or x_user_email
+    identity.require_actor(email, QA_PERMISSION, "read the portfolio book summary")
+    scope = resolve_qa_permission_scope({"inputs": {"acting_user_email": email, "question": ""}})
+    records = _records_for(scope["visible_deal_ids"])
     facts = _portfolio_facts(records)
     return {
         "role": scope["role"],
@@ -713,16 +887,58 @@ def qa_book_summary(acting_user_email: str):
     }
 
 
+def _session_projection(session, reader, visible_deal_ids, book_wide):
+    """What `reader` may see of one recorded session.
+
+    An unidentified caller gets the row's SHAPE and nothing else — no question,
+    no answer, no deal id, no asker — mirroring the foundation's redacted board
+    projection. An identified caller sees its own sessions in full, and the deal
+    ids on any session are still intersected with what that role may see."""
+    if identity.is_anonymous(reader):
+        return {
+            "id": session.get("id"),
+            "user_id": None,
+            "question": REDACTED,
+            "grounded_response": REDACTED,
+            "source_deal_ids": [],
+            "created_at": session.get("created_at"),
+            "redacted": True,
+        }
+    sources = [d for d in (session.get("source_deal_ids") or []) if d in visible_deal_ids]
+    row = {
+        "id": session.get("id"),
+        "user_id": session.get("user_id"),
+        "question": session.get("question"),
+        "grounded_response": session.get("grounded_response"),
+        "source_deal_ids": sources,
+        "created_at": session.get("created_at"),
+    }
+    if book_wide:
+        row["trace_data"] = session.get("trace_data")
+    return row
+
+
 @router.get("/api/qa/sessions")
-def list_qa_sessions(acting_user_email: str | None = None):
+def list_qa_sessions(
+    acting_user_email: str | None = None,
+    x_user_email: str | None = Header(default=None),
+):
     """The Q&A session log, most-recent first — the audit read-back for R-029.
 
-    When a caller identifies itself the log is scoped to what that role may
-    see (same contract as `GET /api/deals`): the desk roles read the whole
-    log, a relationship manager reads only its own sessions."""
+    The guard is UNCONDITIONAL and fail-closed (`identity.require_reader`, the
+    same helper the deal book and pipeline board use): an identity that
+    resolves to no stored user is a 403, an identified caller is scoped by role
+    — the desk roles read the whole log, a relationship manager reads only its
+    own sessions and only the deal ids it may see — and an UNIDENTIFIED caller
+    reads the redacted projection: it can see that sessions exist and when, but
+    never a question, an answer, an asker or a deal id."""
+    reader = identity.require_reader(acting_user_email or x_user_email, action="read the Q&A session log")
+    book_wide = identity.has_permission(reader, BOOK_WIDE_PERMISSION)
+    visible_deal_ids = {
+        d.get("deal_code")
+        for d in identity.visible_deals(reader, deals_repo.all_current_deals())
+    }
     sessions = list(reversed(store.list("portfolio_qa_sessions")))
-    if acting_user_email:
-        actor = identity.require_actor(acting_user_email, QA_PERMISSION, "read the Q&A session log")
-        if actor.get("role") not in BROAD_VISIBILITY_ROLES:
-            sessions = [s for s in sessions if s.get("user_id") == actor["id"]]
-    return sessions
+    if not identity.is_anonymous(reader) and not book_wide:
+        sessions = [s for s in sessions if s.get("user_id") == reader.get("id")]
+    return [_session_projection(s, reader, visible_deal_ids, book_wide) for s in sessions]

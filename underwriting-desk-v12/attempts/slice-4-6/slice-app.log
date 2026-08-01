@@ -1,45 +1,46 @@
-INFO:     Started server process [70950]
+INFO:     Started server process [8032]
 INFO:     Waiting for application startup.
 INFO:     Application startup complete.
-INFO:     Uvicorn running on http://127.0.0.1:51826 (Press CTRL+C to quit)
-INFO:     127.0.0.1:51829 - "GET /health HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51832 - "POST /api/deals HTTP/1.1" 201 Created
-INFO:     127.0.0.1:51829 - "GET /api/pipeline HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51832 - "POST /api/deals/DEAL-1001/agents/intake-triage/run HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51866 - "POST /api/deals/DEAL-1001/triage/accept HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51832 - "POST /api/deals/DEAL-1004/approve HTTP/1.1" 403 Forbidden
-INFO:     127.0.0.1:51866 - "POST /api/deals/DEAL-1004/approve HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51832 - "POST /api/deals/DEAL-1006/decline HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51866 - "GET /api/sla/idle HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51878 - "GET / HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51878 - "GET /tokens.css HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51880 - "GET /app.js HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51878 - "GET /agent/mode HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51880 - "GET /agents HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51881 - "GET /api/conversations HTTP/1.1" 404 Not Found
-INFO:     127.0.0.1:51882 - "GET /api/pipeline HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51883 - "GET /api/sla/idle HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51884 - "GET /api/approval-tiers HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51878 - "GET /favicon.ico HTTP/1.1" 404 Not Found
-INFO:     127.0.0.1:51878 - "GET /api/deals/DEAL-1004/decisions HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51884 - "GET / HTTP/1.1" 304 Not Modified
-INFO:     127.0.0.1:51883 - "GET /agents HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51884 - "GET /agent/mode HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51882 - "GET /api/conversations HTTP/1.1" 404 Not Found
-INFO:     127.0.0.1:51880 - "GET /api/sla/idle HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51881 - "GET /api/pipeline HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51906 - "GET /api/approval-tiers HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51906 - "GET /api/deals/DEAL-1004/decisions HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51906 - "GET /api/sla/idle HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51881 - "GET /api/approval-tiers HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51881 - "GET /api/deals/DEAL-1004/decisions HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51881 - "GET /api/deals/DEAL-1004/decisions HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51881 - "POST /api/deals/DEAL-1004/approve HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51881 - "GET /api/sla/idle HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51906 - "GET /api/approval-tiers HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51906 - "GET /api/deals/DEAL-1004/decisions HTTP/1.1" 200 OK
+INFO:     Uvicorn running on http://127.0.0.1:55940 (Press CTRL+C to quit)
+INFO:     127.0.0.1:55943 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55944 - "POST /api/deals HTTP/1.1" 201 Created
+INFO:     127.0.0.1:55943 - "GET /api/pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55944 - "POST /api/deals/DEAL-1001/agents/intake-triage/run HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55956 - "POST /api/deals/DEAL-1001/triage/accept HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55944 - "POST /api/deals/DEAL-1004/approve HTTP/1.1" 403 Forbidden
+INFO:     127.0.0.1:55956 - "POST /api/deals/DEAL-1004/approve HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55944 - "POST /api/deals/DEAL-1006/decline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55956 - "GET /api/sla/idle HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55964 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55964 - "GET /tokens.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55965 - "GET /app.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55965 - "GET /agent/mode HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55964 - "GET /agents HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55966 - "GET /api/conversations HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:55967 - "GET /api/pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55968 - "GET /api/sla/idle?acting_user_email=officer%40bank.test HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55969 - "GET /api/approval-tiers?acting_user_email=officer%40bank.test HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55966 - "GET /api/pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55964 - "GET /favicon.ico HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:55964 - "GET /api/deals/DEAL-1004/decisions?acting_user_email=officer%40bank.test HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55966 - "GET / HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:55966 - "GET /agent/mode HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55968 - "GET /api/conversations HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:55969 - "GET /agents HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55967 - "GET /api/pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55965 - "GET /api/sla/idle?acting_user_email=officer%40bank.test HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55982 - "GET /api/approval-tiers?acting_user_email=officer%40bank.test HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55969 - "GET /api/pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55982 - "GET /api/deals/DEAL-1004/decisions?acting_user_email=officer%40bank.test HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55982 - "GET /api/sla/idle?acting_user_email=officer%40bank.test HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55969 - "GET /api/approval-tiers?acting_user_email=officer%40bank.test HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55969 - "GET /api/deals/DEAL-1004/decisions?acting_user_email=officer%40bank.test HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55969 - "GET /api/deals/DEAL-1004/decisions?acting_user_email=officer%40bank.test HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55969 - "POST /api/deals/DEAL-1004/approve HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55969 - "GET /api/sla/idle?acting_user_email=officer%40bank.test HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55982 - "GET /api/approval-tiers?acting_user_email=officer%40bank.test HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55982 - "GET /api/deals/DEAL-1004/decisions?acting_user_email=officer%40bank.test HTTP/1.1" 200 OK
 INFO:     Shutting down
-INFO:     Waiting for background tasks to complete. (CTRL+C to force quit)
 INFO:     Waiting for application shutdown.
 INFO:     Application shutdown complete.
-INFO:     Finished server process [70950]
+INFO:     Finished server process [8032]

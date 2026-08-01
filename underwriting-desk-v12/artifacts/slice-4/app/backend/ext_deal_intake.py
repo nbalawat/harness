@@ -18,7 +18,7 @@ slice does not own would fail on handlers that do not exist yet.
 import datetime
 import time
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Header, HTTPException
 from pydantic import BaseModel
 
 import agent_runtime
@@ -71,7 +71,7 @@ def validate_intake_submission(context):
             "exposure_amount": inputs["exposure_amount"],
             "current_stage": "intake",
             "current_status": "pending_triage",
-            "created_by_user_id": user["id"] if user else None,
+            "created_by_user_id": user["id"],
             "assigned_to_user_id": None,
             "risk_grade": None,
             "decline_reason_code": None,
@@ -80,7 +80,7 @@ def validate_intake_submission(context):
         })
     entry = audit("deal.intake_submitted", {
         "deal_id": deal["deal_code"] if deal else None,
-        "actor_user_id": user["id"] if user else None,
+        "actor_user_id": user["id"],
         "resource_type": "deal",
         "resource_id": deal["deal_code"] if deal else None,
         "after": deal,
@@ -92,7 +92,7 @@ def validate_intake_submission(context):
         "borrower_industry": inputs.get("borrower_industry"),
         "requested_amount": inputs.get("requested_amount"),
         "exposure_amount": inputs.get("exposure_amount"),
-        "submitted_by_user_id": user["id"] if user else None,
+        "submitted_by_user_id": user["id"],
         "audit_entry_id": entry["id"],
     }
 
@@ -193,26 +193,43 @@ def create_deal(req: DealCreateRequest):
     return {**deal, "message": f"Deal {deal['deal_code']} created and entered intake."}
 
 
+def _reader(acting_user_email, x_user_email, action):
+    """Resolve the caller of a read. UNCONDITIONAL and fail-closed: identity may
+    arrive as a query parameter or an `x-user-email` header, an identity that
+    resolves to no stored user is a 403 (never a silent fallback to full
+    access), and an unidentified caller reads as the least-privilege
+    ANONYMOUS_VIEWER, whose rows `identity.visible_deals` redacts to the board
+    projection."""
+    return identity.require_reader(acting_user_email or x_user_email, action=action)
+
+
 @router.get("/api/deals")
-def list_deals(acting_user_email: str | None = None):
-    """The deal book. When a caller identifies itself, the list is scoped to
-    what that role may see — a relationship manager sees only the deals it
-    filed or holds; the analyst/officer desk sees the whole book."""
-    deals = deals_repo.all_current_deals()
-    if acting_user_email:
-        actor = identity.require_actor(acting_user_email, action="read the deal book")
-        return identity.visible_deals(actor, deals)
-    return deals
+def list_deals(
+    acting_user_email: str | None = None,
+    x_user_email: str | None = Header(default=None),
+):
+    """The deal book, always scoped to the caller — a relationship manager sees
+    only the deals it filed or holds, the analyst/officer desk sees the whole
+    book, and an unidentified caller gets the redacted board projection."""
+    reader = _reader(acting_user_email, x_user_email, "read the deal book")
+    return identity.visible_deals(reader, deals_repo.all_current_deals())
 
 
 @router.get("/api/pipeline")
-def pipeline_board():
-    """Every deal, grouped by the stage it presently occupies — the pipeline board."""
-    deals = deals_repo.all_current_deals()
+def pipeline_board(
+    acting_user_email: str | None = None,
+    x_user_email: str | None = Header(default=None),
+):
+    """Every deal the caller may see, grouped by the stage it presently
+    occupies — the pipeline board. Scoped and redacted through the same
+    `visible_deals` guard as the deal book, so the board can never be used as a
+    way around the deal book's access control."""
+    reader = _reader(acting_user_email, x_user_email, "read the pipeline board")
+    deals = identity.visible_deals(reader, deals_repo.all_current_deals())
     columns = {}
     for d in deals:
         columns.setdefault(d.get("current_stage") or "intake", []).append(d)
-    return {"deals": deals, "columns": columns}
+    return {"deals": deals, "columns": columns, "scoped_to": reader.get("role")}
 
 
 def _deal_or_404(deal_code):
@@ -290,7 +307,7 @@ def run_intake_triage(deal_code: str, req: ActingUserRequest):
     })
     audit("triage.agent_run", {
         "deal_id": deal_code,
-        "actor_user_id": actor["id"] if actor else None,
+        "actor_user_id": actor["id"],
         "resource_type": "agent_output",
         "resource_id": output["id"],
         "after": output_content,
@@ -319,7 +336,7 @@ def accept_triage(deal_code: str, req: ActingUserRequest):
     result = record_triage_and_route_to_queue({
         "deal_id": deal_code,
         "recommended_queue": recommended_queue,
-        "actor_user_id": actor["id"] if actor else None,
+        "actor_user_id": actor["id"],
         "triage_decision_id": decision["id"],
         "agent_output_id": output["id"] if output else None,
         "triage_output": output["output_content"] if output else None,

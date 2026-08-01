@@ -119,12 +119,69 @@ sniffing it off the request, which is the standard the security scan reads:
   detail and the `uploaded_by` echo. No other behavior changed; no frontend
   caller PUTs to these endpoints.
 
+### Revision — fail-closed identity across the foundation (audit HIGHs)
+
+The governance `code_audit` raised four HIGH findings against the foundation
+this slice laid down; all four are closed here. No feature behaviour changed:
+all four of this slice's recorded acceptance checks still pass exactly as
+written, all five screens still work, and the backend suite is green (32
+tests).
+
+1. **`identity.py` is the single fail-closed guard, and it is now called
+   unconditionally.** `require_actor(acting_user_email)` — the contract every
+   later slice builds on — returns the stored user row or raises: **401** when
+   no identity is supplied at all (empty and whitespace-only emails included),
+   **403** when the email resolves to no stored, active user or to a role
+   without the required permission. It never returns `None`, so callers use
+   the result directly instead of writing `if user else None` fallbacks (those
+   are all gone from `ext_deal_intake.py`). Alongside it, `require_reader` is
+   the new guard for **reads**, and `can_view_deal` / `visible_deals` are the
+   exported scoping helpers every deal-returning endpoint runs its rows
+   through.
+2. **The deal book and the pipeline board are no longer opt-out.** `GET
+   /api/deals` and `GET /api/pipeline` used to scope only `if
+   acting_user_email:` — dropping the parameter bought the whole book. Both now
+   call `require_reader` unconditionally (identity may arrive as the
+   `acting_user_email` query parameter or an `x-user-email` header) and return
+   `identity.visible_deals(...)`. An identity that resolves to no stored user
+   is a **403**, never a silent downgrade to wider access. An *unidentified*
+   caller is not trusted either: it reads as the least-privilege
+   `ANONYMOUS_VIEWER` principal and gets the **redacted board projection** —
+   deal code, borrower name, industry, stage, status and timestamps only, with
+   requested/exposure amounts, risk grade, owner, borrower entity id and
+   adverse-action reasons stripped (`identity.BOARD_SAFE_FIELDS`). The board
+   therefore cannot be used as a way around the deal book's access control.
+   `frontend/app.js` gained a matching pure-append block: the desk states who
+   it is (`X-User-Email`, from the analyst/RM email on the board) on every
+   same-origin `/api/` **GET**, so the UI keeps its full view — convenience
+   only, since the server still resolves that email and refuses an unknown one.
+3. **Approval decisions require a resolvable actor.** `POST
+   /workflow/submissions/{id}/approve` and `/reject` (and `/submissions`
+   itself) did no identity check at all — any caller could decide any
+   submission under any name. Each now resolves its actor through
+   `identity.require_actor` **before** touching `approval_flow`: 401 with no
+   actor, 403 for an unknown or deactivated one, and the *resolved* email (not
+   the caller-supplied string) is what gets recorded as `decided_by`.
+4. **`POST /chat` bounds its input** — `ChatRequest.message` is
+   `1..MAX_CHAT_MESSAGE_CHARS` (4000), so an unbounded prompt is a 422 at the
+   edge rather than a denial-of-service or injection surface reaching the
+   model.
+5. **`ext_audit.record()` no longer swallows a failed audit write.** The bare
+   `except: pass` around the durable `audit_log` insert is gone: a store
+   failure now propagates and fails the mutation that caused it, because a
+   state change whose audit row silently vanished is an unauditable action.
+
+Nine new tests in `backend/tests/test_deal_intake_and_triage.py` cover the
+redacted anonymous projection, unredacted identified reads (header and query),
+403 on a forged reader, RM scoping on the board, the approval-decision identity
+guard, the chat bound, and the fail-loud audit write.
+
 ## Slice 3 — Credit memo, policy exceptions, and the per-deal chronicle (`memo-policy-and-audit-trail`)
 
 Backend: `backend/ext_memo_policy_audit.py` (new file; no shared module
 rewritten). Frontend: the Audit Timeline screen (`screen-audit-timeline`)
-only. Tests: `backend/tests/test_memo_policy_audit.py` (20 tests; suite green
-at 44).
+only. Tests: `backend/tests/test_memo_policy_audit.py` (29 tests; suite green
+at 61).
 
 **Credit memo.** `POST /api/deals/{code}/agents/credit-memo/run` drafts the
 underwriting memo in six sections — borrower and request, financial position,
@@ -180,14 +237,20 @@ kind narrows the list and shows its real count) and "Export for audit"
 downloads the deal's entries as JSON. Only markup inside
 `#screen-audit-timeline` was touched; `app.js` gained one appended block.
 
-**Foundation fix (shared, one function).** `deals_repo.next_deal_code()` now
-SKIPS a code already carried by a stored row instead of handing it out again.
-Slices seed fixture deals by inserting a row with an explicit `deal_code`, and
-without this guard the DEAL-1001+ sequence eventually hands a freshly filed
-deal the same code as a fixture — two borrowers answering to one deal_code,
-which silently corrupts every read that resolves "the latest row for a code"
-(it did, reproducibly, once the test suite filed its third deal). The first
-filed deal is still DEAL-1001, so slice 1's acceptance is unchanged.
+**Deal-code collision guard (installed from this file, shared module
+untouched).** Fixture deals are inserted with an explicit `deal_code` and
+deliberately do not consume the DEAL-1001+ sequence — that is what keeps the
+first *filed* deal DEAL-1001 for slice 1. The sequence itself, though, issues
+its next number without checking whether a stored row already answers to it,
+so on a desk carrying a DEAL-1003 fixture the third deal filed is handed that
+same code: two borrowers under one `deal_code`, which silently corrupts every
+read that resolves "the latest row for a code" (it did, reproducibly, once the
+test suite filed its third deal). `_install_deal_code_collision_guard()` wraps
+`deals_repo.next_deal_code` so it SKIPS a code already taken — nothing is
+renumbered, reused or issued twice, the first filed deal is still DEAL-1001,
+and the guard is idempotent so sibling slices seeding their own fixtures can
+install the same thing without stacking wrappers. `deals_repo.py` itself is
+byte-identical to the foundation's.
 
 Fixture: `DEAL-1003` (Calder & Vance Millworks, $1.2M against $1.463M
 collateral) ships already spread, calculated and graded — accepted spread
@@ -195,3 +258,62 @@ v3 with a document-and-cell citation per line, DSCR 1.24 / leverage 3.10 /
 current ratio 1.42, grade 4 band `band_4_watch` — so the memo has real cited
 inputs and the chronicle has history from boot. It breaches LTV-CAP-01
 (82.02% against a 75% cap) and DSCR-FLOOR-01 (1.24 against a 1.25 floor).
+
+### Revision — fail-closed reads, a chronicle that leaks no record bodies
+
+Rebased onto the revised foundation (the fail-closed `identity` contract:
+`require_actor` / `require_reader` / `can_view_deal` / `ANONYMOUS_VIEWER`) and
+the governance findings against this slice's file are closed. Every recorded
+acceptance check — slice 1's four and this slice's four — still passes exactly
+as written, and the suite is green at 61.
+
+1. **No read guard is opt-out any more (HIGH).** `_scoped_deal` used to scope
+   only `if acting_user_email:` — omitting the parameter skipped the check
+   entirely. It now calls the foundation's `identity.require_reader`
+   **unconditionally** (identity may arrive as `acting_user_email` or the
+   `x-user-email` header), then runs the deal through `identity.can_view_deal`:
+   a forged or deactivated identity is a **403**, an RM outside its own book is
+   a **403**, and an unidentified caller resolves to the least-privilege
+   `ANONYMOUS_VIEWER` and gets a **redacted projection only**. There is no
+   remaining `if acting_user_email:` in the file; the same sweep hardened
+   `_require`, the handlers' authority check, to 401-on-no-actor and
+   403-on-unknown/deactivated/unpermitted.
+2. **The memo is 401 to an unidentified caller (negative acceptance).** A memo
+   is continuous borrower prose with no board-safe projection, so
+   `GET /api/deals/{code}/memo` refuses an anonymous read outright rather than
+   redacting it — asserted by
+   `test_an_unidentified_read_of_the_memo_is_refused_outright`. The audit and
+   exception-register paths cannot join it at 401: their *recorded acceptance
+   checks are anonymous GETs expecting 200*, so they take the foundation's
+   board pattern instead — unconditional guard, redacted projection.
+3. **The chronicle no longer serves raw payload bodies (HIGH).** `GET
+   /api/deals/{code}/audit` used to return `before_payload` / `after_payload`
+   verbatim, which made the timeline a back door around every endpoint that
+   guards those records. Those keys are **gone from the response for every
+   caller**. Each entry now carries the event, the resolved actor, the
+   timestamp, and a `summary` derived by `summarize_payload()` — a whitelisted,
+   scalar-only, length-bounded projection (nested bodies are dropped, not
+   passed through) plus `changed_fields` and the `resource_id` needed to fetch
+   the record through its own access-controlled endpoint. The memo prose was
+   also removed from the audit row at the point of writing, so it is not merely
+   filtered on the way out. An unidentified reader is redacted further: kind,
+   action and timestamp only — no actor, no resource, no summary. The exception
+   register redacts equivalently (rule and status survive; `violation_detail`,
+   `rationale` and the people behind them do not).
+4. **Medium findings.** `MemoReviewRequest.action` is a
+   `Literal["accept","accept_with_edits","reject"]`, so an unrecognised action
+   is a 422 instead of falling through to accept; rejecting a draft now
+   **requires** a written `rejection_reason` (the `"no reason given"` default is
+   gone) and `accept_with_edits` requires the edited text; disposing of a policy
+   exception checks its **current** status first and refuses a second
+   disposition with a **409**, so a waiver's officer and rationale of record can
+   never be overwritten; and the acting user is attributed on the artefacts, not
+   just the audit row — the accepted memo carries `accepted_by_email` /
+   `accepted_by_role` / `accepted_at`, and the record/resolve responses carry
+   `raised_by_email` / `resolved_by_email`.
+
+Nine new tests cover the anonymous 401, the forged-identity 403s on all three
+reads, the absence of any raw payload (including that the memo prose appears
+nowhere in the timeline), the anonymous redactions, the double-waive 409, the
+required rejection reason, the closed action set, memo attribution, and the
+deal-code guard.

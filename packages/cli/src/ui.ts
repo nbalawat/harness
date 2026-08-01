@@ -288,7 +288,7 @@ export function buildState(workspace: string): Record<string, unknown> {
   }
   let assumptions: unknown[] = [];
   for (const byNode of Object.values(state.artifacts)) {
-    if (byNode.rtm) {
+    if (byNode?.rtm) {
       try {
         assumptions = (JSON.parse(fs.readFileSync(path.join(workspace, byNode.rtm), "utf8")) as { assumptions: unknown[] })
           .assumptions;
@@ -466,9 +466,18 @@ export function buildState(workspace: string): Record<string, unknown> {
         : (dagOrder.get(a.nodeId) ?? 0) - (dagOrder.get(b.nodeId) ?? 0),
     );
     const remaining = w.reopened.filter((id) => !state.committed.has(id) && !state.skipped.has(id));
+    // KIND: a wave that fixes a DEFECT is a remediation; a wave that adds/changes
+    // a REQUIREMENT is an enhancement. The signal is the entry point — feedback
+    // routed to the requirements node (the CR front door) is a change of intent,
+    // not a fix of a broken build. "Remediation" on a healthy new-requirement
+    // wave gives exactly the wrong impression.
+    const reqNodeId = def.nodes.find((n) => (n.outputs ?? []).some((o) => o.name === "requirements"))?.id;
+    const isChange = reqNodeId ? w.feedbacks.some((f) => f.nodeId === reqNodeId) : false;
+    const kind = isChange ? "enhancement" : "remediation";
     return {
       wave: globalIdx + 1,
       at: w.startedAt,
+      kind,
       feedbacks: w.feedbacks,
       reopened: w.reopened,
       remaining,
@@ -1730,7 +1739,7 @@ button.ghost { background:transparent; border:1px solid var(--border); color:var
   </nav>
 </div></div>
 <div class="banner" id="banner"><b>Waiting on you</b><span id="bannerText"></span><button class="primary" onclick="showTab('overview');window.scrollTo({top:0,behavior:'smooth'})">Answer now</button></div>
-<div class="banner remed" id="remBanner"><b>Remediation wave</b><span id="remText"></span></div>
+<div class="banner remed" id="remBanner"><b id="remBannerTitle">In progress</b><span id="remText"></span></div>
 <main>
 <section id="storefront" style="display:none" class="store">
   <div class="hero">
@@ -1769,7 +1778,7 @@ button.ghost { background:transparent; border:1px solid var(--border); color:var
     <div class="card"><h2>About this build</h2><div id="about"></div></div>
     <div class="card"><h2>Quality &amp; test results</h2><div id="quality"></div></div>
   </div>
-  <div class="card" id="remedPanel" style="display:none"><h2>Remediation summary <span class="hint">— problems found and re-verified; click a wave for the full story</span></h2><div id="remedList"></div></div>
+  <div class="card" id="remedPanel" style="display:none"><h2>Remediations &amp; enhancements <span class="hint">— defects fixed and requirements changed after the first build; click any for the full story</span></h2><div id="remedList"></div></div>
   <div class="card" id="findingsPanel" style="display:none"><h2>Security &amp; audit findings <span class="hint" id="findingsCount"></span></h2><div id="findingsList"></div></div>
   <div class="secwrap" id="sec-design" style="display:none">
     <div class="seclabel">The design <span class="hint">— what your app looks like</span></div>
@@ -1848,7 +1857,12 @@ button.ghost { background:transparent; border:1px solid var(--border); color:var
 const STATUS_COLOR = { completed:'var(--good)', running:'var(--accent)', parked:'var(--warn)', failed:'var(--crit)', stopped:'var(--muted)', starting:'var(--warn)' };
 const STATE_ICON = { committed:'✓', failed:'✕', parked:'⏸', started:'●', skipped:'↷', pending:'○' };
 const REM_SRC_ICON = { 'merge conflict': '⛙', 'security scan': '🛡', 'code audit': '🔍', 'live verification': '⚡', 'user review': '👤', 'review feedback': '💬' };
-let waveSel = 'all'; // pipeline sub-view: 'all' or a remediation wave number
+let waveSel = 'all'; // pipeline sub-view: 'all' or a wave number
+// A wave is either a REMEDIATION (fixing a defect) or an ENHANCEMENT (new /
+// changed requirement) — never call the latter "remediation".
+function waveNoun(r) { return r.kind === 'enhancement' ? 'Enhancement' : 'Remediation'; }
+function waveIcon(r) { return r.kind === 'enhancement' ? '✦' : '⟳'; }
+function waveVerbing(r) { return r.kind === 'enhancement' ? 'Adding' : 'Fixing'; }
 function remHeadline(fb) {
   if (!fb) return 'review feedback';
   const head = fb.split(/[:.]/)[0].trim();
@@ -2245,7 +2259,9 @@ async function tick() {
   if (activeRems.length) {
     const r = activeRems[activeRems.length - 1];
     const doneN = r.reopened.length - r.remaining.length;
-    setHTML('remText', 'Fixing <b>' + esc(remHeadline(r.feedback)) + '</b> (feedback on <span class="mono">' + esc(r.nodeId) + '</span>) — ' +
+    setText('remBannerTitle', waveNoun(r) + ' ' + r.wave + ' in progress');
+    document.getElementById('remBanner').style.borderColor = r.kind === 'enhancement' ? 'var(--ok,#2b8a3e)' : 'var(--accent,#3b5bdb)';
+    setHTML('remText', waveVerbing(r) + ' <b>' + esc(remHeadline(r.feedback)) + '</b> (feedback on <span class="mono">' + esc(r.nodeId) + '</span>) — ' +
       doneN + ' of ' + r.reopened.length + ' steps re-verified, now on <span class="mono">' + esc(r.remaining[0]) + '</span>. ' +
       '<span class="fb">Full story: Pipeline tab → wave ' + r.wave + '.</span>');
   }
@@ -2263,7 +2279,7 @@ async function tick() {
       const state = waveVerdict(r);
       const f0 = r.feedbacks[0];
       return '<div class="remrow" data-wave="' + r.wave + '" role="button" tabindex="0">' +
-        '<span style="min-width:7.5rem"><b>' + (REM_SRC_ICON[f0?.source] || '💬') + ' Wave ' + r.wave + '</b></span>' +
+        '<span style="min-width:8.5rem"><b>' + (waveIcon(r)) + ' ' + waveNoun(r) + ' ' + r.wave + '</b></span>' +
         '<span class="hint">' + esc(String(r.at||'').slice(11,19)) + '</span>' +
         '<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(remHeadline(f0?.feedback)) + ' <span class="hint">→ ' + esc(f0?.nodeId || '') + '</span></span>' +
         state + '<span class="hint" style="white-space:nowrap">details →</span></div>';
@@ -2504,9 +2520,9 @@ async function tick() {
   const waves = s.remediation || [];
   if (waves.length) {
     wt.style.display = '';
-    const tabHtml = '<button data-wave="all" class="' + (waveSel === 'all' ? 'active' : '') + '">Live pipeline</button>' +
+    const tabHtml = '<button data-wave="all" class="' + (waveSel === 'all' ? 'active' : '') + '">Live (current state)</button>' +
       waves.map(r => '<button data-wave="' + r.wave + '" class="' + (String(waveSel) === String(r.wave) ? 'active' : '') + '">' +
-        (REM_SRC_ICON[r.feedbacks[0]?.source] || '💬') + ' Remediation ' + r.wave +
+        (REM_SRC_ICON[r.feedbacks[0]?.source] || '💬') + ' ' + waveNoun(r) + ' ' + r.wave +
         (r.remaining.length ? ' <span class="dot"></span>' : '') + '</button>').join('');
     if (wt.innerHTML !== tabHtml) {
       wt.innerHTML = tabHtml;
@@ -2519,18 +2535,18 @@ async function tick() {
     // again, or "queued" steps read as the build going backwards.
     wi.style.display = '';
     const act = waves.filter(r => r.remaining.length > 0).pop();
-    setHTML('waveInfo', '⟳ <b>This is the live state.</b> Remediation ' + (act ? act.wave : '') +
-      ' is re-deriving previously completed steps (they re-verify from scratch — nothing is patched in place). ' +
-      'Select the wave tab above to see what was found and why these steps re-run.');
+    setHTML('waveInfo', '⟳ <b>This is the LIVE pipeline (current state).</b> ' + (act ? waveNoun(act) + ' ' + act.wave : 'A wave') +
+      ' is re-deriving previously completed steps — they re-verify from scratch, nothing is patched in place. ' +
+      'Click the wave tab above to freeze the view to that wave AS IT RAN.');
   } else if (activeWave) {
     wi.style.display = '';
     setHTML('waveInfo',
-      '<div style="margin-bottom:.3rem"><b>Remediation ' + activeWave.wave + '</b> <span class="hint">started ' + esc(String(activeWave.at||'').slice(11,19)) + '</span> ' + waveVerdict(activeWave) + '</div>' +
+      '<div style="margin-bottom:.3rem"><b>' + waveNoun(activeWave) + ' ' + activeWave.wave + '</b> <span class="hint">— shown AS IT RAN at ' + esc(String(activeWave.at||'').slice(11,19)) + ', not current state</span> ' + waveVerdict(activeWave) + '</div>' +
       (activeWave.trigger
         ? '<div class="remfb">⛔ <b>Triggered by</b> <span class="mono">' + esc(activeWave.trigger.nodeId) + '</span> failing: <span class="hint">' + esc(activeWave.trigger.summary) + '</span></div>'
         : '') +
       activeWave.feedbacks.map(f =>
-        '<div class="remfb">' + (REM_SRC_ICON[f.source] || '💬') + ' <b>' + esc(f.source) + '</b> found the problem → feedback delivered to <span class="mono">' + esc(f.nodeId) + '</span>' +
+        '<div class="remfb">' + (REM_SRC_ICON[f.source] || '💬') + ' <b>' + esc(f.source) + '</b> ' + (activeWave.kind === 'enhancement' ? 'requested' : 'found the problem') + ' → feedback delivered to <span class="mono">' + esc(f.nodeId) + '</span>' +
         (f.feedback ? '<details><summary class="hint">what it said</summary><div class="hint" style="white-space:pre-wrap;max-height:160px;overflow:auto">' + esc(f.feedback) + '</div></details>' : '') + '</div>').join('') +
       (activeWave.ended && activeWave.ended.kind === 'failed'
         ? '<div class="remfb">⛔ <b>How this wave ended:</b> <span class="mono">' + esc(activeWave.ended.nodeId) + '</span> failed — <span class="hint">' + esc(activeWave.ended.summary || '') + '</span> → remediation ' + (activeWave.wave + 1) + ' picks it up.</div>'
@@ -2612,7 +2628,7 @@ async function tick() {
   }
   // Phase dividers: label each run phase in the activity stream so the user
   // sees "Remediation 3" begin, not an unexplained burst of re-runs.
-  const phaseLabel = (p) => p === 'build' ? 'Original build' : 'Remediation ' + String(p).replace('wave-', '');
+  const phaseLabel = (p) => { if (p === 'build') return 'Original build'; const n = String(p).replace('wave-',''); const r = (s.remediation||[]).find(x => String(x.wave) === n); return (r ? waveNoun(r) : 'Remediation') + ' ' + n; };
   const groupHtml = (g) => {
     const bad = g.items.some(e => e.type.includes('failed') || e.type.includes('exceeded'));
     const lastE = g.items[g.items.length - 1];

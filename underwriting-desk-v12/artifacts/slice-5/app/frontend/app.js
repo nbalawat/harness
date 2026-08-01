@@ -403,6 +403,44 @@ fetch("/api/conversations")
 })();
 
 // ============================================================
+// Desk identity on reads (foundation).
+// The backend read guard is fail-closed: a read that carries no identity
+// resolves to the least-privilege board viewer, and its rows come back
+// redacted (stage, status and borrower name only — no amounts, owners, grades
+// or decline reasons). So the desk UI states who it is on every same-origin
+// API read, using the analyst/RM email the operator has entered on the board.
+// This is convenience, not authorization: the server still resolves that email
+// against stored users and refuses an unknown or deactivated one.
+// ============================================================
+(function () {
+  function deskEmail() {
+    for (const id of ["triage-analyst-email", "intake-rm-email"]) {
+      const el = document.getElementById(id);
+      const value = el ? String(el.value || "").trim() : "";
+      if (value) return value;
+    }
+    return "";
+  }
+
+  const nativeFetch = window.fetch.bind(window);
+  window.fetch = function (resource, init) {
+    const url = typeof resource === "string" ? resource : (resource && resource.url) || "";
+    const method = String((init && init.method) || (resource && resource.method) || "GET").toUpperCase();
+    const email = deskEmail();
+    if (email && method === "GET" && url.indexOf("/api/") === 0) {
+      const options = Object.assign({}, init);
+      options.headers = Object.assign({}, (init && init.headers) || {}, { "X-User-Email": email });
+      return nativeFetch(resource, options);
+    }
+    return nativeFetch(resource, init);
+  };
+
+  // The board's first load ran before this block was parsed, so it came back
+  // redacted — re-read it now that reads identify the desk.
+  document.dispatchEvent(new CustomEvent("screen:shown", { detail: { screen: "screen-pipeline-board" } }));
+})();
+
+// ============================================================
 // screen-chat: The Portfolio Desk (slice: grounded-portfolio-qa)
 //   - #composer submits to POST /api/qa/ask, grounded + permission-scoped
 //   - "Standing Questions" shortcuts in the marginalia ask the same way

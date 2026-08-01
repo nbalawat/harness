@@ -513,3 +513,27 @@ test("remediation waves: per-wave state is IN-SPAN and index-exact (adversarial 
   const w2merge = w2.actions.find((a) => a.nodeId === "merge-slices");
   assert.equal(w2merge.outcome, "committed");
 });
+
+test("remediation vs enhancement: a new-requirement wave is NOT labelled remediation", () => {
+  const ws = tmpDir("kind");
+  // agentic-app project type so the requirements node ('requirements-synthesis') is known.
+  const AA = path.join(REPO_ROOT, "project-types", "agentic-app");
+  fs.writeFileSync(path.join(ws, "run.json"), JSON.stringify({ projectTypeDir: AA, mockAgents: true }));
+  const T = "2026-08-01T10:00:00.000Z";
+  const ev = (o) => JSON.stringify({ ts: T, ...o });
+  fs.writeFileSync(path.join(ws, "journal.jsonl"), [
+    ev({ type: "run.completed" }),
+    // DEFECT fix routed to a slice -> remediation
+    ev({ type: "node.reopened", nodeId: "slice-2", reason: "user_revision", feedback: "MERGE CONFLICT: pure append." }),
+    ev({ type: "node.running", nodeId: "slice-2" }),
+    ev({ type: "node.committed", nodeId: "slice-2", artifacts: {} }),
+    // NEW REQUIREMENT routed to the requirements front door -> enhancement
+    ev({ type: "node.reopened", nodeId: "requirements-synthesis", reason: "user_revision", feedback: "User change request CR-5: also add an export-to-Excel button." }),
+  ].join("\n") + "\n");
+
+  const s = buildState(ws);
+  assert.equal(s.remediation.length, 2);
+  const [w1, w2] = s.remediation;
+  assert.equal(w1.kind, "remediation", "a defect fix on a slice is a remediation");
+  assert.equal(w2.kind, "enhancement", "a new requirement via the front door is an enhancement, not remediation");
+});

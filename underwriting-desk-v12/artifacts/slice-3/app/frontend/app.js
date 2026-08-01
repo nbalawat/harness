@@ -403,6 +403,42 @@ fetch("/api/conversations")
 })();
 
 // ============================================================
+// Desk identity on reads (foundation).
+// The backend read guard is fail-closed: a read that carries no identity
+// resolves to the least-privilege board viewer, and its rows come back
+// redacted (stage, status and borrower name only — no amounts, owners, grades
+// or decline reasons). So the desk UI states who it is on every same-origin
+// API read, using the analyst/RM email the operator has entered on the board.
+// This is convenience, not authorization: the server still resolves that email
+// against stored users and refuses an unknown or deactivated one.
+// ============================================================
+(function () {
+  function deskEmail() {
+    for (const id of ["triage-analyst-email", "intake-rm-email"]) {
+      const el = document.getElementById(id);
+      const value = el ? String(el.value || "").trim() : "";
+      if (value) return value;
+    }
+    return "";
+  }
+
+  const nativeFetch = window.fetch.bind(window);
+  window.fetch = function (resource, init) {
+    const url = typeof resource === "string" ? resource : (resource && resource.url) || "";
+    const method = String((init && init.method) || (resource && resource.method) || "GET").toUpperCase();
+    const email = deskEmail();
+    if (email && method === "GET" && url.indexOf("/api/") === 0) {
+      const options = Object.assign({}, init);
+      options.headers = Object.assign({}, (init && init.headers) || {}, { "X-User-Email": email });
+      return nativeFetch(resource, options);
+    }
+    return nativeFetch(resource, init);
+  };
+
+  // The board's first load ran before this block was parsed, so it came back
+  // redacted — re-read it now that reads identify the desk.
+  document.dispatchEvent(new CustomEvent("screen:shown", { detail: { screen: "screen-pipeline-board" } }));
+})();
 // The Chronicle — memo, policy and the per-deal audit timeline
 // (slice: memo-policy-and-audit-trail)
 //   - runs the Credit Memo Agent and accepts its draft
@@ -488,10 +524,11 @@ fetch("/api/conversations")
     return text.length > cap ? text.slice(0, cap) + "…" : text;
   }
 
-  // A chronicle entry reads as a sentence, not as a payload dump: the raw
-  // before/after payloads stay available underneath in the delta line.
+  // A chronicle entry reads as a sentence, not as a payload dump. The server
+  // never sends a raw audit payload body — `entry.before` / `entry.after` are
+  // its derived, scalar-only summaries — so this only ever renders a summary.
   function summarise(entry) {
-    const a = entry.after_payload || {};
+    const a = entry.after || {};
     const list = (v) => (Array.isArray(v) ? v.join(", ") : String(v == null ? "" : v));
     switch (entry.action) {
       case "memo.agent_drafted":
@@ -501,11 +538,14 @@ fetch("/api/conversations")
         );
       case "memo.accepted":
         return (
-          "Memo accepted and stored with " + ((a.citation_ids || []).length) +
-          " citations; the deal moved to " + a.current_stage + "."
+          "Memo accepted by " + (a.accepted_by || "a named analyst") + " and stored with " +
+          (a.citation_count || 0) + " citations; the deal moved to " + a.current_stage + "."
         );
       case "memo.rejected":
-        return "Draft rejected and returned to the agent: " + (a.rejection_reason || "no reason given") + ".";
+        return (
+          "Draft rejected by " + (a.rejected_by || "a named analyst") +
+          " with a written reason held on the review record."
+        );
       case "policy.agent_reviewed":
         return (
           a.agent + " tested " + ((a.rules_tested || []).length) + " rules of lending policy " + a.policy_version +
@@ -518,7 +558,8 @@ fetch("/api/conversations")
         );
       case "policy.exceptions_resolved":
         return (
-          "Exceptions " + list(a.resolved_exception_refs) + " dispositioned by " + (a.resolved_by || "an officer") +
+          "Dispositioned by " + (a.resolved_by || "an officer") + ": " +
+          (list(a.dispositions) || list(a.resolved_exception_refs)) +
           "; " + a.open_exception_count + " still open."
         );
       case "ratios.computed":
@@ -532,8 +573,9 @@ fetch("/api/conversations")
         return a.line_items + " line items accepted on template " + a.template_version + ", each carrying a document locator.";
       default:
         return (
-          brief(entry.after_payload) ||
-          brief(entry.before_payload) ||
+          entry.summary ||
+          brief(entry.after) ||
+          brief(entry.before) ||
           (entry.resource_type ? entry.resource_type + " " + entry.resource_id : "recorded")
         );
     }
@@ -600,17 +642,17 @@ fetch("/api/conversations")
 
         // The before/after delta is printed only where there is a real state
         // transition to show; otherwise the sentence above already says it.
-        if (entry.before_payload) {
+        if (entry.before && Object.keys(entry.before).length) {
           const delta = document.createElement("span");
           delta.className = "delta";
           const was = document.createElement("span");
           was.className = "was";
-          was.textContent = brief(entry.before_payload, 80);
+          was.textContent = brief(entry.before, 80);
           delta.appendChild(was);
           delta.appendChild(document.createTextNode(" → "));
           const now = document.createElement("span");
           now.className = "now";
-          now.textContent = brief(entry.after_payload, 100) || "recorded";
+          now.textContent = brief(entry.after, 100) || "recorded";
           delta.appendChild(now);
           body.appendChild(delta);
         }
@@ -637,7 +679,7 @@ fetch("/api/conversations")
   function loadChronicle() {
     const code = dealCode();
     if (!code) return Promise.resolve();
-    return fetch("/api/deals/" + encodeURIComponent(code) + "/audit")
+    return fetch("/api/deals/" + encodeURIComponent(code) + "/audit?acting_user_email=" + encodeURIComponent(analystEmail()))
       .then((r) => (r.ok ? r.json() : { entries: [], counts: {} }))
       .then((data) => {
         entries = data.entries || [];
@@ -681,7 +723,7 @@ fetch("/api/conversations")
   function loadMemo() {
     const code = dealCode();
     if (!code) return Promise.resolve();
-    return fetch("/api/deals/" + encodeURIComponent(code) + "/memo")
+    return fetch("/api/deals/" + encodeURIComponent(code) + "/memo?acting_user_email=" + encodeURIComponent(analystEmail()))
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
         if (!data) return;
@@ -874,7 +916,7 @@ fetch("/api/conversations")
   function loadExceptions() {
     const code = dealCode();
     if (!code) return Promise.resolve();
-    return fetch("/api/deals/" + encodeURIComponent(code) + "/policy-exceptions")
+    return fetch("/api/deals/" + encodeURIComponent(code) + "/policy-exceptions?acting_user_email=" + encodeURIComponent(analystEmail()))
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => renderExceptions(data))
       .catch(() => {});

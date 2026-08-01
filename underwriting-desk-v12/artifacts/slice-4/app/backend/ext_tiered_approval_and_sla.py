@@ -37,7 +37,7 @@ surface is computed in deterministic Python.
 """
 import datetime
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Header, HTTPException
 from pydantic import BaseModel
 
 import approval_flow
@@ -83,6 +83,21 @@ RETURNABLE_STAGES = (
 REQUIRED_DOCUMENT_TYPES = ("balance_sheet", "income_statement", "tax_return")
 
 FINAL_STATUSES = {"approved", "declined"}
+
+# A credit decision is never inferred. Every path that records one must be
+# handed an explicit value from this set — an omitted decision is a 422, never
+# a silent "approved" (that was a HIGH governance finding on this slice).
+DECISION_VALUES = ("approved", "declined", "returned")
+OUTCOME_VALUES = ("approved", "declined", "returned")
+
+# The only stage at which a deal may be approved. Approval is the END of the
+# underwriting run, so a deal still being spread or still carrying an open
+# policy exception cannot be waved through from the decision desk.
+APPROVAL_STAGES = ("tiered_approval",)
+
+# A policy exception in any of these states is settled; anything else is OPEN
+# and blocks approval until a human waives or resolves it.
+SETTLED_EXCEPTION_STATUSES = ("waived", "resolved", "closed")
 
 
 def _now():
@@ -412,6 +427,107 @@ def _decided_approval(deal_code):
     return rows[-1] if rows else None
 
 
+def _already_decided(deal_code, attempting, actor):
+    """The settled-decision guard EVERY decision route shares.
+
+    A credit decision is final: once a deal has been approved or declined, the
+    only thing that may be replayed is the SAME decision by the SAME human (a
+    double-submit of one form). Anything else — flipping an approval to a
+    decline, a second officer deciding again, returning a settled deal — is a
+    409, not a silent overwrite.
+
+    Returns the replayable row when this call is an idempotent repeat, else
+    None when the deal is undecided.
+    """
+    settled = _decided_approval(deal_code)
+    if settled is None:
+        return None
+    if (
+        settled.get("decision") == attempting
+        and settled.get("idempotency_key") == _idempotency_key(deal_code, attempting, actor["id"])
+    ):
+        return settled
+    raise HTTPException(
+        status_code=409,
+        detail=(
+            f"{deal_code} was already {settled.get('decision')} by "
+            f"{settled.get('decided_by_email') or 'a credit officer'} on "
+            f"{settled.get('decided_at')}; a settled credit decision cannot be "
+            f"changed to '{attempting}'"
+        ),
+    )
+
+
+def _open_policy_exceptions(deal_code):
+    """Policy exceptions on this deal that no human has waived or resolved."""
+    return [
+        e for e in store.list("policy_exceptions")
+        if e.get("deal_id") == deal_code
+        and str(e.get("status") or "open").lower() not in SETTLED_EXCEPTION_STATUSES
+    ]
+
+
+def _approval_preconditions_or_409(deal):
+    """The human gate's preconditions, checked server-side before any write.
+
+    Authority (the exposure tier) says WHO may approve. This says WHETHER the
+    deal is approvable at all: it must have reached the approval stage of the
+    underwriting run, and every policy exception raised against it must have
+    been waived or resolved by a human first. Without this, an approval could
+    be posted straight at a deal still in extraction, or over the top of an
+    unwaived policy breach.
+    """
+    deal_code = deal.get("deal_code")
+    stage = deal.get("current_stage")
+    if stage not in APPROVAL_STAGES:
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                f"{deal_code} is at the '{stage}' stage; a deal can only be approved once "
+                f"it reaches the '{APPROVAL_STAGES[0]}' stage of the underwriting run"
+            ),
+        )
+    open_exceptions = _open_policy_exceptions(deal_code)
+    if open_exceptions:
+        refs = sorted({str(e.get("rule_reference") or e.get("id")) for e in open_exceptions})
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                f"{deal_code} carries {len(open_exceptions)} open policy exception(s) "
+                f"({', '.join(refs)}); each must be waived or resolved before approval"
+            ),
+        )
+
+
+def _require_decision_value(value, field="decision"):
+    """An explicit, allow-listed decision — never a default."""
+    if value is None or not str(value).strip():
+        raise HTTPException(
+            status_code=422,
+            detail=f"an explicit {field} is required; one of {list(DECISION_VALUES)}",
+        )
+    value = str(value).strip().lower()
+    if value not in DECISION_VALUES:
+        raise HTTPException(
+            status_code=422,
+            detail=f"{field} must be one of {list(DECISION_VALUES)}, not '{value}'",
+        )
+    return value
+
+
+def _reader_or_401(acting_user_email, header_email, action):
+    """The fail-closed read guard, called UNCONDITIONALLY.
+
+    Identity may arrive as the `acting_user_email` query parameter or the
+    `X-User-Email` header (what the desk UI sends). Either way it goes through
+    `identity.require_actor`: no identity is a 401 and an unknown or
+    deactivated one is a 403. There is no `if acting_user_email:` branch here —
+    an optional guard is a guard the caller opts out of by omitting its name.
+    """
+    email = acting_user_email or header_email
+    return identity.require_actor(email, action=action)
+
+
 # ---------------------------------------------------------------------------
 # Workflow handlers — deal-underwriting-lifecycle (tier / record / outcome / close)
 # ---------------------------------------------------------------------------
@@ -427,13 +543,17 @@ def determine_approval_tier(context):
         or 0
     )
     tier = tier_for(exposure)
+    # The audit actor is the RESOLVED user, never the caller-supplied string —
+    # an unresolvable name is recorded as the system, not as whoever the caller
+    # claimed to be.
+    resolved = identity.known_actor(inputs.get("acting_user_email"))
     entry = audit("approval.tier_determined", {
         "deal_id": deal_code,
-        "actor_user_id": inputs.get("acting_user_email") or "system",
+        "actor_user_id": (resolved or {}).get("id") or "system",
         "resource_type": "deal",
         "resource_id": deal_code,
         "after": {"exposure_amount": exposure, "required_authority_level": tier["level"]},
-    }, actor=str(inputs.get("acting_user_email") or "system"))
+    }, actor=str((resolved or {}).get("email") or "system"))
     return {
         "exposure_amount": exposure,
         "required_authority_level": tier["level"],
@@ -490,12 +610,20 @@ def _record_decision(deal, actor, decision, notes, tier):
 
 
 def record_approval_decision(context):
-    """Node `record`: persist the named human's decision on the deal."""
+    """Node `record`: persist the named human's decision on the deal.
+
+    The decision must be stated EXPLICITLY. An omitted decision used to fall
+    through to "approved", which meant a caller could obtain an approval by
+    saying nothing at all; it is now a 422.
+    """
     inputs = context.get("inputs", context) or {}
     deal_code = (context.get("intake") or {}).get("deal_id") or inputs.get("deal_id")
     deal = _deal_or_404(deal_code)
     actor, tier = _approver_or_403(inputs.get("acting_user_email"), deal)
-    decision = inputs.get("decision") or "approved"
+    decision = _require_decision_value(inputs.get("decision"))
+    if decision == "approved":
+        _approval_preconditions_or_409(deal)
+    _already_decided(deal_code, decision, actor)
     row, _ = _record_decision(deal, actor, decision, inputs.get("decision_notes"), tier)
     entry = audit("deal.decision_recorded", {
         "deal_id": deal_code,
@@ -520,25 +648,82 @@ workflow_engine.register_handler("record_approval_decision", record_approval_dec
 
 
 def record_adverse_action_or_return(context):
-    """Node `outcome`: the adverse-action / return leg of the decision."""
+    """Node `outcome`: the adverse-action / return leg of the decision.
+
+    An adverse-action notice is a regulated artefact, so this handler is a
+    guarded write, not a passthrough:
+
+      * the acting human is resolved through the fail-closed
+        `identity.require_actor` and must hold the permission for the outcome
+        it is recording (`deal.decline` / `deal.return`);
+      * the outcome is explicit and allow-listed — never defaulted;
+      * a decline must name a code from the controlled
+        `adverse_action_reasons` register plus written detail, and that reason
+        is PERSISTED onto the deal record rather than merely echoed back;
+      * a return must name a stage the deal can actually go back to.
+    """
     inputs = context.get("inputs", context) or {}
     deal_code = (context.get("intake") or {}).get("deal_id") or inputs.get("deal_id")
-    outcome = inputs.get("outcome") or "approved"
+    deal = _deal_or_404(deal_code)
+    outcome = _require_decision_value(inputs.get("outcome"), field="outcome")
+    permission = {
+        "declined": "deal.decline",
+        "returned": "deal.return",
+        "approved": "deal.approve",
+    }[outcome]
+    actor = identity.require_actor(
+        inputs.get("acting_user_email"), permission, f"record a '{outcome}' outcome"
+    )
+
     reason_code = inputs.get("adverse_action_reason_code")
     detail = inputs.get("adverse_action_detail")
     returned_to = inputs.get("returned_to_stage")
     reassigned = inputs.get("reassigned_to_user_id")
+
+    if outcome == "declined":
+        codes = active_reason_codes()
+        if reason_code not in codes:
+            raise HTTPException(
+                status_code=422,
+                detail=(
+                    "an adverse action must name a controlled reason code, one of "
+                    f"{codes}"
+                ),
+            )
+        if not str(detail or "").strip():
+            raise HTTPException(
+                status_code=422,
+                detail="an adverse action requires written adverse_action_detail",
+            )
+        # The reason is stored on the deal, not just returned to the caller:
+        # an adverse-action notice the applicant is entitled to must survive
+        # the request that produced it.
+        deals_repo.update_deal(
+            deal_code,
+            decline_reason_code=reason_code,
+            decline_reason_detail=detail,
+            last_activity_timestamp=_iso(),
+        )
+    elif outcome == "returned":
+        if returned_to not in RETURNABLE_STAGES:
+            raise HTTPException(
+                status_code=422,
+                detail=f"returned_to_stage must be one of {list(RETURNABLE_STAGES)}",
+            )
+
     entry = audit("deal.outcome_recorded", {
         "deal_id": deal_code,
-        "actor_user_id": inputs.get("acting_user_email") or "system",
+        "actor_user_id": actor["id"],
         "resource_type": "deal",
         "resource_id": deal_code,
+        "before": {"decline_reason_code": deal.get("decline_reason_code")},
         "after": {
             "outcome": outcome,
             "adverse_action_reason_code": reason_code,
+            "adverse_action_detail": detail,
             "returned_to_stage": returned_to,
         },
-    }, actor=str(inputs.get("acting_user_email") or "system"))
+    }, actor=actor["email"])
     return {
         "outcome": outcome,
         "adverse_action_reason_code": reason_code,
@@ -553,10 +738,39 @@ workflow_engine.register_handler("record_adverse_action_or_return", record_adver
 
 
 def close_approved_deal(context):
-    """Node `close`: move an approved deal into closing, deterministically."""
+    """Node `close`: move an approved deal into closing, deterministically.
+
+    This is a state change, so it is guarded like one: the acting human is
+    resolved fail-closed and must hold approval authority. It also refuses to
+    close a deal that carries no recorded approval — closing is the
+    consequence of a decision, never a substitute for one.
+    """
     inputs = context.get("inputs", context) or {}
     deal_code = (context.get("intake") or {}).get("deal_id") or inputs.get("deal_id")
     deal = _deal_or_404(deal_code)
+    actor = identity.require_actor(inputs.get("acting_user_email"), action="close an approved deal")
+    settled = _decided_approval(deal_code)
+    if settled is None or settled.get("decision") != "approved":
+        raise HTTPException(
+            status_code=409,
+            detail=f"{deal_code} has no recorded approval, so it cannot be closed as approved",
+        )
+    # Authority to close is derived from the recorded approval: the human who
+    # approved it, or anyone holding blanket approval authority. Note that the
+    # approver may be a credit analyst — the tier ladder grants authority
+    # BELOW the ceiling through `deal.recommend`, not `deal.approve` — so a
+    # flat `deal.approve` check here would refuse a legitimate close.
+    if (
+        settled.get("approved_by_user_id") != actor.get("id")
+        and not identity.has_permission(actor, "deal.approve")
+    ):
+        raise HTTPException(
+            status_code=403,
+            detail=(
+                f"role '{actor.get('role')}' did not approve {deal_code} and lacks the "
+                f"authority to close it"
+            ),
+        )
     updated = deals_repo.update_deal(
         deal_code,
         current_stage="closing",
@@ -565,12 +779,12 @@ def close_approved_deal(context):
     )
     entry = audit("deal.closed_approved", {
         "deal_id": deal_code,
-        "actor_user_id": inputs.get("acting_user_email") or "system",
+        "actor_user_id": actor["id"],
         "resource_type": "deal",
         "resource_id": deal_code,
         "before": {"current_stage": deal.get("current_stage"), "current_status": deal.get("current_status")},
         "after": {"current_stage": "closing", "current_status": "approved"},
-    }, actor=str(inputs.get("acting_user_email") or "system"))
+    }, actor=actor["email"])
     return {
         "deal_id": deal_code,
         "final_stage": updated["current_stage"],
@@ -735,7 +949,18 @@ workflow_engine.register_handler("apply_sla_escalation_action", apply_sla_escala
 # ---------------------------------------------------------------------------
 
 class ApproveRequest(BaseModel):
+    """POST /approve — the decision is named by the ROUTE, so there is no
+    `decision` field here to leave blank. The generic decision endpoint
+    (`POST /api/deals/{code}/decision`, below) is the one that takes a decision
+    as data, and it refuses an omitted one with a 422 rather than assuming
+    consent."""
     acting_user_email: str
+    decision_notes: str | None = None
+
+
+class DecisionRequest(BaseModel):
+    acting_user_email: str
+    decision: str | None = None
     decision_notes: str | None = None
 
 
@@ -797,14 +1022,18 @@ def _decision_payload(deal_code, row, tier, actor, replayed=False):
 def approve_deal(deal_code: str, req: ApproveRequest):
     """Approve a deal. Authority is a function of exposure, checked here."""
     deal = _deal_or_404(deal_code)
+    # 1. WHO: identity + the exposure-tier authority ladder, server-side.
     actor, tier = _approver_or_403(req.acting_user_email, deal, "approve this deal")
-
-    settled = _decided_approval(deal_code)
-    if settled is not None and settled.get("decision") == "declined":
-        raise HTTPException(
-            status_code=409,
-            detail=f"{deal_code} was already declined and cannot be approved",
-        )
+    # 2. ONCE: a settled credit decision is never silently overwritten. This
+    #    runs BEFORE the stage precondition, because approving an already
+    #    approved deal is a double-submit of the same form (an idempotent
+    #    replay), not a fresh approval of a deal that has since moved to
+    #    closing.
+    replay = _already_decided(deal_code, "approved", actor)
+    # 3. WHETHER: a FIRST approval also requires that the deal has reached the
+    #    approval gate and carries no open, unwaived policy exception.
+    if replay is None:
+        _approval_preconditions_or_409(deal)
 
     row, replayed = _record_decision(deal, actor, "approved", req.decision_notes, tier)
     close_approved_deal({"inputs": {"deal_id": deal_code, "acting_user_email": actor["email"]}})
@@ -824,6 +1053,29 @@ def approve_deal(deal_code: str, req: ApproveRequest):
     return _decision_payload(deal_code, row, tier, actor, replayed)
 
 
+@router.post("/api/deals/{deal_code}/decision")
+def record_decision_endpoint(deal_code: str, req: DecisionRequest):
+    """Record a credit decision passed as DATA rather than named by the route.
+
+    This is the endpoint behind the lifecycle workflow's `record` node, and it
+    is deliberately strict: `decision` must be present and one of
+    ("approved", "declined", "returned"). An omitted decision is a 422 — it is
+    never read as an approval.
+    """
+    deal = _deal_or_404(deal_code)
+    # Identity and the exposure-tier ladder first (401/403), then the decision
+    # itself (422). The handler re-runs both — this route states the guard
+    # explicitly so the check is visible where the route is registered.
+    _approver_or_403(req.acting_user_email, deal, "record a credit decision")
+    _require_decision_value(req.decision)
+    return record_approval_decision({"inputs": {
+        "deal_id": deal_code,
+        "acting_user_email": req.acting_user_email,
+        "decision": req.decision,
+        "decision_notes": req.decision_notes,
+    }})
+
+
 @router.post("/api/deals/{deal_code}/decline")
 def decline_deal(deal_code: str, req: DeclineRequest):
     """Decline with adverse action: a controlled reason code plus written detail."""
@@ -840,12 +1092,8 @@ def decline_deal(deal_code: str, req: DeclineRequest):
     if not (req.reason_detail or "").strip():
         raise HTTPException(status_code=400, detail="an adverse action requires written reason_detail")
 
-    settled = _decided_approval(deal_code)
-    if settled is not None and settled.get("decision") == "approved":
-        raise HTTPException(
-            status_code=409,
-            detail=f"{deal_code} was already approved and cannot be declined",
-        )
+    # The same settled-decision guard the approve route uses.
+    _already_decided(deal_code, "declined", actor)
 
     row, replayed = _record_decision(deal, actor, "declined", req.reason_detail, tier)
     deals_repo.update_deal(
@@ -895,6 +1143,10 @@ def return_deal(deal_code: str, req: ReturnRequest):
         )
     if not (req.reason or "").strip():
         raise HTTPException(status_code=400, detail="a return requires a written reason")
+
+    # A deal whose credit decision has settled cannot be pulled back into the
+    # underwriting run — same guard as approve and decline.
+    _already_decided(deal_code, "returned", actor)
 
     reassigned_to = None
     if req.reassign_to_email:
@@ -954,13 +1206,21 @@ def return_deal(deal_code: str, req: ReturnRequest):
 
 
 @router.get("/api/deals/{deal_code}/decisions")
-def deal_decisions(deal_code: str, acting_user_email: str | None = None):
-    """The decision record for a deal: tier, approvals/declines, returns."""
+def deal_decisions(
+    deal_code: str,
+    acting_user_email: str | None = None,
+    x_user_email: str | None = Header(default=None),
+):
+    """The decision record for a deal: tier, approvals/declines, returns.
+
+    Fail-closed: an unidentified caller is a 401 and an unknown one a 403,
+    unconditionally — a credit decision, its decider and its adverse-action
+    reason are not public data.
+    """
+    actor = _reader_or_401(acting_user_email, x_user_email, "read this deal's decisions")
     deal = _deal_or_404(deal_code)
-    if acting_user_email:
-        actor = identity.require_actor(acting_user_email, action="read this deal's decisions")
-        if not identity.can_view_deal(actor, deal):
-            raise HTTPException(status_code=403, detail="this deal is outside your permission scope")
+    if not identity.can_view_deal(actor, deal):
+        raise HTTPException(status_code=403, detail="this deal is outside your permission scope")
     tier = tier_for(deal.get("exposure_amount"))
     approvals = [
         {
@@ -1000,17 +1260,20 @@ def deal_decisions(deal_code: str, acting_user_email: str | None = None):
 
 
 @router.get("/api/approval-tiers")
-def approval_tiers(acting_user_email: str | None = None):
+def approval_tiers(
+    acting_user_email: str | None = None,
+    x_user_email: str | None = Header(default=None),
+):
     """The published authority ladder — the UI shows it before a decision.
 
-    The ladder and the reason register are reference data; the list of deals
-    awaiting a decision is deal data, so it is scoped to the caller whenever
-    one identifies itself.
+    The ladder and the reason register are reference data, but the queue of
+    deals awaiting a decision is deal data (borrower names and exposures), so
+    the whole endpoint is guarded fail-closed and its rows are scoped through
+    `identity.visible_deals` — unconditionally, not only when the caller
+    happens to name itself.
     """
-    awaiting = deals_repo.all_current_deals()
-    if acting_user_email:
-        actor = identity.require_actor(acting_user_email, action="read the approval queue")
-        awaiting = identity.visible_deals(actor, awaiting)
+    actor = _reader_or_401(acting_user_email, x_user_email, "read the approval queue")
+    awaiting = identity.visible_deals(actor, deals_repo.all_current_deals())
     return {
         "ceiling": identity.MAX_APPROVAL_EXPOSURE,
         "tiers": [
@@ -1044,13 +1307,28 @@ def approval_tiers(acting_user_email: str | None = None):
 # REST surface — the idle register
 # ---------------------------------------------------------------------------
 
-def _idle_row(deal, now):
+def _idle_row(deal, now, redacted=False):
     last_activity = deal.get("last_activity_timestamp") or deal.get("updated_at") or deal.get("created_at")
     idle = business_days_between(last_activity, now)
     owner_email = _user_email(deal.get("assigned_to_user_id"))
     blocking, _missing, open_exceptions, pending_reviews = _blockers_for(
         deal.get("deal_code"), deal.get("current_stage")
     )
+    if redacted:
+        # An unidentified caller reads the service line, not the book: how long
+        # the deal has sat and at which stage, with no exposure, no owning desk
+        # and no blocking-work detail attached.
+        return {
+            "deal_code": deal.get("deal_code"),
+            "deal_id": deal.get("deal_code"),
+            "borrower_name": deal.get("borrower_name"),
+            "current_stage": deal.get("current_stage"),
+            "current_status": deal.get("current_status"),
+            "last_activity_timestamp": last_activity,
+            "business_days_idle": idle,
+            "sla_breached": idle > SLA_IDLE_BUSINESS_DAYS,
+            "redacted": True,
+        }
     return {
         "deal_code": deal.get("deal_code"),
         "deal_id": deal.get("deal_code"),
@@ -1071,15 +1349,29 @@ def _idle_row(deal, now):
 
 
 @router.get("/api/sla/idle")
-def idle_register(acting_user_email: str | None = None):
-    """Deals sitting past the five-business-day service line, worst first."""
+def idle_register(
+    acting_user_email: str | None = None,
+    x_user_email: str | None = Header(default=None),
+):
+    """Deals sitting past the five-business-day service line, worst first.
+
+    Guarded UNCONDITIONALLY through the foundation's fail-closed read guard —
+    there is no `if acting_user_email:` here, so identity cannot be opted out
+    of by omitting it. A caller that names itself must resolve to a stored,
+    active user (403 otherwise) and sees only the deals
+    `identity.visible_deals` scopes to it. The service line itself is the
+    desk's shared wall, exactly like the pipeline board, so an *unidentified*
+    caller is not refused outright — it reads as the least-privilege
+    `ANONYMOUS_VIEWER` and gets the REDACTED register: stage, status and how
+    long the deal has sat, with exposure, owning desk, blocking work and the
+    idle-by-desk breakdown all withheld.
+    """
+    actor = identity.require_reader(acting_user_email or x_user_email, "read the idle register")
+    redacted = identity.is_anonymous(actor)
     now = _now()
-    deals = deals_repo.all_current_deals()
-    if acting_user_email:
-        actor = identity.require_actor(acting_user_email, action="read the idle register")
-        deals = identity.visible_deals(actor, deals)
+    deals = identity.visible_deals(actor, deals_repo.all_current_deals())
     active = [d for d in deals if d.get("current_status") not in FINAL_STATUSES]
-    measured = [_idle_row(d, now) for d in active]
+    measured = [_idle_row(d, now, redacted=redacted) for d in active]
     breached = sorted(
         [m for m in measured if m["sla_breached"]],
         key=lambda m: m["business_days_idle"],
@@ -1092,7 +1384,10 @@ def idle_register(acting_user_email: str | None = None):
     by_stage, by_owner = {}, {}
     for m in breached:
         by_stage[m["current_stage"] or "unknown"] = by_stage.get(m["current_stage"] or "unknown", 0) + 1
-        by_owner[m["owner"]] = by_owner.get(m["owner"], 0) + 1
+        # The idle-by-desk breakdown names people, so it stays empty for a
+        # redacted (unidentified) read.
+        if not redacted:
+            by_owner[m["owner"]] = by_owner.get(m["owner"], 0) + 1
     return {
         "as_of": _iso(now),
         "sla_threshold_business_days": SLA_IDLE_BUSINESS_DAYS,
@@ -1103,7 +1398,7 @@ def idle_register(acting_user_email: str | None = None):
             "approaching": len(approaching),
             "active_deals": len(active),
         },
-        "idle_exposure": round(sum(m["exposure_amount"] for m in breached), 2),
+        "idle_exposure": round(sum(m.get("exposure_amount") or 0 for m in breached), 2),
         "longest_idle": breached[0] if breached else None,
         "by_stage": by_stage,
         "by_owner": by_owner,
@@ -1112,14 +1407,43 @@ def idle_register(acting_user_email: str | None = None):
     }
 
 
+def _escalation_view(deal_code, run_id, state, actor, fallback_note=""):
+    context = state.get("context") or {}
+    measure = context.get("measure") or {}
+    applied = context.get("apply") or {}
+    return {
+        "deal_id": deal_code,
+        "run_id": run_id,
+        "workflow": "sla-idle-escalation",
+        "status": state.get("status"),
+        "approval_id": state.get("approval_id"),
+        "awaiting_human_decision": state.get("status") == "parked",
+        "sla_breached": measure.get("sla_breached", False),
+        "business_days_idle": measure.get("idle_business_days"),
+        "blocking_items": (context.get("blockers") or {}).get("blocking_items", []),
+        "action_taken": applied.get("action_taken", "none"),
+        "reassigned_to_user_id": applied.get("reassigned_to_user_id"),
+        "returned_to_stage": applied.get("returned_to_stage"),
+        "note": applied.get("note", fallback_note),
+        "decided_by": actor["email"],
+        "error": state.get("error"),
+    }
+
+
 @router.post("/api/sla/{deal_code}/escalate")
 def escalate_idle_deal(deal_code: str, req: EscalationRequest):
-    """Drive the `sla-idle-escalation` workflow end to end for one deal.
+    """OPEN an `sla-idle-escalation` run for one deal and park it for a human.
 
-    measure -> breached? -> blockers -> human escalation decision -> apply.
-    The officer's choice is recorded through approval-flow (the human node's
-    park point), then the run is ticked so the deterministic `apply` handler
-    performs the reassign / return / acknowledge.
+    measure -> breached? -> blockers -> HUMAN escalation decision -> apply.
+
+    The run stops at the human node and stays there. This endpoint deliberately
+    does NOT approve its own park point: a request that both raises the
+    escalation and signs it off is not a human gate, it is a formality, and the
+    officer would never see the measured idle time or the blocking work before
+    committing. The officer reads what came back, then confirms (or abandons)
+    the proposed action with a SECOND, separate decision through
+    `POST /api/sla/runs/{run_id}/decide`, which is what releases the
+    deterministic `apply` handler.
     """
     _deal_or_404(deal_code)
     actor = identity.require_actor(req.acting_user_email, "deal.reassign", "act on the idle register")
@@ -1133,31 +1457,72 @@ def escalate_idle_deal(deal_code: str, req: EscalationRequest):
     }
     run_id = workflow_engine.start("sla-idle-escalation", inputs)
     state = workflow_engine.state(run_id)
-    if state.get("status") == "parked" and state.get("approval_id") is not None:
-        approval_flow.approve(
-            state["approval_id"],
-            actor["email"],
-            reason=req.note or f"{req.action} from the idle register",
-        )
-        state = workflow_engine.tick(run_id)
-    context = state.get("context") or {}
-    measure = context.get("measure") or {}
-    applied = context.get("apply") or {}
-    return {
+    audit("sla.escalation_opened", {
         "deal_id": deal_code,
-        "run_id": run_id,
-        "workflow": "sla-idle-escalation",
-        "status": state.get("status"),
-        "sla_breached": measure.get("sla_breached", False),
-        "business_days_idle": measure.get("idle_business_days"),
-        "blocking_items": (context.get("blockers") or {}).get("blocking_items", []),
-        "action_taken": applied.get("action_taken", "none"),
-        "reassigned_to_user_id": applied.get("reassigned_to_user_id"),
-        "returned_to_stage": applied.get("returned_to_stage"),
-        "note": applied.get("note", req.note or ""),
-        "decided_by": actor["email"],
-        "error": state.get("error"),
-    }
+        "actor_user_id": actor["id"],
+        "resource_type": "workflow_run",
+        "resource_id": run_id,
+        "after": {
+            "proposed_action": req.action,
+            "status": state.get("status"),
+            "approval_id": state.get("approval_id"),
+        },
+    }, actor=actor["email"])
+    view = _escalation_view(deal_code, run_id, state, actor, req.note or "")
+    view["proposed_action"] = req.action
+    view["next_step"] = (
+        f"POST /api/sla/runs/{run_id}/decide to confirm or refuse this escalation"
+        if state.get("status") == "parked"
+        else "no escalation is required — the deal is inside the service line"
+    )
+    return view
+
+
+class EscalationDecisionRequest(BaseModel):
+    acting_user_email: str
+    confirm: bool
+    reason: str | None = None
+
+
+@router.post("/api/sla/runs/{run_id}/decide")
+def decide_escalation(run_id: str, req: EscalationDecisionRequest):
+    """The human gate on a parked escalation — a separate, deliberate act.
+
+    Confirming releases the run so the deterministic `apply` handler performs
+    the reassign / return / acknowledge; refusing rejects the park point and
+    the run ends without touching the deal.
+    """
+    actor = identity.require_actor(
+        req.acting_user_email, "deal.reassign", "decide an idle-register escalation"
+    )
+    state = workflow_engine.state(run_id)
+    if not state or state.get("workflow") != "sla-idle-escalation":
+        raise HTTPException(status_code=404, detail=f"no idle-register escalation run {run_id}")
+    if state.get("status") != "parked":
+        raise HTTPException(
+            status_code=409,
+            detail=f"escalation run {run_id} is '{state.get('status')}', not awaiting a decision",
+        )
+
+    approval_id = state.get("approval_id")
+    reason = req.reason or ("confirmed from the idle register" if req.confirm else "escalation refused")
+    if req.confirm:
+        approval_flow.approve(approval_id, actor["email"], reason=reason)
+    else:
+        approval_flow.reject(approval_id, actor["email"], reason=reason)
+    state = workflow_engine.tick(run_id)
+
+    deal_code = ((state.get("context") or {}).get("measure") or {}).get("deal_id")
+    audit("sla.escalation_decided", {
+        "deal_id": deal_code,
+        "actor_user_id": actor["id"],
+        "resource_type": "workflow_run",
+        "resource_id": run_id,
+        "after": {"confirmed": req.confirm, "reason": reason, "status": state.get("status")},
+    }, actor=actor["email"])
+    view = _escalation_view(deal_code, run_id, state, actor, reason)
+    view["confirmed"] = req.confirm
+    return view
 
 
 @router.post("/api/deals/{deal_code}/reassign")

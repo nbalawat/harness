@@ -1643,7 +1643,7 @@ sup.cite:hover { background: var(--surface-sunken); }
     </p>
 
     <!-- ---------- credit decision desk: approve, decline, return ---------- -->
-    <article class="manuscript" id="decision-desk" style="margin-bottom:2rem;">
+    <article class="manuscript" id="sla-decision-desk" style="margin-bottom:2rem;">
       <div class="manuscript__head">
         <h3>Credit Decision Desk</h3>
         <p>Approve, decline with a controlled adverse-action reason, or return a deal to an
@@ -1653,58 +1653,58 @@ sup.cite:hover { background: var(--surface-sunken); }
       <div class="find-bar" style="border-top:0;padding-top:0;">
         <label class="field">
           <span>Deal</span>
-          <input type="text" id="decision-deal-code" list="decision-deal-codes" value="DEAL-1004" placeholder="DEAL-1004">
-          <datalist id="decision-deal-codes"></datalist>
+          <input type="text" id="sla-decision-deal-code" list="sla-decision-deal-codes" value="DEAL-1004" placeholder="DEAL-1004">
+          <datalist id="sla-decision-deal-codes"></datalist>
         </label>
         <label class="field">
           <span>Your email (credit officer)</span>
-          <input type="email" id="decision-officer-email" value="officer@bank.test">
+          <input type="email" id="sla-decision-officer-email" value="officer@bank.test">
         </label>
         <label class="field field--wide">
           <span>Decision notes / adverse-action detail</span>
-          <input type="text" id="decision-notes" placeholder="Within policy, DSCR above the floor">
+          <input type="text" id="sla-decision-notes" placeholder="Within policy, DSCR above the floor">
         </label>
       </div>
-      <p class="composer-hint" id="decision-authority" role="status"></p>
-      <ul class="docket-list" id="decision-receipt"></ul>
+      <p class="composer-hint" id="sla-decision-authority" role="status"></p>
+      <ul class="docket-list" id="sla-decision-receipt"></ul>
       <div class="decision-bar">
-        <button type="button" class="btn btn--ink" id="decision-approve-btn">Approve</button>
+        <button type="button" class="btn btn--ink" id="sla-decision-approve-btn">Approve</button>
         <label class="field">
           <span>Adverse-action reason</span>
-          <input type="text" id="decision-reason-code" list="decision-reason-codes" placeholder="INSUFFICIENT_DSCR">
-          <datalist id="decision-reason-codes"></datalist>
+          <input type="text" id="sla-decision-reason-code" list="sla-decision-reason-codes" placeholder="INSUFFICIENT_DSCR">
+          <datalist id="sla-decision-reason-codes"></datalist>
         </label>
-        <button type="button" class="btn" id="decision-decline-btn">Decline</button>
+        <button type="button" class="btn" id="sla-decision-decline-btn">Decline</button>
         <label class="field">
           <span>Return to stage</span>
-          <input type="text" id="decision-return-stage" list="decision-return-stages" placeholder="financial_spreading">
-          <datalist id="decision-return-stages"></datalist>
+          <input type="text" id="sla-decision-return-stage" list="sla-decision-return-stages" placeholder="financial_spreading">
+          <datalist id="sla-decision-return-stages"></datalist>
         </label>
-        <button type="button" class="btn btn--quiet" id="decision-return-btn">Return</button>
-        <p class="decision-note" id="decision-status"></p>
+        <button type="button" class="btn btn--quiet" id="sla-decision-return-btn">Return</button>
+        <p class="decision-note" id="sla-decision-status"></p>
       </div>
     </article>
 
     <div class="plate-row">
       <div class="plate">
         <span class="plate-label">Past the service line</span>
-        <span class="plate-figure alarm" id="plate-past-line">0</span>
-        <p class="plate-caption" id="plate-past-line-caption">of 0 active deals</p>
+        <span class="plate-figure alarm" id="sla-plate-past-line">0</span>
+        <p class="plate-caption" id="sla-plate-past-line-caption">of 0 active deals</p>
       </div>
       <div class="plate">
         <span class="plate-label">Exposure at rest</span>
-        <span class="plate-figure" id="plate-idle-exposure">$0</span>
+        <span class="plate-figure" id="sla-plate-idle-exposure">$0</span>
         <p class="plate-caption">idle capital in the book</p>
       </div>
       <div class="plate">
         <span class="plate-label">Longest idle</span>
-        <span class="plate-figure alarm" id="plate-longest">—</span>
-        <p class="plate-caption" id="plate-longest-caption">nothing past the line</p>
+        <span class="plate-figure alarm" id="sla-plate-longest">—</span>
+        <p class="plate-caption" id="sla-plate-longest-caption">nothing past the line</p>
       </div>
       <div class="plate">
         <span class="plate-label">Approaching the line</span>
-        <span class="plate-figure caution" id="plate-approaching">0</span>
-        <p class="plate-caption" id="plate-approaching-caption">idle 3 – 5 business days</p>
+        <span class="plate-figure caution" id="sla-plate-approaching">0</span>
+        <p class="plate-caption" id="sla-plate-approaching-caption">idle 3 – 5 business days</p>
       </div>
     </div>
 
@@ -1723,7 +1723,7 @@ sup.cite:hover { background: var(--surface-sunken); }
               <th scope="col" class="num">Idle</th>
             </tr>
           </thead>
-          <tbody id="idle-register-body"></tbody>
+          <tbody id="sla-idle-register-body"></tbody>
         </table>
 
         <p class="board-footnote">
@@ -1736,12 +1736,12 @@ sup.cite:hover { background: var(--surface-sunken); }
       <aside class="marginalia" aria-label="Service line apparatus">
         <div class="sidebar-panel">
           <h4>Idle by Stage</h4>
-          <ul id="idle-by-stage"></ul>
+          <ul id="sla-idle-by-stage"></ul>
         </div>
 
         <div class="sidebar-panel">
           <h4>Idle by Desk</h4>
-          <ul id="idle-by-desk"></ul>
+          <ul id="sla-idle-by-desk"></ul>
         </div>
 
         <div class="sidebar-panel">
@@ -1752,10 +1752,11 @@ sup.cite:hover { background: var(--surface-sunken); }
 
         <div class="margin-note">
           <h4>Act on the Register</h4>
-          <p>Choose a deal from the register — clicking a row selects it — then hand it to another
-            desk or acknowledge it with a note. Each action runs the
-            <em>sla-idle-escalation</em> workflow: idle time is re-measured, the blockers are
-            collected, the officer's choice is recorded, and the deal's clock resets.</p>
+          <p>Choose a deal from the register — clicking a row selects it — then propose handing it
+            to another desk or acknowledging it. Each action opens an
+            <em>sla-idle-escalation</em> run: idle time is re-measured and the blocking work is
+            collected, and the run then <b>parks for you</b>. Read what came back and confirm it
+            below — the escalation is only applied once a human signs it off, in a second act.</p>
           <label class="field">
             <span>Deal</span>
             <input type="text" id="sla-deal-code" list="sla-deal-codes" placeholder="DEAL-1005">
@@ -1778,6 +1779,11 @@ sup.cite:hover { background: var(--surface-sunken); }
             <button type="button" class="btn btn--sm btn--quiet" id="sla-acknowledge-btn">Acknowledge with note</button>
           </p>
           <p class="decision-note" id="sla-action-status" role="status"></p>
+          <p style="display:flex;flex-wrap:wrap;gap:.4rem;" id="sla-escalation-gate" hidden>
+            <button type="button" class="btn btn--sm btn--ink" id="sla-escalation-confirm-btn">Confirm escalation</button>
+            <button type="button" class="btn btn--sm btn--quiet" id="sla-escalation-refuse-btn">Refuse</button>
+          </p>
+          <p class="decision-note" id="sla-escalation-gate-status" role="status"></p>
         </div>
       </aside>
     </div>

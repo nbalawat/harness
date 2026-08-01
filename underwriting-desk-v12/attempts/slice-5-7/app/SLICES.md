@@ -118,6 +118,64 @@ sniffing it off the request, which is the standard the security scan reads:
   `test_blob_and_upload_writes_require_a_known_identity` now asserts the 401
   detail and the `uploaded_by` echo. No other behavior changed; no frontend
   caller PUTs to these endpoints.
+
+### Revision — fail-closed identity across the foundation (audit HIGHs)
+
+The governance `code_audit` raised four HIGH findings against the foundation
+this slice laid down; all four are closed here. No feature behaviour changed:
+all four of this slice's recorded acceptance checks still pass exactly as
+written, all five screens still work, and the backend suite is green (32
+tests).
+
+1. **`identity.py` is the single fail-closed guard, and it is now called
+   unconditionally.** `require_actor(acting_user_email)` — the contract every
+   later slice builds on — returns the stored user row or raises: **401** when
+   no identity is supplied at all (empty and whitespace-only emails included),
+   **403** when the email resolves to no stored, active user or to a role
+   without the required permission. It never returns `None`, so callers use
+   the result directly instead of writing `if user else None` fallbacks (those
+   are all gone from `ext_deal_intake.py`). Alongside it, `require_reader` is
+   the new guard for **reads**, and `can_view_deal` / `visible_deals` are the
+   exported scoping helpers every deal-returning endpoint runs its rows
+   through.
+2. **The deal book and the pipeline board are no longer opt-out.** `GET
+   /api/deals` and `GET /api/pipeline` used to scope only `if
+   acting_user_email:` — dropping the parameter bought the whole book. Both now
+   call `require_reader` unconditionally (identity may arrive as the
+   `acting_user_email` query parameter or an `x-user-email` header) and return
+   `identity.visible_deals(...)`. An identity that resolves to no stored user
+   is a **403**, never a silent downgrade to wider access. An *unidentified*
+   caller is not trusted either: it reads as the least-privilege
+   `ANONYMOUS_VIEWER` principal and gets the **redacted board projection** —
+   deal code, borrower name, industry, stage, status and timestamps only, with
+   requested/exposure amounts, risk grade, owner, borrower entity id and
+   adverse-action reasons stripped (`identity.BOARD_SAFE_FIELDS`). The board
+   therefore cannot be used as a way around the deal book's access control.
+   `frontend/app.js` gained a matching pure-append block: the desk states who
+   it is (`X-User-Email`, from the analyst/RM email on the board) on every
+   same-origin `/api/` **GET**, so the UI keeps its full view — convenience
+   only, since the server still resolves that email and refuses an unknown one.
+3. **Approval decisions require a resolvable actor.** `POST
+   /workflow/submissions/{id}/approve` and `/reject` (and `/submissions`
+   itself) did no identity check at all — any caller could decide any
+   submission under any name. Each now resolves its actor through
+   `identity.require_actor` **before** touching `approval_flow`: 401 with no
+   actor, 403 for an unknown or deactivated one, and the *resolved* email (not
+   the caller-supplied string) is what gets recorded as `decided_by`.
+4. **`POST /chat` bounds its input** — `ChatRequest.message` is
+   `1..MAX_CHAT_MESSAGE_CHARS` (4000), so an unbounded prompt is a 422 at the
+   edge rather than a denial-of-service or injection surface reaching the
+   model.
+5. **`ext_audit.record()` no longer swallows a failed audit write.** The bare
+   `except: pass` around the durable `audit_log` insert is gone: a store
+   failure now propagates and fails the mutation that caused it, because a
+   state change whose audit row silently vanished is an unauditable action.
+
+Nine new tests in `backend/tests/test_deal_intake_and_triage.py` cover the
+redacted anonymous projection, unredacted identified reads (header and query),
+403 on a forged reader, RM scoping on the board, the approval-decision identity
+guard, the chat bound, and the fail-loud audit write.
+
 ## Slice 5 — Grounded, permission-scoped portfolio Q&A desk (`grounded-portfolio-qa`)
 
 A credit officer asks the portfolio desk a question in plain English (`POST
@@ -225,3 +283,53 @@ appends to `frontend/app.js` (after the foundation module's closing `})();`) and
 to this file. Nothing in the foundation tree is modified by this slice. Re-probed
 against the booted app: slice 1's four acceptance checks and this slice's three
 all pass exactly as recorded, and the backend suite is green (33 tests).
+
+**Revision (slice 5, attempt 7) — security remediation, re-based on the revised
+foundation.** No feature behaviour was removed and every recorded acceptance
+check still passes exactly as written (slice 1's four and this slice's three);
+the tree was first re-taken from the current foundation (which added
+`identity.require_reader`/`visible_deals` redaction, the fail-loud audit write
+and the desk-identity read header) and only this slice's own files re-applied on
+top — `backend/ext_grounded_portfolio_qa.py`,
+`backend/tests/test_grounded_portfolio_qa.py`, `demo/slice-5.json`, and pure
+appends to `frontend/app.js` and this file.
+
+1. *Identity is now unconditional and fail-closed on every surface of the desk
+   (HIGH: default-deny).* No guard in this module sits behind an
+   `if acting_user_email:` any more. `POST /api/qa/ask` and
+   `GET /api/qa/book-summary` take identity as optional in the schema **only so
+   that the identity guard answers**, not FastAPI: an anonymous or blank caller
+   now gets **401 "identify yourself"** from `identity.require_actor` (a forged
+   or deactivated one still 403, a role without `portfolio.query` still 403).
+   `GET /api/qa/sessions` runs through the foundation's `identity.require_reader`
+   (query parameter or `x-user-email` header, same contract as `GET /api/deals`):
+   an unknown identity is a 403, an identified caller is scoped — desk roles read
+   the whole log, a relationship manager only its own sessions and only the deal
+   ids `identity.visible_deals` grants it — and an **unidentified caller now
+   reads a redacted projection**: row id and timestamp only, with question,
+   answer, asker and deal ids withheld, mirroring the foundation's redacted board
+   projection. Scope itself is always resolved through `identity.visible_deals`
+   rather than a role list this module kept for itself. On top of that the
+   roster's read tools are structurally scope-guarded: `permitted_scope()` binds
+   the resolved scope for a retrieval and every `read_*` tool refuses a deal
+   outside it — or any read with no scope bound at all — so a future caller
+   cannot reach deal data through the tool registry by skipping the endpoint.
+2. *The model can no longer put a figure or a citation into an answer (MEDIUM:
+   llm-math / grounding).* The narrative from `agent_runtime.respond()` is now a
+   **candidate, never the answer**. `_verify_narrative()` serves it only when it
+   is verifiably grounded — it names a retrieved record, names no deal outside
+   the caller's scope, and **every numeral in it is one this module computed**
+   (`_system_computed_numbers`, drawn from the stored records and
+   `_portfolio_facts`). Anything else — an empty reply, a refusal, an echo of the
+   prompt, an out-of-scope deal id, an invented figure — falls back to the
+   deterministic, records-derived digest; the raw reply and the rejection reason
+   are kept in the session trace for audit and returned as `narrative_source`.
+   The citable-ids honesty guard is unchanged: a "none match" answer still cites
+   the deals actually read to reach it. `QaAskRequest.question` is bounded at the
+   edge (1–2000 characters, 422 outside it), matching the foundation's chat bound.
+3. *Negative acceptance.* `test_anonymous_ask_is_401_not_an_answer` asserts an
+   unidentified `POST /api/qa/ask` is 401 and leaks no deal id, alongside new
+   tests for the 401 book summary, the redacted anonymous session log, header
+   identity, RM session scoping, the scope-guarded read tools, the question
+   length bound, and the figure-verification fallback. Backend suite green
+   (49 tests).

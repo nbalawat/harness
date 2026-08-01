@@ -119,6 +119,63 @@ sniffing it off the request, which is the standard the security scan reads:
   detail and the `uploaded_by` echo. No other behavior changed; no frontend
   caller PUTs to these endpoints.
 
+### Revision — fail-closed identity across the foundation (audit HIGHs)
+
+The governance `code_audit` raised four HIGH findings against the foundation
+this slice laid down; all four are closed here. No feature behaviour changed:
+all four of this slice's recorded acceptance checks still pass exactly as
+written, all five screens still work, and the backend suite is green (32
+tests).
+
+1. **`identity.py` is the single fail-closed guard, and it is now called
+   unconditionally.** `require_actor(acting_user_email)` — the contract every
+   later slice builds on — returns the stored user row or raises: **401** when
+   no identity is supplied at all (empty and whitespace-only emails included),
+   **403** when the email resolves to no stored, active user or to a role
+   without the required permission. It never returns `None`, so callers use
+   the result directly instead of writing `if user else None` fallbacks (those
+   are all gone from `ext_deal_intake.py`). Alongside it, `require_reader` is
+   the new guard for **reads**, and `can_view_deal` / `visible_deals` are the
+   exported scoping helpers every deal-returning endpoint runs its rows
+   through.
+2. **The deal book and the pipeline board are no longer opt-out.** `GET
+   /api/deals` and `GET /api/pipeline` used to scope only `if
+   acting_user_email:` — dropping the parameter bought the whole book. Both now
+   call `require_reader` unconditionally (identity may arrive as the
+   `acting_user_email` query parameter or an `x-user-email` header) and return
+   `identity.visible_deals(...)`. An identity that resolves to no stored user
+   is a **403**, never a silent downgrade to wider access. An *unidentified*
+   caller is not trusted either: it reads as the least-privilege
+   `ANONYMOUS_VIEWER` principal and gets the **redacted board projection** —
+   deal code, borrower name, industry, stage, status and timestamps only, with
+   requested/exposure amounts, risk grade, owner, borrower entity id and
+   adverse-action reasons stripped (`identity.BOARD_SAFE_FIELDS`). The board
+   therefore cannot be used as a way around the deal book's access control.
+   `frontend/app.js` gained a matching pure-append block: the desk states who
+   it is (`X-User-Email`, from the analyst/RM email on the board) on every
+   same-origin `/api/` **GET**, so the UI keeps its full view — convenience
+   only, since the server still resolves that email and refuses an unknown one.
+3. **Approval decisions require a resolvable actor.** `POST
+   /workflow/submissions/{id}/approve` and `/reject` (and `/submissions`
+   itself) did no identity check at all — any caller could decide any
+   submission under any name. Each now resolves its actor through
+   `identity.require_actor` **before** touching `approval_flow`: 401 with no
+   actor, 403 for an unknown or deactivated one, and the *resolved* email (not
+   the caller-supplied string) is what gets recorded as `decided_by`.
+4. **`POST /chat` bounds its input** — `ChatRequest.message` is
+   `1..MAX_CHAT_MESSAGE_CHARS` (4000), so an unbounded prompt is a 422 at the
+   edge rather than a denial-of-service or injection surface reaching the
+   model.
+5. **`ext_audit.record()` no longer swallows a failed audit write.** The bare
+   `except: pass` around the durable `audit_log` insert is gone: a store
+   failure now propagates and fails the mutation that caused it, because a
+   state change whose audit row silently vanished is an unauditable action.
+
+Nine new tests in `backend/tests/test_deal_intake_and_triage.py` cover the
+redacted anonymous projection, unredacted identified reads (header and query),
+403 on a forged reader, RM scoping on the board, the approval-decision identity
+guard, the chat bound, and the fail-loud audit write.
+
 ## Slice 4 — Tiered human approval, adverse action, and the idle register (`tiered-approval-and-sla`)
 
 A credit officer decides a deal from the Idle Register screen's **Credit
@@ -143,10 +200,12 @@ BUSINESS days (weekends plus the seeded 2026 bank-holiday `business_calendar`
 excluded) from `last_activity_timestamp`, in deterministic Python — no LLM
 touches a date or an amount anywhere in this slice. Everything past five
 business days is listed worst-first with its exposure, blocking work,
-owning desk and `escalation_owner`. `POST /api/sla/{code}/escalate` drives the
-whole `sla-idle-escalation` workflow end to end through `workflow_engine`
-(measure → breached? → blockers → human park in approval-flow → apply), and
-`POST /api/deals/{code}/reassign` hands a stalled deal to another desk.
+owning desk and `escalation_owner`. `POST /api/sla/{code}/escalate` plus `POST
+/api/sla/runs/{run_id}/decide` drive the whole `sla-idle-escalation` workflow
+end to end through `workflow_engine` (measure → breached? → blockers → human
+park in approval-flow → apply) across two deliberate human acts — see the
+revision note below — and `POST /api/deals/{code}/reassign` hands a stalled
+deal to another desk.
 
 Workflow handlers registered: `determine_approval_tier`,
 `record_approval_decision`, `record_adverse_action_or_return`,
@@ -177,3 +236,76 @@ shared chrome, and no shared CSS was touched. Backend: new
 `backend/ext_tiered_approval_and_sla.py` (auto-mounted by main.py's ext loop,
 so it is registered before the `/api/{table}` catch-all and nothing is
 shadowed). Covered by `backend/tests/test_tiered_approval_and_sla.py`.
+
+### Revision — decision integrity and default-deny reads (audit HIGHs/MEDIUMs)
+
+The governance `code_audit` raised four HIGH and two MEDIUM findings against
+this slice's own file. All are closed here, with the four recorded acceptance
+checks still passing exactly as written (analyst 403 / officer 200 on
+DEAL-1004, the DEAL-1006 adverse action, the DEAL-1005 idle register) and the
+backend suite green at 68 tests.
+
+1. **A credit decision is never defaulted.** `record_approval_decision` did
+   `decision = inputs.get("decision") or "approved"` — an omitted decision
+   became an approval. It now goes through `_require_decision_value`: the
+   decision must be present and one of `("approved", "declined", "returned")`,
+   and anything else is a **422**. The same rule governs
+   `record_adverse_action_or_return`'s `outcome`. Because the `/approve` route
+   names its decision in the URL (so there is no field there to leave blank),
+   the decision-as-data surface is the new `POST /api/deals/{code}/decision`,
+   which is what the lifecycle's `record` node drives and which answers 422 to
+   an omitted, blank or unrecognised decision.
+2. **The human gate now has preconditions, not just authority.** Authority
+   says *who* may approve; `_approval_preconditions_or_409` says *whether the
+   deal is approvable at all* — it must have reached the `tiered_approval`
+   stage, and every policy exception against it must be waived or resolved
+   (**409** naming the blocking `rule_reference` otherwise). One shared
+   `_already_decided(deal, attempting, actor)` guard now sits on approve,
+   decline AND return: a settled credit decision can only ever be replayed
+   identically by the same human (the idempotent double-submit); flipping it,
+   deciding it a second time, or pulling a settled deal back into underwriting
+   is a 409. The replay check runs before the stage check, so a double submit
+   of the same approval still replays cleanly after the deal has moved to
+   closing. `close_approved_deal` is likewise a guarded write now: it resolves
+   its actor fail-closed and refuses (409) to close a deal that carries no
+   recorded approval.
+3. **Reads are default-deny, unconditionally.** Every `if acting_user_email:`
+   in the file is gone. `GET /api/deals/{code}/decisions` and `GET
+   /api/approval-tiers` run `identity.require_actor` on every call — **401**
+   unidentified, **403** unknown/deactivated — and scope their rows through
+   `identity.can_view_deal` / `identity.visible_deals`. `GET /api/sla/idle` is
+   guarded just as unconditionally, but through the foundation's
+   `identity.require_reader`, because the service line is the desk's shared
+   wall exactly like the pipeline board: a forged reader is a 403, an
+   identified one sees only its scoped deals, and an *unidentified* one reads
+   as `ANONYMOUS_VIEWER` and gets the **redacted** register — stage, status and
+   idle days only, with exposure, owning desk, blocking work, the idle-exposure
+   total and the whole idle-by-desk breakdown withheld. Identity may arrive as
+   the `acting_user_email` query parameter or the `X-User-Email` header the
+   desk UI sends.
+4. **Merge-seam DOM ids.** Every element id this slice adds is now prefixed
+   `sla-` (`sla-decision-approve-btn`, `sla-plate-past-line`,
+   `sla-idle-register-body`, …) so nothing can collide with the deal-detail
+   ids another slice adds on its own screen. `frontend/app.js` (still a pure
+   append after the foundation's block) and `demo/slice-4.json` were updated to
+   match.
+5. **A human gate stays a human gate.** `POST /api/sla/{code}/escalate` used to
+   approve its own park point and tick the run in the same request, so the
+   "human decision" node was a formality. It now OPENS the run — measure →
+   breached? → blockers → **park** — and returns the measured idle time, the
+   blocking work, the `run_id` and `awaiting_human_decision: true` without
+   touching the deal. The officer reads that and then confirms or refuses in a
+   separate act through the new `POST /api/sla/runs/{run_id}/decide`, which is
+   what releases the deterministic `apply` handler; a refusal ends the run with
+   the deal untouched, and a decided run cannot be decided again (409). The
+   "Act on the Register" console gained the matching two-step confirm/refuse
+   control. `record_adverse_action_or_return` also resolves its actor through
+   `identity.require_actor` (permission-checked per outcome), validates the
+   reason against the controlled register, and now **stores** the
+   adverse-action reason on the deal rather than echoing it back.
+
+Nine new tests cover exactly these refusals: the 422s on an omitted, blank and
+unrecognised decision (and that none of them wrote an approval row), the
+wrong-stage and open-policy-exception 409s, the settled-deal return 409, 401/403
+on both anonymous and forged scoped reads, the redacted anonymous register, the
+escalation parking without applying, and the guarded adverse-action write.
