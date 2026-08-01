@@ -1,0 +1,43 @@
+INFO:     Started server process [68097]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:51090 (Press CTRL+C to quit)
+INFO:     127.0.0.1:51094 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51095 - "POST /api/deals HTTP/1.1" 201 Created
+INFO:     127.0.0.1:51094 - "GET /api/pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51095 - "POST /api/deals/DEAL-1001/agents/intake-triage/run HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51108 - "POST /api/deals/DEAL-1001/triage/accept HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51095 - "POST /api/deals/DEAL-1002/agents/financial-spreading/run HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51119 - "POST /api/deals/DEAL-1002/spread/accept HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51095 - "GET /api/deals/DEAL-1002/ratios HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51119 - "GET /api/deals/DEAL-1002/risk-grade HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51127 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51127 - "GET /tokens.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51128 - "GET /app.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51128 - "GET /agent/mode HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51127 - "GET /agents HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51129 - "GET /api/conversations HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:51130 - "GET /api/pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51131 - "GET /api/adverse_action_reasons HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51132 - "GET /api/deals/DEAL-1002/dossier?acting_user_email=analyst%40bank.test HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51129 - "GET /api/pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51129 - "GET /favicon.ico HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:51132 - "GET / HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:51132 - "GET /agent/mode HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51130 - "GET /api/conversations HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:51127 - "GET /api/pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51131 - "GET /agents HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51128 - "GET /api/adverse_action_reasons HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51130 - "GET /api/pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51145 - "GET /api/deals/DEAL-1002/dossier?acting_user_email=analyst%40bank.test HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51145 - "GET /api/pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51130 - "GET /api/adverse_action_reasons HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51128 - "GET /api/deals/DEAL-1002/dossier?acting_user_email=analyst%40bank.test HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51128 - "GET /api/deals/DEAL-1002/dossier?acting_user_email=analyst%40bank.test HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51128 - "POST /api/deals/DEAL-1002/agents/financial-spreading/run HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51128 - "POST /api/deals/DEAL-1002/spread/accept HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51128 - "GET /api/deals/DEAL-1002/dossier?acting_user_email=analyst%40bank.test HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [68097]

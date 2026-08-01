@@ -23,9 +23,10 @@ SLICE SIZING (time is the scarce resource — plan for it):
   check proving a refusal — an unauthorized or invalid actor/request getting a
   4xx (`expect_status`: 401/403/404/409/422). "Verified" means the app refuses
   wrong things, not merely that right things work. Examples: an unknown
-  `acting_user_email` mutating -> 403; a request missing a required field ->
-  422; a write to a closed generic table -> 403. The verifier rejects plans
-  that skip this.
+  `acting_user_email` mutating -> 403; the SAME request with NO identity at
+  all -> 401 (absent identity is the attack case, not just wrong identity);
+  a request missing a required field -> 422; a write to a closed generic
+  table -> 403. The verifier rejects plans that skip this.
 - AGENT CHECKS MUST PROVE GROUNDING: on live builds the verifier exercises
   agent endpoints with REAL model calls. An agent acceptance check must
   therefore assert content only a genuinely working, data-grounded agent can

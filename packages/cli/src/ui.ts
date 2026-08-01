@@ -362,6 +362,7 @@ export function buildState(workspace: string): Record<string, unknown> {
   };
   interface Wave {
     startedAt: unknown;
+    startIdx: number;
     endIdx: number;
     feedbacks: Array<{ nodeId: string; source: string; feedback: string | null }>;
     reopened: string[];
@@ -373,7 +374,7 @@ export function buildState(workspace: string): Record<string, unknown> {
     if (e.type !== "node.reopened") return;
     if (e.reason === "user_revision") {
       if (engineMovedSinceLastRevision || waves.length === 0) {
-        waves.push({ startedAt: e.ts, endIdx: i, feedbacks: [], reopened: [] });
+        waves.push({ startedAt: e.ts, startIdx: i, endIdx: i, feedbacks: [], reopened: [] });
         engineMovedSinceLastRevision = false;
       }
       const w = waves[waves.length - 1];
@@ -412,10 +413,12 @@ export function buildState(workspace: string): Record<string, unknown> {
   };
   const remediation = waves.slice(-8).map((w, wi, arr) => {
     const globalIdx = waves.indexOf(w);
-    const capIdx = globalIdx + 1 < waves.length ? events.findIndex((e) => e.ts === waves[globalIdx + 1].startedAt && e.type === "node.reopened") : events.length;
+    // Exact index boundaries (never timestamp equality — two events can share
+    // a millisecond): a wave owns events (startIdx, nextWave.startIdx].
+    const capIdx = globalIdx + 1 < waves.length ? waves[globalIdx + 1].startIdx : events.length;
+    const startIdx = w.startIdx;
     // Trigger: the failure that provoked this wave (nearest failed event
     // before its first reopen; absent for pure user-initiated feedback).
-    const startIdx = events.findIndex((e) => e.ts === w.startedAt && e.type === "node.reopened");
     let trigger: { nodeId: string; summary: string } | null = null;
     for (let i = startIdx - 1; i >= 0; i--) {
       const e = events[i];
@@ -1440,6 +1443,7 @@ body { font:14px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif; background:
 #waveInfo { border:1px solid var(--accent,#3b5bdb); border-left-width:4px; border-radius:10px; padding:.55rem .8rem; margin-bottom:.6rem; font-size:.85rem; }
 .prow.dim { opacity:.32; }
 .prow.inwave { box-shadow: inset 3px 0 0 var(--accent, #3b5bdb); }
+.prow.failhere { box-shadow: inset 3px 0 0 var(--bad,#c92a2a); background:color-mix(in srgb, var(--bad,#c92a2a) 7%, transparent); }
 .prow .wavechip { margin-left:.4rem; }
 /* Pipeline chips stay quiet: small, single-line, never stacked. */
 .prow .chip { font-size:.62rem; padding:.06rem .45rem; vertical-align:middle; }
@@ -1833,9 +1837,19 @@ function remOutcomeChip(a) {
       ? '<span class="chip" title="inputs unchanged — previous result re-used">unchanged · reused</span>'
       : '<span class="chip" style="background:var(--ok,#2b8a3e);color:#fff">rebuilt ✓' + (a.attempts > 1 ? ' (' + a.attempts + ' attempts)' : '') + (a.costUsd ? ' · $' + a.costUsd.toFixed(2) : '') + '</span>')
     : a.outcome === 're-running' ? '<span class="chip remed">re-building now…</span>'
-    : a.outcome === 'failed' ? '<span class="chip" style="background:var(--bad,#c92a2a);color:#fff">failed — next wave fixes it</span>'
+    : a.outcome === 'failed' ? '<span class="chip" style="background:var(--bad,#c92a2a);color:#fff">✕ failed here — this is where the wave stopped</span>'
     : a.outcome === 'skipped' ? '<span class="chip">skipped</span>'
-    : '<span class="chip">queued</span>';
+    : '<span class="chip">queued (wave stopped before reaching it)</span>';
+}
+// In a wave lens, a row must show its IN-SPAN state (what happened during
+// that wave), never its current live state — else a step that failed in
+// wave 2 shows a green ✓ because a later wave fixed it.
+function waveRowState(outcome) {
+  return outcome === 'committed' ? { cls: 'committed', icon: '✓' }
+    : outcome === 'failed' ? { cls: 'failed', icon: '✕' }
+    : outcome === 're-running' ? { cls: 'started', icon: '●' }
+    : outcome === 'skipped' ? { cls: 'skipped', icon: '↷' }
+    : { cls: 'pending', icon: '○' };
 }
 const prevHtml = {};
 function setHTML(id, html) {
@@ -2497,14 +2511,23 @@ async function tick() {
 
   setHTML('nodes', phases.map(ph => {
     const list = byPhase[ph];
-    const phDone = list.filter(n => n.state === 'committed' || n.state === 'skipped').length;
-    return '<div class="phase"><div class="phead"><b>' + esc(ph) + '</b><div class="bar"><div style="width:' + (100*phDone/list.length) + '%"></div></div><span class="stat">' + phDone + '/' + list.length + '</span></div>' + header +
+    // In a wave lens the phase bar counts only THIS wave's steps in this phase
+    // (in-span re-verified), not the phase's lifetime completion.
+    const inWave = activeWave ? list.filter(n => waveAction(n.id)) : list;
+    const denom = inWave.length || list.length;
+    const phDone = activeWave
+      ? inWave.filter(n => { const a = waveAction(n.id); return a && a.outcome === 'committed'; }).length
+      : list.filter(n => n.state === 'committed' || n.state === 'skipped').length;
+    const phLabel = activeWave ? (inWave.length ? phDone + '/' + inWave.length + ' re-verified' : '—') : phDone + '/' + list.length;
+    return '<div class="phase"><div class="phead"><b>' + esc(ph) + '</b><div class="bar"><div style="width:' + (100*phDone/denom) + '%"></div></div><span class="stat">' + phLabel + '</span></div>' + header +
       list.map(n =>
-        '<div class="prow ' + n.state + (activeWave ? (waveAction(n.id) ? ' inwave' : ' dim') : '') + '" data-id="' + esc(n.id) + '"><span class="icon">' + (STATE_ICON[n.state]||'') + '</span>' +
+        // Wave lens shows in-span state; live view shows current state.
+        (() => { const wa = activeWave ? waveAction(n.id) : null; const disp = wa ? waveRowState(wa.outcome) : { cls: n.state, icon: STATE_ICON[n.state]||'' };
+        return '<div class="prow ' + disp.cls + (activeWave ? (wa ? ' inwave' : ' dim') : '') + (wa && wa.outcome === 'failed' ? ' failhere' : '') + '" data-id="' + esc(n.id) + '"><span class="icon">' + disp.icon + '</span>'; })() +
         '<span class="id mono">' + esc(n.id) + (n.retries ? ' <span class="chip retry">retry ×' + n.retries + '</span>' : '') +
-        // Wave lens: membership = accent bar; a chip ONLY when there is news
-        // (building/built/reused/failed) — a dozen "queued" chips is clutter.
-        (activeWave && waveAction(n.id) && !['pending','skipped'].includes(waveAction(n.id).outcome) ? ' <span class="wavechip">' + remOutcomeChip(waveAction(n.id)) + '</span>' : '') +
+        // Wave lens: membership = accent bar + in-span icon; a chip when there's
+        // news (built/reused/failed/queued-because-wave-stopped).
+        (activeWave && waveAction(n.id) && !['skipped'].includes(waveAction(n.id).outcome) ? ' <span class="wavechip">' + remOutcomeChip(waveAction(n.id)) + '</span>' : '') +
         // Full-build lens: the compact remediation markers live here instead.
         (!activeWave && n.revised ? ' <span class="chip" style="border:1px solid var(--accent,#3b5bdb);color:var(--accent,#3b5bdb)" title="remediation feedback was delivered to this step ' + n.revised + ' time(s) — see the wave tabs above">revised ×' + n.revised + '</span>' : '') +
         (!activeWave && (s.remediation || []).some(r => r.remaining.includes(n.id)) ? ' <span class="chip remed" title="re-deriving from remediation feedback">remediating</span>' : '') + '</span>' +

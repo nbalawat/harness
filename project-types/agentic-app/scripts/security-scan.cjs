@@ -88,6 +88,23 @@ function scanMutations(dir) {
 }
 scanMutations(appDir);
 
+// Opt-out authorization: a guard that only runs when identity is SUPPLIED
+// lets anonymous callers skip it. Deterministically greppable.
+function scanOptOut(dir) {
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    if (entry.name === "__pycache__" || entry.name === "node_modules") continue;
+    const p2 = path.join(dir, entry.name);
+    if (entry.isDirectory()) { scanOptOut(p2); continue; }
+    if (!entry.name.endsWith(".py")) continue;
+    const content = fs.readFileSync(p2, "utf8");
+    const m = content.match(/if\s+acting_user_email\s*(?:is not None\s*)?:/);
+    if (m) {
+      findings.push({ severity: "medium", rule: "opt-out-authz", file: path.relative(appDir, p2), detail: "identity guard runs only when identity is supplied — anonymous callers skip it (default-deny instead)" });
+    }
+  }
+}
+scanOptOut(appDir);
+
 const high = findings.filter((f) => f.severity === "high");
 fs.writeFileSync(
   "security_report.json",

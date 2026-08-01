@@ -1,0 +1,11 @@
+The user reviewed this step's previous output and requested changes:
+
+SECURITY REMEDIATION (audit highs/mediums in YOUR files) — rebase on the revised foundation first, then fix:
+1. HIGH default-deny: backend/ext_memo_policy_audit.py _scoped_deal (~720) is opt-out ("if acting_user_email:"). Use the foundation's fail-closed identity.require_actor unconditionally. Sweep the WHOLE file for every "if acting_user_email:" read/mutation guard and make them fail-closed.
+2. HIGH audit exposure: GET /api/deals/{deal_code}/audit (~924) serves before_payload/after_payload verbatim — potentially exposing full record bodies to anyone. Require identity + deal-view scope, and redact/omit raw payload bodies from the response (keep event, actor, timestamps, a summary).
+3. MEDIUM: MemoReviewRequest.action must be an enum; accept_memo reject branch must REQUIRE a written rejection_reason (no "no reason" default); resolve_policy_exceptions must check the exception's current status before waiving (no double-waive); persist_accepted_memo etc. must attribute the acting user.
+NEGATIVE ACCEPTANCE: add a check that an anonymous GET on the audit/scoped routes returns 401. Every recorded acceptance check must keep passing; app.js stays a pure append.
+
+
+The previously committed output is at: /Users/nbalawat/development/harness/underwriting-desk-v12/artifacts/slice-3
+Start from it and apply ONLY the requested changes — keep everything else stable.

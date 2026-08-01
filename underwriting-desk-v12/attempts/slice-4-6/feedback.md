@@ -1,0 +1,13 @@
+The user reviewed this step's previous output and requested changes:
+
+SECURITY REMEDIATION (audit highs/mediums in YOUR files) — rebase on the revised foundation first, then fix:
+1. HIGH decision integrity: backend/ext_tiered_approval_and_sla.py record_approval_decision (~498) does `decision = inputs.get("decision") or "approved"` — an omitted credit decision must NEVER default to approved. Require an explicit decision in {"approved","declined","returned"}; 422 otherwise.
+2. HIGH human-gate precondition: approve_deal (~796) checks only exposure tier — it must also verify the deal is at the approval stage AND has NO open (unwaived) policy exceptions before approving (return 409 otherwise). return_deal/decline must share the settled-decision (_already_decided) guard.
+3. HIGH default-deny reads: GET /api/deals/{code}/decisions (~960), GET /api/sla/idle (~1078), GET /api/approval-tiers (~1011) are all opt-out. Use the foundation's fail-closed identity.require_actor + visible_deals unconditionally. Sweep the whole file for every "if acting_user_email:".
+4. HIGH merge-seam DOM ids: prefix every element id your screen-sla-dashboard / approval controls add with "sla-" so they don't collide with slice-2's deal-detail ids; update app.js append + demo/slice-4.json selectors.
+5. MEDIUM: record_adverse_action_or_return must call identity.require_actor and store a real adverse-action reason; escalate_idle_deal must not auto-approve in the same request (a human gate stays a human gate).
+NEGATIVE ACCEPTANCE: add checks that an anonymous call to your scoped GETs returns 401 and that approve with an omitted decision returns 422. Every recorded acceptance check must keep passing; app.js stays a pure append.
+
+
+The previously committed output is at: /Users/nbalawat/development/harness/underwriting-desk-v12/artifacts/slice-4
+Start from it and apply ONLY the requested changes — keep everything else stable.

@@ -445,3 +445,71 @@ test("distribution: storefront offers the certified catalog shipped with the ins
     assert.deepEqual(runs.runs, [], "no runs yet in a fresh dir");
   });
 });
+
+test("remediation waves: per-wave state is IN-SPAN and index-exact (adversarial multi-wave journal)", () => {
+  // A hand-built journal exercising the hard cases at once:
+  //  - original build completes
+  //  - wave 1: user revises slice-2; it rebuilds, then merge FAILS (handoff)
+  //  - wave 2: a BATCH of two revisions (slice-1 + slice-2, no engine activity
+  //    between) rebuild — slice-2 CACHED — then the run COMPLETES
+  //  - several events share a millisecond ts (index-exact boundaries required)
+  const ws = tmpDir("waves");
+  fs.writeFileSync(path.join(ws, "run.json"), JSON.stringify({ projectTypeDir: DEMO_DIR, mockAgents: true }));
+  const T = "2026-08-01T10:00:00.000Z"; // reused ts on purpose (same millisecond)
+  const ev = (o) => JSON.stringify({ ts: T, ...o });
+  const lines = [
+    ev({ type: "run.created" }),
+    ev({ type: "node.committed", nodeId: "slice-1", artifacts: {} }),
+    ev({ type: "cost.recorded", nodeId: "slice-1", cost: { costUsd: 5 } }),
+    ev({ type: "node.committed", nodeId: "slice-2", artifacts: {} }),
+    ev({ type: "node.committed", nodeId: "merge-slices", artifacts: {} }),
+    ev({ type: "run.completed" }),
+    // ---- wave 1: revise slice-2 -> rebuild -> merge FAILS ----
+    ev({ type: "node.reopened", nodeId: "slice-2", reason: "user_revision", revisionOf: "slice-2", feedback: "merge conflict: fix app.js append" }),
+    ev({ type: "node.reopened", nodeId: "merge-slices", reason: "upstream_revised", revisionOf: "slice-2" }),
+    ev({ type: "node.running", nodeId: "slice-2", attempt: 2 }),
+    ev({ type: "cost.recorded", nodeId: "slice-2", cost: { costUsd: 2 } }),
+    ev({ type: "node.committed", nodeId: "slice-2", artifacts: {} }),
+    ev({ type: "node.running", nodeId: "merge-slices", attempt: 2 }),
+    ev({ type: "node.attempt_failed", nodeId: "merge-slices", attempt: 2, error: "MERGE CONFLICT: SLICES.md rewritten" }),
+    ev({ type: "node.failed", nodeId: "merge-slices" }),
+    ev({ type: "run.failed", nodeId: "merge-slices" }),
+    // ---- wave 2: BATCH revise slice-1 + slice-2 -> rebuild (slice-2 cached) -> COMPLETE ----
+    ev({ type: "node.reopened", nodeId: "slice-1", reason: "user_revision", revisionOf: "slice-1", feedback: "security: fail-closed identity" }),
+    ev({ type: "node.reopened", nodeId: "slice-2", reason: "user_revision", revisionOf: "slice-2", feedback: "security: opt-out reads" }),
+    ev({ type: "node.reopened", nodeId: "merge-slices", reason: "upstream_revised", revisionOf: "slice-1" }),
+    ev({ type: "node.running", nodeId: "slice-1", attempt: 2 }),
+    ev({ type: "cost.recorded", nodeId: "slice-1", cost: { costUsd: 3 } }),
+    ev({ type: "node.committed", nodeId: "slice-1", artifacts: {} }),
+    ev({ type: "node.committed", nodeId: "slice-2", artifacts: {}, cached: true }), // reused
+    ev({ type: "node.running", nodeId: "merge-slices", attempt: 3 }),
+    ev({ type: "node.committed", nodeId: "merge-slices", artifacts: {} }),
+    ev({ type: "run.completed" }),
+  ];
+  fs.writeFileSync(path.join(ws, "journal.jsonl"), lines.join("\n") + "\n");
+
+  const s = buildState(ws);
+  assert.equal(s.remediation.length, 2, "two distinct waves (batched revisions collapse into one)");
+
+  const [w1, w2] = s.remediation;
+  // Wave 1: ended in a merge FAILURE — must NOT show green because wave 2 later fixed merge.
+  assert.equal(w1.wave, 1);
+  assert.equal(w1.ended.kind, "failed", "wave 1 ended failed IN ITS OWN SPAN");
+  assert.equal(w1.ended.nodeId, "merge-slices");
+  assert.match(w1.ended.summary, /MERGE CONFLICT/);
+  const w1merge = w1.actions.find((a) => a.nodeId === "merge-slices");
+  assert.equal(w1merge.outcome, "failed", "merge shows FAILED in wave 1's lens (not its current committed state)");
+  const w1s2 = w1.actions.find((a) => a.nodeId === "slice-2");
+  assert.equal(w1s2.outcome, "committed");
+  assert.equal(w1s2.cached, false);
+  assert.equal(w1s2.costUsd, 2, "wave-1 cost attributed in-span, not lifetime");
+
+  // Wave 2: a batch of two feedbacks; slice-2 reused; ended in completion.
+  assert.equal(w2.feedbacks.length, 2, "batched revisions are one wave with both feedbacks");
+  assert.deepEqual(w2.feedbacks.map((f) => f.nodeId).sort(), ["slice-1", "slice-2"]);
+  assert.equal(w2.ended.kind, "completed", "wave 2 ran through to completion");
+  const w2s2 = w2.actions.find((a) => a.nodeId === "slice-2");
+  assert.equal(w2s2.cached, true, "unchanged step reused, not re-paid");
+  const w2merge = w2.actions.find((a) => a.nodeId === "merge-slices");
+  assert.equal(w2merge.outcome, "committed");
+});
