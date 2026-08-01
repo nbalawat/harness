@@ -1,0 +1,6 @@
+The user reviewed this step's previous output and requested changes:
+
+FUNCTIONAL GAP on the merged app (union-only test failure): tests/test_grounded_portfolio_qa.py::test_answer_is_grounded_in_live_deal_records asserts the deal it creates appears in source_deal_ids for a tiered-approval question, but on the merged app (which seeds MORE deals than your tree) the retrieval's source list returned only ['DEAL-1004','DEAL-1006','DEAL-1007'] and the created deal was pushed out. Fix so both the feature and the test are robust to sibling slices' data: EITHER make retrieval scope include every deal relevant to the question regardless of how many deals exist (no arbitrary top-k that silently drops relevant records — if you cap, cap AFTER relevance filtering), OR make the test assert grounding on deals genuinely at the queried stage (ask about the created deal explicitly). The desk must stay honestly grounded; every recorded acceptance check must keep passing; keep app.js as a pure append; rebase on the current foundation first.
+
+The previously committed output is at: /Users/nbalawat/development/harness/underwriting-desk-v12/artifacts/slice-5
+Start from it and apply ONLY the requested changes — keep everything else stable.

@@ -7,6 +7,9 @@ const path = require("node:path");
 
 const inputs = JSON.parse(fs.readFileSync("inputs.json", "utf8"));
 
+// Fresh output every attempt (retry continuity + cpSync overlay would keep stale files).
+fs.rmSync("designs", { recursive: true, force: true });
+
 const options = [];
 for (let i = 1; i <= 3; i++) {
   const input = inputs[`option_${i}_dir`];

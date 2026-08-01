@@ -58,6 +58,11 @@ for (let i = 2; i <= 6; i++) {
   }
 }
 
+// FRESH output every attempt: retry continuity carries the previous
+// attempt's ./app forward, and cpSync overlays without deleting — a stale
+// file from an earlier wave (e.g. a module a slice since renamed) would
+// silently shadow the real one.
+fs.rmSync("app", { recursive: true, force: true });
 fs.cpSync(base, "app", { recursive: true });
 
 function conflict(rel, slices, detail) {

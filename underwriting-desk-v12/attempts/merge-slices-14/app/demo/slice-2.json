@@ -1,0 +1,12 @@
+{
+  "screen": "screen-deal-detail",
+  "caption": "Opening the Verrazano Dental Group dossier and running the Financial Spreading Agent: six line items are transcribed with a document, page and cell citation on every figure, the illegible interest-expense line is listed as unextractable rather than guessed, and the analyst's acceptance triggers the deterministic ratios — DSCR 1.24×, leverage 3.10×, current ratio 1.42× — and risk grade 4 on rubric v2.1 with the exact band it struck.",
+  "steps": [
+    { "action": "click", "selector": "[data-screen=\"deal-detail\"]" },
+    { "action": "fill", "selector": "#dossier-deal-code", "value": "DEAL-1002" },
+    { "action": "fill", "selector": "#dossier-analyst-email", "value": "analyst@bank.test" },
+    { "action": "click", "selector": "#dossier-load-btn" },
+    { "action": "click", "selector": "#spread-run-btn" },
+    { "action": "click", "selector": "#spread-accept-btn" }
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "screen": "screen-sla-dashboard",
+  "caption": "The idle register, live: Vellum Bookbinding (DEAL-1005) has sat 15 business days at document extraction, the credit officer selects it and nudges the owner, and the escalation workflow records the acknowledgement against their name — with the Decision Desk above showing the $1.25M Ironvale deal that only the credit committee may approve.",
+  "steps": [
+    { "action": "click", "selector": "[data-screen=\"sla-dashboard\"]" },
+    { "action": "click", "selector": "#sla-pick-DEAL-1005" },
+    { "action": "fill", "selector": "#sla-escalation-note", "value": "Vellum has sat past the service line at document extraction — owner nudged for the missing tax return" },
+    { "action": "click", "selector": "#sla-nudge-btn" }
+  ]
+}

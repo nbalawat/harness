@@ -188,9 +188,13 @@ export function buildState(workspace: string): Record<string, unknown> {
   }
 
   const running = new Set<string>();
+  // Retry counts are PER INCARNATION: a reopen (revision / remediation) starts
+  // a fresh cycle. Lifetime attempt totals read as "retry ×10" on a step whose
+  // failures were separate, explained remediation waves — pure alarm noise.
   const retries: Record<string, number> = {};
   for (const e of events) {
     if (e.type === "node.running") running.add(e.nodeId as string);
+    if (e.type === "node.reopened") retries[e.nodeId as string] = 0;
     if (e.type === "node.attempt_failed") retries[e.nodeId as string] = (retries[e.nodeId as string] ?? 0) + 1;
   }
 
@@ -329,26 +333,113 @@ export function buildState(workspace: string): Record<string, unknown> {
     slicesDelivered: def.nodes.filter((n) => /^slice-[0-9]+$/.test(n.id) && state.committed.has(n.id)).length,
   };
 
-  // Remediation context: user revisions whose reopened closure is still
-  // re-deriving — the dashboard must SAY a wave is a remediation and WHY,
-  // or re-running steps look like the build repeating itself.
-  const remediation = events
-    .filter((e) => e.type === "node.reopened" && e.reason === "user_revision")
-    .slice(-6)
-    .map((rev) => {
-      const cascade = events
-        .filter((e) => e.type === "node.reopened" && e.revisionOf === rev.nodeId && String(e.ts) >= String(rev.ts))
-        .map((e) => String(e.nodeId));
-      const reopened = [...new Set([String(rev.nodeId), ...cascade])];
-      const remaining = reopened.filter((id) => !state.committed.has(id) && !state.skipped.has(id));
-      return {
-        nodeId: rev.nodeId,
-        feedback: (rev.feedback as string | undefined) ?? null,
-        at: rev.ts,
-        reopened,
-        remaining,
-      };
+  // ---- Remediation timeline: original -> finding -> feedback -> re-derive ----
+  // The journal holds the whole story; the UI must narrate it. A WAVE is a
+  // batch of feedback filed together (no engine activity between the
+  // revisions) plus everything that re-derived because of it.
+  const classifySource = (fb: string | null): string => {
+    if (!fb) return "review feedback";
+    if (/^merge conflict/i.test(fb)) return "merge conflict";
+    if (/security scan/i.test(fb)) return "security scan";
+    if (/audit finding|security audit/i.test(fb)) return "code audit";
+    if (/^functional gap/i.test(fb)) return "live verification";
+    return "user review";
+  };
+  // Feedback delivered through the file channel (revisions/<node>[-consumed].md)
+  // never reaches the journal — read it from disk so the story stays complete.
+  const feedbackFile = (nodeId: string): string | null => {
+    for (const name of [`${nodeId}-consumed.md`, `${nodeId}.md`]) {
+      const p = path.join(workspace, "revisions", name);
+      if (fs.existsSync(p)) return fs.readFileSync(p, "utf8").slice(0, 2000);
+    }
+    return null;
+  };
+  interface Wave {
+    startedAt: unknown;
+    endIdx: number;
+    feedbacks: Array<{ nodeId: string; source: string; feedback: string | null }>;
+    reopened: string[];
+  }
+  const waves: Wave[] = [];
+  let engineMovedSinceLastRevision = true;
+  events.forEach((e, i) => {
+    if (e.type === "node.running") engineMovedSinceLastRevision = true;
+    if (e.type !== "node.reopened") return;
+    if (e.reason === "user_revision") {
+      if (engineMovedSinceLastRevision || waves.length === 0) {
+        waves.push({ startedAt: e.ts, endIdx: i, feedbacks: [], reopened: [] });
+        engineMovedSinceLastRevision = false;
+      }
+      const w = waves[waves.length - 1];
+      const fb = (e.feedback as string | undefined) ?? feedbackFile(String(e.nodeId));
+      w.feedbacks.push({ nodeId: String(e.nodeId), source: classifySource(fb), feedback: fb });
+      w.endIdx = i;
+    } else if (waves.length > 0) {
+      // cascades + operator reopens ride the wave they follow
+      waves[waves.length - 1].endIdx = i;
+    }
+    if (waves.length > 0) {
+      const w = waves[waves.length - 1];
+      if (!w.reopened.includes(String(e.nodeId))) w.reopened.push(String(e.nodeId));
+    }
+  });
+  // Cascaded slices that got their feedback via the file channel: surface it.
+  for (const w of waves) {
+    for (const id of w.reopened) {
+      if (w.feedbacks.some((f) => f.nodeId === id)) continue;
+      const fb = feedbackFile(id);
+      if (fb && classifySource(fb) !== "review feedback") {
+        // only attach when it's clearly targeted feedback, not stale leftovers
+        if (!waves.some((other) => other !== w && other.feedbacks.some((f) => f.nodeId === id && f.feedback === fb))) {
+          w.feedbacks.push({ nodeId: id, source: classifySource(fb), feedback: fb });
+        }
+      }
+    }
+  }
+  // Per wave: what actually happened to each reopened step (scan events after
+  // the wave, capped at the next wave's start so actions attribute correctly).
+  const remediation = waves.slice(-8).map((w, wi, arr) => {
+    const globalIdx = waves.indexOf(w);
+    const capIdx = globalIdx + 1 < waves.length ? events.findIndex((e) => e.ts === waves[globalIdx + 1].startedAt && e.type === "node.reopened") : events.length;
+    const actions = w.reopened.map((id) => {
+      let attempts = 0;
+      let costUsd = 0;
+      let outcome = "pending";
+      let cached = false;
+      for (let i = w.endIdx + 1; i < capIdx; i++) {
+        const e = events[i];
+        if (e.nodeId !== id) continue;
+        if (e.type === "node.running") { attempts++; outcome = "re-running"; }
+        if (e.type === "cost.recorded") costUsd += (e.cost as { costUsd?: number })?.costUsd ?? 0;
+        if (e.type === "node.committed") { outcome = "committed"; cached = e.cached === true; }
+        if (e.type === "node.failed") outcome = "failed";
+        if (e.type === "node.skipped") outcome = "skipped";
+      }
+      return { nodeId: id, outcome, cached, attempts, costUsd: Number(costUsd.toFixed(2)) };
     });
+    const remaining = w.reopened.filter((id) => !state.committed.has(id) && !state.skipped.has(id));
+    return {
+      wave: globalIdx + 1,
+      at: w.startedAt,
+      feedbacks: w.feedbacks,
+      reopened: w.reopened,
+      remaining,
+      actions,
+      // legacy fields the banner uses
+      nodeId: w.feedbacks[0]?.nodeId ?? w.reopened[0],
+      feedback: w.feedbacks[0]?.feedback ?? null,
+    };
+  });
+  const firstCompleted = events.find((e) => e.type === "run.completed");
+  const originalBuild = {
+    completedAt: firstCompleted?.ts ?? null,
+    costUsd: Number(
+      events
+        .filter((e) => e.type === "cost.recorded" && (!waves[0] || String(e.ts) <= String(waves[0].startedAt)))
+        .reduce((s, e) => s + ((e.cost as { costUsd?: number })?.costUsd ?? 0), 0)
+        .toFixed(2),
+    ),
+  };
 
   // Open review window: the run is WAITING (not parked) for a verdict.
   let windowGate: Record<string, unknown> | null = null;
@@ -450,6 +541,7 @@ export function buildState(workspace: string): Record<string, unknown> {
     designChoice: (designChoiceDoc?.chosen_option as string | undefined) ?? null,
     windowGate,
     remediation,
+    originalBuild,
     remediationActive: remediation.some((r) => r.remaining.length > 0),
     designDelivery,
     appAgents: Array.isArray(rosterDoc?.agents) ? rosterDoc!.agents : null,
@@ -1226,6 +1318,12 @@ body { font:14px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif; background:
 .banner.remed span { line-height:1.45; }
 .banner.remed .fb { opacity:.75; font-style:italic; }
 .chip.remed { background:var(--accent, #3b5bdb); color:#fff; }
+.remwave { padding:.6rem 0 .5rem; border-bottom:1px solid var(--border); }
+.remwave:last-child { border-bottom:0; }
+.remhead { display:flex; align-items:center; gap:.5rem; margin-bottom:.25rem; flex-wrap:wrap; }
+.remarrow { color:var(--accent, #3b5bdb); font-size:.72rem; letter-spacing:.08em; text-transform:uppercase; margin:.1rem 0 .3rem; }
+.remfb { padding:.25rem 0 .25rem .9rem; border-left:2px solid var(--border); margin:.2rem 0; font-size:.85rem; }
+.remprop { display:flex; flex-wrap:wrap; gap:.35rem .5rem; align-items:center; font-size:.8rem; }
 main { padding:1.2rem clamp(1rem,4vw,2.5rem); max-width:1420px; margin:0 auto; }
 .tabpane { display:none; }
 .tabpane.active { display:block; }
@@ -1964,15 +2062,45 @@ async function tick() {
   const remP = document.getElementById('remedPanel');
   if ((s.remediation || []).length) {
     remP.style.display = '';
-    setHTML('remedList', s.remediation.slice().reverse().map(r => {
+    const SRC_ICON = { 'merge conflict': '⛙', 'security scan': '🛡', 'code audit': '🔍', 'live verification': '⚡', 'user review': '👤', 'review feedback': '💬' };
+    const outcomeChip = (a) =>
+      a.outcome === 'committed' ? (a.cached
+        ? '<span class="chip" title="inputs unchanged — previous result re-used">unchanged · reused</span>'
+        : '<span class="chip" style="background:var(--ok,#2b8a3e);color:#fff">rebuilt ✓' + (a.attempts > 1 ? ' (' + a.attempts + ' attempts)' : '') + (a.costUsd ? ' · $' + a.costUsd.toFixed(2) : '') + '</span>')
+      : a.outcome === 're-running' ? '<span class="chip remed">re-building now…</span>'
+      : a.outcome === 'failed' ? '<span class="chip" style="background:var(--bad,#c92a2a);color:#fff">failed — next wave fixes it</span>'
+      : a.outcome === 'skipped' ? '<span class="chip">skipped</span>'
+      : '<span class="chip">queued</span>';
+    const origin = '<div class="remwave">' +
+      '<div class="remhead"><b>Original build</b>' +
+      (s.originalBuild && s.originalBuild.completedAt
+        ? ' <span class="hint">completed ' + esc(String(s.originalBuild.completedAt).slice(11,19)) + ' · $' + s.originalBuild.costUsd.toFixed(2) + ' — then quality gates and reviews found problems below</span>'
+        : ' <span class="hint">first derivation — problems found before completion are remediated below</span>') +
+      '</div></div>';
+    setHTML('remedList', origin + s.remediation.map((r, i) => {
       const doneN = r.reopened.length - r.remaining.length;
-      const state = r.remaining.length === 0
-        ? '<span class="chip" style="background:var(--ok,#2b8a3e);color:#fff">fixed &amp; re-verified</span>'
-        : '<span class="chip remed">in progress · ' + doneN + '/' + r.reopened.length + '</span>';
-      return '<div style="padding:.55rem 0;border-bottom:1px solid var(--border)">' +
-        '<div><b>' + esc(remHeadline(r.feedback)) + '</b> ' + state + '</div>' +
-        '<div class="hint">feedback entered at <span class="mono">' + esc(r.nodeId) + '</span> · ' + esc((r.at||'').slice(11,19)) + ' · re-derives: ' + r.reopened.map(esc).join(', ') + '</div>' +
-        (r.feedback ? '<details><summary class="hint">full feedback</summary><div class="hint" style="white-space:pre-wrap">' + esc(r.feedback) + '</div></details>' : '') +
+      const isLatest = i === s.remediation.length - 1;
+      // A superseded wave's live "remaining" counts nodes a LATER wave reopened
+      // — show its own outcome instead: it either finished or handed off.
+      const state = !isLatest
+        ? (r.actions.some(a => a.outcome === 'failed' || a.outcome === 'pending' || a.outcome === 're-running')
+          ? '<span class="chip">handed off to remediation ' + (r.wave + 1) + '</span>'
+          : '<span class="chip" style="background:var(--ok,#2b8a3e);color:#fff">fixed &amp; re-verified ✓</span>')
+        : r.remaining.length === 0
+          ? '<span class="chip" style="background:var(--ok,#2b8a3e);color:#fff">fixed &amp; re-verified ✓</span>'
+          : '<span class="chip remed">re-deriving · ' + doneN + '/' + r.reopened.length + '</span>';
+      const findings = r.feedbacks.map(f =>
+        '<div class="remfb">' + (SRC_ICON[f.source] || '💬') + ' <b>' + esc(f.source) + '</b> → feedback delivered to <span class="mono">' + esc(f.nodeId) + '</span>' +
+        (f.feedback ? '<details><summary class="hint">what it said</summary><div class="hint" style="white-space:pre-wrap;max-height:180px;overflow:auto">' + esc(f.feedback) + '</div></details>' : '') +
+        '</div>').join('');
+      const acted = r.actions.filter(a => a.outcome !== 'skipped');
+      const propagation = acted.map(a => '<span style="white-space:nowrap"><span class="mono">' + esc(a.nodeId) + '</span> ' + outcomeChip(a) + '</span>').join(' <span class="hint">→</span> ');
+      return '<div class="remwave">' +
+        '<div class="remarrow">▼ feedback</div>' +
+        '<div class="remhead"><b>Remediation ' + r.wave + '</b> <span class="hint">' + esc(String(r.at||'').slice(11,19)) + '</span> ' + state + '</div>' +
+        findings +
+        '<div class="hint" style="margin:.3rem 0 .15rem">The fix propagates: the step that owns the problem rebuilds, then everything depending on it re-derives (unchanged steps are re-used, never re-paid):</div>' +
+        '<div class="remprop">' + propagation + '</div>' +
         '</div>';
     }).join(''));
   } else remP.style.display = 'none';
