@@ -831,6 +831,48 @@ export function buildNodeDetail(workspace: string, nodeId: string): Record<strin
     }
   }
 
+  // Findings belong to the step that PRODUCED them: security-scan (rules) and
+  // slice-audit (semantic). Grouped by area for the drawer, so a wall of text
+  // becomes a triage list where you drill down by category.
+  let findings: { high: number; total: number; groups: { area: string; items: { severity: string; file: string; line?: number; text: string }[] }[] } | null = null;
+  const findingSources: Array<{ name: string; sevKey?: string }> = [
+    { name: "security_report" },
+    { name: "audit" },
+  ];
+  const rawFindings: Array<{ severity: string; area: string; file: string; line?: number; text: string }> = [];
+  for (const src of findingSources) {
+    const doc = readArtifactJson(workspace, foldState(new Journal(workspace).read()).artifacts, src.name) as Record<string, unknown> | null;
+    // only attach to the node that actually owns this artifact
+    if (!node.outputs?.some((o) => o.name === src.name)) continue;
+    const arr = (doc?.findings as Array<Record<string, unknown>>) ?? [];
+    for (const f of arr) {
+      rawFindings.push({
+        severity: String(f.severity ?? "medium"),
+        area: String(f.area ?? f.rule ?? "other"),
+        file: String(f.file ?? ""),
+        line: f.line as number | undefined,
+        text: String(f.finding ?? f.detail ?? ""),
+      });
+    }
+  }
+  if (rawFindings.length) {
+    const byArea = new Map<string, typeof rawFindings>();
+    const sevRank = { high: 0, medium: 1, low: 2 } as Record<string, number>;
+    for (const f of rawFindings) {
+      if (!byArea.has(f.area)) byArea.set(f.area, []);
+      byArea.get(f.area)!.push(f);
+    }
+    const groups = [...byArea.entries()]
+      .map(([area, items]) => ({
+        area,
+        items: items.sort((a, b) => (sevRank[a.severity] ?? 1) - (sevRank[b.severity] ?? 1)),
+        _high: items.filter((i) => i.severity === "high").length,
+      }))
+      .sort((a, b) => b._high - a._high || b.items.length - a.items.length)
+      .map(({ area, items }) => ({ area, items }));
+    findings = { high: rawFindings.filter((f) => f.severity === "high").length, total: rawFindings.length, groups };
+  }
+
   const describe = (id: string) => def.nodes.find((n) => n.id === id)?.description ?? null;
   let promptText: string | null = null;
   if (node.prompt) {
@@ -853,6 +895,7 @@ export function buildNodeDetail(workspace: string, nodeId: string): Record<strin
     command: node.command ?? null,
     verifyCommand: node.verify ?? null,
     results,
+    findings,
     attempts: Object.entries(attempts).map(([n, a]) => ({ attempt: Number(n), ...a })),
     transcript,
     toolCounts,
@@ -1837,7 +1880,7 @@ button.ghost { background:transparent; border:1px solid var(--border); color:var
     <div class="card"><h2>Quality &amp; test results</h2><div id="quality"></div></div>
   </div>
   <div class="card" id="remedPanel" style="display:none"><h2>Remediations &amp; enhancements <span class="hint">— defects fixed and requirements changed after the first build; click any for the full story</span></h2><div id="remedList"></div></div>
-  <div class="card" id="findingsPanel" style="display:none"><h2>Security &amp; audit findings <span class="hint" id="findingsCount"></span></h2><div id="findingsList"></div></div>
+  <div class="card" id="findingsPanel" style="display:none"><h2>Security posture</h2><div id="findingsList"></div></div>
   <div class="secwrap" id="sec-design" style="display:none">
     <div class="seclabel">The design <span class="hint">— what your app looks like</span></div>
     <div class="card" id="designPanel" style="display:none"><h2 id="designHead">Design options — pick one</h2><div class="designs" id="designs"></div></div>
@@ -2135,8 +2178,22 @@ async function refreshDrawer() {
     '<div class="attempt"><b>' + title(r.name) + '</b> · <a href="' + r.href + '" target="_blank" class="mono" style="color:var(--accent);font-size:.72rem">open ' + esc(r.file) + '</a>' +
     r.entries.map(e => '<div class="depitem"><span class="d">' + esc(title(e.k)) + ':</span> <span class="mono" style="font-size:.74rem">' + esc(e.v) + '</span></div>').join('') +
     '</div>').join('');
+  // Findings live in the drawer of the step that produced them, grouped by
+  // area and collapsible — the triage list, not a wall.
+  const sevChip = v => '<span class="chip" style="' + (v === 'high' ? 'background:var(--bad,#c92a2a);color:#fff' : v === 'medium' ? 'border:1px solid var(--warn,#e08e0b);color:var(--warn,#e08e0b)' : 'border:1px solid var(--border)') + '">' + v + '</span>';
+  const findingsHtml = d.findings ?
+    '<h3>Findings <span class="hint">' + d.findings.high + ' high · ' + d.findings.total + ' total</span></h3>' +
+    d.findings.groups.map(g => {
+      const gh = g.items.filter(i => i.severity === 'high').length;
+      return '<details class="egroup"' + (gh ? ' open' : '') + '><summary><span class="arrow">▶</span><b>' + esc(g.area) + '</b> <span class="hint">' + g.items.length + (gh ? ' · ' + gh + ' high' : '') + '</span></summary>' +
+        '<div class="inner">' + g.items.map(i =>
+          '<div class="findrow">' + sevChip(i.severity) +
+          '<span class="mono hint" style="white-space:nowrap">' + esc((i.file||'') + (i.line ? ':' + i.line : '')) + '</span>' +
+          '<span style="flex:1">' + esc(i.text) + '</span></div>').join('') + '</div></details>';
+    }).join('') : '';
   setHTML('dBody',
     (d.description ? '<p style="font-size:.9rem">' + esc(d.description) + '</p>' : '') +
+    findingsHtml +
     (d.model ? '<h3>Model</h3><div class="depitem mono">' + esc(d.model) + (d.escalateModel ? ' <span class="d">(retries escalate to ' + esc(d.escalateModel) + ')</span>' : '') + '</div>' : '') +
     ran + caps + toolUse +
     '<h3>Waits for</h3>' + (d.deps.map(dep).join('') || '<div class="empty">Nothing — a starting step.</div>') +
@@ -2716,26 +2773,26 @@ async function tick() {
   }
   setHTML('events', rows.join(''));
 
-  // Security + code-audit findings, surfaced (was only raw JSON before).
+  // Security POSTURE on Overview = one honest line, not a wall. The findings
+  // themselves live in the drawer of the step that produced them (click
+  // security-scan or slice-audit in the Pipeline).
   const fp = document.getElementById('findingsPanel');
   const sec = s.securityReport, aud = s.auditReport;
-  const allFindings = []
-    .concat((sec?.findings || []).map(f => ({ ...f, _src: 'scan' })))
-    .concat((aud?.findings || []).map(f => ({ ...f, _src: 'audit' })));
-  if (allFindings.length) {
+  const highN = (sec?.findings || []).filter(f => (f.severity||'medium') === 'high').length
+              + (aud?.findings || []).filter(f => (f.severity||'medium') === 'high').length;
+  const totalN = (sec?.findings || []).length + (aud?.findings || []).length;
+  if (totalN) {
     fp.style.display = '';
-    const sev = f => (f.severity || 'medium');
-    const order = { high: 0, medium: 1, low: 2 };
-    allFindings.sort((a, b) => (order[sev(a)] ?? 1) - (order[sev(b)] ?? 1));
-    const highN = allFindings.filter(f => sev(f) === 'high').length;
-    setText('findingsCount', '— ' + highN + ' high, ' + allFindings.length + ' total' + (sec?.filesScanned ? ' · ' + sec.filesScanned + ' files scanned' : ''));
-    const sevChip = v => '<span class="chip" style="' + (v === 'high' ? 'background:var(--bad,#c92a2a);color:#fff' : v === 'medium' ? 'border:1px solid var(--warn,#e08e0b);color:var(--warn,#e08e0b)' : 'border:1px solid var(--border)') + '">' + v + '</span>';
-    setHTML('findingsList', allFindings.slice(0, 120).map(f =>
-      '<div class="findrow">' + sevChip(sev(f)) +
-      '<span class="chip">' + esc(f._src === 'scan' ? (f.rule || 'scan') : (f.area || 'audit')) + '</span>' +
-      '<span class="mono hint" style="white-space:nowrap">' + esc((f.file || '') + (f.line ? ':' + f.line : '')) + '</span>' +
-      '<span style="flex:1">' + esc(f.finding || f.detail || '') + '</span></div>').join('') +
-      (allFindings.length > 120 ? '<div class="hint" style="margin-top:.3rem">showing 120 of ' + allFindings.length + '</div>' : ''));
+    const openAudit = aud ? 'slice-audit' : 'security-scan';
+    const verdict = highN > 0
+      ? '<span class="chip" style="background:var(--bad,#c92a2a);color:#fff">⛔ ' + highN + ' high · not shippable</span>'
+      : '<span class="chip" style="background:var(--ok,#2b8a3e);color:#fff">✓ 0 high</span>';
+    setHTML('findingsList',
+      '<div style="display:flex;align-items:center;gap:.7rem;flex-wrap:wrap">' + verdict +
+      '<span class="hint">' + totalN + ' findings total' + (sec?.filesScanned ? ' · ' + sec.filesScanned + ' files scanned' : '') + '</span>' +
+      '<button class="ghost" id="reviewFindingsBtn" data-node="' + openAudit + '" style="margin-left:auto">Review findings →</button></div>');
+    const rfb = document.getElementById('reviewFindingsBtn');
+    if (rfb) rfb.onclick = () => { showTab('pipeline'); openDrawer(rfb.dataset.node); };
   } else fp.style.display = 'none';
 
   // designs (locked once chosen)
