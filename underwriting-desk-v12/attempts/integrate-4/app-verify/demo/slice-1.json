@@ -1,0 +1,16 @@
+{
+  "screen": "screen-pipeline-board",
+  "caption": "Filing Harborline Freight through intake triage: the agent proposes a classification, the missing documents and an analyst queue, the analyst accepts it, and the deal moves from Intake into Document Extraction on the live pipeline board.",
+  "steps": [
+    { "action": "click", "selector": "[data-screen=\"pipeline-board\"]" },
+    { "action": "fill", "selector": "#intake-borrower-name", "value": "Harborline Freight" },
+    { "action": "fill", "selector": "#intake-industry", "value": "trucking" },
+    { "action": "fill", "selector": "#intake-requested", "value": "400000" },
+    { "action": "fill", "selector": "#intake-exposure", "value": "400000" },
+    { "action": "fill", "selector": "#intake-rm-email", "value": "rm@bank.test" },
+    { "action": "click", "selector": "#intake-submit-btn" },
+    { "action": "fill", "selector": "#triage-analyst-email", "value": "analyst@bank.test" },
+    { "action": "click", "selector": "#triage-run-btn" },
+    { "action": "click", "selector": "#triage-accept-btn" }
+  ]
+}

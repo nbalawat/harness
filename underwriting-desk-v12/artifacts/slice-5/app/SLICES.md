@@ -167,3 +167,28 @@ user's email as `actor` to `ext_audit.record()`, since an audit entry must name
 who caused it — a Q&A session is caused by the person who asked, never by
 `system`. All three recorded acceptance checks still pass exactly as written and
 the backend suite is green (33 tests).
+
+**Revision (slice 5, attempt 5) — grounding made robust to the merged book.**
+On the merged app (which seeds many more deals than this slice's own tree) the
+test `test_answer_is_grounded_in_live_deal_records` failed: it asked "which
+deals await tiered approval" and asserted the intake deal it had just filed
+appeared in `source_deal_ids`, but with sibling slices' deals genuinely parked
+at tiered approval the desk correctly grounded that answer in exactly those
+deals instead. The desk's behaviour was right and the assertion was wrong, so
+the fix is on the test — plus an explicit guarantee on the feature. Retrieval
+carries **no top-k**: `retrieve_grounded_deal_context` returns every record in
+the caller's permission scope that bears on the question, however large the
+book grows, and the only truncation in the module is a display one in
+`_deterministic_digest` ("+N more") applied AFTER relevance filtering and never
+applied to `source_deal_ids`, so a relevant deal is never silently dropped from
+an answer's sources. The test now asserts grounding on a stage the fixture deal
+genuinely occupies (intake), and checks the desk's sources against the live
+pipeline board — `set(source_deal_ids) == the deals actually at that stage` —
+rather than against a fixed list; the tiered-approval question is still
+exercised, asserting the honest outcome either way (exactly the deals at that
+stage when some exist, otherwise the "none match" answer grounded in the book
+actually read). Verified against a simulated merged book (16 deals, three at
+tiered approval, twelve-plus at intake): sources came back as the exact
+relevant set with nothing dropped. No behaviour change to any endpoint; all
+three recorded acceptance checks pass exactly as written, the backend suite is
+green (33 tests), and `frontend/app.js` remains an untouched pure append.

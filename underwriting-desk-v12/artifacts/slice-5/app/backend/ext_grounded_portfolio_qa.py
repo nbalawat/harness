@@ -338,7 +338,14 @@ def retrieve_grounded_deal_context(context):
     """Node `retrieve`: R-015 grounds answers in stored deal data, capped at
     the scope resolved above — record selection stays in code the agent
     cannot widen (R-054). The returned `context_records` ARE the agent's
-    knowledge for this question."""
+    knowledge for this question.
+
+    There is deliberately NO top-k here: every record in the caller's scope
+    that bears on the question is retrieved and cited, however large the book
+    grows. The only truncation anywhere in this module is a display one in
+    `_deterministic_digest`, applied AFTER relevance filtering, disclosed in
+    the prose ("+N more"), and never applied to `source_deal_ids` — so a
+    relevant deal is never silently dropped from the answer's sources."""
     visible = context.get("visible_deal_ids", [])
     question = context.get("question")
     agent = _agent()

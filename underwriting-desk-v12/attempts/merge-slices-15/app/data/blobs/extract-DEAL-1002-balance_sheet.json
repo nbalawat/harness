@@ -1,0 +1,36 @@
+{
+  "deal_code": "DEAL-1002",
+  "document_type": "balance_sheet",
+  "figures": [
+    {
+      "line_item_key": "current_assets",
+      "period": "FY2025",
+      "value": 611000,
+      "unit": "USD",
+      "page_number": 1,
+      "section": "Balance Sheet",
+      "cell_locator": "row 9",
+      "quoted_text": "Total current assets 611,000"
+    },
+    {
+      "line_item_key": "current_liabilities",
+      "period": "FY2025",
+      "value": 430300,
+      "unit": "USD",
+      "page_number": 1,
+      "section": "Balance Sheet",
+      "cell_locator": "row 21",
+      "quoted_text": "Total current liabilities 430,300"
+    },
+    {
+      "line_item_key": "total_funded_debt",
+      "period": "FY2025",
+      "value": 2207000,
+      "unit": "USD",
+      "page_number": 1,
+      "section": "Balance Sheet",
+      "cell_locator": "row 27",
+      "quoted_text": "Total funded debt 2,207,000"
+    }
+  ]
+}

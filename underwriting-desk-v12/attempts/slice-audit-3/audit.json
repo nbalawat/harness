@@ -1,0 +1,268 @@
+{
+  "status": "findings",
+  "findings": [
+    {
+      "severity": "high",
+      "area": "fsi-hardening",
+      "file": "backend/ext_audit.py",
+      "line": 48,
+      "finding": "POST /audit is unauthenticated and accepts an arbitrary `event` string plus a free-form `detail` dict, and record() writes that straight into the domain `audit_log` table. Verified: an unauthenticated POST of {\"event\":\"deal.decision_recorded\",\"detail\":{\"deal_id\":\"DEAL-1004\",\"actor_user_id\":3,\"after\":{\"decision\":\"approved\"}}} returned 200 and the forged row then appeared in GET /api/deals/DEAL-1004/audit — the deal Chronicle that ext_memo_policy.py:773 advertises as the regulatory record. The audit trail is attacker-writable and attributable to any user id, so it cannot be relied on as evidence of who decided what."
+    },
+    {
+      "severity": "high",
+      "area": "fsi-hardening",
+      "file": "backend/ext_workflow.py",
+      "line": 31,
+      "finding": "POST /workflow/submissions/{id}/approve has no identity check and takes the deciding human's identity from the request body (`req.actor`, a free string). workflow_engine.py:171 parks every `human` workflow node on exactly this queue, so the app's human approval gate is passable by any unauthenticated caller under any invented name. Verified: an anonymous POST with actor='i-made-this-up@evil.test' returned 200 and moved the submission to status 'approved' with decided_by set to that string. Companion routes POST /workflow/submissions (line 21) and the workflow start/tick routes in ext_workflow_runs.py:19,28 are likewise unauthenticated."
+    },
+    {
+      "severity": "high",
+      "area": "fsi-hardening",
+      "file": "backend/ext_memo_policy.py",
+      "line": 673,
+      "finding": "MemoAcceptRequest.action (line 582) is an unvalidated free string, and accept_memo passes it through to persist_accepted_memo, which publishes the memo draft and advances the deal to policy_compliance unconditionally. Verified: POST /api/deals/DEAL-1003/memo/accept with action='reject' returned 200 {\"accepted\":true}, published the memo, and moved current_stage from memo_drafting to policy_compliance; action='banana' did the same. An analyst REJECTING the Credit Memo Agent's draft therefore advances the deal past its human gate on the agent's output. The sibling slice validates this correctly (ext_financial_spreading.py:609 rejects anything outside accept/edit/reject and skips downstream work on reject) — the two slices disagree."
+    },
+    {
+      "severity": "high",
+      "area": "merge-seams",
+      "file": "backend/ext_memo_policy.py",
+      "line": 145,
+      "finding": "Two parallel slices ship two contradictory risk-grade rubrics that write the SAME `risk_grades` table. ext_memo_policy.py:132 defines RUBRIC_VERSION 'v2.1' with numeric grades 2/3/5/7, while ext_financial_spreading.py:35,100 defines 'risk-rubric-v1' with letter grades A/B/C/D. Verified: after driving both paths, store.list('risk_grades') held [('B','risk-rubric-v1'), (5,'v2.1')] and `deals.risk_grade` is synced from whichever ran last. A deal's regulatory risk grade is on a different scale depending on which slice touched it, and any consumer comparing grades across deals (the pipeline board, the Q&A desk at ext_grounded_portfolio_qa.py:274) is comparing letters to integers."
+    },
+    {
+      "severity": "high",
+      "area": "merge-seams",
+      "file": "backend/ext_memo_policy.py",
+      "line": 137,
+      "finding": "The same two slices define DSCR differently and both persist to `financial_ratios` with ratio_type='dscr'. ext_memo_policy.py:138 computes DSCR as ebitda/annual_debt_service and leverage as total_funded_debt/ebitda; ext_financial_spreading.py:335 computes DSCR as ebitda/interest_expense and leverage as total_debt/ebitda. Verified: the dscr rows stored were (210000/60000)=3.5 and (540000/432000)=1.25 — computed from different line items under one label. The two modules also use different current-ratio source keys (current_assets vs total_current_assets) and different divide-by-zero labels ('return_null' vs 'denominator_zero_returns_null'), so the covenant metric a credit decision rests on is not consistently defined across the merged app."
+    },
+    {
+      "severity": "high",
+      "area": "merge-seams",
+      "file": "backend/ext_tiered_approval_and_sla.py",
+      "line": 480,
+      "finding": "_already_decided() treats 'returned_for_rework' as a recorded decision, but return_deal (line 599) and apply_sla_escalation_action (line 387) both SET current_status='returned_for_rework'. A returned deal is therefore permanently frozen out of decisioning. Verified: POST /api/deals/DEAL-1004/return returned 200, after which approve, decline, and return all returned 409 'deal DEAL-1004 already has a recorded decision'. Returning a deal for rework is supposed to send it back into the workflow (the module docstring at line 54 describes the guard as preventing reopening of a *closed or declined* deal); as merged it destroys the deal instead."
+    },
+    {
+      "severity": "high",
+      "area": "fsi-hardening",
+      "file": "backend/ext_deal_intake.py",
+      "line": 208,
+      "finding": "GET /api/pipeline has no identity or role check at all and returns every deal in the book with borrower_name, borrower_industry, requested_amount, exposure_amount, risk grade and stage. Verified: an unauthenticated GET returned 200 with the full deal list including 'Meridian Millwork LLC' and its $650,000 exposure. identity.can_view_deal / identity.visible_deals exist for exactly this purpose (identity.py:176) and are never called here, so the relationship-manager read scoping R-053 requires is absent on the app's primary board."
+    },
+    {
+      "severity": "high",
+      "area": "fsi-hardening",
+      "file": "backend/ext_deal_intake.py",
+      "line": 196,
+      "finding": "GET /api/deals applies role scoping only when the caller volunteers `acting_user_email`; with the parameter omitted it returns the entire deal book unscoped. Verified: unauthenticated GET /api/deals returned 200 with all deals. Because the scoping is opt-in on a caller-supplied query parameter, any client simply omits it to bypass identity.visible_deals — default-deny is inverted into default-allow."
+    },
+    {
+      "severity": "high",
+      "area": "fsi-hardening",
+      "file": "backend/ext_financial_spreading.py",
+      "line": 472,
+      "finding": "GET /api/deals/{deal_code} performs no authentication, authorisation, or read scoping and returns the complete borrower record. Verified: unauthenticated GET /api/deals/DEAL-1002 returned 200 with the full row. The sibling read endpoints in the same file are equally open: /api/deals/{c}/documents (line 477), /ratios (line 640) and /risk-grade (line 666) all serve borrower financials with no caller check."
+    },
+    {
+      "severity": "high",
+      "area": "fsi-hardening",
+      "file": "backend/ext_tiered_approval_and_sla.py",
+      "line": 719,
+      "finding": "GET /api/sla/idle has no identity or role check and returns a portfolio-wide register of stalled deals: borrower_name, exposure_amount, current_stage, last activity, and the named escalation_owner for each. Verified: unauthenticated GET returned 200 listing 'Pemberton Cold Storage' with its exposure and owner. GET /api/deals/{c}/approvals (line 708) is likewise unauthenticated and discloses recorded credit decisions, the deciding user id, and decision_notes."
+    },
+    {
+      "severity": "high",
+      "area": "fsi-hardening",
+      "file": "backend/ext_memo_policy.py",
+      "line": 773,
+      "finding": "GET /api/deals/{deal_code}/audit and /policy-exceptions (line 765) enforce read scoping only through _scoped_read (line 751), which returns immediately when `acting_user_email` is falsy — so omitting the optional query parameter skips the check entirely. Verified: unauthenticated GET /api/deals/DEAL-1003/audit returned 200 with the full Chronicle including before_payload/after_payload bodies containing the complete borrower record. GET /api/deals/{c}/memo (line 693) has no scoping call at all. The deal's full decision history and policy breaches are world-readable."
+    },
+    {
+      "severity": "high",
+      "area": "fsi-hardening",
+      "file": "backend/ext_grounded_portfolio_qa.py",
+      "line": 702,
+      "finding": "GET /api/qa/sessions scopes the Q&A session log only when `acting_user_email` is supplied; omitting it returns every session unfiltered. Verified: unauthenticated GET returned 200. The `portfolio_qa_sessions` rows contain question text, the grounded answer, source_deal_ids and the asking user_id — the permission-scoped retrieval the module is built around (line 205) is undone at the read-back."
+    },
+    {
+      "severity": "high",
+      "area": "fsi-hardening",
+      "file": "frontend/app.js",
+      "line": 1239,
+      "finding": "The portfolio Q&A desk hardcodes its caller identity: `const ACTING_USER_EMAIL = \"officer@bank.test\";`, used as the acting user for POST /api/qa/ask (line 1304) and GET /api/qa/book-summary (line 1352). The retrieval scope that ext_grounded_portfolio_qa.py:205 resolves server-side from this email — and that index.html:1039 promises is 'filtered by your role before the agent ever sees a row' — is therefore selected by a string literal in a static JS file served to every browser. Every visitor queries the whole book with Senior Credit Officer visibility."
+    },
+    {
+      "severity": "high",
+      "area": "fsi-hardening",
+      "file": "frontend/app.js",
+      "line": 291,
+      "finding": "Every mutating call in the frontend asserts its own identity from a user-editable text box; no request anywhere in the frontend sends an Authorization header, cookie or token (verified by grep — the only header used is Content-Type). acting_user_email is read from editable <input type=\"email\"> fields for deal intake (app.js:291 / index.html:1093), triage run and accept (app.js:336,382 / index.html:1112), spreading run and accept (app.js:662,692 / index.html:1323), memo run/accept and policy run (app.js:873,917,941), and SLA escalation (app.js:1182 / index.html:1599). A user types any desk address into the box and the acceptance is recorded as that person's signature. app.js:746 makes it worse by substituting a default 'analyst@bank.test' when the field is cleared rather than refusing the action."
+    },
+    {
+      "severity": "high",
+      "area": "module-bypasses",
+      "file": "backend/main.py",
+      "line": 66,
+      "finding": "POST /chat calls agent_runtime.respond() directly with no identity check, no permission-scoped retrieval, and no session recording — bypassing the entire grounded Q&A path in ext_grounded_portfolio_qa.py, which exists to enforce R-053/R-054 scoping and to write every exchange to `portfolio_qa_sessions` for audit. Verified: an unauthenticated POST /chat returned an agent reply and store.list('portfolio_qa_sessions') stayed at 0 rows. This is an unlogged, unscoped LLM channel into an app whose agent interactions are all supposed to be recorded."
+    },
+    {
+      "severity": "high",
+      "area": "fsi-hardening",
+      "file": "backend/ext_audit.py",
+      "line": 38,
+      "finding": "record() wraps the `audit_log` insert in `try/except Exception: pass`, so a failure to persist the regulatory audit row is silently swallowed and the mutation still succeeds. The comment calls the in-memory list 'the load-bearing record', but that list is process-local and is never read by the deal Chronicle — ext_memo_policy.py:785 reads the `audit_log` table. Any mutation whose audit write fails completes with no durable trail and no error surfaced to the caller."
+    },
+    {
+      "severity": "high",
+      "area": "merge-seams",
+      "file": "backend/ext_tiered_approval_and_sla.py",
+      "line": 78,
+      "finding": "ROLE_RANK introduces a 'credit_committee' role that exists in neither identity.ROLE_PERMISSIONS (identity.py:73) nor identity._KNOWN_ROLES (identity.py:40), and identity.resolve_user can never produce it. determine_approval_tier (line 169) requires that role for any exposure above $1,000,000, so those deals are permanently unapprovable by every provisionable identity. Verified: a $2,500,000 deal rejected officer@bank.test with 403 'requires credit_committee or higher'. The R-022 top tier is unreachable — the approval slice's role vocabulary and the shared identity module were built in parallel and never reconciled."
+    },
+    {
+      "severity": "high",
+      "area": "design-fidelity",
+      "file": "frontend/index.html",
+      "line": 948,
+      "finding": "The #messages list ships hardcoded fabricated agent answers naming invented borrowers, exposures and exception ids — 'Harborline Freight LLC ($880,000) carries an open concentration exception ... transportation exposure would reach 14.2% of the book against a 12% cap', 'Verrazano Dental Group ($640,000)', 'Kettle & Crown Brewing ($515,000)', sourced to 'DEAL-2291 · exception EX-114'. appendMessage (app.js:1262) inserts before .msg-pending and never clears the list, so this invented credit analysis sits permanently above every real server-grounded answer, visually indistinguishable from it. None of those borrowers or exceptions exists in the data model."
+    },
+    {
+      "severity": "medium",
+      "area": "fsi-hardening",
+      "file": "backend/ext_blobs.py",
+      "line": 10,
+      "finding": "PUT /files/{name} and GET /files/{name} (line 20) have no identity check, no role check and write no audit row. Verified: an unauthenticated PUT of arbitrary bytes returned 200 and the unauthenticated GET read them back. ext_uploads.py:15 (PUT /uploads/{name}) is the same — it filters by file extension but performs no authorisation and records nothing. In a regulated app these are unauthenticated read/write access to the document store."
+    },
+    {
+      "severity": "medium",
+      "area": "fsi-hardening",
+      "file": "backend/ext_auth.py",
+      "line": 15,
+      "finding": "POST /auth/login mints a bearer token for any non-empty `username` with no password, secret, or any other credential — LoginRequest (line 11) has a username field and nothing else. Identity is entirely self-asserted at the point the session is created, so the bearer tokens this module issues carry no assurance whatsoever."
+    },
+    {
+      "severity": "medium",
+      "area": "merge-seams",
+      "file": "backend/ext_memo_policy.py",
+      "line": 479,
+      "finding": "Three modules disagree on how to count an open policy exception. `policy_exceptions` is append-only, so waiving inserts a new row carrying the same rule_reference forward; ext_tiered_approval_and_sla.py:136 correctly folds to the latest row per rule, but ext_memo_policy.py:479 and ext_grounded_portfolio_qa.py:265 both filter naively on status == 'open' and so keep counting the superseded row. Verified: after waiving PROHIBITED-IND-01 on DEAL-1003 the approval module reported 1 open exception while the Q&A module reported 2, and GET /api/qa/book-summary returned open_exception_count 2. Officers reading the desk summary see breaches that have been formally waived."
+    },
+    {
+      "severity": "medium",
+      "area": "fsi-hardening",
+      "file": "backend/ext_memo_policy.py",
+      "line": 159,
+      "finding": "compute_ratio uses Python's built-in round(), which is round-half-to-even, but stamps every resulting row with rounding_method='round_half_up_2dp' (line 133) and persists that label into `financial_ratios.rounding_method`. Verified: compute_ratio(0.125, 1) returned 0.12 where round-half-up gives 0.13, and compute_ratio(2.675, 1) returned 2.67. The stored provenance of a regulated financial calculation misstates the method actually used, and the sibling slice does it correctly with Decimal(ROUND_HALF_UP) at ext_financial_spreading.py:118 — so the two paths round differently as well."
+    },
+    {
+      "severity": "medium",
+      "area": "fsi-hardening",
+      "file": "backend/ext_memo_policy.py",
+      "line": 703,
+      "finding": "POST /api/deals/{c}/agents/policy-compliance/run has no idempotency guard: record_policy_exceptions (line 452) inserts a fresh exception row on every invocation. Verified: three runs against DEAL-1003 produced 6 exception rows for 2 distinct rules. Because ext_memo_policy and ext_grounded_portfolio_qa count open exceptions by row rather than by rule, the exception register an officer reads inflates with every re-run, and a re-run after a waive silently re-blocks approval."
+    },
+    {
+      "severity": "medium",
+      "area": "fsi-hardening",
+      "file": "backend/ext_financial_spreading.py",
+      "line": 597,
+      "finding": "POST /api/deals/{c}/spread/accept is not idempotent and can be replayed indefinitely: each call re-inserts the full spread and re-computes ratios and grade. Verified: two accepts on DEAL-1002 took `financial_spread_template` from 9 to 18 rows and `financial_ratios` from 3 to 6 rows for the same six real figures. The persisted spread — the evidentiary basis of the credit decision — accumulates duplicate line items, and there is no check that the deal has not already had a spread accepted."
+    },
+    {
+      "severity": "medium",
+      "area": "merge-seams",
+      "file": "backend/ext_tiered_approval_and_sla.py",
+      "line": 95,
+      "finding": "The approval slice bypasses the shared permission model. identity.ROLE_PERMISSIONS grants 'deal.approve' only to senior_credit_officer/admin, but this module calls identity.require_actor(..., roles=CAN_APPROVE_ROLES) and then applies its own ROLE_RANK table, so the documented permission is never consulted. Verified: identity.has_permission(analyst, 'deal.approve') is False, yet POST /api/deals/DEAL-1006/approve as analyst@bank.test returned 200. The tier ceiling still holds so the observable behaviour matches R-020, but identity.py is no longer the authority of record for approvals — editing ROLE_PERMISSIONS has no effect on who can approve."
+    },
+    {
+      "severity": "medium",
+      "area": "module-bypasses",
+      "file": "backend/ext_rbac.py",
+      "line": 16,
+      "finding": "rbac.py is a second, parallel role system independent of identity.py, keyed on ext_auth bearer tokens instead of acting_user_email. Nothing anywhere calls rbac.grant(), so rbac._grants is permanently empty and both /admin/roles routes return 403 forever. Verified: GET /admin/roles returned 403 with rbac._grants == {}. rls.py:8 also scopes rows through this dead grant table, so any future use of the row-level-security module would silently deny everything."
+    },
+    {
+      "severity": "medium",
+      "area": "module-bypasses",
+      "file": "backend/ext_financial_spreading.py",
+      "line": 498,
+      "finding": "attach_document registers document metadata with storage_path=None and never calls blob_store, so a deal's supporting documents — the cited evidence behind every spread figure — have no file content behind them. Meanwhile ext_blobs.py and ext_uploads.py write blobs that nothing ever links to a deal. The blob-store contract is composed but disconnected from the app's document model, so citations at ext_financial_spreading.py:538 point at document rows that reference no retrievable file."
+    },
+    {
+      "severity": "medium",
+      "area": "merge-seams",
+      "file": "frontend/app.js",
+      "line": 1231,
+      "finding": "The Q&A slice re-mounts the shared composer with `composer = originalComposer.cloneNode(true); originalComposer.parentNode.replaceChild(composer, originalComposer)`. cloneNode does not copy event listeners, so the foundation's submit handler registered at app.js:17 is silently discarded at load. Concrete consequence: addMessage() and the whole /chat path (app.js:9-34) become dead code that still ships, and the module-scope `const input` captured at app.js:7 is left pointing at the detached original node — any later code writing to `input` updates an element no longer in the document."
+    },
+    {
+      "severity": "medium",
+      "area": "design-fidelity",
+      "file": "frontend/app.js",
+      "line": 42,
+      "finding": "`badge.textContent = ...` on the canonical #agent-mode mount point destroys the three child spans the design shell ships at index.html:855-858 — the `.dot` status indicator, the 'Agent Mode — Supervised Draft' label and the `.mode-note` 'every output awaits acceptance'. The mount point survives (so the id check passes) but the chosen design's agent-mode treatment is wiped on every page load and its CSS at index.html:136-149 becomes dead."
+    },
+    {
+      "severity": "medium",
+      "area": "design-fidelity",
+      "file": "frontend/index.html",
+      "line": 1382,
+      "finding": "The entire tiered-approval slice has no working frontend. The Approve / Decline / Return controls are hardcoded `disabled`, carry no id, and are never referenced in app.js; the same is true of the 'Waive with rationale' and 'Return to analyst' buttons at index.html:1375-1376 and the orphaned #exception-list at index.html:1370. Ten backend routes are never called from the UI: /approve, /decline, /return, /approvals, /policy-exceptions, /policy-exceptions/waive, /memo, /api/adverse-action-reasons, /api/qa/sessions, /audit. The credit decision itself cannot be performed from this app, while the page copy at index.html:1386 presents the buttons as merely awaiting an earlier stage."
+    },
+    {
+      "severity": "medium",
+      "area": "design-fidelity",
+      "file": "frontend/index.html",
+      "line": 1016,
+      "finding": "The 'Book at a Glance' panel ships five rows but app.js:1356-1358 only updates three from GET /api/qa/book-summary. 'Awaiting your signature: 9' (line 1018) and 'Idle past 5 days: 6' (line 1020) stay hardcoded forever, sitting immediately beside live server-computed figures with identical styling. A user cannot tell which portfolio numbers are real."
+    },
+    {
+      "severity": "medium",
+      "area": "merge-seams",
+      "file": "frontend/app.js",
+      "line": 279,
+      "finding": "Three parallel slices each invented their own 'currently selected deal' state and none of them synchronise: `let currentDealCode` (app.js:279, pipeline/triage), `let dealCode` (app.js:436, dossier), and `function dealCode()` (app.js:741, chronicle) which falls back to a hardcoded 'DEAL-1003' at app.js:743. Opening DEAL-1002 in the dossier leaves the Chronicle showing DEAL-1003, so a reviewer can read one deal's audit timeline while looking at another deal's financials."
+    },
+    {
+      "severity": "medium",
+      "area": "module-bypasses",
+      "file": "app/composed_modules.json",
+      "line": 1,
+      "finding": "Five modules are declared as composed but are never imported anywhere in the backend (verified by import grep): row-level-security (rls.py), pii-redaction (pii.py — reachable only through transcripts.py, itself unimported), forms-engine (forms.py), row-history (row_history.py) and structured-logging (slog.py). Consequently the app has no field-level change trail, no PII redaction on any deal or Q&A path, and no request logging at all. Endpoint payload validation is left to ad-hoc per-handler checks, which is how the unvalidated memo `action` field above slipped through."
+    },
+    {
+      "severity": "low",
+      "area": "merge-seams",
+      "file": "frontend/app.js",
+      "line": 1019,
+      "finding": "money() is defined three times by three slices (app.js:142, 422, 1019) and the third formats differently: the first two render '$880,000' via toLocaleString while the Idle Register version abbreviates to '$0.9M' (used at app.js:1090, 1153). The same regulated exposure figure is presented at different precision on the Pipeline Board and the SLA dashboard. setText() is also duplicated verbatim at app.js:431 and app.js:1136."
+    },
+    {
+      "severity": "low",
+      "area": "merge-seams",
+      "file": "frontend/app.js",
+      "line": 81,
+      "finding": "A leftover scaffold call fetches /api/conversations on every page load. That route does not exist; it falls through to the generic catch-all at backend/main.py:101 and returns 404 'unknown table'. The handler then targets #history-list, which does not exist in this design either, so the call is doubly dead."
+    },
+    {
+      "severity": "low",
+      "area": "design-fidelity",
+      "file": "frontend/index.html",
+      "line": 1622,
+      "finding": "index.html loads exactly one script (app.js), so all seven mod_*.js files shipped in frontend/ are dead: mod_auditview.js, mod_cards.js, mod_datatable.js, mod_notify.js, mod_permissions.js, mod_recorddetail.js and mod_router.js. mod_router.js:16 would install a second, competing hash-based screen router alongside app.js:100's [data-screen] router if it were ever included, and mod_permissions.js:24 calls /admin/roles, which is permanently 403."
+    },
+    {
+      "severity": "low",
+      "area": "fsi-hardening",
+      "file": "frontend/index.html",
+      "line": 861,
+      "finding": "The masthead states the signed-in identity and authority as static markup with no id and no JS binding: 'Desk of M. Okonjo', role chip 'Senior Credit Officer', authority chip 'Authority to $1,000,000'. index.html:1410 similarly hardcodes '$640,000 falls within the senior credit officer tier' regardless of which deal is loaded in the dossier. The UI asserts an approval authority that is never fetched from or checked against the server."
+    }
+  ],
+  "checked": {
+    "files": 71,
+    "axes": ["contracts", "fsi-hardening"]
+  }
+}

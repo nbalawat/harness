@@ -1603,6 +1603,7 @@ button.ghost { background:transparent; border:1px solid var(--border); color:var
   <div class="card gate" id="agentQPanel" style="display:none"><h2>The agent needs your input</h2><form id="agentQForm"></form></div>
   <div class="card gate" id="windowPanel" style="display:none"><h2>Checkpoint — the build is pausing for you <span class="hint" id="windowCountdown"></span></h2><form id="windowForm"></form></div>
   <div class="card gate" id="gatePanel" style="display:none"><h2>Waiting on you — the run continues after you answer</h2><form id="gateForm"></form></div>
+  <div class="card" id="remedPanel" style="display:none"><h2>Remediation — problems found, feedback routed, fixes re-verified</h2><div class="hint" style="margin-bottom:.3rem">When a review, audit, scan, or merge finds a problem, feedback re-opens the owning step and everything downstream re-derives. Nothing is patched silently — the chain below is the full history.</div><div id="remedList"></div></div>
   <div class="tiles">
     <div class="tile"><div class="k">Progress</div><div class="v" id="progressV"></div><div class="meter"><div id="progressBar"></div></div><div class="sub" id="progressSub"></div></div>
     <div class="tile"><div class="k">Cost</div><div class="v" id="costV"></div><div class="meter"><div id="costBar"></div></div><div class="sub" id="costSub"></div></div>
@@ -1617,7 +1618,6 @@ button.ghost { background:transparent; border:1px solid var(--border); color:var
   <div class="secwrap" id="sec-design" style="display:none">
     <div class="seclabel">The design <span class="hint">— what your app looks like</span></div>
     <div class="card" id="designPanel" style="display:none"><h2 id="designHead">Design options — pick one</h2><div class="designs" id="designs"></div></div>
-    <div class="card" id="remedPanel" style="display:none"><h2>Remediation — problems found, routed back, and re-verified</h2><div class="hint" style="margin-bottom:.3rem">When a review, audit, or scan finds a problem, the feedback re-opens the owning step and everything downstream re-derives. Nothing is patched silently.</div><div id="remedList"></div></div>
     <div class="card" id="deliveryPanel" style="display:none"><h2>Design delivery — what you approved vs what's live <span class="hint" id="deliveryTotals"></span></h2><div id="deliveryGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:.6rem"></div></div>
   </div>
   <div class="secwrap" id="sec-anatomy" style="display:none">

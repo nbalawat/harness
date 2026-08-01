@@ -1,0 +1,24 @@
+{
+  "files_scanned": 169,
+  "findings": [
+    {
+      "severity": "high",
+      "rule": "unauthenticated-mutation",
+      "file": "backend/ext_blobs.py",
+      "detail": "PUT /files/{name} handler carries no identity (add role check via acting_user_email, or an explicit '# public-endpoint: <reason>' marker)"
+    },
+    {
+      "severity": "high",
+      "rule": "unauthenticated-mutation",
+      "file": "backend/ext_uploads.py",
+      "detail": "PUT /uploads/{name} handler carries no identity (add role check via acting_user_email, or an explicit '# public-endpoint: <reason>' marker)"
+    },
+    {
+      "severity": "medium",
+      "rule": "unauthenticated-mutation",
+      "file": "backend/main.py",
+      "detail": "POST /chat handler carries no identity (add role check via acting_user_email, or an explicit '# public-endpoint: <reason>' marker)"
+    }
+  ],
+  "high_count": 2
+}
