@@ -1345,7 +1345,11 @@ body { font:14px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif; background:
 .subtabs button.active { border-color:var(--accent,#3b5bdb); color:var(--accent,#3b5bdb); font-weight:600; }
 #waveInfo { border:1px solid var(--accent,#3b5bdb); border-left-width:4px; border-radius:10px; padding:.55rem .8rem; margin-bottom:.6rem; font-size:.85rem; }
 .prow.dim { opacity:.32; }
+.prow.inwave { box-shadow: inset 3px 0 0 var(--accent, #3b5bdb); }
 .prow .wavechip { margin-left:.4rem; }
+/* Pipeline chips stay quiet: small, single-line, never stacked. */
+.prow .chip { font-size:.62rem; padding:.06rem .45rem; vertical-align:middle; }
+.prow .id { white-space:nowrap; }
 main { padding:1.2rem clamp(1rem,4vw,2.5rem); max-width:1420px; margin:0 auto; }
 .tabpane { display:none; }
 .tabpane.active { display:block; }
@@ -2383,10 +2387,13 @@ async function tick() {
     const phDone = list.filter(n => n.state === 'committed' || n.state === 'skipped').length;
     return '<div class="phase"><div class="phead"><b>' + esc(ph) + '</b><div class="bar"><div style="width:' + (100*phDone/list.length) + '%"></div></div><span class="stat">' + phDone + '/' + list.length + '</span></div>' + header +
       list.map(n =>
-        '<div class="prow ' + n.state + (activeWave && !waveAction(n.id) ? ' dim' : '') + '" data-id="' + esc(n.id) + '"><span class="icon">' + (STATE_ICON[n.state]||'') + '</span>' +
+        '<div class="prow ' + n.state + (activeWave ? (waveAction(n.id) ? ' inwave' : ' dim') : '') + '" data-id="' + esc(n.id) + '"><span class="icon">' + (STATE_ICON[n.state]||'') + '</span>' +
         '<span class="id mono">' + esc(n.id) + (n.retries ? ' <span class="chip retry">retry ×' + n.retries + '</span>' : '') +
-        (n.revised ? ' <span class="chip" style="border:1px solid var(--accent,#3b5bdb);color:var(--accent,#3b5bdb)" title="remediation feedback was delivered to this step ' + n.revised + ' time(s) — see the wave tabs above or the Remediation panel on Overview">revised ×' + n.revised + '</span>' : '') +
-        (activeWave && waveAction(n.id) ? ' <span class="wavechip">' + remOutcomeChip(waveAction(n.id)) + '</span>' : '') +
+        // Wave lens: membership = accent bar; a chip ONLY when there is news
+        // (building/built/reused/failed) — a dozen "queued" chips is clutter.
+        (activeWave && waveAction(n.id) && !['pending','skipped'].includes(waveAction(n.id).outcome) ? ' <span class="wavechip">' + remOutcomeChip(waveAction(n.id)) + '</span>' : '') +
+        // Full-build lens: the compact remediation markers live here instead.
+        (!activeWave && n.revised ? ' <span class="chip" style="border:1px solid var(--accent,#3b5bdb);color:var(--accent,#3b5bdb)" title="remediation feedback was delivered to this step ' + n.revised + ' time(s) — see the wave tabs above">revised ×' + n.revised + '</span>' : '') +
         (!activeWave && (s.remediation || []).some(r => r.remaining.includes(n.id)) ? ' <span class="chip remed" title="re-deriving from remediation feedback">remediating</span>' : '') + '</span>' +
         (n.kind === 'agent' ? '<span class="chip model">' + esc(shortModel(n.model) || 'agent') + '</span>' : '<span class="chip">' + n.kind + '</span>') +
         '<span class="desc">' + esc(n.description ?? '') + '</span>' +

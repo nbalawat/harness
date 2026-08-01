@@ -1,14 +1,16 @@
-INFO:     Started server process [32777]
+INFO:     Started server process [64824]
 INFO:     Waiting for application startup.
 INFO:     Application startup complete.
-INFO:     Uvicorn running on http://127.0.0.1:62031 (Press CTRL+C to quit)
-INFO:     127.0.0.1:62033 - "GET /health HTTP/1.1" 200 OK
-INFO:     127.0.0.1:62035 - "POST /api/deals HTTP/1.1" 201 Created
-INFO:     127.0.0.1:62037 - "GET /api/pipeline HTTP/1.1" 200 OK
-INFO:     127.0.0.1:62039 - "POST /api/deals/DEAL-1001/agents/intake-triage/run HTTP/1.1" 200 OK
-INFO:     127.0.0.1:62041 - "POST /api/deals/DEAL-1001/triage/accept HTTP/1.1" 200 OK
-INFO:     127.0.0.1:62043 - "GET / HTTP/1.1" 200 OK
+INFO:     Uvicorn running on http://127.0.0.1:50507 (Press CTRL+C to quit)
+INFO:     127.0.0.1:50511 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50512 - "PUT /uploads/note.txt HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:50512 - "PUT /files/note.txt HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:50513 - "POST /api/deals HTTP/1.1" 422 Unprocessable Content
+INFO:     127.0.0.1:50513 - "GET /api/pipeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50514 - "POST /api/deals HTTP/1.1" 422 Unprocessable Content
+INFO:     127.0.0.1:50523 - "POST /api/deals HTTP/1.1" 422 Unprocessable Content
+INFO:     127.0.0.1:50524 - "GET /api/pipeline HTTP/1.1" 200 OK
 INFO:     Shutting down
 INFO:     Waiting for application shutdown.
 INFO:     Application shutdown complete.
-INFO:     Finished server process [32777]
+INFO:     Finished server process [64824]

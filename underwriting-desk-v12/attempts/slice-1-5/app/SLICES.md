@@ -98,3 +98,23 @@ still works, and `frontend/app.js` and `frontend/index.html` were not touched.
    extension allowlist still applies on top for identified callers.
 
 Covered by `backend/tests/test_deal_intake_and_triage.py` (24 tests green).
+
+### Revision — upload identity brought to the hardened module standard
+
+Both upload writes now declare identity in the handler signature rather than
+sniffing it off the request, which is the standard the security scan reads:
+
+- `backend/ext_blobs.py` `PUT /files/{name}` and `backend/ext_uploads.py`
+  `PUT /uploads/{name}` each take
+  `x_user_email: str | None = Header(default=None)` and return **401
+  `"x-user-email header required for uploads"`** when it is absent. The
+  `acting_user_email` query-parameter fallback (unused by any caller) is gone,
+  so the header is the single, explicit identity channel.
+- On success each response now carries `"uploaded_by": x_user_email` alongside
+  `name`/`bytes`, so the writer is visible in the response as well as in the
+  audit row.
+- Unknown/deactivated callers are still 403 via `identity.require_actor`, the
+  upload extension allowlist still applies, and
+  `test_blob_and_upload_writes_require_a_known_identity` now asserts the 401
+  detail and the `uploaded_by` echo. No other behavior changed; no frontend
+  caller PUTs to these endpoints.
