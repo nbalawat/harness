@@ -832,6 +832,55 @@ export function startUiServer(target: string, port: number): Promise<http.Server
 
   /** Per-tab independence: ?ws=<dir> selects the run for THIS request only —
    * ten builds in ten tabs, none fighting over server-side selection. */
+  /**
+   * Route free-text feedback to its entry point. Deterministic scoring: a
+   * strong, unambiguous match against ONE slice's story/screens/endpoints ->
+   * targeted slice fix; explicit new-capability language or a weak/ambiguous
+   * match -> the requirements front door (the cascade re-derives the plan and
+   * delivers the change to the right slice with provenance either way).
+   */
+  function routeFeedback(ws: string, text: string): { mode: string; target: string | null; why: string } {
+    const t = " " + text.toLowerCase().replace(/[^a-z0-9]+/g, " ") + " ";
+    const newReq =
+      /(new requirement|new feature|new screen|new report|new table|should also|also (want|need)|we (also )?need|must now|going forward|from now on|add support for|as well as)/.test(t);
+    const plan = readJsonSafe(path.join(ws, "artifacts", "slice-plan", "slice_plan.json")) as
+      | { slices?: Array<{ id: string; name?: string; story?: string; covers?: string[]; acceptance?: Array<{ path?: string }> }> }
+      | null;
+    const STOP = new Set(["this", "that", "with", "from", "have", "does", "screen", "slice", "should", "when", "user", "users", "into", "onto", "them", "then", "there", "deal", "deals", "will", "would"]);
+    const scores = (plan?.slices ?? []).map((s, i) => {
+      let score = 0;
+      const hits: string[] = [];
+      const weigh = (src: unknown, w: number) => {
+        for (const word of String(src ?? "").toLowerCase().split(/[^a-z0-9]+/)) {
+          if (word.length < 4 || STOP.has(word) || hits.includes(word)) continue;
+          if (t.includes(" " + word + " ") || t.includes(word)) {
+            score += w;
+            hits.push(word);
+          }
+        }
+      };
+      weigh(s.id, 1);
+      weigh(s.name, 1);
+      weigh(s.story, 1);
+      for (const c of s.covers ?? []) weigh(c.replace(/^screen-/, ""), 3);
+      for (const a of s.acceptance ?? []) weigh(a.path, 2);
+      return { slice: `slice-${i + 1}`, id: s.id, score, hits };
+    }).sort((a, b) => b.score - a.score);
+    const [best, second] = scores;
+    if (best && best.score >= 4 && (!second || best.score >= second.score * 1.6) && !newReq) {
+      return { mode: "fix-slice", target: best.slice, why: `matched '${best.id}' (${best.hits.slice(0, 5).join(", ")})` };
+    }
+    return {
+      mode: "new-requirement",
+      target: null,
+      why: newReq
+        ? "reads as a new or changed requirement — entering through requirements keeps provenance and re-plans correctly"
+        : best && best.score > 0
+          ? `no single slice matched decisively (top: ${best.id} ${best.score} vs ${second?.id ?? "-"} ${second?.score ?? 0}) — the requirements front door re-derives the plan and routes it safely`
+          : "no slice matched — the requirements front door re-derives the plan and routes it safely",
+    };
+  }
+
   function wsFrom(url: URL): string | null {
     const ws = url.searchParams.get("ws");
     if (!ws) return null;
@@ -1222,8 +1271,23 @@ export function startUiServer(target: string, port: number): Promise<http.Server
         let body = "";
         req.on("data", (chunk) => (body += chunk));
         req.on("end", () => {
-          const { kind, slice, text } = JSON.parse(body) as { kind: string; slice?: string; text: string };
-          const ctx = revisionCtx(wsFrom(url) ?? workspace!);
+          const parsed = JSON.parse(body) as { kind: string; slice?: string; text: string };
+          const { text } = parsed;
+          let { kind, slice } = parsed;
+          const ws = wsFrom(url) ?? workspace!;
+          const ctx = revisionCtx(ws);
+          // GENERIC feedback: the user describes the change; the router decides
+          // the entry point. A strong match against one slice's story/screens/
+          // endpoints -> targeted slice fix (cheap). Anything else -> the front
+          // door (requirements change request) — always correct, because the
+          // cascade re-derives the plan and carries the change to the right
+          // slice with full traceability.
+          let routed: { mode: string; target: string | null; why: string } | null = null;
+          if (kind === "auto") {
+            routed = routeFeedback(ws, text);
+            kind = routed.mode;
+            if (routed.target) slice = routed.target;
+          }
           let target: string | undefined;
           let feedback: string;
           if (kind === "fix-slice") {
@@ -1257,7 +1321,7 @@ export function startUiServer(target: string, port: number): Promise<http.Server
           const { reopened } = reviseNode(ctx, target, feedback);
           spawnResume([], ctx.workspace);
           res.writeHead(200, { "content-type": "application/json" });
-          res.end(JSON.stringify({ ok: true, target, reopened }));
+          res.end(JSON.stringify({ ok: true, target, reopened, routed }));
         });
       } else if (url.pathname === "/api/app/start" && req.method === "POST") {
         void startApp(wsFrom(url));
@@ -1655,9 +1719,10 @@ button.ghost { background:transparent; border:1px solid var(--border); color:var
   <div class="card" id="shotsPanel" style="display:none"><h2>Watch it grow — one screenshot per slice</h2><div class="shots" id="shots"></div>
     <details style="margin-top:.9rem"><summary style="cursor:pointer;font-weight:600;font-size:.88rem">Request a change to the app</summary>
       <form id="feedbackForm" style="margin-top:.7rem;max-width:640px">
-        <label class="opt"><input type="radio" name="fbKind" value="fix-slice" checked><span><b>Fix a slice</b><div class="od">The build doesn&#39;t match what was agreed — the slice re-runs with your correction; requirements stay unchanged.</div></span></label>
+        <label class="opt"><input type="radio" name="fbKind" value="auto" checked><span><b>Just describe it — the pipeline routes it</b><div class="od">A clear match to one delivered feature becomes a targeted fix of that slice; anything broader or new enters through requirements with provenance and re-plans. You&#39;ll be told which path it took.</div></span></label>
+        <label class="opt"><input type="radio" name="fbKind" value="fix-slice"><span><b>Fix a specific slice</b><div class="od">The build doesn&#39;t match what was agreed — the slice re-runs with your correction; requirements stay unchanged.</div></span></label>
         <label class="opt"><input type="radio" name="fbKind" value="new-requirement"><span><b>New or changed requirement</b><div class="od">Recorded as a change request, added to requirements with provenance, then re-planned and rebuilt with full traceability.</div></span></label>
-        <div id="fbSliceRow" style="margin:.5rem 0"><label class="hint">Which slice? </label><select id="fbSlice" style="padding:.35rem .5rem;border:1px solid var(--grid);border-radius:6px;background:var(--surface);color:inherit"></select></div>
+        <div id="fbSliceRow" style="margin:.5rem 0;display:none"><label class="hint">Which slice? </label><select id="fbSlice" style="padding:.35rem .5rem;border:1px solid var(--grid);border-radius:6px;background:var(--surface);color:inherit"></select></div>
         <textarea id="fbText" rows="3" style="width:100%;box-sizing:border-box;border:1px solid var(--grid);border-radius:8px;padding:.5rem .7rem;font:inherit;background:var(--page);color:inherit" placeholder="Describe the change you want…"></textarea>
         <button type="submit" class="primary" style="margin-top:.5rem">Send feedback &amp; rebuild</button>
       </form>
@@ -2245,7 +2310,15 @@ async function tick() {
       const text = document.getElementById('fbText').value.trim();
       if (!text) return;
       const r = await (await fetch('/api/feedback' + q(), { method:'POST', body: JSON.stringify({ kind, slice: document.getElementById('fbSlice').value, text }) })).json();
-      if (r.ok) { document.getElementById('fbText').value = ''; alert('Feedback accepted — ' + r.reopened.length + ' step(s) reopened. Watch the pipeline re-derive; unchanged steps are re-used.'); }
+      if (r.ok) {
+        document.getElementById('fbText').value = '';
+        const how = r.routed
+          ? (r.routed.mode === 'fix-slice'
+            ? 'Routed as a targeted fix of ' + r.target + ' — ' + r.routed.why
+            : 'Routed through requirements (front door) — ' + r.routed.why)
+          : 'Entered at ' + r.target;
+        alert('Feedback accepted.' + NL + NL + how + '.' + NL + NL + r.reopened.length + ' step(s) re-derive; unchanged steps are re-used. Track it as a new wave in the Pipeline tab.');
+      }
       tick();
     };
   }

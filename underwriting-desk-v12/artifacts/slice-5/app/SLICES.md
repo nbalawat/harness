@@ -98,6 +98,26 @@ still works, and `frontend/app.js` and `frontend/index.html` were not touched.
    extension allowlist still applies on top for identified callers.
 
 Covered by `backend/tests/test_deal_intake_and_triage.py` (24 tests green).
+
+### Revision — upload identity brought to the hardened module standard
+
+Both upload writes now declare identity in the handler signature rather than
+sniffing it off the request, which is the standard the security scan reads:
+
+- `backend/ext_blobs.py` `PUT /files/{name}` and `backend/ext_uploads.py`
+  `PUT /uploads/{name}` each take
+  `x_user_email: str | None = Header(default=None)` and return **401
+  `"x-user-email header required for uploads"`** when it is absent. The
+  `acting_user_email` query-parameter fallback (unused by any caller) is gone,
+  so the header is the single, explicit identity channel.
+- On success each response now carries `"uploaded_by": x_user_email` alongside
+  `name`/`bytes`, so the writer is visible in the response as well as in the
+  audit row.
+- Unknown/deactivated callers are still 403 via `identity.require_actor`, the
+  upload extension allowlist still applies, and
+  `test_blob_and_upload_writes_require_a_known_identity` now asserts the 401
+  detail and the `uploaded_by` echo. No other behavior changed; no frontend
+  caller PUTs to these endpoints.
 ## Slice 5 — Grounded, permission-scoped portfolio Q&A desk (`grounded-portfolio-qa`)
 
 A credit officer asks the portfolio desk a question in plain English (`POST
@@ -192,3 +212,16 @@ tiered approval, twelve-plus at intake): sources came back as the exact
 relevant set with nothing dropped. No behaviour change to any endpoint; all
 three recorded acceptance checks pass exactly as written, the backend suite is
 green (33 tests), and `frontend/app.js` remains an untouched pure append.
+
+**Rebase (attempt 6) — no behaviour change.** The foundation advanced again
+(the "upload identity brought to the hardened module standard" revision to
+`backend/ext_blobs.py`, `backend/ext_uploads.py` and
+`backend/tests/test_deal_intake_and_triage.py`), so this slice was re-based onto
+the current foundation: every shared file was re-taken from the foundation input
+and only this slice's own work re-applied on top —
+`backend/ext_grounded_portfolio_qa.py`,
+`backend/tests/test_grounded_portfolio_qa.py`, `demo/slice-5.json`, and pure
+appends to `frontend/app.js` (after the foundation module's closing `})();`) and
+to this file. Nothing in the foundation tree is modified by this slice. Re-probed
+against the booted app: slice 1's four acceptance checks and this slice's three
+all pass exactly as recorded, and the backend suite is green (33 tests).

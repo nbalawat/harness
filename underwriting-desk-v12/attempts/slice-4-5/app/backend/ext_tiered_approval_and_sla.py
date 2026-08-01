@@ -195,6 +195,34 @@ def business_days_between(start_iso, end=None):
 # deal codes so they never consume the intake sequence (see deals_repo).
 # ---------------------------------------------------------------------------
 
+def _reserve_fixture_deal_codes():
+    """The intake sequence must never re-issue a code a fixture already holds.
+
+    `deals_repo.next_deal_code()` counts DEAL-1001, DEAL-1002, … and knows
+    nothing about deals inserted with an explicit code, so an app that files a
+    few deals would eventually hand DEAL-1004 to a new borrower and silently
+    overwrite this desk's fixture (deals rows are append-only, latest-wins).
+    Rather than rewrite the shared repository — every slice builds on that same
+    file — the allocator is wrapped once, here, so it steps over codes already
+    taken. The first deal filed through intake is still DEAL-1001; only taken
+    codes are skipped, and the wrap is idempotent.
+    """
+    if getattr(deals_repo.next_deal_code, "_skips_taken_codes", False):
+        return
+    allocate = deals_repo.next_deal_code
+
+    def next_unused_deal_code():
+        code = allocate()
+        guard = 0
+        while deals_repo.get_deal(code) is not None and guard < 1000:
+            code = allocate()
+            guard += 1
+        return code
+
+    next_unused_deal_code._skips_taken_codes = True
+    deals_repo.next_deal_code = next_unused_deal_code
+
+
 def _fixture_deal(code, **fields):
     if deals_repo.get_deal(code) is not None:
         return
@@ -292,6 +320,7 @@ def _seed_desk_fixtures():
 
 
 _seed_reference_data()
+_reserve_fixture_deal_codes()
 _seed_desk_fixtures()
 
 
@@ -971,8 +1000,17 @@ def deal_decisions(deal_code: str, acting_user_email: str | None = None):
 
 
 @router.get("/api/approval-tiers")
-def approval_tiers():
-    """The published authority ladder — the UI shows it before a decision."""
+def approval_tiers(acting_user_email: str | None = None):
+    """The published authority ladder — the UI shows it before a decision.
+
+    The ladder and the reason register are reference data; the list of deals
+    awaiting a decision is deal data, so it is scoped to the caller whenever
+    one identifies itself.
+    """
+    awaiting = deals_repo.all_current_deals()
+    if acting_user_email:
+        actor = identity.require_actor(acting_user_email, action="read the approval queue")
+        awaiting = identity.visible_deals(actor, awaiting)
     return {
         "ceiling": identity.MAX_APPROVAL_EXPOSURE,
         "tiers": [
@@ -996,7 +1034,7 @@ def approval_tiers():
                 "required_authority_level": tier_for(d.get("exposure_amount"))["level"],
                 "current_stage": d.get("current_stage"),
             }
-            for d in deals_repo.all_current_deals()
+            for d in awaiting
             if d.get("current_status") not in FINAL_STATUSES
         ],
     }

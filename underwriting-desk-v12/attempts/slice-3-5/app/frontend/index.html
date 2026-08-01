@@ -1468,7 +1468,7 @@ sup.cite:hover { background: var(--surface-sunken); }
         <span class="kicker">Section D · Append-Only</span>
         <h2>The Chronicle</h2>
       </div>
-      <span class="head-meta">DEAL-2264 · 47 entries · nothing amended, nothing removed</span>
+      <span class="head-meta" id="chronicle-meta">select a deal · nothing amended, nothing removed</span>
     </div>
 
     <p class="deck">
@@ -1477,131 +1477,72 @@ sup.cite:hover { background: var(--surface-sunken); }
       delete path — not in the interface, and not in the API beneath it.
     </p>
 
+    <!-- ---------- memo & policy desk: the drafts this chronicle records ---------- -->
+    <article class="manuscript" id="memo-policy-desk" style="margin-bottom:2rem;">
+      <div class="manuscript__head">
+        <h3>Memo &amp; Policy Desk</h3>
+        <p>The Credit Memo Agent drafts from accepted figures only; the Policy Compliance Agent
+          tests the deal against the active lending ruleset. Both are proposals — a named human
+          accepts, and every action below lands in the chronicle beneath it.</p>
+      </div>
+
+      <div class="find-bar" style="border-top:0;padding-top:0;">
+        <label class="field field--wide">
+          <span>Deal</span>
+          <select id="chronicle-deal"></select>
+        </label>
+        <label class="field">
+          <span>Analyst email</span>
+          <input type="email" id="chronicle-analyst-email" value="analyst@bank.test">
+        </label>
+        <label class="field">
+          <span>Officer email (waivers)</span>
+          <input type="email" id="chronicle-officer-email" value="officer@bank.test">
+        </label>
+      </div>
+
+      <div class="decision-bar">
+        <button type="button" class="btn" id="memo-run-btn">Run Credit Memo Agent</button>
+        <button type="button" class="btn btn--ink" id="memo-accept-btn">Accept memo draft</button>
+        <p class="decision-note" id="memo-status">No memo drafted for this deal yet.</p>
+      </div>
+      <ul class="citation-rail" id="memo-output"></ul>
+
+      <div class="decision-bar">
+        <button type="button" class="btn" id="policy-run-btn">Run Policy Compliance Agent</button>
+        <button type="button" class="btn btn--ink" id="policy-accept-btn">Record exceptions</button>
+        <p class="decision-note" id="policy-status">No compliance review run for this deal yet.</p>
+      </div>
+      <ul class="docket-list" id="policy-output"></ul>
+
+      <div class="manuscript__head" style="margin-top:1.4rem;">
+        <h3>Policy Exceptions</h3>
+        <p>Every breach, written up with its rule reference, what was breached, and a rationale.
+          Only a credit officer may waive or uphold one, and never without writing why.</p>
+      </div>
+      <ul class="docket-list" id="exceptions-list"></ul>
+      <p class="composer-hint" id="exceptions-status" role="status"></p>
+    </article>
+
     <div class="chronicle-layout">
 
-      <ol class="chronicle">
-
-        <li class="by-human">
-          <div class="entry-when"><b>31 Jul</b>08:34:12 <span class="seq">Entry 47</span></div>
-          <div class="entry-spine" aria-hidden="true"></div>
-          <div class="entry-body">
-            <h4>Exception waiver requested</h4>
-            <span class="actor">J. Castellanos · Credit Analyst</span>
-            <p>Waiver requested on EX-108 with written rationale citing operating history and
-              principal guarantees. Routed to senior credit officer for disposition.</p>
-            <span class="delta"><span class="was">EX-108: open</span> → <span class="now">EX-108: waiver_requested</span></span>
-            <span class="seal">sealed</span>
-          </div>
-        </li>
-
-        <li class="by-agent">
-          <div class="entry-when"><b>31 Jul</b>08:12:55 <span class="seq">Entry 46</span></div>
-          <div class="entry-spine" aria-hidden="true"></div>
-          <div class="entry-body">
-            <h4>Policy compliance review completed</h4>
-            <span class="actor">Policy Compliance Agent · v2.3 · ruleset v4.2</span>
-            <p>Reviewed memo against concentration limits, prohibited industries and LTV caps.
-              One violation found: LTV 82.0% against a 75% cap. Written exception EX-108 raised.
-              Latency 4.2s · 3,180 tokens.</p>
-            <span class="delta"><span class="now">EX-108 created · rule LTV-CAP-01</span></span>
-            <span class="seal">sealed</span>
-          </div>
-        </li>
-
-        <li class="by-human">
-          <div class="entry-when"><b>31 Jul</b>08:09:41 <span class="seq">Entry 45</span></div>
-          <div class="entry-spine" aria-hidden="true"></div>
-          <div class="entry-body">
-            <h4>Memo draft accepted with edits</h4>
-            <span class="actor">J. Castellanos · Credit Analyst</span>
-            <p>Accepted the credit memo agent draft after amending the covenant paragraph.
-              Two sentences added, one struck. Both versions retained.</p>
-            <span class="delta"><span class="was">memo: draft</span> → <span class="now">memo: accepted_with_edits</span></span>
-            <span class="seal">sealed</span>
-          </div>
-        </li>
-
-        <li class="by-agent">
-          <div class="entry-when"><b>31 Jul</b>08:02:18 <span class="seq">Entry 44</span></div>
-          <div class="entry-spine" aria-hidden="true"></div>
-          <div class="entry-body">
-            <h4>Credit memo drafted</h4>
-            <span class="actor">Credit Memo Agent · v1.7</span>
-            <p>Drafted the underwriting memo citing seven sources: three deterministic ratio
-              calculations, two spread line items, one appraisal locator and one policy rule.
-              Latency 11.8s · 9,440 tokens.</p>
-            <span class="delta"><span class="now">draft MEMO-2264-r1 stored</span></span>
-            <span class="seal">sealed</span>
-          </div>
-        </li>
-
-        <li class="by-system">
-          <div class="entry-when"><b>31 Jul</b>08:01:03 <span class="seq">Entry 43</span></div>
-          <div class="entry-spine" aria-hidden="true"></div>
-          <div class="entry-body">
-            <h4>Risk grade assigned — deterministic</h4>
-            <span class="actor">Grading module · rubric v2.1 · no agent involved</span>
-            <p>Band four struck: DSCR 1.24×, leverage 3.10×, LTV exception outstanding.
-              Rubric version and band recorded with the grade.</p>
-            <span class="delta"><span class="was">grade: ungraded</span> → <span class="now">grade: 4 (Watch)</span></span>
-            <span class="seal">sealed</span>
-          </div>
-        </li>
-
-        <li class="by-system">
-          <div class="entry-when"><b>31 Jul</b>08:00:57 <span class="seq">Entry 42</span></div>
-          <div class="entry-spine" aria-hidden="true"></div>
-          <div class="entry-body">
-            <h4>Ratios computed</h4>
-            <span class="actor">Ratio module · pure function · fixed rounding</span>
-            <p>CALC-8841 DSCR = 712,000 ÷ 574,200 = 1.24×. CALC-8842 leverage = 2,207,000 ÷
-              712,000 = 3.10×. CALC-8843 current ratio = 611,000 ÷ 430,300 = 1.42×.
-              Inputs and results recorded in full.</p>
-            <span class="delta"><span class="now">3 calculation records written</span></span>
-            <span class="seal">sealed</span>
-          </div>
-        </li>
-
-        <li class="by-human">
-          <div class="entry-when"><b>30 Jul</b>16:22:09 <span class="seq">Entry 41</span></div>
-          <div class="entry-spine" aria-hidden="true"></div>
-          <div class="entry-body">
-            <h4>Spread accepted</h4>
-            <span class="actor">J. Castellanos · Credit Analyst</span>
-            <p>Accepted the financial spreading agent output; all 42 extracted figures carried a
-              document locator. Two figures corrected against the source before acceptance.</p>
-            <span class="delta"><span class="was">spread: draft</span> → <span class="now">spread: accepted (v3)</span></span>
-            <span class="seal">sealed</span>
-          </div>
-        </li>
-
-        <li class="by-agent">
-          <div class="entry-when"><b>30 Jul</b>15:47:31 <span class="seq">Entry 40</span></div>
-          <div class="entry-spine" aria-hidden="true"></div>
-          <div class="entry-body">
-            <h4>Financial spread extracted</h4>
-            <span class="actor">Financial Spreading Agent · v3.1</span>
-            <p>Extracted 42 line items into the standard spread template, each with a document,
-              page and cell locator. No uncited figure was written. Latency 22.4s · 18,100 tokens.</p>
-            <span class="delta"><span class="now">spread v3 draft · 42 cited figures</span></span>
-            <span class="seal">sealed</span>
-          </div>
-        </li>
-
-      </ol>
+      <div>
+        <ol class="chronicle" id="chronicle-list" aria-live="polite"></ol>
+        <p class="composer-hint" id="chronicle-empty" role="status">Loading the chronicle…</p>
+      </div>
 
       <aside class="marginalia" aria-label="Chronicle apparatus">
         <div class="margin-note">
           <h4>Filter the Chronicle</h4>
-          <ul>
-            <li><span>All entries</span><span>47</span></li>
-            <li><span>Human decisions</span><span>14</span></li>
-            <li><span>Agent drafts</span><span>9</span></li>
-            <li><span>Calculations</span><span>11</span></li>
-            <li><span>State changes</span><span>13</span></li>
+          <ul id="chronicle-filters">
+            <li><button type="button" class="btn btn--sm btn--quiet" id="chr-filter-all" data-kind="all" aria-pressed="true">All entries</button><span id="chr-count-all">0</span></li>
+            <li><button type="button" class="btn btn--sm btn--quiet" id="chr-filter-human" data-kind="human_decision" aria-pressed="false">Human decisions</button><span id="chr-count-human_decision">0</span></li>
+            <li><button type="button" class="btn btn--sm btn--quiet" id="chr-filter-agent" data-kind="agent_draft" aria-pressed="false">Agent drafts</button><span id="chr-count-agent_draft">0</span></li>
+            <li><button type="button" class="btn btn--sm btn--quiet" id="chr-filter-calc" data-kind="calculation" aria-pressed="false">Calculations</button><span id="chr-count-calculation">0</span></li>
+            <li><button type="button" class="btn btn--sm btn--quiet" id="chr-filter-state" data-kind="state_change" aria-pressed="false">State changes</button><span id="chr-count-state_change">0</span></li>
           </ul>
           <p style="margin-top:.7rem;">
-            <button type="button" class="btn btn--sm btn--quiet">Export for audit</button>
+            <button type="button" class="btn btn--sm btn--quiet" id="chronicle-export-btn">Export for audit</button>
           </p>
         </div>
 

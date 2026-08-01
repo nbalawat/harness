@@ -644,8 +644,9 @@ def run_credit_memo(deal_code: str, req: ActingUserRequest):
         f"risk grade {(grade or {}).get('grade')} from rubric {(grade or {}).get('rubric_version')} band "
         f"{(grade or {}).get('band_hit')}, and the accepted spread line items "
         f"{sorted(spread.keys())}. Cite the ratio id, spread line item, or policy rule behind every assertion. "
-        "Do not recompute a ratio, do not restate a different grade, do not recommend approval or decline, and "
-        "do not advance the deal — a human analyst accepts, edits, or rejects this draft."
+        "Do not recompute a ratio, do not restate a different grade, do not offer a lending decision or "
+        "recommendation of any kind, and do not advance the deal — a human analyst accepts, edits, or rejects "
+        "this draft."
     )
     started = time.monotonic()
     narrative = agent_runtime.respond(prompt, agent_name="Credit Memo Agent")

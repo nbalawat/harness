@@ -401,3 +401,622 @@ fetch("/api/conversations")
 
   loadPipeline();
 })();
+
+// ============================================================
+// The Chronicle — memo, policy and the per-deal audit timeline
+// (slice: memo-policy-and-audit-trail)
+//   - runs the Credit Memo Agent and accepts its draft
+//     (POST /api/deals/{id}/agents/credit-memo/run, /memo/accept)
+//   - runs the Policy Compliance Agent and records its exceptions
+//     (POST /api/deals/{id}/agents/policy-compliance/run, /policy-review/accept)
+//   - waives or upholds an exception with a written rationale
+//     (POST /api/deals/{id}/policy-exceptions/resolve)
+//   - renders the append-only chronicle (GET /api/deals/{id}/audit)
+// Everything below writes with textContent, never innerHTML.
+// ============================================================
+(function () {
+  const dealSelect = document.getElementById("chronicle-deal");
+  const list = document.getElementById("chronicle-list");
+  if (!dealSelect || !list) return;
+
+  const FIXTURE_DEAL = "DEAL-1003";
+  const KIND_LABEL = {
+    human_decision: "Human decision",
+    agent_draft: "Agent draft",
+    calculation: "Deterministic calculation",
+    state_change: "State change",
+  };
+  const KIND_CLASS = {
+    human_decision: "by-human",
+    agent_draft: "by-agent",
+    calculation: "by-system",
+    state_change: "by-system",
+  };
+  const ACTION_TITLE = {
+    "deal.intake_submitted": "Deal filed at intake",
+    "triage.agent_run": "Intake triage drafted",
+    "deal.triage_accepted_and_routed": "Triage accepted — deal routed to a queue",
+    "spread.accepted": "Financial spread accepted",
+    "ratios.computed": "Ratios computed — deterministic",
+    "grade.assigned": "Risk grade assigned — deterministic",
+    "memo.agent_drafted": "Credit memo drafted",
+    "memo.accepted": "Credit memo accepted",
+    "memo.rejected": "Credit memo draft rejected",
+    "policy.agent_reviewed": "Policy compliance review completed",
+    "policy.exceptions_recorded": "Policy exceptions recorded",
+    "policy.exceptions_resolved": "Policy exception dispositioned",
+  };
+
+  let entries = [];
+  let activeKind = "all";
+  // `ready` resolves once the deal picker has been filled from the server, so a
+  // click that lands before the first load still acts on a real deal code.
+  let ready = Promise.resolve();
+  let pendingMemoRun = Promise.resolve();
+  let pendingPolicyRun = Promise.resolve();
+
+  function dealCode() {
+    return dealSelect.value;
+  }
+
+  function analystEmail() {
+    const el = document.getElementById("chronicle-analyst-email");
+    return el ? el.value.trim() : "";
+  }
+
+  function officerEmail() {
+    const el = document.getElementById("chronicle-officer-email");
+    return el ? el.value.trim() : "";
+  }
+
+  function say(id, text) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = text;
+  }
+
+  function brief(payload, limit) {
+    if (payload === null || payload === undefined) return "";
+    let text;
+    if (typeof payload === "object") {
+      text = Object.keys(payload)
+        .map((k) => k + ": " + (typeof payload[k] === "object" ? JSON.stringify(payload[k]) : String(payload[k])))
+        .join(" · ");
+    } else {
+      text = String(payload);
+    }
+    const cap = limit || 220;
+    return text.length > cap ? text.slice(0, cap) + "…" : text;
+  }
+
+  // A chronicle entry reads as a sentence, not as a payload dump: the raw
+  // before/after payloads stay available underneath in the delta line.
+  function summarise(entry) {
+    const a = entry.after_payload || {};
+    const list = (v) => (Array.isArray(v) ? v.join(", ") : String(v == null ? "" : v));
+    switch (entry.action) {
+      case "memo.agent_drafted":
+        return (
+          a.agent + " drafted " + a.section_count + " sections carrying " + a.citation_count +
+          " citations in " + a.latency_ms + " ms — every figure copied from a stored record, none recomputed."
+        );
+      case "memo.accepted":
+        return (
+          "Memo accepted and stored with " + ((a.citation_ids || []).length) +
+          " citations; the deal moved to " + a.current_stage + "."
+        );
+      case "memo.rejected":
+        return "Draft rejected and returned to the agent: " + (a.rejection_reason || "no reason given") + ".";
+      case "policy.agent_reviewed":
+        return (
+          a.agent + " tested " + ((a.rules_tested || []).length) + " rules of lending policy " + a.policy_version +
+          " — breached: " + (list(a.breached) || "none") + "."
+        );
+      case "policy.exceptions_recorded":
+        return (
+          "Exceptions " + list(a.exception_refs) + " written up under policy " + a.policy_version +
+          "; " + a.open_exception_count + " now open and blocking approval."
+        );
+      case "policy.exceptions_resolved":
+        return (
+          "Exceptions " + list(a.resolved_exception_refs) + " dispositioned by " + (a.resolved_by || "an officer") +
+          "; " + a.open_exception_count + " still open."
+        );
+      case "ratios.computed":
+        return (
+          "DSCR " + a.dscr + ", leverage " + a.leverage + ", current ratio " + a.current_ratio +
+          " — " + a.rounding_method + ", computed in code with no model involved."
+        );
+      case "grade.assigned":
+        return "Grade " + a.grade + " struck under rubric " + a.rubric_version + ", band " + a.band_hit + ".";
+      case "spread.accepted":
+        return a.line_items + " line items accepted on template " + a.template_version + ", each carrying a document locator.";
+      default:
+        return (
+          brief(entry.after_payload) ||
+          brief(entry.before_payload) ||
+          (entry.resource_type ? entry.resource_type + " " + entry.resource_id : "recorded")
+        );
+    }
+  }
+
+  function stamp(iso) {
+    const d = new Date(iso || "");
+    if (isNaN(d.getTime())) return { day: "—", time: "" };
+    const day = String(d.getUTCDate()).padStart(2, "0");
+    const month = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][d.getUTCMonth()];
+    const time =
+      String(d.getUTCHours()).padStart(2, "0") +
+      ":" +
+      String(d.getUTCMinutes()).padStart(2, "0") +
+      ":" +
+      String(d.getUTCSeconds()).padStart(2, "0");
+    return { day: day + " " + month, time: time };
+  }
+
+  function renderChronicle() {
+    const shown = entries.filter((e) => activeKind === "all" || e.entry_kind === activeKind);
+    list.replaceChildren();
+    shown
+      .slice()
+      .reverse()
+      .forEach((entry) => {
+        const li = document.createElement("li");
+        li.className = KIND_CLASS[entry.entry_kind] || "by-system";
+
+        const when = document.createElement("div");
+        when.className = "entry-when";
+        const day = document.createElement("b");
+        const marks = stamp(entry.timestamp);
+        day.textContent = marks.day;
+        const seq = document.createElement("span");
+        seq.className = "seq";
+        seq.textContent = "Entry " + entry.seq;
+        when.appendChild(day);
+        when.appendChild(document.createTextNode(marks.time));
+        when.appendChild(seq);
+
+        const spine = document.createElement("div");
+        spine.className = "entry-spine";
+        spine.setAttribute("aria-hidden", "true");
+
+        const body = document.createElement("div");
+        body.className = "entry-body";
+
+        const title = document.createElement("h4");
+        title.textContent = ACTION_TITLE[entry.action] || entry.action.replace(/[._]/g, " ");
+        body.appendChild(title);
+
+        const actor = document.createElement("span");
+        actor.className = "actor";
+        const who = entry.agent_draft
+          ? entry.agent_draft
+          : (entry.actor_name || "System") + (entry.actor_role ? " · " + entry.actor_role.replace(/_/g, " ") : "");
+        actor.textContent = who + " · " + (KIND_LABEL[entry.entry_kind] || entry.entry_kind);
+        body.appendChild(actor);
+
+        const detail = document.createElement("p");
+        detail.textContent = summarise(entry);
+        body.appendChild(detail);
+
+        // The before/after delta is printed only where there is a real state
+        // transition to show; otherwise the sentence above already says it.
+        if (entry.before_payload) {
+          const delta = document.createElement("span");
+          delta.className = "delta";
+          const was = document.createElement("span");
+          was.className = "was";
+          was.textContent = brief(entry.before_payload, 80);
+          delta.appendChild(was);
+          delta.appendChild(document.createTextNode(" → "));
+          const now = document.createElement("span");
+          now.className = "now";
+          now.textContent = brief(entry.after_payload, 100) || "recorded";
+          delta.appendChild(now);
+          body.appendChild(delta);
+        }
+
+        const seal = document.createElement("span");
+        seal.className = "seal";
+        seal.textContent = "sealed";
+        body.appendChild(seal);
+
+        li.appendChild(when);
+        li.appendChild(spine);
+        li.appendChild(body);
+        list.appendChild(li);
+      });
+
+    const empty = document.getElementById("chronicle-empty");
+    if (empty) {
+      empty.textContent = shown.length
+        ? "Showing " + shown.length + " of " + entries.length + " entries — oldest at the foot."
+        : "No entries of this kind on " + dealCode() + " yet.";
+    }
+  }
+
+  function loadChronicle() {
+    const code = dealCode();
+    if (!code) return Promise.resolve();
+    return fetch("/api/deals/" + encodeURIComponent(code) + "/audit")
+      .then((r) => (r.ok ? r.json() : { entries: [], counts: {} }))
+      .then((data) => {
+        entries = data.entries || [];
+        const counts = data.counts || {};
+        ["all", "human_decision", "agent_draft", "calculation", "state_change"].forEach((k) => {
+          const el = document.getElementById("chr-count-" + k);
+          if (el) el.textContent = String(counts[k] || 0);
+        });
+        say(
+          "chronicle-meta",
+          code + " · " + (counts.all || 0) + " entries · nothing amended, nothing removed"
+        );
+        renderChronicle();
+      })
+      .catch(() => {});
+  }
+
+  // ---------- credit memo ----------
+  function renderMemo(memo) {
+    const out = document.getElementById("memo-output");
+    if (!out) return;
+    out.replaceChildren();
+    if (!memo || !memo.sections) return;
+    memo.sections.forEach((section, index) => {
+      const li = document.createElement("li");
+      const no = document.createElement("span");
+      no.className = "cite-no";
+      no.textContent = "§" + (index + 1) + " " + section.heading;
+      const text = document.createElement("span");
+      text.textContent = " " + section.body;
+      const src = document.createElement("span");
+      src.className = "cite-src";
+      src.textContent = "cites: " + (section.citations || []).join(", ");
+      li.appendChild(no);
+      li.appendChild(text);
+      li.appendChild(src);
+      out.appendChild(li);
+    });
+  }
+
+  function loadMemo() {
+    const code = dealCode();
+    if (!code) return Promise.resolve();
+    return fetch("/api/deals/" + encodeURIComponent(code) + "/memo")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (!data) return;
+        const memo = data.accepted || data.draft;
+        renderMemo(memo);
+        if (data.status === "accepted" || data.status === "accepted_with_edits") {
+          say("memo-status", "Memo accepted by a named analyst and stored with its citations.");
+        } else if (data.status === "proposed") {
+          say("memo-status", "Draft standing — an analyst must accept it before it is stored.");
+        } else {
+          say("memo-status", "No memo drafted for this deal yet.");
+        }
+      })
+      .catch(() => {});
+  }
+
+  const memoRunBtn = document.getElementById("memo-run-btn");
+  if (memoRunBtn) {
+    memoRunBtn.addEventListener("click", () => {
+      say("memo-status", "Credit Memo Agent drafting from the accepted spread, ratios and grade…");
+      pendingMemoRun = ready
+        .then(() =>
+          fetch("/api/deals/" + encodeURIComponent(dealCode()) + "/agents/credit-memo/run", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ acting_user_email: analystEmail() }),
+          })
+        )
+        .then((r) => r.json().then((data) => ({ ok: r.ok, data })))
+        .then((res) => {
+          if (!res.ok) {
+            say("memo-status", "Memo draft refused: " + (res.data.detail || "error"));
+            return;
+          }
+          renderMemo(res.data);
+          say(
+            "memo-status",
+            "Draft in " +
+              res.data.sections.length +
+              " sections with " +
+              res.data.citations.length +
+              " citations — every figure copied from a stored record. An analyst must accept it."
+          );
+          return loadChronicle();
+        })
+        .catch((err) => say("memo-status", "Request failed: " + err.message));
+    });
+  }
+
+  const memoAcceptBtn = document.getElementById("memo-accept-btn");
+  if (memoAcceptBtn) {
+    memoAcceptBtn.addEventListener("click", () => {
+      pendingMemoRun = pendingMemoRun
+        .then(() =>
+          fetch("/api/deals/" + encodeURIComponent(dealCode()) + "/memo/accept", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ acting_user_email: analystEmail(), action: "accept" }),
+          })
+        )
+        .then((r) => r.json().then((data) => ({ ok: r.ok, data })))
+        .then((res) => {
+          if (!res.ok) {
+            say("memo-status", "Accept refused: " + (res.data.detail || "error"));
+            return;
+          }
+          say(
+            "memo-status",
+            "Memo accepted by " + analystEmail() + " — stored with " + res.data.citation_ids.length + " citations; deal now in " + res.data.current_stage + "."
+          );
+          return Promise.all([loadMemo(), loadChronicle()]);
+        })
+        .catch((err) => say("memo-status", "Request failed: " + err.message));
+    });
+  }
+
+  // ---------- policy compliance ----------
+  function renderFindings(findings) {
+    const out = document.getElementById("policy-output");
+    if (!out) return;
+    out.replaceChildren();
+    (findings || []).forEach((finding) => {
+      const li = document.createElement("li");
+      const left = document.createElement("span");
+      left.textContent = finding.rule_reference + " — " + finding.detail;
+      if (finding.status === "breached") left.className = "missing";
+      const right = document.createElement("span");
+      right.className = "flag " + (finding.status === "breached" ? "flag--idle" : finding.status === "passed" ? "flag--ok" : "flag--await");
+      right.textContent = finding.status;
+      li.appendChild(left);
+      li.appendChild(right);
+      out.appendChild(li);
+    });
+  }
+
+  function renderExceptions(data) {
+    const out = document.getElementById("exceptions-list");
+    if (!out) return;
+    out.replaceChildren();
+    const rows = (data && data.exceptions) || [];
+    if (!rows.length) {
+      const li = document.createElement("li");
+      li.textContent = "No policy exceptions on this deal.";
+      out.appendChild(li);
+      return;
+    }
+    rows.forEach((row) => {
+      const li = document.createElement("li");
+      li.style.flexDirection = "column";
+      li.style.alignItems = "flex-start";
+
+      const head = document.createElement("span");
+      head.textContent = (row.exception_ref ? row.exception_ref + " · " : "") + row.rule_reference + " — " + row.violation_detail;
+      if (row.status === "open" || row.status === "proposed") head.className = "missing";
+      li.appendChild(head);
+
+      const why = document.createElement("span");
+      why.className = "cite-src";
+      why.textContent = "rationale: " + (row.rationale || "—");
+      li.appendChild(why);
+
+      const tags = document.createElement("span");
+      tags.className = "flag " + (row.status === "waived" ? "flag--ok" : row.status === "open" ? "flag--idle" : "flag--await");
+      tags.textContent = row.status + " · " + row.origin;
+      li.appendChild(tags);
+
+      if (row.origin === "recorded" && row.status === "open") {
+        const bar = document.createElement("span");
+        bar.style.display = "flex";
+        bar.style.gap = ".4rem";
+        bar.style.marginTop = ".4rem";
+        bar.style.flexWrap = "wrap";
+
+        const rationale = document.createElement("input");
+        rationale.type = "text";
+        rationale.placeholder = "written rationale (required)";
+        rationale.style.flex = "1 1 22rem";
+        rationale.id = "waive-rationale-" + row.exception_ref;
+        // Deliberately NOT pre-filled: the rationale must be the officer's own
+        // words, and the server rejects a blank one.
+
+        const waive = document.createElement("button");
+        waive.type = "button";
+        waive.className = "btn btn--sm btn--ink";
+        waive.id = "waive-btn-" + row.exception_ref;
+        waive.textContent = "Waive";
+        waive.addEventListener("click", () => dispose(row.exception_ref, "waive", rationale.value));
+
+        const uphold = document.createElement("button");
+        uphold.type = "button";
+        uphold.className = "btn btn--sm btn--quiet";
+        uphold.id = "uphold-btn-" + row.exception_ref;
+        uphold.textContent = "Uphold";
+        uphold.addEventListener("click", () => dispose(row.exception_ref, "uphold", rationale.value));
+
+        bar.appendChild(rationale);
+        bar.appendChild(waive);
+        bar.appendChild(uphold);
+        li.appendChild(bar);
+      }
+      out.appendChild(li);
+    });
+  }
+
+  function dispose(ref, disposition, rationale) {
+    const code = dealCode();
+    fetch("/api/deals/" + encodeURIComponent(code) + "/policy-exceptions/resolve", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        acting_user_email: officerEmail(),
+        decisions: [{ exception_ref: ref, disposition: disposition, rationale: rationale }],
+      }),
+    })
+      .then((r) => r.json().then((data) => ({ ok: r.ok, data })))
+      .then((res) => {
+        if (!res.ok) {
+          say("exceptions-status", "Refused: " + (res.data.detail || "error"));
+          return;
+        }
+        say(
+          "exceptions-status",
+          ref + " " + (disposition === "waive" ? "waived" : "upheld") + " by " + officerEmail() + " — " + res.data.open_exception_count + " still open."
+        );
+        return Promise.all([loadExceptions(), loadChronicle()]);
+      })
+      .catch((err) => say("exceptions-status", "Request failed: " + err.message));
+  }
+
+  function loadExceptions() {
+    const code = dealCode();
+    if (!code) return Promise.resolve();
+    return fetch("/api/deals/" + encodeURIComponent(code) + "/policy-exceptions")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => renderExceptions(data))
+      .catch(() => {});
+  }
+
+  const policyRunBtn = document.getElementById("policy-run-btn");
+  if (policyRunBtn) {
+    policyRunBtn.addEventListener("click", () => {
+      say("policy-status", "Testing the deal against the active lending ruleset…");
+      pendingPolicyRun = Promise.all([ready, pendingMemoRun])
+        .then(() =>
+          fetch("/api/deals/" + encodeURIComponent(dealCode()) + "/agents/policy-compliance/run", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ acting_user_email: analystEmail() }),
+          })
+        )
+        .then((r) => r.json().then((data) => ({ ok: r.ok, data })))
+        .then((res) => {
+          if (!res.ok) {
+            say("policy-status", "Compliance review refused: " + (res.data.detail || "error"));
+            return;
+          }
+          renderFindings(res.data.findings);
+          say(
+            "policy-status",
+            "Policy " +
+              res.data.policy_version +
+              ": " +
+              res.data.findings.length +
+              " rules tested, " +
+              res.data.exceptions.length +
+              " breach(es) proposed — a human must record them."
+          );
+          return Promise.all([loadExceptions(), loadChronicle()]);
+        })
+        .catch((err) => say("policy-status", "Request failed: " + err.message));
+    });
+  }
+
+  const policyAcceptBtn = document.getElementById("policy-accept-btn");
+  if (policyAcceptBtn) {
+    policyAcceptBtn.addEventListener("click", () => {
+      pendingPolicyRun = pendingPolicyRun
+        .then(() =>
+          fetch("/api/deals/" + encodeURIComponent(dealCode()) + "/policy-review/accept", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ acting_user_email: analystEmail() }),
+          })
+        )
+        .then((r) => r.json().then((data) => ({ ok: r.ok, data })))
+        .then((res) => {
+          if (!res.ok) {
+            say("policy-status", "Recording refused: " + (res.data.detail || "error"));
+            return;
+          }
+          say(
+            "policy-status",
+            res.data.exception_ids.length +
+              " exception(s) recorded on policy " +
+              res.data.policy_version +
+              " — " +
+              res.data.open_exception_count +
+              " open and blocking approval."
+          );
+          return Promise.all([loadExceptions(), loadChronicle()]);
+        })
+        .catch((err) => say("policy-status", "Request failed: " + err.message));
+    });
+  }
+
+  // ---------- filters + export ----------
+  Array.from(document.querySelectorAll("#chronicle-filters button")).forEach((button) => {
+    button.addEventListener("click", () => {
+      activeKind = button.dataset.kind;
+      document.querySelectorAll("#chronicle-filters button").forEach((b) => {
+        b.setAttribute("aria-pressed", b === button ? "true" : "false");
+      });
+      renderChronicle();
+    });
+  });
+
+  const exportBtn = document.getElementById("chronicle-export-btn");
+  if (exportBtn) {
+    exportBtn.addEventListener("click", () => {
+      const payload = JSON.stringify({ deal_id: dealCode(), append_only: true, entries: entries }, null, 2);
+      const url = URL.createObjectURL(new Blob([payload], { type: "application/json" }));
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = dealCode() + "-audit-trail.json";
+      anchor.click();
+      URL.revokeObjectURL(url);
+      say("chronicle-meta", dealCode() + " · " + entries.length + " entries exported for audit");
+    });
+  }
+
+  // ---------- deal picker ----------
+  function refreshAll() {
+    return Promise.all([loadMemo(), loadExceptions(), loadChronicle()]);
+  }
+
+  dealSelect.addEventListener("change", () => {
+    say("memo-status", "No memo drafted for this deal yet.");
+    say("policy-status", "No compliance review run for this deal yet.");
+    say("exceptions-status", "");
+    const out = document.getElementById("policy-output");
+    if (out) out.replaceChildren();
+    refreshAll();
+  });
+
+  function loadDeals() {
+    return fetch("/api/pipeline")
+      .then((r) => (r.ok ? r.json() : { deals: [] }))
+      .then((data) => {
+        const deals = data.deals || [];
+        const previous = dealSelect.value;
+        dealSelect.replaceChildren();
+        deals.forEach((deal) => {
+          const option = document.createElement("option");
+          option.value = deal.deal_code;
+          option.textContent = deal.deal_code + " · " + (deal.borrower_name || "");
+          dealSelect.appendChild(option);
+        });
+        const preferred = deals.some((d) => d.deal_code === previous)
+          ? previous
+          : deals.some((d) => d.deal_code === FIXTURE_DEAL)
+          ? FIXTURE_DEAL
+          : deals.length
+          ? deals[0].deal_code
+          : "";
+        dealSelect.value = preferred;
+        return refreshAll();
+      })
+      .catch(() => {});
+  }
+
+  document.addEventListener("screen:shown", (event) => {
+    if (event.detail && event.detail.screen === "screen-audit-timeline") {
+      ready = loadDeals();
+    }
+  });
+
+  ready = loadDeals();
+})();

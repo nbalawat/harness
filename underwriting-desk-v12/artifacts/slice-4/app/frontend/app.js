@@ -403,50 +403,263 @@ fetch("/api/conversations")
 })();
 
 // ============================================================
-// Decision desk + SLA idle register (slice: tiered-approval-and-sla)
-//   - GET  /api/approvals/queue        deals sitting at the approval step
-//   - GET  /api/deals/{id}/approval-tier   who may decide, and why
-//   - POST /api/deals/{id}/approve|decline|return   the named human decision
-//   - GET  /api/sla/idle               the business-day idle register
-//   - POST /api/sla/escalate           runs the sla-idle-escalation workflow
-// Authority is decided by the SERVER; these controls only report what it says.
-// textContent everywhere — never innerHTML with data.
+// SLA dashboard + credit decision desk (slice: tiered-approval-and-sla)
+//   - the idle register reads GET /api/sla/idle (business-day arithmetic
+//     computed server-side; nothing here invents a number)
+//   - approve / decline / return post to the tiered decision endpoints,
+//     whose authority checks are enforced on the server
+//   - reassign / acknowledge drive POST /api/sla/{deal}/escalate, which runs
+//     the sla-idle-escalation workflow end to end
+// Every write below reports exactly what the server answered — including a
+// refusal — using textContent only.
 // ============================================================
 (function () {
-  const STAGE_LABELS = {
-    intake: "Intake",
-    document_extraction: "Document extraction",
-    financial_spreading: "Financial spreading",
-    risk_grading: "Risk grading",
-    memo_drafting: "Memo drafting",
-    policy_compliance: "Policy compliance",
-    tiered_approval: "Tiered approval",
-    closing: "Closing",
-    closed: "Closed",
-  };
+  const register = document.getElementById("idle-register-body");
+  const decisionDesk = document.getElementById("decision-desk");
+  if (!register && !decisionDesk) return;
 
-  const el = (id) => document.getElementById(id);
-  const money = (n) => "$" + (Number(n) || 0).toLocaleString("en-US");
-  const stageLabel = (s) => STAGE_LABELS[s] || s || "—";
-  const emailOf = (id) => (el(id) ? String(el(id).value || "").trim() : "");
+  let idleDeals = [];
+  let pendingDecisions = [];
 
-  function compactMoney(n) {
-    const v = Number(n) || 0;
-    if (v >= 1000000) return "$" + (v / 1000000).toFixed(1) + "M";
-    if (v >= 1000) return "$" + Math.round(v / 1000) + "k";
-    return money(v);
+  function money(n) {
+    return "$" + (Number(n) || 0).toLocaleString("en-US", { maximumFractionDigits: 0 });
+  }
+
+  function titleCase(value) {
+    return String(value || "")
+      .split("_")
+      .filter(Boolean)
+      .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+      .join(" ");
   }
 
   function shortDate(iso) {
     const t = Date.parse(iso || "");
     if (!t) return "—";
-    return new Date(t).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+    const d = new Date(t);
+    return d.toLocaleDateString("en-US", { day: "numeric", month: "short" });
   }
 
-  function setRows(list, entries) {
+  function textOf(id, value) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = value;
+  }
+
+  function valueOf(id) {
+    const el = document.getElementById(id);
+    return el ? String(el.value || "").trim() : "";
+  }
+
+  function fillDatalist(id, values) {
+    const list = document.getElementById(id);
     if (!list) return;
     list.replaceChildren();
-    entries.forEach(([label, value]) => {
+    values.forEach((v) => {
+      const option = document.createElement("option");
+      option.value = v;
+      list.appendChild(option);
+    });
+  }
+
+  function fillCountList(id, counts) {
+    const ul = document.getElementById(id);
+    if (!ul) return;
+    ul.replaceChildren();
+    const entries = Object.entries(counts || {}).sort((a, b) => b[1] - a[1]);
+    if (!entries.length) {
+      const li = document.createElement("li");
+      const label = document.createElement("span");
+      label.textContent = "Nothing past the line";
+      const n = document.createElement("span");
+      n.textContent = "0";
+      li.appendChild(label);
+      li.appendChild(n);
+      ul.appendChild(li);
+      return;
+    }
+    entries.forEach(([key, count]) => {
+      const li = document.createElement("li");
+      const label = document.createElement("span");
+      label.textContent = key.includes("@") ? key : titleCase(key);
+      const n = document.createElement("span");
+      n.textContent = String(count);
+      li.appendChild(label);
+      li.appendChild(n);
+      ul.appendChild(li);
+    });
+  }
+
+  function selectDeal(code) {
+    const slaField = document.getElementById("sla-deal-code");
+    if (slaField) slaField.value = code;
+    const decisionField = document.getElementById("decision-deal-code");
+    if (decisionField) decisionField.value = code;
+    describeAuthority();
+  }
+
+  function renderRegister(data) {
+    idleDeals = data.deals || [];
+    if (register) {
+      register.replaceChildren();
+      if (!idleDeals.length) {
+        const tr = document.createElement("tr");
+        const td = document.createElement("td");
+        td.colSpan = 6;
+        td.textContent = "Nothing is past the service line — every active deal has moved within five business days.";
+        tr.appendChild(td);
+        register.appendChild(tr);
+      }
+      const worst = idleDeals.length ? idleDeals[0].business_days_idle || 1 : 1;
+      idleDeals.forEach((d) => {
+        const tr = document.createElement("tr");
+        tr.addEventListener("click", () => selectDeal(d.deal_code));
+
+        const dealCell = document.createElement("td");
+        dealCell.className = "deal-cell";
+        const name = document.createElement("b");
+        name.textContent = d.borrower_name || d.deal_code;
+        const code = document.createElement("small");
+        code.textContent = d.deal_code;
+        dealCell.appendChild(name);
+        dealCell.appendChild(code);
+
+        const stage = document.createElement("td");
+        stage.textContent = titleCase(d.current_stage);
+
+        const owner = document.createElement("td");
+        owner.textContent = d.owner_email || "Unassigned";
+
+        const activity = document.createElement("td");
+        activity.textContent = shortDate(d.last_activity_timestamp) + " · " + String(d.current_status || "").replace(/_/g, " ");
+
+        const exposure = document.createElement("td");
+        exposure.className = "num";
+        exposure.textContent = money(d.exposure_amount);
+
+        const age = document.createElement("td");
+        age.className = "num";
+        const ageBar = document.createElement("span");
+        ageBar.className = "age-bar";
+        const bar = document.createElement("span");
+        bar.className = d.business_days_idle > 8 ? "bar warn" : "bar";
+        bar.style.width = Math.max(12, Math.round((d.business_days_idle / worst) * 56)) + "px";
+        ageBar.appendChild(bar);
+        ageBar.appendChild(document.createTextNode(String(d.business_days_idle) + "d"));
+        age.appendChild(ageBar);
+
+        [dealCell, stage, owner, activity, exposure, age].forEach((td) => tr.appendChild(td));
+        register.appendChild(tr);
+      });
+    }
+
+    const counts = data.counts || {};
+    textOf("plate-past-line", String(counts.past_service_line || 0));
+    textOf("plate-past-line-caption", "of " + (counts.active_deals || 0) + " active deals");
+    textOf("plate-idle-exposure", money(data.idle_exposure));
+    textOf("plate-approaching", String(counts.approaching || 0));
+    textOf(
+      "plate-approaching-caption",
+      "idle 3 – " + (data.sla_threshold_business_days || 5) + " business days"
+    );
+    if (data.longest_idle) {
+      textOf("plate-longest", String(data.longest_idle.business_days_idle) + "d");
+      textOf(
+        "plate-longest-caption",
+        data.longest_idle.borrower_name + ", " + titleCase(data.longest_idle.current_stage)
+      );
+    } else {
+      textOf("plate-longest", "—");
+      textOf("plate-longest-caption", "nothing past the line");
+    }
+    fillCountList("idle-by-stage", data.by_stage);
+    fillCountList("idle-by-desk", data.by_owner);
+    fillDatalist("sla-deal-codes", idleDeals.map((d) => d.deal_code));
+
+    const slaField = document.getElementById("sla-deal-code");
+    if (slaField && !slaField.value && idleDeals.length) slaField.value = idleDeals[0].deal_code;
+  }
+
+  function loadRegister() {
+    return fetch("/api/sla/idle")
+      .then((r) => (r.ok ? r.json() : { deals: [], counts: {} }))
+      .then(renderRegister)
+      .catch(() => {});
+  }
+
+  let authorityToken = 0;
+
+  function describeAuthority() {
+    const code = valueOf("decision-deal-code");
+    if (!code) {
+      textOf("decision-authority", "");
+      return;
+    }
+    const deal = pendingDecisions.find((d) => d.deal_code === code);
+    if (deal) {
+      textOf(
+        "decision-authority",
+        deal.deal_code +
+          " · " +
+          deal.borrower_name +
+          " · exposure " +
+          money(deal.exposure_amount) +
+          " · stage " +
+          titleCase(deal.current_stage) +
+          " · requires " +
+          deal.required_authority_level +
+          " authority"
+      );
+      return;
+    }
+    // Already settled (or filed elsewhere): read its decision record.
+    const token = ++authorityToken;
+    fetch("/api/deals/" + encodeURIComponent(code) + "/decisions")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((rec) => {
+        if (token !== authorityToken) return;
+        if (!rec) {
+          textOf("decision-authority", code + " — no such deal on the book.");
+          return;
+        }
+        const settled = (rec.approvals || []).filter((a) => a.decision).slice(-1)[0];
+        textOf(
+          "decision-authority",
+          rec.deal_id +
+            " · " +
+            rec.borrower_name +
+            " · exposure " +
+            money(rec.exposure_amount) +
+            " · requires " +
+            rec.required_authority_level +
+            " authority · now at " +
+            titleCase(rec.current_stage) +
+            " · " +
+            rec.current_status +
+            (settled ? " (" + settled.decision + " by " + settled.decided_by + ")" : "")
+        );
+      })
+      .catch(() => {});
+  }
+
+  function loadTiers() {
+    return fetch("/api/approval-tiers")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (!data) return;
+        pendingDecisions = data.pending_decisions || [];
+        fillDatalist("decision-deal-codes", pendingDecisions.map((d) => d.deal_code));
+        fillDatalist("decision-reason-codes", (data.adverse_action_reasons || []).map((r) => r.reason_code));
+        fillDatalist("decision-return-stages", data.returnable_stages || []);
+        describeAuthority();
+      })
+      .catch(() => {});
+  }
+
+  function renderReceipt(rows) {
+    const list = document.getElementById("decision-receipt");
+    if (!list) return;
+    list.replaceChildren();
+    rows.forEach(([label, value]) => {
       const li = document.createElement("li");
       const k = document.createElement("span");
       k.textContent = label;
@@ -458,368 +671,178 @@ fetch("/api/conversations")
     });
   }
 
-  function jsonOf(response) {
-    return response.json().then((data) => ({ ok: response.ok, data }));
-  }
-
-  // ---------------------------------------------------------------- register
-  let selectedIdleDeal = null;
-
-  function renderRegister(body) {
-    const rows = body.deals || [];
-    const breachedPlate = el("sla-plate-breached");
-    if (breachedPlate) breachedPlate.textContent = String(body.breached_count || 0);
-    const breachedCaption = el("sla-plate-breached-caption");
-    if (breachedCaption) breachedCaption.textContent = "of " + (body.active_deal_count || 0) + " active deals";
-    const exposurePlate = el("sla-plate-exposure");
-    if (exposurePlate) exposurePlate.textContent = compactMoney(body.idle_exposure);
-    const longestPlate = el("sla-plate-longest");
-    const longestCaption = el("sla-plate-longest-caption");
-    if (longestPlate) {
-      longestPlate.textContent = body.longest_idle ? body.longest_idle.business_days_idle + "d" : "0d";
-    }
-    if (longestCaption) {
-      longestCaption.textContent = body.longest_idle
-        ? (body.longest_idle.borrower_name || body.longest_idle.deal_id) +
-          ", " + stageLabel(body.longest_idle.current_stage).toLowerCase()
-        : "nothing past the service line";
-    }
-    const approachingPlate = el("sla-plate-approaching");
-    if (approachingPlate) approachingPlate.textContent = String(body.approaching_count || 0);
-
-    const tbody = el("sla-register-body");
-    if (tbody) {
-      tbody.replaceChildren();
-      if (!rows.length) {
-        const tr = document.createElement("tr");
-        const td = document.createElement("td");
-        td.colSpan = 7;
-        td.textContent = "No deal has crossed the service line. The register is clean.";
-        tr.appendChild(td);
-        tbody.appendChild(tr);
-      }
-      const longest = rows.length ? rows[0].business_days_idle || 1 : 1;
-      rows.forEach((row) => {
-        const tr = document.createElement("tr");
-
-        const pick = document.createElement("td");
-        const radio = document.createElement("input");
-        radio.type = "radio";
-        radio.name = "sla-selected-deal";
-        radio.value = row.deal_id;
-        radio.setAttribute("aria-label", "Select " + row.deal_id);
-        radio.id = "sla-pick-" + row.deal_id;
-        if (selectedIdleDeal === row.deal_id) radio.checked = true;
-        radio.addEventListener("change", () => {
-          selectedIdleDeal = row.deal_id;
-          const status = el("sla-escalation-status");
-          if (status) {
-            status.textContent =
-              row.deal_id + " selected — " + (row.blocking_items || []).join("; ");
-          }
-        });
-        pick.appendChild(radio);
-
-        const deal = document.createElement("td");
-        deal.className = "deal-cell";
-        const name = document.createElement("b");
-        name.textContent = row.borrower_name || row.deal_id;
-        const code = document.createElement("small");
-        code.textContent = row.deal_id;
-        deal.appendChild(name);
-        deal.appendChild(code);
-
-        const stage = document.createElement("td");
-        stage.textContent = stageLabel(row.current_stage);
-
-        const owner = document.createElement("td");
-        owner.textContent = row.owner_email || "Unassigned";
-
-        const last = document.createElement("td");
-        last.textContent = shortDate(row.last_activity_timestamp) + " · " + (row.blocking_items || ["idle"])[0];
-
-        const exposure = document.createElement("td");
-        exposure.className = "num";
-        exposure.textContent = money(row.exposure_amount);
-
-        const idle = document.createElement("td");
-        idle.className = "num";
-        const ageBar = document.createElement("span");
-        ageBar.className = "age-bar";
-        const bar = document.createElement("span");
-        bar.className = "bar";
-        bar.style.width = Math.max(8, Math.round((row.business_days_idle / longest) * 56)) + "px";
-        ageBar.appendChild(bar);
-        const days = document.createElement("span");
-        days.textContent = row.business_days_idle + "d";
-        ageBar.appendChild(days);
-        idle.appendChild(ageBar);
-
-        [pick, deal, stage, owner, last, exposure, idle].forEach((cell) => tr.appendChild(cell));
-        tbody.appendChild(tr);
-      });
-    }
-
-    setRows(
-      el("sla-by-stage"),
-      Object.entries(body.by_stage || {}).map(([k, v]) => [stageLabel(k), v])
-    );
-    setRows(el("sla-by-owner"), Object.entries(body.by_owner || {}));
-    const calendarNote = el("sla-calendar-note");
-    if (calendarNote) {
-      const holidays = body.bank_holidays || [];
-      calendarNote.textContent = holidays.length
-        ? "Bank holidays configured: " + holidays.join(", ") + "."
-        : "No bank holidays configured for this calendar year.";
-    }
-    const caption = el("sla-register-caption");
-    if (caption) {
-      caption.textContent =
-        "Deals idle beyond " + (body.threshold_business_days || 5) + " business days · escalation owner " +
-        (body.escalation_owner || "unassigned");
-    }
-  }
-
-  function loadRegister() {
-    const email = emailOf("sla-officer-email");
-    const url = "/api/sla/idle" + (email ? "?acting_user_email=" + encodeURIComponent(email) : "");
-    return fetch(url)
-      .then((r) => (r.ok ? r.json() : { deals: [] }))
-      .then(renderRegister)
-      .catch(() => {});
-  }
-
-  function escalate(action, note) {
-    const status = el("sla-escalation-status");
-    if (!selectedIdleDeal) {
-      if (status) status.textContent = "Select a deal on the register first.";
-      return;
-    }
-    fetch("/api/sla/escalate", {
+  function post(path, body) {
+    return fetch(path, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        acting_user_email: emailOf("sla-officer-email"),
-        deal_code: selectedIdleDeal,
-        action: action,
-        note: note,
-      }),
-    })
-      .then(jsonOf)
-      .then((res) => {
-        if (!res.ok) {
-          if (status) status.textContent = "Escalation refused: " + (res.data.detail || "error");
-          return;
-        }
-        if (status) {
-          status.textContent =
-            res.data.action_taken === "reassign"
-              ? res.data.deal_id + " reassigned to " + (res.data.reassigned_to_email || "the queue") +
-                " by " + res.data.decided_by_email + " — recorded in the audit trail."
-              : res.data.deal_id + " acknowledged by " + res.data.decided_by_email +
-                " after " + res.data.idle_business_days + " idle business days.";
-        }
-        loadRegister();
-      })
-      .catch((err) => {
-        if (status) status.textContent = "Request failed: " + err.message;
-      });
+      body: JSON.stringify(body),
+    }).then((r) => r.json().then((data) => ({ ok: r.ok, data })));
   }
 
-  const reassignBtn = el("sla-reassign-btn");
-  if (reassignBtn) {
-    reassignBtn.addEventListener("click", () => {
-      const note = el("sla-escalation-note");
-      escalate("reassign", (note && note.value.trim()) || "Idle past the service line — reassigned by the credit officer");
-    });
-  }
-  const nudgeBtn = el("sla-nudge-btn");
-  if (nudgeBtn) {
-    nudgeBtn.addEventListener("click", () => {
-      const note = el("sla-escalation-note");
-      escalate("acknowledge", (note && note.value.trim()) || "Owner nudged; deal acknowledged on the register");
-    });
-  }
-  const officerEmail = el("sla-officer-email");
-  if (officerEmail) officerEmail.addEventListener("change", loadRegister);
-
-  // ----------------------------------------------------------- decision desk
-  function renderTier(tier) {
-    const list = el("decision-tier");
-    if (!list) return;
-    if (!tier) {
-      list.replaceChildren();
-      return;
-    }
-    setRows(list, [
-      ["Exposure", money(tier.exposure_amount)],
-      ["Required authority", tier.required_authority_level],
-      ["Tier rule applied", tier.tier_rule_applied],
-      ["You may approve this", tier.caller_may_approve ? "yes — " + (tier.caller_role || "") : "no"],
-      ["Already decided", tier.already_decided || "not yet"],
-    ]);
+  function afterDecision() {
+    loadRegister();
+    loadTiers();
   }
 
-  function loadTier() {
-    const select = el("decision-deal");
-    const code = select ? select.value : "";
-    if (!code) {
-      renderTier(null);
-      return Promise.resolve();
-    }
-    const email = emailOf("decision-user-email");
-    return fetch(
-      "/api/deals/" + encodeURIComponent(code) + "/approval-tier" +
-        (email ? "?acting_user_email=" + encodeURIComponent(email) : "")
-    )
-      .then((r) => (r.ok ? r.json() : null))
-      .then(renderTier)
-      .catch(() => {});
-  }
-
-  function loadApprovalQueue() {
-    const email = emailOf("decision-user-email");
-    const url = "/api/approvals/queue" + (email ? "?acting_user_email=" + encodeURIComponent(email) : "");
-    return fetch(url)
-      .then((r) => (r.ok ? r.json() : { deals: [] }))
-      .then((body) => {
-        const select = el("decision-deal");
-        if (!select) return;
-        const previous = select.value;
-        select.replaceChildren();
-        (body.deals || []).forEach((d) => {
-          const option = document.createElement("option");
-          option.value = d.deal_id;
-          option.textContent =
-            d.deal_id + " · " + (d.borrower_name || "borrower withheld") + " · " +
-            money(d.exposure_amount) + " · needs " + d.required_authority_level;
-          select.appendChild(option);
-        });
-        if (!(body.deals || []).length) {
-          const option = document.createElement("option");
-          option.value = "";
-          option.textContent = "No deal is awaiting a decision.";
-          select.appendChild(option);
-        }
-        if (previous && Array.prototype.some.call(select.options, (o) => o.value === previous)) {
-          select.value = previous;
-        }
-        return loadTier();
-      })
-      .catch(() => {});
-  }
-
-  function loadReasonCodes() {
-    return fetch("/api/adverse_action_reasons")
-      .then((r) => (r.ok ? r.json() : []))
-      .then((rows) => {
-        const select = el("decision-reason-code");
-        if (!select || !Array.isArray(rows)) return;
-        select.replaceChildren();
-        rows
-          .filter((r) => r.is_active)
-          .forEach((r) => {
-            const option = document.createElement("option");
-            option.value = r.reason_code;
-            option.textContent = r.reason_code + " — " + r.reason_label;
-            select.appendChild(option);
-          });
-      })
-      .catch(() => {});
-  }
-
-  function decide(path, payload, describe) {
-    const select = el("decision-deal");
-    const status = el("decision-status");
-    const code = select ? select.value : "";
-    if (!code) {
-      if (status) status.textContent = "Choose a deal awaiting a decision first.";
-      return;
-    }
-    fetch("/api/deals/" + encodeURIComponent(code) + "/" + path, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(Object.assign({ acting_user_email: emailOf("decision-user-email") }, payload)),
-    })
-      .then(jsonOf)
-      .then((res) => {
-        if (!res.ok) {
-          if (status) status.textContent = "Refused by the server: " + (res.data.detail || "error");
-          return;
-        }
-        if (status) status.textContent = describe(res.data);
-        loadApprovalQueue();
-        loadRegister();
-      })
-      .catch((err) => {
-        if (status) status.textContent = "Request failed: " + err.message;
-      });
-  }
-
-  const approveBtn = el("decision-approve-btn");
+  const approveBtn = document.getElementById("decision-approve-btn");
   if (approveBtn) {
     approveBtn.addEventListener("click", () => {
-      const notes = el("decision-notes");
-      decide(
-        "approve",
-        { decision_notes: (notes && notes.value.trim()) || "" },
-        (d) =>
-          d.deal_id + " APPROVED by " + d.approved_by_email + " (" + d.required_authority_level +
-          " authority, exposure " + money(d.exposure_amount) + ") — now in " +
-          stageLabel(d.final_stage) + "."
-      );
+      const code = valueOf("decision-deal-code");
+      if (!code) {
+        textOf("decision-status", "Name the deal you are deciding.");
+        return;
+      }
+      post("/api/deals/" + encodeURIComponent(code) + "/approve", {
+        acting_user_email: valueOf("decision-officer-email"),
+        decision_notes: valueOf("decision-notes"),
+      })
+        .then((res) => {
+          if (!res.ok) {
+            renderReceipt([["Refused", res.data.detail || "error"]]);
+            textOf("decision-status", "Refused by the server: " + (res.data.detail || "error"));
+            return;
+          }
+          renderReceipt([
+            ["Decision", res.data.decision],
+            ["Deal", res.data.deal_id + " — " + res.data.borrower_name],
+            ["Exposure", money(res.data.exposure_amount)],
+            ["Authority exercised", res.data.approval_authority_level],
+            ["Decided by", res.data.decided_by + " (" + res.data.decided_by_role + ")"],
+            ["Notes", res.data.decision_notes || "—"],
+            ["Now at", titleCase(res.data.current_stage) + " · " + res.data.current_status],
+            ["Idempotency key", res.data.idempotency_key],
+          ]);
+          textOf(
+            "decision-status",
+            res.data.deal_id +
+              " approved by " +
+              res.data.decided_by +
+              " under " +
+              res.data.approval_authority_level +
+              " authority."
+          );
+          afterDecision();
+        })
+        .catch((err) => textOf("decision-status", "Request failed: " + err.message));
     });
   }
 
-  const declineBtn = el("decision-decline-btn");
+  const declineBtn = document.getElementById("decision-decline-btn");
   if (declineBtn) {
     declineBtn.addEventListener("click", () => {
-      const codeEl = el("decision-reason-code");
-      const detailEl = el("decision-reason-detail");
-      decide(
-        "decline",
-        {
-          reason_code: codeEl ? codeEl.value : "",
-          reason_detail: detailEl ? detailEl.value.trim() : "",
-        },
-        (d) =>
-          d.deal_id + " DECLINED by " + d.declined_by_email + " — adverse action " +
-          d.adverse_action_reason_code + ": " + d.adverse_action_detail
-      );
+      const code = valueOf("decision-deal-code");
+      post("/api/deals/" + encodeURIComponent(code) + "/decline", {
+        acting_user_email: valueOf("decision-officer-email"),
+        reason_code: valueOf("decision-reason-code"),
+        reason_detail: valueOf("decision-notes"),
+      })
+        .then((res) => {
+          if (!res.ok) {
+            renderReceipt([["Refused", res.data.detail || "error"]]);
+            textOf("decision-status", "Refused by the server: " + (res.data.detail || "error"));
+            return;
+          }
+          renderReceipt([
+            ["Decision", res.data.decision],
+            ["Deal", res.data.deal_id + " — " + res.data.borrower_name],
+            ["Adverse-action code", res.data.adverse_action_reason_code],
+            ["Written detail", res.data.adverse_action_detail],
+            ["Authority exercised", res.data.approval_authority_level],
+            ["Decided by", res.data.decided_by],
+            ["Now at", titleCase(res.data.current_stage) + " · " + res.data.current_status],
+          ]);
+          textOf(
+            "decision-status",
+            res.data.deal_id + " declined — adverse action " + res.data.adverse_action_reason_code + " issued."
+          );
+          afterDecision();
+        })
+        .catch((err) => textOf("decision-status", "Request failed: " + err.message));
     });
   }
 
-  const returnBtn = el("decision-return-btn");
+  const returnBtn = document.getElementById("decision-return-btn");
   if (returnBtn) {
     returnBtn.addEventListener("click", () => {
-      const stageEl = el("decision-return-stage");
-      const notes = el("decision-notes");
-      decide(
-        "return",
-        {
-          returned_to_stage: stageEl ? stageEl.value : "",
-          reason: (notes && notes.value.trim()) || "",
-        },
-        (d) =>
-          d.deal_id + " RETURNED to " + stageLabel(d.returned_to_stage) + " by " +
-          d.returned_by_email + " and reassigned to " + (d.reassigned_to_email || "the analyst queue") + "."
-      );
+      const code = valueOf("decision-deal-code");
+      post("/api/deals/" + encodeURIComponent(code) + "/return", {
+        acting_user_email: valueOf("decision-officer-email"),
+        returned_to_stage: valueOf("decision-return-stage"),
+        reason: valueOf("decision-notes"),
+      })
+        .then((res) => {
+          if (!res.ok) {
+            renderReceipt([["Refused", res.data.detail || "error"]]);
+            textOf("decision-status", "Refused by the server: " + (res.data.detail || "error"));
+            return;
+          }
+          renderReceipt([
+            ["Decision", "returned"],
+            ["Deal", res.data.deal_id],
+            ["From", titleCase(res.data.returned_from_stage)],
+            ["Back to", titleCase(res.data.returned_to_stage)],
+            ["Written reason", res.data.reason],
+            ["Returned by", res.data.returned_by],
+          ]);
+          textOf(
+            "decision-status",
+            res.data.deal_id + " returned to " + titleCase(res.data.returned_to_stage) + "."
+          );
+          afterDecision();
+        })
+        .catch((err) => textOf("decision-status", "Request failed: " + err.message));
     });
   }
 
-  const dealSelect = el("decision-deal");
-  if (dealSelect) dealSelect.addEventListener("change", loadTier);
-  const decisionEmail = el("decision-user-email");
-  if (decisionEmail) decisionEmail.addEventListener("change", loadApprovalQueue);
+  const dealField = document.getElementById("decision-deal-code");
+  if (dealField) dealField.addEventListener("input", describeAuthority);
 
-  function loadSlaScreen() {
-    loadRegister();
-    loadApprovalQueue();
+  function escalate(action) {
+    const code = valueOf("sla-deal-code");
+    if (!code) {
+      textOf("sla-action-status", "Pick a deal from the register first.");
+      return;
+    }
+    post("/api/sla/" + encodeURIComponent(code) + "/escalate", {
+      acting_user_email: valueOf("sla-officer-email"),
+      action: action,
+      note: valueOf("sla-note"),
+      reassign_to_email: valueOf("sla-reassign-email"),
+    })
+      .then((res) => {
+        if (!res.ok) {
+          textOf("sla-action-status", "Refused by the server: " + (res.data.detail || "error"));
+          return;
+        }
+        const blockers = (res.data.blocking_items || []).join("; ");
+        textOf(
+          "sla-action-status",
+          res.data.deal_id +
+            " — " +
+            res.data.business_days_idle +
+            " business days idle · action " +
+            res.data.action_taken +
+            " · workflow " +
+            res.data.status +
+            (blockers ? " · blocking: " + blockers : "")
+        );
+        loadRegister();
+      })
+      .catch((err) => textOf("sla-action-status", "Request failed: " + err.message));
   }
 
+  const reassignBtn = document.getElementById("sla-reassign-btn");
+  if (reassignBtn) reassignBtn.addEventListener("click", () => escalate("reassign"));
+  const ackBtn = document.getElementById("sla-acknowledge-btn");
+  if (ackBtn) ackBtn.addEventListener("click", () => escalate("acknowledge"));
+
   document.addEventListener("screen:shown", (event) => {
-    if (event.detail && event.detail.screen === "screen-sla-dashboard") loadSlaScreen();
+    if (event.detail && event.detail.screen === "screen-sla-dashboard") {
+      loadRegister();
+      loadTiers();
+    }
   });
 
-  loadReasonCodes().then(loadSlaScreen);
+  loadRegister();
+  loadTiers();
 })();

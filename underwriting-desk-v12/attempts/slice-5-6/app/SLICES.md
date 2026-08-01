@@ -212,3 +212,16 @@ tiered approval, twelve-plus at intake): sources came back as the exact
 relevant set with nothing dropped. No behaviour change to any endpoint; all
 three recorded acceptance checks pass exactly as written, the backend suite is
 green (33 tests), and `frontend/app.js` remains an untouched pure append.
+
+**Rebase (attempt 6) — no behaviour change.** The foundation advanced again
+(the "upload identity brought to the hardened module standard" revision to
+`backend/ext_blobs.py`, `backend/ext_uploads.py` and
+`backend/tests/test_deal_intake_and_triage.py`), so this slice was re-based onto
+the current foundation: every shared file was re-taken from the foundation input
+and only this slice's own work re-applied on top —
+`backend/ext_grounded_portfolio_qa.py`,
+`backend/tests/test_grounded_portfolio_qa.py`, `demo/slice-5.json`, and pure
+appends to `frontend/app.js` (after the foundation module's closing `})();`) and
+to this file. Nothing in the foundation tree is modified by this slice. Re-probed
+against the booted app: slice 1's four acceptance checks and this slice's three
+all pass exactly as recorded, and the backend suite is green (33 tests).

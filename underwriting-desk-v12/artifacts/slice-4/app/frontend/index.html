@@ -1642,83 +1642,69 @@ sup.cite:hover { background: var(--surface-sunken); }
       day it was opened.
     </p>
 
-    <!-- ---------- decision desk: tiered approval, adverse action, return ---------- -->
+    <!-- ---------- credit decision desk: approve, decline, return ---------- -->
     <article class="manuscript" id="decision-desk" style="margin-bottom:2rem;">
       <div class="manuscript__head">
-        <h3>Decision Desk — Tiered Approval</h3>
-        <p>Approve, decline with a documented adverse-action reason, or return a deal to an
-          earlier stage. Authority is set by exposure and enforced on the server: an analyst may
-          not approve above $250,000, and no agent may decide at all.</p>
+        <h3>Credit Decision Desk</h3>
+        <p>Approve, decline with a controlled adverse-action reason, or return a deal to an
+          earlier stage. Approval authority follows exposure and is checked on the server — an
+          analyst cannot approve above $250,000, whatever the browser sends.</p>
       </div>
-
       <div class="find-bar" style="border-top:0;padding-top:0;">
-        <label class="field field--wide">
-          <span>Deal awaiting a decision</span>
-          <select id="decision-deal"><option value="">Loading the approval queue…</option></select>
+        <label class="field">
+          <span>Deal</span>
+          <input type="text" id="decision-deal-code" list="decision-deal-codes" value="DEAL-1004" placeholder="DEAL-1004">
+          <datalist id="decision-deal-codes"></datalist>
         </label>
         <label class="field">
-          <span>Your email (decider)</span>
-          <input type="email" id="decision-user-email" value="officer@bank.test">
+          <span>Your email (credit officer)</span>
+          <input type="email" id="decision-officer-email" value="officer@bank.test">
         </label>
         <label class="field field--wide">
-          <span>Decision notes</span>
-          <input type="text" id="decision-notes" placeholder="Within policy, DSCR above floor">
+          <span>Decision notes / adverse-action detail</span>
+          <input type="text" id="decision-notes" placeholder="Within policy, DSCR above the floor">
         </label>
       </div>
-
-      <ul class="docket-list" id="decision-tier"></ul>
-
-      <div class="find-bar">
-        <label class="field">
-          <span>Adverse-action reason code</span>
-          <select id="decision-reason-code"><option value="">Loading reason codes…</option></select>
-        </label>
-        <label class="field field--wide">
-          <span>Adverse-action detail (required to decline)</span>
-          <input type="text" id="decision-reason-detail"
-                 placeholder="DSCR of 0.82 is below the 1.25 policy floor">
-        </label>
-        <label class="field">
-          <span>Return to stage</span>
-          <select id="decision-return-stage">
-            <option value="document_extraction">Document extraction</option>
-            <option value="financial_spreading">Financial spreading</option>
-            <option value="risk_grading">Risk grading</option>
-            <option value="memo_drafting">Memo drafting</option>
-            <option value="policy_compliance">Policy compliance</option>
-          </select>
-        </label>
-      </div>
-
+      <p class="composer-hint" id="decision-authority" role="status"></p>
+      <ul class="docket-list" id="decision-receipt"></ul>
       <div class="decision-bar">
         <button type="button" class="btn btn--ink" id="decision-approve-btn">Approve</button>
-        <button type="button" class="btn btn--spot" id="decision-decline-btn">Decline (adverse action)</button>
-        <button type="button" class="btn btn--quiet" id="decision-return-btn">Return for rework</button>
-        <p class="decision-note" id="decision-status" role="status">Every decision is recorded against
-          the deciding officer's name and written to the deal's audit trail.</p>
+        <label class="field">
+          <span>Adverse-action reason</span>
+          <input type="text" id="decision-reason-code" list="decision-reason-codes" placeholder="INSUFFICIENT_DSCR">
+          <datalist id="decision-reason-codes"></datalist>
+        </label>
+        <button type="button" class="btn" id="decision-decline-btn">Decline</button>
+        <label class="field">
+          <span>Return to stage</span>
+          <input type="text" id="decision-return-stage" list="decision-return-stages" placeholder="financial_spreading">
+          <datalist id="decision-return-stages"></datalist>
+        </label>
+        <button type="button" class="btn btn--quiet" id="decision-return-btn">Return</button>
+        <p class="decision-note" id="decision-status"></p>
       </div>
     </article>
 
     <div class="plate-row">
       <div class="plate">
         <span class="plate-label">Past the service line</span>
-        <span class="plate-figure alarm" id="sla-plate-breached">—</span>
-        <p class="plate-caption" id="sla-plate-breached-caption">counting the book…</p>
+        <span class="plate-figure alarm" id="plate-past-line">0</span>
+        <p class="plate-caption" id="plate-past-line-caption">of 0 active deals</p>
       </div>
       <div class="plate">
         <span class="plate-label">Exposure at rest</span>
-        <span class="plate-figure" id="sla-plate-exposure">—</span>
+        <span class="plate-figure" id="plate-idle-exposure">$0</span>
         <p class="plate-caption">idle capital in the book</p>
       </div>
       <div class="plate">
         <span class="plate-label">Longest idle</span>
-        <span class="plate-figure alarm" id="sla-plate-longest">—</span>
-        <p class="plate-caption" id="sla-plate-longest-caption">the deal at the top of the register</p>
+        <span class="plate-figure alarm" id="plate-longest">—</span>
+        <p class="plate-caption" id="plate-longest-caption">nothing past the line</p>
       </div>
       <div class="plate">
         <span class="plate-label">Approaching the line</span>
-        <span class="plate-figure caution" id="sla-plate-approaching">—</span>
-        <p class="plate-caption">idle 4 business days</p>
+        <span class="plate-figure caution" id="plate-approaching">0</span>
+        <p class="plate-caption" id="plate-approaching-caption">idle 3 – 5 business days</p>
       </div>
     </div>
 
@@ -1726,10 +1712,9 @@ sup.cite:hover { background: var(--surface-sunken); }
 
       <div>
         <table class="idle-register">
-          <caption id="sla-register-caption">Deals idle beyond five business days</caption>
+          <caption>Deals idle beyond five business days</caption>
           <thead>
             <tr>
-              <th scope="col">Act</th>
               <th scope="col">Deal</th>
               <th scope="col">Stage</th>
               <th scope="col">Owner</th>
@@ -1738,53 +1723,61 @@ sup.cite:hover { background: var(--surface-sunken); }
               <th scope="col" class="num">Idle</th>
             </tr>
           </thead>
-          <tbody id="sla-register-body">
-            <tr><td colspan="7">Reading the register…</td></tr>
-          </tbody>
+          <tbody id="idle-register-body"></tbody>
         </table>
 
-        <p class="board-footnote" id="sla-register-footnote">
-          Idle deals remain in their stage; nothing auto-advances. Idle time is counted in
-          business days from the deal's last meaningful activity, weekends and the configured
-          bank-holiday calendar excluded. Select a deal to reassign it, return it, or acknowledge
-          it with a note — each choice is applied by the escalation workflow and audited.
+        <p class="board-footnote">
+          Idle deals remain in their stage; nothing auto-advances. Where an agent failed or timed
+          out, the stage stays open and a retry or manual-completion path is offered to the
+          assigned human.
         </p>
       </div>
 
       <aside class="marginalia" aria-label="Service line apparatus">
         <div class="sidebar-panel">
           <h4>Idle by Stage</h4>
-          <ul id="sla-by-stage"></ul>
+          <ul id="idle-by-stage"></ul>
         </div>
 
         <div class="sidebar-panel">
           <h4>Idle by Desk</h4>
-          <ul id="sla-by-owner"></ul>
+          <ul id="idle-by-desk"></ul>
         </div>
 
         <div class="sidebar-panel">
           <h4>The Calendar</h4>
           <p>Business days exclude weekends and the configured bank-holiday calendar. A deal
             crosses the service line at the start of its sixth idle business day.</p>
-          <p id="sla-calendar-note"></p>
         </div>
 
         <div class="margin-note">
           <h4>Act on the Register</h4>
+          <p>Choose a deal from the register — clicking a row selects it — then hand it to another
+            desk or acknowledge it with a note. Each action runs the
+            <em>sla-idle-escalation</em> workflow: idle time is re-measured, the blockers are
+            collected, the officer's choice is recorded, and the deal's clock resets.</p>
           <label class="field">
-            <span>Escalating officer</span>
+            <span>Deal</span>
+            <input type="text" id="sla-deal-code" list="sla-deal-codes" placeholder="DEAL-1005">
+            <datalist id="sla-deal-codes"></datalist>
+          </label>
+          <label class="field">
+            <span>Your email (credit officer)</span>
             <input type="email" id="sla-officer-email" value="officer@bank.test">
           </label>
           <label class="field">
-            <span>Note to the record</span>
-            <input type="text" id="sla-escalation-note"
-                   placeholder="Idle past the service line — reassigning">
+            <span>Reassign to</span>
+            <input type="email" id="sla-reassign-email" value="analyst@bank.test" placeholder="analyst@bank.test">
+          </label>
+          <label class="field">
+            <span>Note</span>
+            <input type="text" id="sla-note" placeholder="Picked up from the register">
           </label>
           <p style="display:flex;flex-wrap:wrap;gap:.4rem;">
-            <button type="button" class="btn btn--sm" id="sla-reassign-btn">Reassign selected</button>
-            <button type="button" class="btn btn--sm btn--quiet" id="sla-nudge-btn">Nudge owners</button>
+            <button type="button" class="btn btn--sm btn--ink" id="sla-reassign-btn">Reassign selected</button>
+            <button type="button" class="btn btn--sm btn--quiet" id="sla-acknowledge-btn">Acknowledge with note</button>
           </p>
-          <p id="sla-escalation-status" role="status"></p>
+          <p class="decision-note" id="sla-action-status" role="status"></p>
         </div>
       </aside>
     </div>

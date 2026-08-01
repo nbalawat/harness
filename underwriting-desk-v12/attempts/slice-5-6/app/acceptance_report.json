@@ -1,5 +1,6 @@
 {
-  "proven_through_slice": 1,
+  "proven_through_slice": 5,
+  "scope": "foundation+self",
   "slices": [
     {
       "slice": "deal-intake-and-triage",
@@ -73,6 +74,59 @@
           "contains": [
             "document_extraction",
             "queue"
+          ],
+          "ok": true
+        }
+      ]
+    },
+    {
+      "slice": "grounded-portfolio-qa",
+      "name": "Grounded, permission-scoped portfolio Q&A desk",
+      "objective": "As a credit officer I ask the portfolio desk questions spanning active deals in plain English and get answers drawn only from stored deal records I am entitled to see, with every statement traceable to the deal ids behind it and the whole session recorded for audit.",
+      "addresses": [
+        "R-014",
+        "R-015",
+        "R-023",
+        "R-029",
+        "R-037",
+        "R-038",
+        "R-053",
+        "R-054",
+        "R-055",
+        "R-056",
+        "R-058",
+        "R-059",
+        "R-060",
+        "R-066"
+      ],
+      "checks": [
+        {
+          "method": "POST",
+          "path": "/api/qa/ask",
+          "expected_status": 200,
+          "contains": [
+            "Portfolio Q&A Agent"
+          ],
+          "ok": true
+        },
+        {
+          "method": "POST",
+          "path": "/api/qa/ask",
+          "expected_status": 200,
+          "contains": [
+            "source_deal_ids",
+            "DEAL-"
+          ],
+          "ok": true
+        },
+        {
+          "method": "GET",
+          "path": "/api/qa/sessions",
+          "expected_status": 200,
+          "contains": [
+            "question",
+            "source_deal_ids",
+            "user_id"
           ],
           "ok": true
         }
