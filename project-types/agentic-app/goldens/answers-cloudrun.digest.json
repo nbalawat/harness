@@ -1,5 +1,5 @@
 {
-  "digest": "f716dc9194cab87a",
+  "digest": "8e5caea3754e657b",
   "files": {
     "agent-design/agent_roster.json": "6dfba59a3d3e9535",
     "architecture/architecture.json": "4a3ff1b8f14e37b3",
@@ -26,7 +26,7 @@
     "design-review/design_review.json": "897c732e58233a0f",
     "design-select/design_choice.json": "d47dd464c6894c4a",
     "gap-questions/gaps.json": "b35942ef3038827d",
-    "governance-report/governance.json": "a016797c1cc3714e",
+    "governance-report/governance.json": "b3ef2fc41a963c4a",
     "ingest/corpus/src-1.md": "112dd27209a4dd7f",
     "ingest/corpus/src-2.md": "060134fc2144216f",
     "ingest/corpus/src-3.md": "d11ae6e79dedad31",

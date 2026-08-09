@@ -9,21 +9,21 @@
       "status": "completed",
       "totalCostUsd": 12.5,
       "nodeCount": 42,
-      "digest": "f716dc9194cab87a"
+      "digest": "8e5caea3754e657b"
     },
     {
       "scenario": "answers-langgraph.json",
       "status": "completed",
       "totalCostUsd": 12.5,
       "nodeCount": 42,
-      "digest": "d6afc5aa28b0ca44"
+      "digest": "59425c86a0cbffd0"
     },
     {
       "scenario": "answers.json",
       "status": "completed",
       "totalCostUsd": 12.5,
       "nodeCount": 42,
-      "digest": "49d1c38a431fda8a"
+      "digest": "a53dc4c4edfddf3e"
     }
   ],
   "revisionDrill": {
@@ -34,6 +34,6 @@
   "gateRegression": {
     "status": "held"
   },
-  "packageDigest": "27bc8d6df3c0870b5c6ee3dce854f9add73e2c9d548c418b70d8112418274168",
-  "certifiedAt": "2026-08-09T12:44:06.580Z"
+  "packageDigest": "9087f2c8b33391495de48bfe2959b9f6a249057f43d14280c300bb36db32697d",
+  "certifiedAt": "2026-08-09T14:46:45.418Z"
 }

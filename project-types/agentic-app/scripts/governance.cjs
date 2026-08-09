@@ -52,6 +52,15 @@ fs.writeFileSync(
             findings: audit.findings.length,
             high_findings: audit.findings.filter((f) => f.severity === "high").length,
             files_checked: audit.checked.files,
+            // Convergence QUALITY, not just a pass: how many findings the
+            // self-healing audit FIXED vs left for a named waiver. A gate that
+            // "converges" only by waiving is a plateau in disguise — surfacing
+            // fixed-vs-waived keeps "fix by default, waive by exception" honest.
+            convergence: {
+              fixed: Array.isArray(audit.resolved) ? audit.resolved.length : 0,
+              remaining_high: audit.findings.filter((f) => f.severity === "high").length,
+              converged_by: Array.isArray(audit.resolved) && audit.resolved.length > 0 ? "self-healing-fix" : "clean-first-pass",
+            },
             evidence: "audit.json",
           }
         : null,
