@@ -72,6 +72,10 @@ export async function executeNode(
     const onDisk = path.join(ctx.workspace, "attempts", `${node.id}-${priorAttempts}`);
     if (fs.existsSync(onDisk)) prevAttemptDir = onDisk;
   }
+  // Doom-loop tracking across retries (see the guard after each failed attempt).
+  let prevSignature: string | undefined;
+  let prevTreeHash: string | undefined;
+  let loopStrikes = 0;
   for (let seq = 1; seq <= maxAttempts; seq++) {
     const attempt = priorAttempts + seq;
 
@@ -190,6 +194,31 @@ export async function executeNode(
     }
 
     ctx.journal.append({ type: "node.attempt_failed", nodeId: node.id, attempt, error });
+
+    // Doom-loop guard: a retry that hits the SAME failure signature as the last
+    // one, or leaves the working tree byte-identical (the agent made no real
+    // change), is not converging — it is burning budget re-treading (the
+    // "40 turns of byte-forensics" class). Detect it, journal it for the
+    // platform team's plateau analysis, and inject a break-the-loop directive so
+    // the (escalated) next attempt changes APPROACH instead of repeating.
+    const sig = failureSignature(error);
+    const treeHash = hashTree(attemptDir);
+    const looping = sig === prevSignature || (prevTreeHash !== undefined && treeHash === prevTreeHash);
+    if (looping) {
+      loopStrikes += 1;
+      ctx.journal.append({
+        type: "node.loop_detected",
+        nodeId: node.id,
+        attempt,
+        strikes: loopStrikes,
+        reason: treeHash === prevTreeHash ? "no_change" : "repeated_failure",
+      });
+    } else {
+      loopStrikes = 0;
+    }
+    prevSignature = sig;
+    prevTreeHash = treeHash;
+
     if (/maximum number of turns/i.test(error)) {
       // Turn exhaustion is scope starvation, not a defect: the retry gets more
       // turns (see runAgent) and must FINISH, not re-tread.
@@ -199,6 +228,14 @@ export async function executeNode(
         `finish ONLY the missing pieces, run the final checks once, and stop.`;
     } else {
       feedback = `Attempt ${attempt} failed validation. Fix the following and try again:\n\n${error}`;
+    }
+    if (loopStrikes >= 1) {
+      feedback +=
+        `\n\n⚠️ LOOP DETECTED: the previous attempt hit the same failure` +
+        (treeHash === prevTreeHash ? " and made no change to the files" : "") +
+        `. Repeating the same approach will keep failing. STOP and change strategy: re-read the exact failing check, ` +
+        `identify the smallest concrete edit that would flip it, make ONLY that edit, and do not re-investigate what already works. ` +
+        `Do not analyze byte encodings, re-explore the tree, or re-derive context you already have.`;
     }
   }
 
@@ -234,18 +271,19 @@ function buildInputs(
  */
 function runCommand(ctx: RunContext, command: string, attemptDir: string): Promise<void> {
   return new Promise((resolve, reject) => {
-    const child = spawn(command, {
+    const env = {
+      ...process.env,
+      HARNESS_PROJECT_DIR: ctx.projectTypeDir,
+      HARNESS_WORKSPACE: ctx.workspace,
+      // Verifiers key off this: a LIVE build's app is verified with LIVE
+      // agents (a grounding bug in an agent is a real defect the stub would
+      // mask); mock/certification runs stay deterministic on stubs.
+      HARNESS_RUN_MODE: ctx.mockAgents ? "mock" : "live",
+    };
+    const child = spawn(expandEnvVars(command, env), {
       shell: true,
       cwd: attemptDir,
-      env: {
-        ...process.env,
-        HARNESS_PROJECT_DIR: ctx.projectTypeDir,
-        HARNESS_WORKSPACE: ctx.workspace,
-        // Verifiers key off this: a LIVE build's app is verified with LIVE
-        // agents (a grounding bug in an agent is a real defect the stub would
-        // mask); mock/certification runs stay deterministic on stubs.
-        HARNESS_RUN_MODE: ctx.mockAgents ? "mock" : "live",
-      },
+      env,
     });
     let stdout = "";
     let stderr = "";
@@ -272,6 +310,71 @@ function runCommand(ctx: RunContext, command: string, attemptDir: string): Promi
       }
     });
   });
+}
+
+/**
+ * Expand `$VAR`, `${VAR}`, and `%VAR%` references in a command string from the
+ * given env BEFORE handing it to the shell. Node's `shell: true` uses `/bin/sh`
+ * on POSIX (which expands `$VAR`) but `cmd.exe` on Windows (which only expands
+ * `%VAR%`) — so a DAG command like `node "$HARNESS_PROJECT_DIR/scripts/x.cjs"`
+ * would resolve nowhere on Windows. Pre-expanding makes commands shell-agnostic.
+ * Unknown variables are left untouched (never silently blanked).
+ */
+/**
+ * A stable signature of a failure for loop detection: strip attempt numbers,
+ * volatile paths, ports, and hex so the SAME underlying failure across retries
+ * hashes identically even as incidental details change.
+ */
+export function failureSignature(error: string): string {
+  const normalized = (error || "")
+    .replace(/attempt \d+/gi, "attempt N")
+    .replace(/:\d+/g, ":N") // ports, line:col
+    .replace(/0x[0-9a-f]+|\b[0-9a-f]{7,}\b/gi, "HEX")
+    .replace(/\/[^\s"']+/g, "/PATH")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 600);
+  return crypto.createHash("sha256").update(normalized).digest("hex").slice(0, 16);
+}
+
+/**
+ * A content hash of an attempt's working tree, used to detect a retry that
+ * changed nothing (the agent re-ran without making a real edit). Skips the
+ * envelope's own scratch files and heavy caches so it reflects the agent's work.
+ */
+function hashTree(dir: string): string {
+  const h = crypto.createHash("sha256");
+  const SKIP = new Set(["inputs.json", "cost.json", "feedback.md", "node_modules", "__pycache__", ".pytest_cache", ".git"]);
+  const walk = (d: string) => {
+    let entries: fs.Dirent[];
+    try {
+      entries = fs.readdirSync(d, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name));
+    } catch {
+      return;
+    }
+    for (const e of entries) {
+      if (SKIP.has(e.name)) continue;
+      const p = path.join(d, e.name);
+      h.update(e.name);
+      if (e.isDirectory()) walk(p);
+      else {
+        try {
+          h.update(fs.readFileSync(p));
+        } catch {
+          /* unreadable — ignore */
+        }
+      }
+    }
+  };
+  walk(dir);
+  return h.digest("hex").slice(0, 16);
+}
+
+export function expandEnvVars(command: string, env: NodeJS.ProcessEnv): string {
+  return command
+    .replace(/\$\{(\w+)\}/g, (m, k) => (k in env ? String(env[k]) : m))
+    .replace(/\$(\w+)/g, (m, k) => (k in env ? String(env[k]) : m))
+    .replace(/%(\w+)%/g, (m, k) => (k in env ? String(env[k]) : m));
 }
 
 /** Resolve a gate's question list: static from the DAG, or dynamic from an upstream artifact. */
@@ -729,7 +832,12 @@ function commit(ctx: RunContext, node: NodeDef, attemptDir: string, inputsHash?:
     } else {
       fs.copyFileSync(path.join(attemptDir, out.file), dest);
     }
-    artifacts[out.name] = path.relative(ctx.workspace, dest);
+    // Store the relative path with FORWARD slashes on every OS: this rel is
+    // used both as a filesystem path (path.join tolerates '/') and, in the
+    // dashboard, spliced straight into artifact URLs (/artifact/<rel>) — a
+    // Windows backslash there produces broken links that 404 ("documents that
+    // don't open"). path.relative yields '\' on Windows, so normalize here.
+    artifacts[out.name] = path.relative(ctx.workspace, dest).split(path.sep).join("/");
   }
   ctx.journal.append({ type: "node.committed", nodeId: node.id, artifacts, inputsHash });
 }

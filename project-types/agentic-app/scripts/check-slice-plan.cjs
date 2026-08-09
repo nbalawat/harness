@@ -26,12 +26,26 @@ for (const slice of slices) {
 // before any build spend.
 const contractScreens = new Set(inputs.design_contract.data.screens.map((s) => s.id));
 const covered = new Set();
+const owner = new Map(); // screen -> the one slice that owns it
 for (const slice of slices) {
   for (const screen of slice.covers ?? []) {
     if (!contractScreens.has(screen)) {
       console.error(`slice '${slice.id}' covers unknown screen '${screen}' — not in the design contract (${[...contractScreens].join(", ")})`);
       process.exit(1);
     }
+    // DISJOINT OWNERSHIP: two parallel slices editing the same screen collide at
+    // merge (they touch the same file). A screen belongs to EXACTLY ONE slice;
+    // a feature without its own screen is backend-only (covers: []) and must not
+    // edit index.html. This is the guard that prevents merge-slices conflicts.
+    if (owner.has(screen)) {
+      console.error(
+        `screen '${screen}' is claimed by BOTH slice '${owner.get(screen)}' and slice '${slice.id}' — ` +
+        "parallel slices must own DISJOINT surfaces or they collide at merge. Give the screen to exactly one " +
+        "slice; make the other backend-only (covers: []) and have it surface through an API the owning screen consumes.",
+      );
+      process.exit(1);
+    }
+    owner.set(screen, slice.id);
     covered.add(screen);
   }
 }

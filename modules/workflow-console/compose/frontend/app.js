@@ -88,10 +88,29 @@ async function renderRun() {
     if (st.kind === "agent" && st.state === "pending" && (run.status === "running")) {
       const th = el("div", "out"); th.appendChild(el("div", "thinking", "agent working…")); s.appendChild(th);
     }
-    if (st.output && st.state === "done") {
+    if (st.state === "done" && (st.data || st.output)) {
       const out = el("div", "out");
-      out.appendChild(el("div", "lbl", st.kind === "agent" ? "AI output" : st.kind === "human" ? "Decision" : "Result"));
-      out.appendChild(el("div", null, st.output));
+      out.appendChild(el("div", "lbl", st.kind === "agent" ? "AI output — for review" : st.kind === "human" ? "Decision" : "Result"));
+      if (st.data) {
+        // structured REVIEW card: declared fields as rows, rationale + confidence surfaced
+        const grid = el("div", "review");
+        for (const [k, v] of Object.entries(st.data)) {
+          if (k === "rationale" || k === "confidence") continue;
+          const row = el("div", "field");
+          row.appendChild(el("span", "fk", k.replace(/_/g, " ")));
+          row.appendChild(el("span", "fv", typeof v === "object" ? JSON.stringify(v) : String(v)));
+          grid.appendChild(row);
+        }
+        out.appendChild(grid);
+        if (st.data.rationale) out.appendChild(el("div", "rationale", st.data.rationale));
+        if (st.data.confidence) {
+          const c = el("div", "confwrap");
+          c.appendChild(el("span", "conf conf-" + st.data.confidence, "confidence: " + st.data.confidence));
+          out.appendChild(c);
+        }
+      } else {
+        out.appendChild(el("div", null, st.output));
+      }
       s.appendChild(out);
     }
     if (st.state === "waiting" && st.question) {

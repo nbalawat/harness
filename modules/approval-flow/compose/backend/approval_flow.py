@@ -26,11 +26,11 @@ def _decide(item_id, actor, decision, reason):
         raise KeyError(f"no submission {item_id}")
     if item["status"] != "pending":
         raise IllegalTransition(f"submission {item_id} is already {item['status']}")
-    item["status"] = decision
-    item["decided_by"] = actor
-    item["reason"] = reason
+    # Persist through store.update — mutating the row from store.list() in place
+    # works in memory but is lost through the Postgres adapter (a data-loss bug).
+    updated = store.update("_approvals_queue", item_id, {"status": decision, "decided_by": actor, "reason": reason})
     record(f"workflow.{decision}", {"id": item_id, "by": actor, "reason": reason})
-    return item
+    return updated
 
 
 def approve(item_id, actor, reason=""):

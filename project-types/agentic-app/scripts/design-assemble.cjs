@@ -11,12 +11,8 @@ const inputs = JSON.parse(fs.readFileSync("inputs.json", "utf8"));
 fs.rmSync("designs", { recursive: true, force: true });
 
 const options = [];
-for (let i = 1; i <= 3; i++) {
+for (let i = 1; inputs[`option_${i}_dir`]; i++) {
   const input = inputs[`option_${i}_dir`];
-  if (!input) {
-    console.error(`design option ${i} missing from inputs — all three concurrent option nodes must commit`);
-    process.exit(1);
-  }
   const src = path.join(input.path, `option-${i}`);
   if (!fs.existsSync(path.join(src, "index.html"))) {
     console.error(`design option ${i} incomplete: ${src}/index.html missing`);

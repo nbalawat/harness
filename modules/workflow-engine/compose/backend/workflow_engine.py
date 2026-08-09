@@ -11,6 +11,7 @@ import json
 import os
 import re
 import string
+import threading
 
 import agent_runtime
 import approval_flow
@@ -19,8 +20,41 @@ from ext_audit import record as audit
 
 _handlers = {}
 _defs_cache = None
+_run_locks = {}
+_locks_guard = threading.Lock()
 
 KINDS = ("deterministic", "agent", "human", "condition")
+
+
+def _lock_for(run_id):
+    with _locks_guard:
+        return _run_locks.setdefault(run_id, threading.Lock())
+
+
+def advance_async(run_id):
+    """Advance a run in a background thread so live agent steps never block the
+    HTTP request; a per-run lock keeps only one tick in flight for a run."""
+    def _worker():
+        lock = _lock_for(run_id)
+        if not lock.acquire(blocking=False):
+            return  # a tick is already advancing this run
+        try:
+            tick(run_id)
+        finally:
+            lock.release()
+
+    threading.Thread(target=_worker, daemon=True).start()
+
+
+def advance(run_id):
+    """Advance a run. Synchronous by default so tests, certification, and the
+    smoke check stay deterministic; set HARNESS_ASYNC_EXEC (the live runtime
+    does) to run steps in a background thread so the console stays responsive
+    while live agents think."""
+    if os.environ.get("HARNESS_ASYNC_EXEC"):
+        advance_async(run_id)
+    else:
+        tick(run_id)
 
 
 class WorkflowError(Exception):
@@ -136,7 +170,7 @@ def start(workflow_name, inputs=None):
     run_id = f"wf-{run['id']}"
     _append(run_id, "run.started", workflow=workflow_name, inputs=inputs or {})
     audit("workflow.started", {"run": run_id, "workflow": workflow_name})
-    tick(run_id)
+    advance(run_id)
     return run_id
 
 
@@ -172,6 +206,39 @@ def _check_contract(node, output):
         if not isinstance(output, dict) or field not in output:
             return f"output missing required field '{field}'"
     return None
+
+
+def _extract_json(text):
+    m = re.search(r"\{.*\}", text or "", re.S)
+    if m:
+        try:
+            return json.loads(m.group(0))
+        except Exception:
+            return None
+    return None
+
+
+def _structured_respond(prompt, contract):
+    """Agent output as a REVIEWABLE contract. The agent returns a small JSON
+    object — the declared fields plus a one-line `rationale` and a `confidence`
+    (low|medium|high) — so a human reviews STRUCTURED data, not an essay. This is
+    framework-agnostic (runs over any agent_runtime) and always yields structure:
+    if the model returns prose, it degrades to a structured object carrying the
+    prose as the rationale. That keeps review consistent across every framework."""
+    fields = [f if isinstance(f, str) else (f or {}).get("name") for f in (contract or [])]
+    fields = [f for f in fields if f]
+    ask = (prompt + "\n\nReturn ONLY a JSON object with these keys: " + ", ".join(fields)
+           + ', plus "rationale" (one sentence) and "confidence" (one of low|medium|high).'
+           + " No text outside the JSON.")
+    reply = agent_runtime.respond(ask)
+    data = _extract_json(reply)
+    if not isinstance(data, dict):
+        data = {"rationale": (reply or "").strip()[:220], "confidence": "medium"}
+    for f in fields:
+        data.setdefault(f, "n/a")
+    data.setdefault("rationale", "")
+    data.setdefault("confidence", "medium")
+    return data
 
 
 def _wf_of(name):
@@ -238,8 +305,13 @@ def tick(run_id):
             deps = _deps_of(wf, node, node_idx[nid])
             if not all(d in st["completed"] or d in st["skipped"] for d in deps):
                 continue
-            # a step depending on a SKIPPED step is itself skipped (branch pruning)
-            if any(d in st["skipped"] for d in deps):
+            # Branch pruning: a node is pruned ONLY when EVERY dependency was
+            # skipped (it sits wholly inside an untaken branch). A node with at
+            # least one COMPLETED dependency is on the taken path — it is a merge
+            # point and must run, never be silently skipped. (The old rule pruned
+            # on ANY skipped dep, which could skip a human-approval gate that a
+            # branch merged back into — defeating the human-in-the-loop control.)
+            if deps and all(d in st["skipped"] for d in deps):
                 _append(run_id, "node.skipped", node=nid, reason="upstream_skipped")
                 progressed = True
                 continue
@@ -262,12 +334,15 @@ def tick(run_id):
                         raise WorkflowError(f"contract violation at '{nid}': {problem}")
                     _append(run_id, "node.completed", node=nid, output=output)
                 elif node["kind"] == "agent":
-                    reply = agent_runtime.respond(_render(node["prompt"], st["context"]))
-                    output = {"reply": reply}
+                    prompt = _render(node["prompt"], st["context"])
+                    contract = node.get("output_contract")
+                    # A step with an output_contract returns REVIEWABLE structured
+                    # data (fields + rationale + confidence); otherwise, free text.
+                    output = _structured_respond(prompt, contract) if contract else {"reply": agent_runtime.respond(prompt)}
                     problem = _check_contract(node, output)
                     if problem:
-                        reply = agent_runtime.respond(_render(node["prompt"], st["context"]) + f"\n\nPrevious attempt failed: {problem}. Fix this.")
-                        output = {"reply": reply}
+                        retry = prompt + f"\n\nPrevious attempt failed: {problem}. Fix this."
+                        output = _structured_respond(retry, contract) if contract else {"reply": agent_runtime.respond(retry)}
                     _append(run_id, "node.completed", node=nid, output=output)
                     audit("workflow.agent_step", {"run": run_id, "node": nid})
                 elif node["kind"] == "condition":
@@ -287,6 +362,12 @@ def tick(run_id):
                             if not after or m["id"] == target:
                                 if m["id"] == target:
                                     break
+                                continue
+                            # A human approval gate is NEVER silently skipped by a
+                            # branch short-circuit — in a compliance workflow that
+                            # would bypass the human-in-the-loop decision. It is
+                            # honored (it parks) even on the on_false path.
+                            if m.get("kind") == "human":
                                 continue
                             _append(run_id, "node.skipped", node=m["id"], reason="branch_not_taken")
                 elif node["kind"] == "human":

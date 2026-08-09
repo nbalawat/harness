@@ -12,10 +12,37 @@ import * as http from "node:http";
 import * as net from "node:net";
 import * as os from "node:os";
 import * as path from "node:path";
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { Journal, downstreamClosure, foldState, loadProjectType, loadProjectTypeFile, reviseNode, type RunContext } from "@harness/runner";
 import type { GateQuestion, LedgerEvent, NodeDef, ProjectTypeDef } from "@harness/spec";
+
+const IS_WIN = process.platform === "win32";
+
+/**
+ * Kill a spawned preview app AND its children (uvicorn workers), cross-platform.
+ * POSIX signals the process group (needs the child spawned detached); Windows
+ * has no such group signal, so taskkill /T walks the tree by PID.
+ */
+function killAppTree(pid: number): void {
+  try {
+    if (IS_WIN) {
+      spawnSync("taskkill", ["/pid", String(pid), "/T", "/F"], { stdio: "ignore" });
+    } else {
+      process.kill(-pid, "SIGTERM");
+    }
+  } catch {
+    /* already gone */
+  }
+}
+
+/** Expand $VAR / ${VAR} / %VAR% from env so a preview command works under any shell. */
+function expandEnv(command: string, env: NodeJS.ProcessEnv): string {
+  return command
+    .replace(/\$\{(\w+)\}/g, (m, k) => (k in env ? String(env[k]) : m))
+    .replace(/\$(\w+)/g, (m, k) => (k in env ? String(env[k]) : m))
+    .replace(/%(\w+)%/g, (m, k) => (k in env ? String(env[k]) : m));
+}
 
 interface UiRunConfig {
   projectTypeDir: string;
@@ -83,7 +110,9 @@ function walk(dir: string, base: string): string[] {
   for (const entry of fs.readdirSync(dir, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name))) {
     const p = path.join(dir, entry.name);
     if (entry.isDirectory()) out.push(...walk(p, base));
-    else out.push(path.relative(base, p));
+    // Forward slashes on every OS: these rels become artifact URLs and are
+    // matched against '/'-based patterns — a Windows backslash breaks both.
+    else out.push(path.relative(base, p).split(path.sep).join("/"));
   }
   return out;
 }
@@ -304,7 +333,9 @@ export function buildState(workspace: string): Record<string, unknown> {
     for (const [name, rel] of Object.entries(byName)) {
       const meta = DOC_LABELS[name];
       if (meta && rel.endsWith(".json")) {
-        const clean = rel.replace(/^artifacts\//, "");
+        // Normalize to forward slashes and strip the artifacts/ prefix — a
+        // Windows-authored rel carries backslashes that would 404 in the URL.
+        const clean = rel.replace(/\\/g, "/").replace(/^artifacts\//, "");
         // Every artifact URL must carry the workspace — in the multi-run
         // dashboard a bare /artifact/ path 404s (documents that "don't open").
         const wsq = `?ws=${encodeURIComponent(workspace)}`;
@@ -1170,11 +1201,7 @@ export function startUiServer(target: string, port: number): Promise<http.Server
     const targets = ws ? [appFor(ws)] : [...apps.values()];
     for (const app of targets) {
       if (app.pid) {
-        try {
-          process.kill(-app.pid, "SIGTERM");
-        } catch {
-          /* already gone */
-        }
+        killAppTree(app.pid);
       }
       app.status = "stopped";
       app.port = null;
@@ -1206,11 +1233,12 @@ export function startUiServer(target: string, port: number): Promise<http.Server
     app.error = undefined;
     const logFile = path.join(w, "app-preview.log");
     const log = fs.openSync(logFile, "w");
-    const child = spawn(preview.command, {
+    const previewEnv = { ...process.env, PORT: String(appPort) };
+    const child = spawn(expandEnv(preview.command, previewEnv), {
       shell: true,
-      detached: true,
+      detached: !IS_WIN, // POSIX: group leader for group-kill; Windows: taskkill /T by PID
       cwd: path.join(runDir, preview.cwd ?? "."),
-      env: { ...process.env, PORT: String(appPort) },
+      env: previewEnv,
       stdio: ["ignore", log, log],
     });
     fs.closeSync(log);
@@ -2805,7 +2833,7 @@ async function tick() {
   const totalN = (sec?.findings || []).length + (aud?.findings || []).length;
   if (totalN) {
     fp.style.display = '';
-    const openAudit = aud ? 'slice-audit' : 'security-scan';
+    const openAudit = aud ? 'slice-audit' : 'remediate';
     const verdict = highN > 0
       ? '<span class="chip" style="background:var(--bad,#c92a2a);color:#fff">⛔ ' + highN + ' high · not shippable</span>'
       : '<span class="chip" style="background:var(--ok,#2b8a3e);color:#fff">✓ 0 high</span>';

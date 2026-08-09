@@ -31,12 +31,13 @@ class TriggerInput(BaseModel):
     source: str | None = None
 
 
-def _fire(kind, req, actor):
+def _fire(kind, req, started_by):
     name = _process_name()
-    run_id = workflow_engine.start(name, {**req.inputs, "_trigger": kind, "_source": req.source or actor})
-    audit("process.triggered", {"trigger": kind, "run": run_id, "source": req.source or actor}, actor=actor)
+    # every instance carries WHO/WHAT started it (started_by) for the audit trail
+    run_id = workflow_engine.start(name, {**req.inputs, "_trigger": kind, "_source": req.source or started_by, "started_by": started_by})
+    audit("process.triggered", {"trigger": kind, "run": run_id, "source": req.source or started_by}, actor=started_by)
     st = workflow_engine.state(run_id)
-    return {"run_id": run_id, "trigger": kind, "status": st["status"]}
+    return {"run_id": run_id, "trigger": kind, "status": st["status"], "started_by": started_by}
 
 
 @router.get("")
@@ -52,24 +53,32 @@ def trigger_catalog():
 
 
 @router.post("/human/internal")
-def human_internal(req: TriggerInput, x_user_email: str | None = Header(default=None)):
-    return _fire("human.internal", req, x_user_email or "internal-user")
+def human_internal(req: TriggerInput, acting_user_email: str | None = Header(default=None)):
+    # internal actions are attributed to the signed-in employee (real auth sits
+    # in front; the identity header is the attribution hook)
+    return _fire("human.internal", req, started_by=acting_user_email or "internal-user")
 
 
 @router.post("/human/external")
 def human_external(req: TriggerInput):
-    # external clients are unauthenticated by nature; the process itself gates decisions
-    return _fire("human.external", req, req.source or "external-client")
+    # public-endpoint: external client portal submission — unauthenticated by
+    # design; the process itself gates every decision and the submitter is
+    # recorded (started_by) for the audit trail.
+    return _fire("human.external", req, started_by=req.source or "external-client")
 
 
 @router.post("/event")
 def event(req: TriggerInput):
-    return _fire("event", req, req.source or "event-bus")
+    # public-endpoint: inbound system webhook — verified by gateway signature in
+    # production; the source system is recorded (started_by) for audit.
+    return _fire("event", req, started_by=req.source or "event-bus")
 
 
 @router.post("/system")
 def system_event(req: TriggerInput):
-    return _fire("system", req, req.source or "system")
+    # public-endpoint: internal system event — emitted by trusted in-cluster
+    # services; the emitting system is recorded (started_by) for audit.
+    return _fire("system", req, started_by=req.source or "system")
 
 
 # Stub scheduler: in production a cron/scheduler fires this; locally you POST a
@@ -80,5 +89,7 @@ class ScheduleTick(BaseModel):
 
 @router.post("/schedule/tick")
 def schedule_tick(req: ScheduleTick):
-    started = [_fire("schedule", TriggerInput(inputs=item, source="scheduler"), "scheduler") for item in (req.batch or [{}])]
+    # public-endpoint: scheduler tick — invoked by the cron/scheduler; each item
+    # is attributed to the scheduler (started_by) for audit.
+    started = [_fire("schedule", TriggerInput(inputs=item, source="scheduler"), started_by="scheduler") for item in (req.batch or [{}])]
     return {"fired": len(started), "runs": started}

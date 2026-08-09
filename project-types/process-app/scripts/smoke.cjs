@@ -3,7 +3,16 @@
 const fs = require("node:fs");
 const net = require("node:net");
 const path = require("node:path");
-const { spawn } = require("node:child_process");
+const { spawn, spawnSync } = require("node:child_process");
+
+const IS_WIN = process.platform === "win32";
+const killTree = (child) => {
+  if (!child || child.pid == null) return;
+  try {
+    if (IS_WIN) spawnSync("taskkill", ["/pid", String(child.pid), "/T", "/F"], { stdio: "ignore" });
+    else process.kill(-child.pid, "SIGTERM");
+  } catch { /* gone */ }
+};
 
 const inputs = JSON.parse(fs.readFileSync("inputs.json", "utf8"));
 fs.cpSync(inputs.app.path, "app", { recursive: true });
@@ -16,9 +25,9 @@ const freePort = () => new Promise((res, rej) => { const s = net.createServer();
   const log = fs.openSync("smoke.log", "w");
   // stub agents so the smoke test is fast + deterministic (real agents run when booted for use)
   const child = spawn(`uv run --with fastapi --with uvicorn --with-requirements requirements.txt uvicorn main:app --host 127.0.0.1 --port ${port}`,
-    { shell: true, detached: true, cwd: path.join(app, "backend"), env: { ...process.env, HARNESS_AGENT_MODE: "stub" }, stdio: ["ignore", log, log] });
+    { shell: true, detached: !IS_WIN, cwd: path.join(app, "backend"), env: { ...process.env, HARNESS_AGENT_MODE: "stub" }, stdio: ["ignore", log, log] });
   fs.closeSync(log);
-  const kill = () => { try { process.kill(-child.pid, "SIGTERM"); } catch {} };
+  const kill = () => killTree(child);
   try {
     let up = false;
     for (let i = 0; i < 60; i++) { await new Promise((r) => setTimeout(r, 500)); try { if ((await fetch(`http://127.0.0.1:${port}/health`)).ok) { up = true; break; } } catch {} }

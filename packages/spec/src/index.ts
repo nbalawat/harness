@@ -211,6 +211,7 @@ export interface LedgerEvent {
     | "run.failed"
     | "node.running"
     | "node.attempt_failed"
+    | "node.loop_detected"
     | "node.committed"
     | "node.failed"
     | "node.parked"

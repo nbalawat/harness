@@ -11,6 +11,13 @@ for (const proc of wf.workflows || []) {
   for (const n of proc.nodes || []) {
     if (!KINDS.includes(n.kind)) problems.push(`${proc.name}/${n.id}: unknown kind '${n.kind}'`);
     if (n.kind === "agent") { hasAgent = true; if (!n.prompt) problems.push(`${proc.name}/${n.id}: agent step needs a prompt`); }
+    // a deterministic step that invokes an agent orchestration is also AI-first
+    if (n.kind === "deterministic" && n.orchestration) {
+      hasAgent = true;
+      if (!Array.isArray(n.orchestration.agents) || !n.orchestration.agents.length) {
+        problems.push(`${proc.name}/${n.id}: orchestration needs at least one agent`);
+      }
+    }
     if (n.kind === "human") { hasHuman = true; if (!n.question) problems.push(`${proc.name}/${n.id}: human step needs a question`); }
     if (n.kind === "deterministic" && !n.handler) problems.push(`${proc.name}/${n.id}: deterministic step needs a handler`);
     for (const d of n.deps || []) if (!ids.has(d)) problems.push(`${proc.name}/${n.id}: depends on unknown step '${d}'`);

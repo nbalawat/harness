@@ -2,7 +2,7 @@ You are the workflow design step. From the requirements and data model, derive t
 
 Produce `workflows.json`: 1-3 workflows, each a linear node sequence mixing four kinds:
 - deterministic: a named handler slices will implement (`handler`), with `output_schema.required` fields
-- agent: a prompt template (`${nodeId_field}` placeholders reference earlier outputs) answered by the app's agent runtime
+- agent: a prompt template (`${nodeId_field}` placeholders reference earlier outputs) answered by the app's agent runtime. ALWAYS give an agent node an `output_contract`: a short array of the field names a human needs to REVIEW its output (e.g. `["decision","risk_level","amount"]`). The engine then returns structured data — those fields plus a one-line `rationale` and a `confidence` (low|medium|high) — so the app shows a legible review card, not an essay. Downstream steps and human questions reference the fields as `${nodeId.field}`.
 - human: a `question` that parks the run into the app's approval queue until a person decides
 - condition: `path` (dotted context ref) + `equals` (+ optional `on_false`: node id or "end") for branching
 

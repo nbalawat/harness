@@ -82,7 +82,7 @@ def test_cross_module_journey():
     assert granted.status_code == 200
 
     item = client.post("/workflow/submissions", json={"kind": "reply", "payload": {"text": "d"}, "by": "agent"}).json()
-    assert client.post(f"/workflow/submissions/{item['id']}/approve", json={"actor": "ana"}).status_code == 200
+    assert client.post(f"/workflow/submissions/{item['id']}/approve", json={"acting_user_email": "ana"}).status_code == 200
 
     events = [e["event"] for e in client.get("/audit").json()]
     assert "workflow.approved" in events

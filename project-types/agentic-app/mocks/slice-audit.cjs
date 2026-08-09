@@ -1,9 +1,10 @@
-const { inputs, writeJson, simulateCost, fs, path } = require("./_lib.cjs");
+const { inputs, writeJson, simulateCost, copyApp, fs, path } = require("./_lib.cjs");
 
-// The mock audit walks the real merged tree (deterministic file count) and
-// reports clean — the certified conventions are what the scaffold + mocks
-// produce, so a finding here would indicate a broken merge.
-const appDir = inputs().app.path;
+// The mock self-healing audit: the certified scaffold + slice mocks already
+// produce a clean app, so there is nothing to heal — it copies the app forward
+// untouched and reports clean. (Live builds audit, FIX every high, and re-audit
+// to convergence; the mock replays that already-converged state deterministically.)
+copyApp(inputs().app.path);
 let files = 0;
 const rec = (d) => {
   for (const e of fs.readdirSync(d, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name))) {
@@ -13,11 +14,12 @@ const rec = (d) => {
     else files++;
   }
 };
-rec(appDir);
+rec("app");
 
 writeJson("audit.json", {
   status: "clean",
   findings: [],
+  resolved: [],
   checked: { files, axes: ["contracts", "fsi-hardening"] },
 });
-simulateCost(0.4, 30000, 2500);
+simulateCost(0.6, 40000, 3000);

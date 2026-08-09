@@ -12,6 +12,29 @@ import { parse } from "yaml";
 /** Modules every app composes — the substrate a module under test sits on. */
 const SUBSTRATE = ["persistence-core", "agent-runtime", "chat-shell"];
 
+const IS_WIN = process.platform === "win32";
+
+/**
+ * A working Python launcher: `python3` on POSIX; `python` or the `py` launcher
+ * on Windows (which has no `python3`). Probed once and cached.
+ */
+let _pythonCmd: { cmd: string; pre: string[] } | null = null;
+function pythonCmd(): { cmd: string; pre: string[] } {
+  if (_pythonCmd) return _pythonCmd;
+  const candidates: [string, ...string[]][] = IS_WIN
+    ? [["python"], ["py", "-3"], ["python3"]]
+    : [["python3"], ["python"]];
+  for (const [cmd, ...pre] of candidates) {
+    try {
+      const r = spawnSync(cmd, [...pre, "--version"], { encoding: "utf8", timeout: 15000, shell: IS_WIN });
+      if (r.status === 0) return (_pythonCmd = { cmd, pre });
+    } catch {
+      /* try next */
+    }
+  }
+  return (_pythonCmd = IS_WIN ? { cmd: "python", pre: [] } : { cmd: "python3", pre: [] });
+}
+
 export interface ModuleReport {
   name: string;
   ok: boolean;
@@ -183,7 +206,8 @@ function certifyOne(modulesDir: string, projectTypeDir: string, name: string): M
   for (const entry of fs.readdirSync(path.join(app, "backend"))) {
     if (entry.endsWith(".py")) pyFiles.push(path.join(app, "backend", entry));
   }
-  const compile = spawnSync("python3", ["-m", "py_compile", ...pyFiles], { encoding: "utf8", timeout: 60000 });
+  const _py = pythonCmd();
+  const compile = spawnSync(_py.cmd, [..._py.pre, "-m", "py_compile", ...pyFiles], { encoding: "utf8", timeout: 60000, shell: IS_WIN });
   if (compile.status !== 0) problems.push(`python compile failed:\n${(compile.stderr ?? "").slice(-400)}`);
 
   // 5. The module's own tests, against the composed app.

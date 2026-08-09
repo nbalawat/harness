@@ -7,6 +7,7 @@ const fs = require("node:fs");
 const net = require("node:net");
 const path = require("node:path");
 const { spawn } = require("node:child_process");
+const { detach, killTree } = require("./_proc.cjs");
 
 const inputs = JSON.parse(fs.readFileSync("inputs.json", "utf8"));
 const contract = inputs.design_contract.data;
@@ -40,12 +41,10 @@ async function main() {
   const child = spawn(
     `uv run --with fastapi --with uvicorn --with-requirements requirements.txt uvicorn dev:app --host 127.0.0.1 --port ${port}`,
     // Live builds boot with LIVE agents; mock runs stay deterministic on stubs.
-    { shell: true, detached: true, cwd: path.join(app, "backend"), env: { ...process.env, ...(process.env.HARNESS_RUN_MODE === "live" ? {} : { HARNESS_AGENT_MODE: "stub" }) }, stdio: ["ignore", log, log] },
+    { shell: true, detached: detach, cwd: path.join(app, "backend"), env: { ...process.env, ...(process.env.HARNESS_RUN_MODE === "live" ? {} : { HARNESS_AGENT_MODE: "stub" }) }, stdio: ["ignore", log, log] },
   );
   fs.closeSync(log);
-  const kill = () => {
-    try { process.kill(-child.pid, "SIGTERM"); } catch { /* gone */ }
-  };
+  const kill = () => killTree(child);
   try {
     let up = false;
     for (let i = 0; i < 60; i++) {

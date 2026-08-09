@@ -12,7 +12,7 @@ from typing import TypedDict
 
 from langgraph.graph import END, START, StateGraph
 
-_MODEL = os.environ.get("APP_MODEL", "claude-sonnet-5")
+_MODEL = os.environ.get("APP_AGENT_MODEL") or os.environ.get("APP_MODEL", "claude-sonnet-5")
 last_trace: list = []  # execution evidence: which graph nodes ran, in order
 
 

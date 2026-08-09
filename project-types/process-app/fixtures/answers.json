@@ -1,1 +1,15 @@
-{"intake":{"process_name":"Vendor Onboarding","process_description":"When a new vendor applies, validate and enrich the application from CRM, assess operational risk and screen compliance in parallel, run an ERP credit check, score the combined result, a manager approves, then activate the vendor across ticketing and email.","triggers":"human.external","ai_steps":"operational risk assessment, compliance screening","human_decisions":"manager approval","systems":"crm","deploy_intent":"local"},"review":{"approved":"yes"}}
+{
+  "intake": {
+    "process_name": "Vendor Onboarding",
+    "process_description": "When a new vendor applies, validate and enrich the application from CRM, assess operational risk and screen compliance in parallel, run an ERP credit check, score the combined result, a manager approves, then activate the vendor across ticketing and email.",
+    "triggers": "human.external",
+    "ai_steps": "operational risk assessment, compliance screening",
+    "human_decisions": "manager approval",
+    "systems": "crm",
+    "deploy_intent": "local",
+    "framework": "claude-sdk"
+  },
+  "review": {
+    "approved": "yes"
+  }
+}

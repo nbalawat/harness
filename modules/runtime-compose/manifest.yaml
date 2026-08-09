@@ -1,0 +1,12 @@
+name: runtime-compose
+version: 0.1.0
+description: "Local-first runtime base: a Docker Compose stack (app + Postgres + Redis) that runs a produced process app for real, with a clean path to the cloud."
+kind: tool
+provides:
+  - "Dockerfile (pinned Python + Node for MCP servers, non-root) + docker-compose.yml (app/db/redis) overlaid at the app root"
+requires:
+  - "postgres-adapter (pg_store.PgStore) and the DATABASE_URL-aware persistence-core store"
+compose:
+  overlay: compose/
+certify:
+  command: node "$HARNESS_MODULE_DIR/test/test.mjs"

@@ -16,7 +16,7 @@ from google.adk.models.llm_response import LlmResponse
 from google.adk.runners import InMemoryRunner
 from google.genai import types
 
-_MODEL = os.environ.get("APP_MODEL", "claude-sonnet-5")
+_MODEL = os.environ.get("APP_AGENT_MODEL") or os.environ.get("APP_MODEL", "claude-sonnet-5")
 last_trace: list = []  # execution evidence: adk runner events + model calls
 
 

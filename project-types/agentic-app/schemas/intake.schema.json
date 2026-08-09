@@ -24,6 +24,9 @@
         "gates-only",
         "every-slice"
       ]
+    },
+    "agent_framework": {
+      "type": "string"
     }
   },
   "required": [

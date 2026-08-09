@@ -8,6 +8,7 @@ const fs = require("node:fs");
 const net = require("node:net");
 const path = require("node:path");
 const { spawn, spawnSync } = require("node:child_process");
+const { detach, killTree, rmCaches } = require("./_proc.cjs");
 
 const inputs = JSON.parse(fs.readFileSync("inputs.json", "utf8"));
 const sliceIndex = inputs._params.data.slice;
@@ -78,12 +79,10 @@ async function main() {
   const child = spawn(
     `uv run --with fastapi --with uvicorn --with-requirements requirements.txt uvicorn dev:app --host 127.0.0.1 --port ${port}`,
     // Live builds verify with LIVE agents; mock runs stay deterministic on stubs.
-    { shell: true, detached: true, cwd: path.join(app, "backend"), env: { ...process.env, ...(process.env.HARNESS_RUN_MODE === "live" ? {} : { HARNESS_AGENT_MODE: "stub" }) }, stdio: ["ignore", log, log] },
+    { shell: true, detached: detach, cwd: path.join(app, "backend"), env: { ...process.env, ...(process.env.HARNESS_RUN_MODE === "live" ? {} : { HARNESS_AGENT_MODE: "stub" }) }, stdio: ["ignore", log, log] },
   );
   fs.closeSync(log);
-  const kill = () => {
-    try { process.kill(-child.pid, "SIGTERM"); } catch { /* gone */ }
-  };
+  const kill = () => killTree(child);
 
   try {
     let up = false;
@@ -204,9 +203,7 @@ async function main() {
     { cwd: path.join(app, "backend"), encoding: "utf8", timeout: 300000 },
   );
   if (pytest.status !== 0) fail(`backend tests FAILED\n${(pytest.stdout ?? "").slice(-1500)}\n${(pytest.stderr ?? "").slice(-1000)}`);
-  for (const cache of ["__pycache__", ".pytest_cache"]) {
-    spawnSync("find", [app, "-name", cache, "-type", "d", "-exec", "rm", "-rf", "{}", "+"]);
-  }
+  rmCaches(app);
 
   // SHIFT-LEFT SECURITY: run the deterministic security scan on THIS slice's
   // tree now, in its own retry loop — the cheapest place to catch an authz /

@@ -4,7 +4,9 @@ const fs = require("node:fs");
 const path = require("node:path");
 
 const inputs = JSON.parse(fs.readFileSync("inputs.json", "utf8"));
-const appDir = inputs.app.path;
+// Prefer a healed local ./app (the remediation flow scans its own copy); fall
+// back to the committed dependency app for any standalone use.
+const appDir = fs.existsSync(path.resolve("app")) ? path.resolve("app") : inputs.app.path;
 
 const RULES = [
   { rule: "hardcoded-secret", severity: "high", ext: null, pattern: /(?:api[_-]?key|secret|password|token)\s*[:=]\s*["'][A-Za-z0-9+\/_-]{12,}["']/i },
@@ -12,6 +14,16 @@ const RULES = [
   // is safe — only bare eval() and new Function() are dangerous.
   { rule: "dynamic-eval-py", severity: "high", ext: [".py"], pattern: /\b(?:eval|exec)\s*\(/ },
   { rule: "dynamic-eval-js", severity: "high", ext: [".js", ".html"], pattern: /(?<![.\w])eval\s*\(|new\s+Function\s*\(/ },
+  // Fail-open identity: resolving a caller then FABRICATING a persona/role when
+  // not found (`identity.find(email) or {"role": "Compliance Officer"}`) hands
+  // authority to anyone. Authorization must fail CLOSED — use require_actor/
+  // require_role, never a `... or {…role…}` fallback.
+  { rule: "fail-open-identity", severity: "high", ext: [".py"], pattern: /\.find\([^)]*\)\s*or\s*\{[^}]{0,200}["']role["']/ },
+  // Defaulted decision: a terminal decision/verdict that DEFAULTS to a positive
+  // outcome when a field is missing (`inputs.get("decision", "approved")`) lets
+  // a malformed request auto-approve. A decision must be explicit, never
+  // defaulted — especially never to approve/pass/accept.
+  { rule: "defaulted-decision", severity: "high", ext: [".py"], pattern: /\.get\(\s*["'](?:decision|verdict|disposition|outcome|adjudication|determination)["']\s*,\s*["'](?:approv|pass|accept|clear|grant|success|ok\b|yes\b|pai?d)/i },
   { rule: "inner-html", severity: "medium", ext: [".js", ".html"], pattern: /\.innerHTML\s*=/ },
   { rule: "insecure-http", severity: "low", ext: null, pattern: /http:\/\/(?!localhost|127\.0\.0\.1)/ },
 ];

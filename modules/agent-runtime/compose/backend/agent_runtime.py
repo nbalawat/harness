@@ -15,7 +15,7 @@ import shutil
 import subprocess
 
 _BASE = os.path.dirname(os.path.abspath(__file__))
-_MODEL = os.environ.get("APP_AGENT_MODEL", "claude-opus-5")
+_MODEL = os.environ.get("APP_AGENT_MODEL", "claude-sonnet-5")
 
 
 def _roster():

@@ -9,6 +9,11 @@ const roster = inputs.agent_roster.data;
 const rtm = inputs.rtm?.data ?? null;
 // audit is absent on pre-0.12.0 runs — tolerate it.
 const audit = inputs.audit?.data ?? null;
+// Functional validation via a real headless browser (Playwright): design-coverage
+// proves every approved screen renders live; the interactivity drive proves every
+// self-acting control does real work (0 dead controls). Absent on older runs.
+const coverage = inputs.design_coverage?.data ?? null;
+const ui = inputs.ui_interactivity?.data ?? null;
 
 fs.writeFileSync(
   "governance.json",
@@ -50,6 +55,20 @@ fs.writeFileSync(
             evidence: "audit.json",
           }
         : null,
+      // Functional validation: a real browser drove the finished app.
+      functional_validation:
+        coverage || ui
+          ? {
+              method: "headless-browser (playwright)",
+              screens_promised: coverage?.totals?.screens ?? null,
+              screens_proven_live: coverage?.totals?.screens_present ?? (coverage ? (coverage.screens ?? []).filter((s) => s.present === true).length : null),
+              controls_driven: ui ? ui.controlsProbed ?? null : null,
+              dead_controls: ui ? (ui.deadControls ?? []).length : null,
+              unreachable_screens: ui ? (ui.unnavigable ?? []).length : null,
+              usable: ui ? ui.ok === true : null,
+              evidence: ["design_coverage.json", "ui_interactivity.json"],
+            }
+          : null,
     },
     null,
     2,

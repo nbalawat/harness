@@ -7,6 +7,14 @@ requirements with provenance, approvable designs, certified modules,
 feature-by-feature builds with tests, security scanning, and a governance
 evidence pack.
 
+The factory is built to produce apps that are **sound, not just green**. Non‑
+functional requirements (authorization, identity integrity, auditability, PII
+protection) are derived up front and become acceptance the slices must pass;
+the strict verification gates **self‑heal** — a merge conflict, a dead control,
+an unauthenticated route, or a semantic authz defect is *fixed and re‑proven*
+rather than stalling the build — and every fix is fed back into the factory's
+build‑expertise so the next app ships it right the first time.
+
 ## Get started (two commands)
 
 ```sh
@@ -29,33 +37,47 @@ harness setup --install-sdk
 Prefer the command line? Everything the dashboard does has a CLI form:
 
 ```sh
-harness run agentic-app@0.9.0 --workspace my-app   # parks at intake
-harness ui                                         # answer + watch in the browser
+harness run agentic-app@0.16.0 --workspace my-app   # parks at intake
+harness ui                                          # answer + watch in the browser
 harness status my-app
 harness revise my-app slice-2 --feedback "..." --resume
 ```
 
 ## What a build gives you
 
-The `agentic-app` project type is a 34-node certified pipeline:
+The `agentic-app` project type is a 42-node certified pipeline:
 
 - **Requirements** — every document read into an evidence corpus; requirements
-  carry provenance (stated / inferred / unknown); at most 6 clarifying
-  questions, each with a default and a "why".
-- **Design** — 3–4 fully rendered, genuinely different design directions; the
-  one you pick ships **verbatim** as your app's frontend and is then locked.
-- **Architecture** — composed from 105 certified capability modules
+  carry provenance (stated / inferred / unknown), and **non-functional
+  requirements** (authorization, identity integrity, human-gate parity, PII
+  protection, auditability, segregation of duties) are derived first-class, each
+  with a testable refusal proof. At most 6 clarifying questions, each with a
+  default and a "why".
+- **Design** — one enterprise operational-console theme in **two layout
+  variants** (left-rail vs master/detail); the one you pick ships **verbatim**
+  as your app's frontend and is then locked. Every control must trace to a
+  requirement — ungrounded "furniture" is rejected before it can ship dead.
+- **Architecture** — composed from 111 certified capability modules
   (persistence, agent runtime, RBAC, audit, approvals, …), including your
   choice of agent framework: native, **LangGraph**, **Google ADK**, or
   **AWS Strands**.
 - **Workflows** — generated apps get their own deterministic workflow layer
   (pure-Python event-sourced engine) with agentic nodes and mandatory human
-  gates where agents feed decisions.
-- **Build** — vertical feature slices, each verified against cumulative
-  acceptance checks + the full test suite, each demonstrated with a screenshot
-  of *its* increment and an objectives ledger.
+  gates where agents feed decisions — and a human approval gate can never be
+  silently skipped by branch pruning.
+- **Build** — vertical feature slices built in parallel on a foundation and
+  merged deterministically (a genuine conflict self-heals, never stalls); each
+  slice is verified against cumulative acceptance checks (including the NFR
+  refusal proofs) + the full test suite, each demonstrated with a screenshot of
+  *its* increment.
+- **Verification (self-healing)** — the merged app is driven to the "done" bar:
+  a security scan (fail-open identity, defaulted decisions, unauthenticated
+  mutations block deterministically), a usability drive (no dead controls; an
+  identity-gated app must ship a persona picker), and a **self-healing semantic
+  audit** that audits → fixes every high finding → re-audits to convergence.
 - **Evidence** — requirements-traceability matrix (uncovered requirements block
-  the build), security scan, agent evals, governance report.
+  the build), security report, agent evals, live per-screen coverage
+  screenshots, governance report.
 
 **Supervision is a dial:** `gates-only` asks you only at the five decision
 points; `every-slice` adds a checkpoint after each slice that pauses up to five
@@ -63,6 +85,28 @@ minutes with the evidence — answer to decide, or walk away and it proceeds on
 approval-by-default, recorded as an assumption. Revisions are cheap: request a
 change on any step and everything downstream re-derives, re-using unchanged
 work automatically at no cost.
+
+## Sound by construction: self-healing gates
+
+An app that passes its happy-path tests can still be unsound. The factory's
+verification gates don't just report defects — they **fix them and re-prove**,
+reusing the same retry/escalation machinery every agent node uses:
+
+- **merge-slices** runs a deterministic union first; only on a genuine conflict
+  does an agent resolve the conflicted hunks (both slices preserved).
+- **remediate** drives the security scan + usability drive against the merged
+  app and fixes unauthenticated mutations, dead controls, and missing persona
+  pickers before the app is admitted.
+- **slice-audit** is a self-healing semantic audit: it audits the app on the
+  FSI-hardening checklist (fail-closed identity, real persistence, human-gate
+  parity, no defaulted/coerced decisions, trustworthy audit, prompt-injection
+  hygiene, …), **fixes every high finding, and re-audits to convergence** — a
+  genuinely-accepted finding needs a named human waiver, never a silent pass.
+
+Two things fall out of this: the strict gates never stall a build on a fixable
+defect, and every heal is recorded as a durable lesson in the project type's
+`build-expertise.md`, so the failure class stops recurring. The factory gets
+more reliable with every app it builds.
 
 ## Documentation
 
@@ -119,8 +163,8 @@ cascade → re-derive to green with memoization).
 packages/spec      shared types (contracts, ledger events, cost envelope)
 packages/runner    scheduler, journal, node envelope, budgets, memoization, MCP/skills/teams
 packages/cli       run | resume | revise | status | ui | setup | certify | install | pack
-project-types/     demo (4-node) and agentic-app (34-node) certified DAGs
-modules/           105 certified capability modules composed into generated apps
+project-types/     demo (4-node) and agentic-app (42-node) certified DAGs
+modules/           111 certified capability modules composed into generated apps
 mcp/               certified MCP servers (app-sandbox: the app-under-build as a service)
 scripts/           bundle.mjs (single-file engine) · pack.mjs (npm package) · catalog-sync.mjs
 docs/              design, module catalog, changelog, role guides

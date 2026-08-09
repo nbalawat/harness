@@ -3,10 +3,19 @@
     {
       "name": "admin-console",
       "version": "0.1.0",
-      "description": "Settings/users/flags surface every app grows — one console instead of scattered admin fragments.",
+      "description": "Settings/users/flags surface every app grows \u2014 one console instead of scattered admin fragments.",
       "requires": [
         "rbac",
         "feature-flags"
+      ]
+    },
+    {
+      "name": "agent-orchestrator",
+      "version": "0.1.0",
+      "description": "Agent orchestration invoked by a deterministic step \u2014 specialist agents (using enterprise MCP tools) plus a synthesizer accomplish a cognitive step. Framework-neutral over the agent-runtime adapter.",
+      "requires": [
+        "agent-runtime",
+        "audit-log"
       ]
     },
     {
@@ -26,7 +35,7 @@
     {
       "name": "agent-runtime-adk",
       "version": "0.1.0",
-      "description": "The agent-runtime contract implemented on Google ADK — an LlmAgent driven by an ADK Runner executes every reply; the model behind it is stub/live-cli/live-api like the base runtime.",
+      "description": "The agent-runtime contract implemented on Google ADK \u2014 an LlmAgent driven by an ADK Runner executes every reply; the model behind it is stub/live-cli/live-api like the base runtime.",
       "requires": [
         "persistence-core"
       ]
@@ -34,7 +43,7 @@
     {
       "name": "agent-runtime-langgraph",
       "version": "0.1.0",
-      "description": "The agent-runtime contract implemented on LangGraph — a compiled StateGraph (ground -> reason -> disclose) executes every reply; the model inside the graph is stub/live-cli/live-api like the base runtime.",
+      "description": "The agent-runtime contract implemented on LangGraph \u2014 a compiled StateGraph (ground -> reason -> disclose) executes every reply; the model inside the graph is stub/live-cli/live-api like the base runtime.",
       "requires": [
         "persistence-core"
       ]
@@ -42,7 +51,7 @@
     {
       "name": "agent-runtime-strands",
       "version": "0.1.0",
-      "description": "The agent-runtime contract implemented on AWS Strands — a Strands Agent with a custom Model bridge executes every reply; the model behind it is stub/live-cli/live-api like the base runtime.",
+      "description": "The agent-runtime contract implemented on AWS Strands \u2014 a Strands Agent with a custom Model bridge executes every reply; the model behind it is stub/live-cli/live-api like the base runtime.",
       "requires": [
         "persistence-core"
       ]
@@ -50,13 +59,13 @@
     {
       "name": "api-keys",
       "version": "0.1.0",
-      "description": "Service-to-service callers of generated apps — hashed keys with prefixes, revocation, and last-used tracking.",
+      "description": "Service-to-service callers of generated apps \u2014 hashed keys with prefixes, revocation, and last-used tracking.",
       "requires": []
     },
     {
       "name": "approval-flow",
       "version": "0.1.0",
-      "description": "Draft -> review -> approve/reject with a full trail — THE core loop of internal tools (our first three real apps all needed it).",
+      "description": "Draft -> review -> approve/reject with a full trail \u2014 THE core loop of internal tools (our first three real apps all needed it).",
       "requires": [
         "persistence-core",
         "audit-log"
@@ -65,19 +74,19 @@
     {
       "name": "assignment",
       "version": "0.1.0",
-      "description": "Route work items to people/queues — fairness rules are policy, not whoever the agent thought of.",
+      "description": "Route work items to people/queues \u2014 fairness rules are policy, not whoever the agent thought of.",
       "requires": []
     },
     {
       "name": "audit-log",
       "version": "0.1.0",
-      "description": "Append-only audit trail for app actions — who did what, when. Governance evidence for every generated app.",
+      "description": "Append-only audit trail for app actions \u2014 who did what, when. Governance evidence for every generated app.",
       "requires": []
     },
     {
       "name": "audit-view",
       "version": "0.1.0",
-      "description": "The uniform 'history' panel over audit-log/row-history — one way to read what happened.",
+      "description": "The uniform 'history' panel over audit-log/row-history \u2014 one way to read what happened.",
       "requires": [
         "audit-log"
       ]
@@ -85,13 +94,13 @@
     {
       "name": "auth-basic",
       "version": "0.1.0",
-      "description": "Minimal session identity — login issues a bearer token, /auth/me resolves it. The Wave-3 sso-oidc module replaces the token issuer without touching callers.",
+      "description": "Minimal session identity \u2014 login issues a bearer token, /auth/me resolves it. The Wave-3 sso-oidc module replaces the token issuer without touching callers.",
       "requires": []
     },
     {
       "name": "backup-restore",
       "version": "0.1.0",
-      "description": "Scheduled dumps and TESTED restore for the persistence layer — a backup that never restored is a rumor.",
+      "description": "Scheduled dumps and TESTED restore for the persistence layer \u2014 a backup that never restored is a rumor.",
       "requires": [
         "persistence-core"
       ]
@@ -99,31 +108,31 @@
     {
       "name": "batch-runner",
       "version": "0.1.0",
-      "description": "Long operations with progress and resume — the difference between a demo and a tool.",
+      "description": "Long operations with progress and resume \u2014 the difference between a demo and a tool.",
       "requires": []
     },
     {
       "name": "blob-store",
       "version": "0.1.0",
-      "description": "Files and attachments with the same discipline as rows — local dir now, GCS behind the same interface later.",
+      "description": "Files and attachments with the same discipline as rows \u2014 local dir now, GCS behind the same interface later.",
       "requires": []
     },
     {
       "name": "cache-layer",
       "version": "0.1.0",
-      "description": "Read-through TTL caching with explicit invalidation — agents otherwise sprinkle dicts with no invalidation story.",
+      "description": "Read-through TTL caching with explicit invalidation \u2014 agents otherwise sprinkle dicts with no invalidation story.",
       "requires": []
     },
     {
       "name": "calendar-bridge",
       "version": "0.1.0",
-      "description": "Meetings/deadlines as standard .ics — calendar sync without a calendar API dependency.",
+      "description": "Meetings/deadlines as standard .ics \u2014 calendar sync without a calendar API dependency.",
       "requires": []
     },
     {
       "name": "charting",
       "version": "0.1.0",
-      "description": "Honest SVG charts (bars/lines) with sane scales — agents freehand charts badly; axes must start at zero for bars.",
+      "description": "Honest SVG charts (bars/lines) with sane scales \u2014 agents freehand charts badly; axes must start at zero for bars.",
       "requires": []
     },
     {
@@ -135,7 +144,7 @@
     {
       "name": "checklists",
       "version": "0.1.0",
-      "description": "Structured task lists with completion tracking — onboarding, reviews, audits all need the same primitive.",
+      "description": "Structured task lists with completion tracking \u2014 onboarding, reviews, audits all need the same primitive.",
       "requires": [
         "persistence-core"
       ]
@@ -143,7 +152,7 @@
     {
       "name": "citation-tracker",
       "version": "0.1.0",
-      "description": "Source attribution structure for grounded answers — trust requires 'says who' on every claim.",
+      "description": "Source attribution structure for grounded answers \u2014 trust requires 'says who' on every claim.",
       "requires": [
         "rag-core"
       ]
@@ -151,7 +160,7 @@
     {
       "name": "comments-threads",
       "version": "0.1.0",
-      "description": "Discussion on any record — the social glue of workflow tools, attached uniformly instead of re-modeled per app.",
+      "description": "Discussion on any record \u2014 the social glue of workflow tools, attached uniformly instead of re-modeled per app.",
       "requires": [
         "persistence-core",
         "input-sanitizer"
@@ -160,7 +169,7 @@
     {
       "name": "consent-tracking",
       "version": "0.1.0",
-      "description": "Record the basis for holding each person's data where that matters — consent is evidence, not a checkbox memory.",
+      "description": "Record the basis for holding each person's data where that matters \u2014 consent is evidence, not a checkbox memory.",
       "requires": [
         "persistence-core"
       ]
@@ -168,13 +177,13 @@
     {
       "name": "conversation-memory",
       "version": "0.1.0",
-      "description": "Multi-turn context windows with deterministic summarization — everyone gets truncation wrong per app.",
+      "description": "Multi-turn context windows with deterministic summarization \u2014 everyone gets truncation wrong per app.",
       "requires": []
     },
     {
       "name": "corpus-refresh",
       "version": "0.1.0",
-      "description": "Re-index knowledge when documents change, atomically — RAG apps rot without a refresh story.",
+      "description": "Re-index knowledge when documents change, atomically \u2014 RAG apps rot without a refresh story.",
       "requires": [
         "rag-core",
         "doc-extract"
@@ -183,7 +192,7 @@
     {
       "name": "cost-meter",
       "version": "0.1.0",
-      "description": "Per-app LLM spend tracking — the deployed sibling of the harness's own cost ledger, so owners see what their app burns.",
+      "description": "Per-app LLM spend tracking \u2014 the deployed sibling of the harness's own cost ledger, so owners see what their app burns.",
       "requires": [
         "persistence-core"
       ]
@@ -191,25 +200,25 @@
     {
       "name": "csp-headers",
       "version": "0.1.0",
-      "description": "Security headers as configuration — the response-header counterpart of the textContent-only frontend policy.",
+      "description": "Security headers as configuration \u2014 the response-header counterpart of the textContent-only frontend policy.",
       "requires": []
     },
     {
       "name": "dashboard-cards",
       "version": "0.1.0",
-      "description": "KPI tiles fed by declared queries — count/sum/latest computed one way, formatted one way.",
+      "description": "KPI tiles fed by declared queries \u2014 count/sum/latest computed one way, formatted one way.",
       "requires": []
     },
     {
       "name": "data-classification",
       "version": "0.1.0",
-      "description": "Sensitivity tags per table/column driving retention, redaction, and export rules — policy attached to the data model itself.",
+      "description": "Sensitivity tags per table/column driving retention, redaction, and export rules \u2014 policy attached to the data model itself.",
       "requires": []
     },
     {
       "name": "data-retention",
       "version": "0.1.0",
-      "description": "TTL/purge honoring the retention answers users give at clarify — the requirement appears in almost every intake.",
+      "description": "TTL/purge honoring the retention answers users give at clarify \u2014 the requirement appears in almost every intake.",
       "requires": [
         "persistence-core",
         "soft-delete"
@@ -218,19 +227,19 @@
     {
       "name": "data-table",
       "version": "0.1.0",
-      "description": "Sortable/filterable/paginated tables — the single most re-built UI artifact in internal tools.",
+      "description": "Sortable/filterable/paginated tables \u2014 the single most re-built UI artifact in internal tools.",
       "requires": []
     },
     {
       "name": "doc-extract",
       "version": "0.1.0",
-      "description": "PDF/docx/HTML/text to clean text+structure — the intake path of most business apps, done once with honest fallbacks.",
+      "description": "PDF/docx/HTML/text to clean text+structure \u2014 the intake path of most business apps, done once with honest fallbacks.",
       "requires": []
     },
     {
       "name": "email-ingest",
       "version": "0.1.0",
-      "description": "'Forward it to the app' — the lowest-friction intake there is, parsed with the stdlib, no daemon required.",
+      "description": "'Forward it to the app' \u2014 the lowest-friction intake there is, parsed with the stdlib, no daemon required.",
       "requires": [
         "persistence-core"
       ]
@@ -238,7 +247,7 @@
     {
       "name": "email-send",
       "version": "0.1.0",
-      "description": "Templated transactional mail with suppression rules — compliance-sensitive enough to centralize.",
+      "description": "Templated transactional mail with suppression rules \u2014 compliance-sensitive enough to centralize.",
       "requires": [
         "persistence-core"
       ]
@@ -246,13 +255,13 @@
     {
       "name": "env-config",
       "version": "0.1.0",
-      "description": "Typed, validated runtime configuration — 12-factor with loud startup failures instead of NoneType surprises at 2am.",
+      "description": "Typed, validated runtime configuration \u2014 12-factor with loud startup failures instead of NoneType surprises at 2am.",
       "requires": []
     },
     {
       "name": "error-reporter",
       "version": "0.1.0",
-      "description": "Capture and group unhandled exceptions with context — errors owners can triage instead of logs nobody reads.",
+      "description": "Capture and group unhandled exceptions with context \u2014 errors owners can triage instead of logs nobody reads.",
       "requires": [
         "persistence-core"
       ]
@@ -260,7 +269,7 @@
     {
       "name": "eval-harness",
       "version": "0.1.0",
-      "description": "Richer eval runner (contains / not_contains / regex rubrics with reports) — evals are how app agents stay honest after changes.",
+      "description": "Richer eval runner (contains / not_contains / regex rubrics with reports) \u2014 evals are how app agents stay honest after changes.",
       "requires": [
         "agent-runtime"
       ]
@@ -268,25 +277,25 @@
     {
       "name": "export-csv",
       "version": "0.1.0",
-      "description": "CSV export for any registered table — analysts always need the data out.",
+      "description": "CSV export for any registered table \u2014 analysts always need the data out.",
       "requires": []
     },
     {
       "name": "fallback-chain",
       "version": "0.1.0",
-      "description": "Model/provider failover policy in one place — retries and degradation are policy, not per-endpoint improvisation.",
+      "description": "Model/provider failover policy in one place \u2014 retries and degradation are policy, not per-endpoint improvisation.",
       "requires": []
     },
     {
       "name": "feature-flags",
       "version": "0.1.0",
-      "description": "Gradual rollout inside generated apps without redeploys — flags as data with deterministic percentage buckets.",
+      "description": "Gradual rollout inside generated apps without redeploys \u2014 flags as data with deterministic percentage buckets.",
       "requires": []
     },
     {
       "name": "feed-poller",
       "version": "0.1.0",
-      "description": "Scheduled pulls from URLs/APIs with dedupe — background ingestion written once, injectable for tests.",
+      "description": "Scheduled pulls from URLs/APIs with dedupe \u2014 background ingestion written once, injectable for tests.",
       "requires": [
         "persistence-core"
       ]
@@ -294,13 +303,13 @@
     {
       "name": "feedback-inbox",
       "version": "0.1.0",
-      "description": "In-app feedback capture — end users of the generated app report issues/wishes where they see them; owners triage from one inbox.",
+      "description": "In-app feedback capture \u2014 end users of the generated app report issues/wishes where they see them; owners triage from one inbox.",
       "requires": []
     },
     {
       "name": "file-preview",
       "version": "0.1.0",
-      "description": "Render uploaded documents inline by type — pairs with file-upload/blob-store so previews are uniform.",
+      "description": "Render uploaded documents inline by type \u2014 pairs with file-upload/blob-store so previews are uniform.",
       "requires": [
         "file-upload"
       ]
@@ -308,7 +317,7 @@
     {
       "name": "file-upload",
       "version": "0.1.0",
-      "description": "Safe upload endpoint with type/size allowlists — security-sensitive enough that agents must never improvise it.",
+      "description": "Safe upload endpoint with type/size allowlists \u2014 security-sensitive enough that agents must never improvise it.",
       "requires": [
         "blob-store"
       ]
@@ -316,7 +325,7 @@
     {
       "name": "forms-engine",
       "version": "0.1.0",
-      "description": "Validated forms from a schema — every CRUD app draws the same form badly; validation must be shared with the backend.",
+      "description": "Validated forms from a schema \u2014 every CRUD app draws the same form badly; validation must be shared with the backend.",
       "requires": []
     },
     {
@@ -330,7 +339,7 @@
     {
       "name": "health-plus",
       "version": "0.1.0",
-      "description": "Deep health checks (store, engine, dependencies) beyond /health's liveness — what readiness probes actually need.",
+      "description": "Deep health checks (store, engine, dependencies) beyond /health's liveness \u2014 what readiness probes actually need.",
       "requires": [
         "persistence-core",
         "agent-runtime"
@@ -339,7 +348,7 @@
     {
       "name": "import-mapper",
       "version": "0.1.0",
-      "description": "CSV/XLSX import with column mapping and dry-run — data onboarding for every app, with mistakes caught before commit.",
+      "description": "CSV/XLSX import with column mapping and dry-run \u2014 data onboarding for every app, with mistakes caught before commit.",
       "requires": [
         "persistence-core",
         "spreadsheet-io",
@@ -349,19 +358,27 @@
     {
       "name": "input-sanitizer",
       "version": "0.1.0",
-      "description": "Central request-text hardening beyond schema types — control chars, length caps, and HTML escaping in one place.",
+      "description": "Central request-text hardening beyond schema types \u2014 control chars, length caps, and HTML escaping in one place.",
       "requires": []
+    },
+    {
+      "name": "integration-hub",
+      "version": "0.1.0",
+      "description": "Enterprise system integrations reached as swappable MCP servers (simulated to start). A step calls integrations.call(\"crm.lookup\", {...}); point the registry at a real MCP server to go live. Every call is audited.",
+      "requires": [
+        "audit-log"
+      ]
     },
     {
       "name": "migrations",
       "version": "0.1.0",
-      "description": "Ordered, tracked, idempotent schema/data migrations — ad-hoc ALTERs by agents are how data gets destroyed.",
+      "description": "Ordered, tracked, idempotent schema/data migrations \u2014 ad-hoc ALTERs by agents are how data gets destroyed.",
       "requires": []
     },
     {
       "name": "multi-env",
       "version": "0.1.0",
-      "description": "dev/staging/prod promotion story — layered env templates merged one way, with prod safety rails.",
+      "description": "dev/staging/prod promotion story \u2014 layered env templates merged one way, with prod safety rails.",
       "requires": [
         "env-config"
       ]
@@ -369,13 +386,13 @@
     {
       "name": "notifications-ui",
       "version": "0.1.0",
-      "description": "In-app toasts/inbox for events and SLA breaches — one queue, deduped, never stacking forever.",
+      "description": "In-app toasts/inbox for events and SLA breaches \u2014 one queue, deduped, never stacking forever.",
       "requires": []
     },
     {
       "name": "ocr-bridge",
       "version": "0.1.0",
-      "description": "Scanned documents appear in every ops workflow eventually — one interface, explicit availability.",
+      "description": "Scanned documents appear in every ops workflow eventually \u2014 one interface, explicit availability.",
       "requires": [
         "doc-extract"
       ]
@@ -383,13 +400,13 @@
     {
       "name": "pdf-render",
       "version": "0.1.0",
-      "description": "Generate the PDF artifact (reports, letters, packets) — a valid, dependency-free text PDF writer.",
+      "description": "Generate the PDF artifact (reports, letters, packets) \u2014 a valid, dependency-free text PDF writer.",
       "requires": []
     },
     {
       "name": "permissions-ui",
       "version": "0.1.0",
-      "description": "The admin screen for rbac — role assignment rendered uniformly instead of re-drawn per app.",
+      "description": "The admin screen for rbac \u2014 role assignment rendered uniformly instead of re-drawn per app.",
       "requires": [
         "rbac"
       ]
@@ -403,43 +420,51 @@
     {
       "name": "pii-redaction",
       "version": "0.1.0",
-      "description": "Detect and mask PII in stored text and transcripts — the most common compliance ask, done once and tested.",
+      "description": "Detect and mask PII in stored text and transcripts \u2014 the most common compliance ask, done once and tested.",
       "requires": []
     },
     {
       "name": "postgres-adapter",
       "version": "0.1.0",
-      "description": "Production Store implementing the persistence-core contract against Postgres — the local-to-production step is a compose choice, not a rewrite.",
+      "description": "Production Store implementing the persistence-core contract against Postgres \u2014 the local-to-production step is a compose choice, not a rewrite.",
       "requires": []
+    },
+    {
+      "name": "process-triggers",
+      "version": "0.1.0",
+      "description": "Enterprise trigger surface for a business process \u2014 start an instance from a human action (internal/external), a system event, a schedule, or a system trigger.",
+      "requires": [
+        "workflow-engine"
+      ]
     },
     {
       "name": "prompt-registry",
       "version": "0.1.0",
-      "description": "App prompts as versioned data, not string literals buried in code — reviewable and hot-fixable without a rebuild.",
+      "description": "App prompts as versioned data, not string literals buried in code \u2014 reviewable and hot-fixable without a rebuild.",
       "requires": []
     },
     {
       "name": "queue-bridge",
       "version": "0.1.0",
-      "description": "Task-queue abstraction with ack/retry semantics — in-process now, Pub/Sub behind the same interface at deploy scale.",
+      "description": "Task-queue abstraction with ack/retry semantics \u2014 in-process now, Pub/Sub behind the same interface at deploy scale.",
       "requires": []
     },
     {
       "name": "rag-core",
       "version": "0.1.0",
-      "description": "Chunking + retrieval done right once — grounding quality is the #1 driver of app trust.",
+      "description": "Chunking + retrieval done right once \u2014 grounding quality is the #1 driver of app trust.",
       "requires": []
     },
     {
       "name": "rate-limit",
       "version": "0.1.0",
-      "description": "Per-client request throttle — protects agent endpoints (which cost real money per call) from loops and abuse.",
+      "description": "Per-client request throttle \u2014 protects agent endpoints (which cost real money per call) from loops and abuse.",
       "requires": []
     },
     {
       "name": "rbac",
       "version": "0.1.0",
-      "description": "Approver vs viewer vs admin as declarative roles — permissions must be data, not if-statements scattered by build agents.",
+      "description": "Approver vs viewer vs admin as declarative roles \u2014 permissions must be data, not if-statements scattered by build agents.",
       "requires": [
         "auth-basic"
       ]
@@ -447,7 +472,7 @@
     {
       "name": "record-detail",
       "version": "0.1.0",
-      "description": "Standard detail view with field layout from the data model — one way to show a record.",
+      "description": "Standard detail view with field layout from the data model \u2014 one way to show a record.",
       "requires": [
         "data-table"
       ]
@@ -455,19 +480,19 @@
     {
       "name": "request-metrics",
       "version": "0.1.0",
-      "description": "Latency/error counters + /metrics — ops can't fly blind, and every app must expose the same shape.",
+      "description": "Latency/error counters + /metrics \u2014 ops can't fly blind, and every app must expose the same shape.",
       "requires": []
     },
     {
       "name": "rest-client",
       "version": "0.1.0",
-      "description": "Outbound HTTP with timeout/retry/backoff policy — agents otherwise scatter bare fetches with none.",
+      "description": "Outbound HTTP with timeout/retry/backoff policy \u2014 agents otherwise scatter bare fetches with none.",
       "requires": []
     },
     {
       "name": "row-history",
       "version": "0.1.0",
-      "description": "Field-level change history for regulated data — pairs with audit-log to answer 'what changed, from what, to what'.",
+      "description": "Field-level change history for regulated data \u2014 pairs with audit-log to answer 'what changed, from what, to what'.",
       "requires": [
         "persistence-core"
       ]
@@ -475,21 +500,27 @@
     {
       "name": "row-level-security",
       "version": "0.1.0",
-      "description": "'You see your team's records' — ownership scoping subtle enough that it must be written once, correctly.",
+      "description": "'You see your team's records' \u2014 ownership scoping subtle enough that it must be written once, correctly.",
       "requires": [
         "rbac"
       ]
     },
     {
+      "name": "runtime-compose",
+      "version": "0.1.0",
+      "description": "Local-first runtime base: a Docker Compose stack (app + Postgres + Redis) that runs a produced process app for real, with a clean path to the cloud.",
+      "requires": []
+    },
+    {
       "name": "scheduling",
       "version": "0.1.0",
-      "description": "Cron-style in-app jobs with visibility and no threads — run_due is called by the host, everything is observable.",
+      "description": "Cron-style in-app jobs with visibility and no threads \u2014 run_due is called by the host, everything is observable.",
       "requires": []
     },
     {
       "name": "screen-router",
       "version": "0.1.0",
-      "description": "Hash navigation binding the design shells' #screen-* mount points — formalizes what every shell implies.",
+      "description": "Hash navigation binding the design shells' #screen-* mount points \u2014 formalizes what every shell implies.",
       "requires": [
         "chat-shell"
       ]
@@ -497,7 +528,7 @@
     {
       "name": "search-index",
       "version": "0.1.0",
-      "description": "Text search over stored rows — every 'find past X' feature reinvents it worse.",
+      "description": "Text search over stored rows \u2014 every 'find past X' feature reinvents it worse.",
       "requires": [
         "persistence-core"
       ]
@@ -505,13 +536,13 @@
     {
       "name": "secrets-manager",
       "version": "0.1.0",
-      "description": "App secrets via environment with loud failures — never in code, never in the store; enforced by a scanner, not advised.",
+      "description": "App secrets via environment with loud failures \u2014 never in code, never in the store; enforced by a scanner, not advised.",
       "requires": []
     },
     {
       "name": "seed-data",
       "version": "0.1.0",
-      "description": "Deterministic demo/dev fixtures — every stakeholder demo needs believable data, seeded the same way every time.",
+      "description": "Deterministic demo/dev fixtures \u2014 every stakeholder demo needs believable data, seeded the same way every time.",
       "requires": [
         "persistence-core"
       ]
@@ -519,7 +550,7 @@
     {
       "name": "session-audit",
       "version": "0.1.0",
-      "description": "Login/logout/denied-access trail — identity events feed the same audit stream as business actions.",
+      "description": "Login/logout/denied-access trail \u2014 identity events feed the same audit stream as business actions.",
       "requires": [
         "audit-log"
       ]
@@ -527,13 +558,13 @@
     {
       "name": "sla-timers",
       "version": "0.1.0",
-      "description": "Due dates, breach flags, escalations — ops apps are judged on these, and clock math is where bugs hide.",
+      "description": "Due dates, breach flags, escalations \u2014 ops apps are judged on these, and clock math is where bugs hide.",
       "requires": []
     },
     {
       "name": "slack-notify",
       "version": "0.1.0",
-      "description": "Where firm users actually live — 'post to the channel' is in every third intake; outbox mode until a webhook is configured.",
+      "description": "Where firm users actually live \u2014 'post to the channel' is in every third intake; outbox mode until a webhook is configured.",
       "requires": [
         "rest-client",
         "persistence-core"
@@ -542,7 +573,7 @@
     {
       "name": "soft-delete",
       "version": "0.1.0",
-      "description": "'Deleted' rows auditors can still see — deletion is a policy, so it must be uniform, not per-endpoint improvisation.",
+      "description": "'Deleted' rows auditors can still see \u2014 deletion is a policy, so it must be uniform, not per-endpoint improvisation.",
       "requires": [
         "persistence-core"
       ]
@@ -550,19 +581,19 @@
     {
       "name": "spreadsheet-io",
       "version": "0.1.0",
-      "description": "CSV/TSV in and out with type coercion — the lingua franca of analysts, parsed one way.",
+      "description": "CSV/TSV in and out with type coercion \u2014 the lingua franca of analysts, parsed one way.",
       "requires": []
     },
     {
       "name": "sqlite-adapter",
       "version": "0.1.0",
-      "description": "Single-file durable Store honoring the persistence-core interface — laptop-class durability without a database server.",
+      "description": "Single-file durable Store honoring the persistence-core interface \u2014 laptop-class durability without a database server.",
       "requires": []
     },
     {
       "name": "sso-oidc",
       "version": "0.1.0",
-      "description": "Firm identity via OIDC ID tokens — replaces auth-basic's issuer while keeping the current_user contract.",
+      "description": "Firm identity via OIDC ID tokens \u2014 replaces auth-basic's issuer while keeping the current_user contract.",
       "requires": [
         "auth-basic"
       ]
@@ -570,19 +601,19 @@
     {
       "name": "state-machine",
       "version": "0.1.0",
-      "description": "Declarative status transitions — scattered ifs are how QA dies; transitions must be data.",
+      "description": "Declarative status transitions \u2014 scattered ifs are how QA dies; transitions must be data.",
       "requires": []
     },
     {
       "name": "structured-logging",
       "version": "0.1.0",
-      "description": "JSON logs with request/user/agent correlation — debugging composed apps needs uniform, parseable logs.",
+      "description": "JSON logs with request/user/agent correlation \u2014 debugging composed apps needs uniform, parseable logs.",
       "requires": []
     },
     {
       "name": "table-extract",
       "version": "0.1.0",
-      "description": "Tables inside documents are where the numbers live — naive text extraction destroys them.",
+      "description": "Tables inside documents are where the numbers live \u2014 naive text extraction destroys them.",
       "requires": [
         "doc-extract"
       ]
@@ -590,13 +621,13 @@
     {
       "name": "token-budgeter",
       "version": "0.1.0",
-      "description": "Per-conversation/user spend caps inside the generated app — the app-level version of the harness's own cost discipline.",
+      "description": "Per-conversation/user spend caps inside the generated app \u2014 the app-level version of the harness's own cost discipline.",
       "requires": []
     },
     {
       "name": "tool-registry",
       "version": "0.1.0",
-      "description": "Declarative tool definitions with roster enforcement — which agent may call what is data, checked at invoke time.",
+      "description": "Declarative tool definitions with roster enforcement \u2014 which agent may call what is data, checked at invoke time.",
       "requires": [
         "agent-runtime"
       ]
@@ -604,7 +635,7 @@
     {
       "name": "transcript-store",
       "version": "0.1.0",
-      "description": "Standard storage + redaction of agent transcripts — the raw material for evals, audits, and retention policies.",
+      "description": "Standard storage + redaction of agent transcripts \u2014 the raw material for evals, audits, and retention policies.",
       "requires": [
         "persistence-core",
         "pii-redaction"
@@ -613,13 +644,13 @@
     {
       "name": "usage-analytics",
       "version": "0.1.0",
-      "description": "Which features actually get used — feeds the owner's roadmap and the firm's ROI story, without third-party trackers.",
+      "description": "Which features actually get used \u2014 feeds the owner's roadmap and the firm's ROI story, without third-party trackers.",
       "requires": []
     },
     {
       "name": "versioned-drafts",
       "version": "0.1.0",
-      "description": "Draft/publish semantics for content-like records — 'live' and 'working copy' must never be the same row.",
+      "description": "Draft/publish semantics for content-like records \u2014 'live' and 'working copy' must never be the same row.",
       "requires": [
         "persistence-core"
       ]
@@ -627,13 +658,13 @@
     {
       "name": "vuln-watch",
       "version": "0.1.0",
-      "description": "Dependency advisories for the generated app's requirements — supply-chain awareness without external calls.",
+      "description": "Dependency advisories for the generated app's requirements \u2014 supply-chain awareness without external calls.",
       "requires": []
     },
     {
       "name": "webhook-in",
       "version": "0.1.0",
-      "description": "Receive events safely — signature verification and replay protection before anything touches app logic.",
+      "description": "Receive events safely \u2014 signature verification and replay protection before anything touches app logic.",
       "requires": [
         "persistence-core"
       ]
@@ -641,7 +672,7 @@
     {
       "name": "webhook-out",
       "version": "0.1.0",
-      "description": "Notify other systems on events with signing and retries — integration's front door, with an outbox you can inspect.",
+      "description": "Notify other systems on events with signing and retries \u2014 integration's front door, with an outbox you can inspect.",
       "requires": [
         "rest-client",
         "persistence-core"
@@ -650,7 +681,7 @@
     {
       "name": "workflow-engine",
       "version": "0.1.0",
-      "description": "Deterministic workflows with agentic nodes inside the generated app — the harness's own architecture (event-sourced, park/resume, contracts) shipped as an app capability.",
+      "description": "Deterministic workflows with agentic nodes inside the generated app \u2014 the harness's own architecture (event-sourced, park/resume, contracts) shipped as an app capability.",
       "requires": [
         "persistence-core",
         "agent-runtime",
@@ -678,7 +709,7 @@
     },
     {
       "name": "pack-intake-triage",
-      "description": "Form/email intake -> classification -> routing -> SLA — the ops-team workhorse.",
+      "description": "Form/email intake -> classification -> routing -> SLA \u2014 the ops-team workhorse.",
       "modules": [
         "persistence-core",
         "agent-runtime",
@@ -695,7 +726,7 @@
     },
     {
       "name": "pack-kb-manager",
-      "description": "Curate the knowledge corpus itself — staleness, gaps, ownership; the meta-app every RAG deployment needs.",
+      "description": "Curate the knowledge corpus itself \u2014 staleness, gaps, ownership; the meta-app every RAG deployment needs.",
       "modules": [
         "persistence-core",
         "agent-runtime",
@@ -711,7 +742,7 @@
     },
     {
       "name": "pack-report-generator",
-      "description": "Data in -> analysis -> templated PDF/deck out on a schedule — the recurring-deliverable machine.",
+      "description": "Data in -> analysis -> templated PDF/deck out on a schedule \u2014 the recurring-deliverable machine.",
       "modules": [
         "persistence-core",
         "agent-runtime",
@@ -727,7 +758,7 @@
     },
     {
       "name": "pack-research-assistant",
-      "description": "Corpus Q&A with citations and reading-list curation — the knowledge-worker staple.",
+      "description": "Corpus Q&A with citations and reading-list curation \u2014 the knowledge-worker staple.",
       "modules": [
         "persistence-core",
         "agent-runtime",
@@ -742,7 +773,7 @@
     },
     {
       "name": "pack-support-copilot",
-      "description": "Grounded answers + approval gate + history — the shape built three times already (the rule of three, literally).",
+      "description": "Grounded answers + approval gate + history \u2014 the shape built three times already (the rule of three, literally).",
       "modules": [
         "persistence-core",
         "agent-runtime",

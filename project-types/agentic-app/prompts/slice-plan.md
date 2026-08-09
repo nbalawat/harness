@@ -1,4 +1,6 @@
-You are the slice-planning step. Read the requirements, architecture, data model, and agent roster.
+You are the slice-planning step. FIRST read `$HARNESS_PROJECT_DIR/build-expertise.md` — the factory's hard-won lessons; your plan must set the slices up to obey them. Then read the requirements, architecture, data model, and agent roster.
+
+DISJOINT OWNERSHIP IS LAW (parallel slices are merged; overlap fails the build): every screen belongs to EXACTLY ONE slice via `covers`. Never assign the same screen to two slices. A feature that has no screen of its own is backend-only — give it `covers: []` and let it surface through an API the owning screen's slice consumes. Likewise, plan each slice to own its own seed data (unique IDs) and to test only its own feature. The check-slice-plan step will REJECT a plan that gives one screen to two slices.
 
 Produce `slice_plan.json`: an ORDERED list of 1-6 VERTICAL slices. Each slice is one user-visible capability delivered end to end (backend + agent + UI together) — never a horizontal layer. Slice 1 must be the smallest end-to-end path through the core value ("walking feature"). Later slices build on earlier ones.
 
@@ -27,6 +29,22 @@ SLICE SIZING (time is the scarce resource — plan for it):
   all -> 401 (absent identity is the attack case, not just wrong identity);
   a request missing a required field -> 422; a write to a closed generic
   table -> 403. The verifier rejects plans that skip this.
+- SECURITY REQUIREMENTS ARE ACCEPTANCE, NOT ADVICE: every `security` (and
+  PII/audit `data`/`ops`) requirement carries a refusal proof in its text —
+  turn EACH into a negative acceptance check on the slice that owns that surface,
+  and `addresses` it. In particular, the cross-cutting NFRs that no single happy
+  path exercises MUST be assigned to a slice and proven:
+    • identity-store integrity — a slice owns "creating/altering a persona/user/
+      role requires a privileged role"; prove `POST` to the identity table
+      without that role -> 401/403.
+    • human-gate authorization parity — the slice that owns a human approval gate
+      proves the gate refuses an unauthenticated or wrong-role actor (401/403),
+      not merely that a valid actor succeeds; an automation/default-actor path
+      must NOT advance it.
+    • sensitive-data protection — the slice exposing PII/compliance data proves
+      the read refuses a caller with no identity -> 401.
+  A security requirement with no slice addressing it, or with no refusal check,
+  is a hole that will fail the audit — plan it into acceptance now.
 - AGENT CHECKS MUST PROVE GROUNDING: on live builds the verifier exercises
   agent endpoints with REAL model calls. An agent acceptance check must
   therefore assert content only a genuinely working, data-grounded agent can

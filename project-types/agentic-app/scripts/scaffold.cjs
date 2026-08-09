@@ -99,6 +99,24 @@ if (architecture.modules.includes("workflow-engine") && inputs.workflows) {
   fs.copyFileSync(inputs.workflows.path, "app/workflows/workflows.json");
 }
 
+// 4a-quater. ENTERPRISE INTEGRATIONS: when integration-hub is composed, ship the
+// simulated enterprise-system MCP servers (CRM / ERP / service-desk) and a
+// swappable registry. Agents reach these systems through the integration hub;
+// point a connector at a real MCP server to go live — no code change.
+if (architecture.modules.includes("integration-hub")) {
+  const SIM = { "sim-crm": [["crm.lookup", "lookup"]], "sim-erp": [["erp.credit_check", "credit_check"]],
+    "sim-servicedesk": [["ticketing.create", "ticket_create"], ["email.send", "email_send"], ["docstore.fetch", "doc_fetch"]] };
+  fs.mkdirSync("app/mcp", { recursive: true });
+  const connectors = {};
+  for (const [dir, tools] of Object.entries(SIM)) {
+    const src = path.join(repoRoot, "mcp", dir);
+    if (!fs.existsSync(src)) continue;
+    fs.cpSync(src, path.join("app/mcp", dir), { recursive: true });
+    for (const [name, tool] of tools) connectors[name] = { server: `${dir}/server.mjs`, tool, live: false };
+  }
+  fs.writeFileSync("app/integrations.registry.json", JSON.stringify({ mcp_dir: "mcp", connectors }, null, 2));
+}
+
 // 4a-ter. PROCESS APP: when the workflow-console is composed, the app IS the
 // agentified business process — the console is its primary surface. The
 // scaffold makes it RUN out of the box: (a) the console frontend is served as

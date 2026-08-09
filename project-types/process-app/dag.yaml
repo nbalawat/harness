@@ -52,6 +52,14 @@ nodes:
           - { value: "erp", label: "ERP / finance", hint: "Credit, limits, terms (sim-erp)." }
           - { value: "servicedesk", label: "Service desk", hint: "Ticketing, email, documents (sim-servicedesk)." }
           - { value: "none", label: "None for now", hint: "No external systems yet." }
+      - id: framework
+        prompt: "Which agent framework should the app's agent steps run on?"
+        type: choice
+        default: "claude-sdk"
+        options:
+          - { value: "claude-sdk", label: "Claude Agent SDK (standard)", hint: "The default — same engine the harness runs on; MCP tools + agentic loop." }
+          - { value: "langgraph", label: "LangGraph", hint: "Graph-based orchestration for teams standardized on LangGraph." }
+          - { value: "adk", label: "Google ADK", hint: "Google Agent Development Kit runtime." }
       - id: deploy_intent
         prompt: "Run locally now; move to cloud later?"
         type: choice

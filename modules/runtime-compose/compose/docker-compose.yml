@@ -1,0 +1,53 @@
+# Local-first runtime for the produced process app.
+#
+#   docker compose up --build      # then open http://localhost:8080
+#
+# Real components — the app on FastAPI, state in Postgres, Redis for the
+# scheduler/cache — so what you run locally is what you run in the cloud. The
+# only stubs are the enterprise-system MCP servers (crm/erp/servicedesk); point
+# integrations.registry.json at real MCP servers to go live, no code change.
+services:
+  db:
+    image: postgres:16.4-alpine
+    environment:
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: app
+      POSTGRES_DB: app
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U app -d app"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+  redis:
+    image: redis:7.4-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+  app:
+    build: .
+    environment:
+      DATABASE_URL: postgres://app:app@db:5432/app
+      REDIS_URL: redis://redis:6379/0
+      # run process steps in the background so the console stays responsive while
+      # live agents think (the read APIs never block)
+      HARNESS_ASYNC_EXEC: "1"
+      # stub (offline, deterministic) by default; set to live-api with a key for real agents
+      HARNESS_AGENT_MODE: ${HARNESS_AGENT_MODE:-stub}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+
+volumes:
+  pgdata:

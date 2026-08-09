@@ -3,6 +3,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 const { spawnSync } = require("node:child_process");
+const { pythonCmd } = require("./_proc.cjs");
 
 const inputs = JSON.parse(fs.readFileSync("inputs.json", "utf8"));
 // FRESH copy every attempt: retry continuity + cpSync overlay would let a
@@ -31,9 +32,10 @@ function walk(dir, ext) {
   return out;
 }
 
-// 1. Python syntax across the whole app
+// 1. Python syntax across the whole app (python3 on POSIX, python/py on Windows)
 const pyFiles = walk(app, ".py");
-const py = run("python3", ["-m", "py_compile", ...pyFiles]);
+const _py = pythonCmd();
+const py = run(_py.cmd, [..._py.pre, "-m", "py_compile", ...pyFiles]);
 if (py.status !== 0) fail("python compile", py);
 
 // 2. Frontend JS syntax

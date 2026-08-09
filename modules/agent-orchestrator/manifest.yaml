@@ -1,0 +1,12 @@
+name: agent-orchestrator
+version: 0.1.0
+description: Agent orchestration invoked by a deterministic step — specialist agents (using enterprise MCP tools) plus a synthesizer accomplish a cognitive step. Framework-neutral over the agent-runtime adapter.
+provides:
+  - python: orchestrator.orchestrate(spec, context) — run a multi-agent orchestration for a step
+requires:
+  - agent-runtime
+  - audit-log
+compose:
+  overlay: compose/
+certify:
+  tests: test/

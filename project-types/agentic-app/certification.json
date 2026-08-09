@@ -1,39 +1,39 @@
 {
   "name": "agentic-app",
-  "version": "0.12.2",
+  "version": "0.16.0",
   "ok": true,
   "problems": [],
   "scenarios": [
     {
       "scenario": "answers-cloudrun.json",
       "status": "completed",
-      "totalCostUsd": 12.299999999999999,
-      "nodeCount": 43,
-      "digest": "af8fe5dd3fe8efd8"
+      "totalCostUsd": 12.5,
+      "nodeCount": 42,
+      "digest": "f716dc9194cab87a"
     },
     {
       "scenario": "answers-langgraph.json",
       "status": "completed",
-      "totalCostUsd": 12.299999999999999,
-      "nodeCount": 43,
-      "digest": "5a2bab8d0368eaa7"
+      "totalCostUsd": 12.5,
+      "nodeCount": 42,
+      "digest": "d6afc5aa28b0ca44"
     },
     {
       "scenario": "answers.json",
       "status": "completed",
-      "totalCostUsd": 12.299999999999999,
-      "nodeCount": 43,
-      "digest": "3b03fc3872a4b4bf"
+      "totalCostUsd": 12.5,
+      "nodeCount": 42,
+      "digest": "49d1c38a431fda8a"
     }
   ],
   "revisionDrill": {
     "node": "requirements-synthesis",
     "status": "completed",
-    "cachedReuses": 6
+    "cachedReuses": 4
   },
   "gateRegression": {
     "status": "held"
   },
-  "packageDigest": "7eb7a4bdf0196e685745dfc99cb324c9347dc0cb7cb157f676d7ca845213828a",
-  "certifiedAt": "2026-08-01T20:46:19.652Z"
+  "packageDigest": "27bc8d6df3c0870b5c6ee3dce854f9add73e2c9d548c418b70d8112418274168",
+  "certifiedAt": "2026-08-09T12:44:06.580Z"
 }

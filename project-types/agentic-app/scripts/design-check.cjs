@@ -8,8 +8,8 @@ const inputs = JSON.parse(fs.readFileSync("inputs.json", "utf8"));
 const { options } = inputs.designs.data;
 const designsDir = inputs.designs_dir.path;
 
-if (options.length < 3 || options.length > 4) {
-  console.error(`expected 3-4 design options, got ${options.length}`);
+if (options.length < 1 || options.length > 2) {
+  console.error(`expected 1-2 design layouts (one enterprise theme), got ${options.length}`);
   process.exit(1);
 }
 

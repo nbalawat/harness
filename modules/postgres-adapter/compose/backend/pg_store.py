@@ -24,3 +24,23 @@ class PgStore:
         cur = self._conn.cursor()
         cur.execute("SELECT body FROM app_rows WHERE tbl = %s ORDER BY id", (table,))
         return [r[0] if isinstance(r[0], dict) else json.loads(r[0]) for r in cur.fetchall()]
+
+    def get(self, table, row_id):
+        cur = self._conn.cursor()
+        cur.execute("SELECT body FROM app_rows WHERE tbl = %s AND id = %s", (table, row_id))
+        r = cur.fetchone()
+        if not r:
+            return None
+        return r[0] if isinstance(r[0], dict) else json.loads(r[0])
+
+    def update(self, table, row_id, changes):
+        """Persist a change to an existing row — the same contract as the
+        in-memory Store: the only correct way to change stored state."""
+        current = self.get(table, row_id)
+        if current is None:
+            return None
+        current.update({k: v for k, v in changes.items() if k != "id"})
+        cur = self._conn.cursor()
+        cur.execute("UPDATE app_rows SET body = %s WHERE tbl = %s AND id = %s", (json.dumps(current), table, row_id))
+        self._conn.commit()
+        return current

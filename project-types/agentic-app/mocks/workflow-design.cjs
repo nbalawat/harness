@@ -16,8 +16,9 @@ writeJson("workflows.json", {
       nodes: [
         { id: "validate", kind: "deterministic", handler: "validate_question", output_schema: { required: ["ok", "topic"] } },
         { id: "worth_drafting", kind: "condition", path: "validate.ok", equals: true, on_false: "end" },
-        { id: "draft", kind: "agent", prompt: "Draft a grounded reply about ${validate_topic}." },
-        { id: "approve", kind: "human", question: "Approve this draft? ${draft_reply}" },
+        { id: "draft", kind: "agent", prompt: "Draft a grounded reply about ${validate_topic}.",
+          output_contract: ["answer", "sources_used"] },
+        { id: "approve", kind: "human", question: "Approve this draft? ${draft.answer} (confidence: ${draft.confidence})" },
         { id: "record", kind: "deterministic", handler: "record_decision", output_schema: { required: ["stored"] } },
       ],
     },

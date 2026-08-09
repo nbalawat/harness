@@ -13,8 +13,13 @@ interface Check {
   detail: string;
 }
 
+// On Windows, CLIs installed as npm/pip shims are `.cmd`/`.bat` (e.g. `claude`,
+// `npm`) and won't spawn without a shell; `shell: true` lets cmd.exe resolve the
+// PATHEXT extension. Harmless on POSIX.
+const SPAWN_SHELL = process.platform === "win32";
+
 function has(cmd: string, args: string[] = ["--version"]): string | null {
-  const r = spawnSync(cmd, args, { encoding: "utf8", timeout: 15000 });
+  const r = spawnSync(cmd, args, { encoding: "utf8", timeout: 15000, shell: SPAWN_SHELL });
   return r.status === 0 ? (r.stdout || r.stderr).trim().split("\n")[0] : null;
 }
 
@@ -50,6 +55,7 @@ export async function setup(installSdk: boolean): Promise<{ checks: Check[]; ok:
       encoding: "utf8",
       timeout: 300000,
       stdio: "inherit",
+      shell: SPAWN_SHELL, // npm is npm.cmd on Windows
     });
     if (r.status === 0) {
       try {

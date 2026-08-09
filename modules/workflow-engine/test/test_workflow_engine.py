@@ -109,3 +109,23 @@ def test_dependency_graph_runs_parallel_branches_and_joins():
     st = workflow_engine.tick(rid)
     assert st["status"] == "completed" and "done" in st["completed"]
     workflow_engine._defs_cache = None
+
+
+def test_agent_output_contract_is_structured_for_review():
+    # An agent step with an output_contract yields REVIEWABLE structured data —
+    # the declared fields plus rationale + confidence — instead of free text, so
+    # a human reviews structure regardless of which framework runs the agent.
+    defs = [{"name": "assess", "nodes": [
+        {"id": "start", "kind": "deterministic", "handler": "vs", "deps": []},
+        {"id": "review", "kind": "agent", "prompt": "Assess ${start.ok}.", "deps": ["start"],
+         "output_contract": ["decision", "risk_level"]},
+    ]}]
+    workflow_engine._defs_cache = defs
+    workflow_engine.register_handler("vs", lambda c: {"ok": True})
+    rid = workflow_engine.start("assess", {})
+    out = workflow_engine.state(rid)["completed"]["review"]
+    assert "reply" not in out  # structured, not free text
+    for key in ("decision", "risk_level", "rationale", "confidence"):
+        assert key in out, f"structured agent output missing '{key}'"
+    assert out["confidence"] in ("low", "medium", "high")
+    workflow_engine._defs_cache = None

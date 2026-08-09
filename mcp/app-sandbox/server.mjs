@@ -13,6 +13,19 @@ import { spawn, spawnSync } from "node:child_process";
 
 const CONFIG = JSON.parse(process.env.HARNESS_MCP_CONFIG || "{}");
 const ATTEMPT_DIR = process.env.HARNESS_ATTEMPT_DIR || process.cwd();
+const IS_WIN = process.platform === "win32";
+
+// Kill the app AND its children (uvicorn workers), cross-platform. POSIX signals
+// the process group of the detached child; Windows walks the tree by PID.
+function killTree(child) {
+  if (!child || child.pid == null) return;
+  try {
+    if (IS_WIN) spawnSync("taskkill", ["/pid", String(child.pid), "/T", "/F"], { stdio: "ignore" });
+    else process.kill(-child.pid, "SIGTERM");
+  } catch {
+    /* already gone */
+  }
+}
 
 let app = { child: null, port: null, logFile: null };
 
@@ -32,13 +45,7 @@ function appDir() {
 }
 
 function stopApp() {
-  if (app.child) {
-    try {
-      process.kill(-app.child.pid, "SIGTERM");
-    } catch {
-      /* gone */
-    }
-  }
+  if (app.child) killTree(app.child);
   const wasRunning = app.child !== null;
   app = { child: null, port: null, logFile: app.logFile };
   return { stopped: wasRunning };
@@ -54,7 +61,7 @@ async function startApp() {
   const log = fs.openSync(logFile, "w");
   const child = spawn(CONFIG.boot.replaceAll("$PORT", String(port)), {
     shell: true,
-    detached: true,
+    detached: !IS_WIN, // POSIX: process-group leader for group-kill; Windows uses taskkill /T
     cwd: path.join(appDir(), CONFIG.cwd ?? "."),
     env: { ...process.env, PORT: String(port), ...(CONFIG.env ?? {}) },
     stdio: ["ignore", log, log],

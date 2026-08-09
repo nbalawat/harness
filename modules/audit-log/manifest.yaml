@@ -2,8 +2,8 @@ name: audit-log
 version: 0.1.0
 description: Append-only audit trail for app actions — who did what, when. Governance evidence for every generated app.
 provides:
-  - python: ext_audit.record(event, detail) — call from any endpoint that changes state
-  - http: GET /audit (newest first), POST /audit
+  - python: ext_audit.record(event, detail, actor) — call server-side from any endpoint that changes state; pass the resolved actor
+  - http: GET /audit (newest first; identity-gated when the app has an identity layer). No public write endpoint — entries are written only via record() so the actor cannot be forged.
 requires:
   - nothing beyond the base app
 compose:

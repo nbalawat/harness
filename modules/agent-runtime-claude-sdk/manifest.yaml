@@ -1,0 +1,16 @@
+name: agent-runtime-claude-sdk
+version: 0.1.0
+description: The STANDARD agent runtime — the Claude Agent SDK (via Claude Code / Anthropic API), with enterprise MCP servers as agent tools. Swappable for agent-runtime-langgraph or agent-runtime-adk.
+provides:
+  - python: agent_runtime.respond(prompt) — Claude Agent SDK runtime
+requires:
+  - persistence-core
+conflicts:
+  - agent-runtime
+  - agent-runtime-langgraph
+  - agent-runtime-adk
+  - agent-runtime-strands
+compose:
+  overlay: compose/
+certify:
+  tests: test/

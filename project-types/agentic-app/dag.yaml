@@ -21,9 +21,59 @@
 # negative acceptance (refusal proofs); the security scan mechanically fails
 # any slice-authored mutating route carrying no identity; live builds verify
 # agents with LIVE calls (stub only for mock/certification determinism).
+# v0.13.0: SELF-HEALING GATES — the strict Verification gates no longer STALL a
+# build; they heal it. merge-slices runs the deterministic union first and, only
+# on a genuine conflict, an agent resolves the conflicted hunks (both slices
+# preserved). A new `remediate` node is the single app-hardening owner: it drives
+# the security + usability gates against the merged app, FIXES unauthenticated
+# mutations / dead controls / missing persona pickers / FSI gaps, and re-proves
+# them green via its own `verify` — reusing the envelope's retry+escalation+
+# feedback so a fixable defect is fixed, not fatal. The former standalone
+# security-scan and verify-ui gates are folded into remediate (their reports are
+# still emitted as governance evidence). Every fix is recorded as a lesson for
+# the factory's build-expertise. Determinism holds: mocks replay the clean
+# certified stub; live builds heal.
+# v0.14.0: CORRECTNESS SHIFTED LEFT (from a live KYC build whose re-audit found
+# 25 highs the happy-path acceptance missed). (1) Non-functional requirements are
+# now first-class: requirements-synthesis derives authz/identity/gate/PII/audit
+# requirements with testable refusal proofs, and slice-plan turns each into
+# negative acceptance. (2) The two most dangerous, greppable classes are now
+# DETERMINISTIC security-scan rules — fail-open identity (`find() or {role}`) and
+# defaulted decisions (`get("decision","approved")`) — caught at build time,
+# perfectly convergent. (3) The persistence substrate gained store.update/get so
+# slices persist instead of mutating in memory. (4) slice-audit is pinned to Opus
+# with an exhaustive fixed checklist so the audit converges (consistent depth =
+# consistent findings) instead of 3 findings one pass and 25 the next. (5) merge
+# is Opus. build-expertise rules 10-11 encode every class.
+# v0.15.0: SHARED MODULES HARDENED (KYC v2 re-audit: 25→5 highs, 3 in shared
+# modules). approval-flow persists decisions via store.update (no in-memory
+# mutation) and resolves the gate actor through the app's identity (fail-closed,
+# no bare-string identity); audit-log removed its forgeable public POST /audit
+# (entries are server-side via record() only) and identity-gates GET /audit;
+# build-expertise rule 12 covers the app-specific residue (export = a gated read;
+# every terminal disposition enforces role+SoD, not just approve; the workflow
+# gate needs the app's role check for parity).
+# v0.15.1: PROCESS-LAYER MODULES HARDENED (KYC v3 re-audit: 5→4, all in the
+# workflow/trigger modules). workflow-engine no longer prunes a merge node that
+# has a completed branch (a human gate could be silently SKIPPED — the HITL
+# control defeated); its start/tick resolve a real actor (no defaulted "system").
+# approval-flow gates submit + the pending queue (case PII) behind identity. The
+# audit now respects `# public-endpoint` process STARTERS (triggers/webhooks are
+# intentionally public) and instead verifies the gates they lead to can't be
+# skipped or decided by the starter.
+# v0.16.0: THE AUDIT SELF-HEALS (KYC audit plateaued at ~4 subtle findings per
+# pass — each remediation revealed the next layer). slice-audit is no longer a
+# read-only report-and-block: it audits the merged app, FIXES every high finding,
+# and re-audits to convergence, driven by its `verify` (check-audit-local) inside
+# the envelope's retry loop — so the audit heals the app instead of stalling the
+# build. It is now the final app-hardening owner; integration/coverage consume its
+# healed app. Also: workflow-engine never skips a human gate via on_false branch
+# short-circuit; the audit checklist adds revoked-persona-fails-closed and
+# no-boolean-coerced-decision. A genuinely-accepted finding still needs a named
+# waiver — the audit fixes by default, waives by exception.
 name: agentic-app
-version: 0.12.2
-description: Builds a working agentic AI application from your problem statement and documents — requirements with provenance, approvable designs, certified modules, parallel feature-slice build with deterministic merge and tests, security scan, and governance evidence.
+version: 0.16.0
+description: Builds a working agentic AI application from your problem statement and documents — requirements with provenance, approvable designs, certified modules, parallel feature-slice build with deterministic merge, self-healing security + usability remediation, tests, and governance evidence.
 
 # Frontier concurrency: how many non-gate nodes may execute at once. Three
 # keeps parallel slices (and the three design options) genuinely concurrent
@@ -55,7 +105,9 @@ cost:
     slice-4: { budget_usd: 30.00 }
     slice-5: { budget_usd: 30.00 }
     slice-6: { budget_usd: 30.00 }
-    slice-audit: { budget_usd: 8.00 }
+    merge-slices: { budget_usd: 20.00 }
+    remediate: { budget_usd: 22.00 }
+    slice-audit: { budget_usd: 16.00 }
 
 interaction:
   max_questions_per_gate: 6
@@ -117,6 +169,15 @@ nodes:
         options:
           - { value: "every-slice", label: "Checkpoint every slice (recommended)", hint: "After each delivered feature: a short review window (90 seconds) with its evidence and screenshot. Answer to decide; walk away and it proceeds on approval-by-default, recorded as an assumption." }
           - { value: "gates-only", label: "Five decisions only", hint: "You're asked at intake, clarify, design pick, design review, and final sign-off. Slices build straight through with no pauses." }
+      - id: agent_framework
+        prompt: "Which framework should run the app's AI agent layer?"
+        type: choice
+        default: "standard"
+        options:
+          - { value: "standard", label: "Standard — portable (recommended)", hint: "Anthropic API, no framework lock-in. API-key-first, runs in any environment. Pick this unless your team standardizes on a specific framework." }
+          - { value: "claude-sdk", label: "Claude Agent SDK", hint: "The Claude Agent SDK agentic loop (MCP tools, multi-turn). Runs via the API or the Claude CLI." }
+          - { value: "langgraph", label: "LangGraph", hint: "A compiled LangGraph StateGraph runs every reply — for teams standardized on LangGraph." }
+          - { value: "adk", label: "Google ADK", hint: "Google Agent Development Kit — an ADK LlmAgent/Runner executes every reply." }
     outputs:
       - { name: intake, file: intake.json, schema: schemas/intake.schema.json }
 
@@ -203,13 +264,19 @@ nodes:
     outputs:
       - { name: screen_inventory, file: screen_inventory.json, schema: schemas/screen_inventory.schema.json }
 
+  # ONE enterprise-grade theme, presented as two LAYOUT variants (not three
+  # different themes). Both are the same operational console — same color
+  # tokens, typography, components — differing only in spatial layout, so the
+  # choice is about ergonomics, not restyling. An enterprise console surfaces
+  # the dashboard, live process instances, work queues, and human-in-the-loop
+  # approvals as first-class regions.
   - id: design-option-1
     phase: Design
-    description: "Design direction 1 — operational console: dense sidebar, panels, status chips. Built concurrently with the other directions."
+    description: "Layout A — enterprise operational console, left-rail navigation: dashboard, work queues, process timelines, and HITL approval panels."
     kind: agent
     model: claude-opus-5
     maxTurns: 45
-    params: { option: 1, direction: "operational console — dense sidebars, panels, status chips, keyboard-first ergonomics; a cockpit for daily work" }
+    params: { option: 1, direction: "ENTERPRISE OPERATIONAL CONSOLE, LEFT-RAIL layout. A persistent left navigation rail; the main canvas leads with a dashboard (KPI cards + live process-instance cards), then dense work-queue data tables, a process timeline with per-step status chips (system / AI agent / human), and inline human-in-the-loop approval panels. Calm, professional, information-dense. Neutral slate palette, system sans-serif, subtle borders and status chips." }
     deps: [screen-inventory, requirements-synthesis, intake]
     prompt: prompts/design-option.md
     mock: node "$HARNESS_PROJECT_DIR/mocks/design-option.cjs"
@@ -219,11 +286,11 @@ nodes:
 
   - id: design-option-2
     phase: Design
-    description: "Design direction 2 — editorial print: masthead, serif measure, generous whitespace. Built concurrently with the other directions."
+    description: "Layout B — same enterprise console theme, top-bar navigation with a master/detail split for process instances and records."
     kind: agent
     model: claude-opus-5
     maxTurns: 45
-    params: { option: 2, direction: "editorial print — manuscript desks, mastheads, serif measure, generous whitespace; a page you read" }
+    params: { option: 2, direction: "SAME ENTERPRISE CONSOLE THEME as Layout A — identical color tokens, typography, and components — but a TOP-BAR navigation with a MASTER/DETAIL split: a list of process instances / records down the left of the working area, and on the right the selected item's detail, its process timeline with per-step status chips, and human-in-the-loop approval panels. Same dashboard KPI cards and data tables; different spatial arrangement only." }
     deps: [screen-inventory, requirements-synthesis, intake]
     prompt: prompts/design-option.md
     mock: node "$HARNESS_PROJECT_DIR/mocks/design-option.cjs"
@@ -231,25 +298,11 @@ nodes:
     outputs:
       - { name: option_2_dir, file: designs, dir: true }
 
-  - id: design-option-3
-    phase: Design
-    description: "Design direction 3 — minimal terminal: monospace, high contrast, zero chrome. Built concurrently with the other directions."
-    kind: agent
-    model: claude-opus-5
-    maxTurns: 45
-    params: { option: 3, direction: "minimal terminal — monospace, high contrast, zero chrome, brutal clarity; an instrument, not a brochure" }
-    deps: [screen-inventory, requirements-synthesis, intake]
-    prompt: prompts/design-option.md
-    mock: node "$HARNESS_PROJECT_DIR/mocks/design-option.cjs"
-    retries: 2
-    outputs:
-      - { name: option_3_dir, file: designs, dir: true }
-
   - id: design-assemble
     phase: Design
     description: "Collects the three concurrently-built design options into one comparable set with a verified index."
     kind: deterministic
-    deps: [design-option-1, design-option-2, design-option-3]
+    deps: [design-option-1, design-option-2]
     command: node "$HARNESS_PROJECT_DIR/scripts/design-assemble.cjs"
     outputs:
       - { name: designs_dir, file: designs, dir: true }
@@ -274,9 +327,9 @@ nodes:
 
   - id: design-contract
     phase: Design
-    description: "Turns your chosen design into an enforceable promise: every screen and interactive element it contains, inventoried for delivery tracking."
+    description: "Turns your chosen design into an enforceable promise: every screen and interactive element it contains, inventoried for delivery tracking — and every control checked to trace to a requirement (ungrounded 'furniture' is rejected before it can ship dead)."
     kind: deterministic
-    deps: [design-select, design-assemble]
+    deps: [design-select, design-assemble, requirements-synthesis]
     command: node "$HARNESS_PROJECT_DIR/scripts/design-contract.cjs"
     outputs:
       - { name: design_contract, file: design_contract.json, schema: schemas/design_contract.schema.json }
@@ -596,30 +649,78 @@ nodes:
   # -- Deterministic merge of the parallel slice wave -----------------------
   - id: merge-slices
     phase: Build
-    description: "Unions the parallel slices into one app — line-level three-way merge against the foundation; a genuine conflict fails loudly (never LLM-resolved) — then re-proves EVERY slice's acceptance cumulatively."
-    kind: deterministic
+    description: "Unions the parallel slices into one app — a DETERMINISTIC line-level three-way merge against the foundation (additive conflicts auto-resolved) runs first; on the rare genuine conflict a healing agent resolves ONLY the conflicted hunks (preserving both slices) so the build never stalls, and records the lesson. Then re-proves EVERY slice's acceptance cumulatively."
+    kind: agent
+    # Conflict resolution is real reasoning — a weaker model rabbit-holes into
+    # byte-level forensics and exhausts its turns. Opus resolves the union
+    # directly. (Verified on a live build: haiku/sonnet burned 40 turns
+    # inspecting UTF-8/newline bytes; Opus is the cost-correct choice here.)
+    model: claude-opus-5
+    maxTurns: 50
+    retries: 2
     deps: [slice-1, slice-2, slice-3, slice-4, slice-5, slice-6,
            review-slice-1, review-slice-2, review-slice-3, review-slice-4, review-slice-5, review-slice-6,
            slice-plan]
-    command: node "$HARNESS_PROJECT_DIR/scripts/merge-slices.cjs"
+    allowedTools: [Read, Write, Edit, Bash, Glob, Grep]
+    prompt: prompts/heal-merge.md
+    mock: node "$HARNESS_PROJECT_DIR/mocks/merge-slices.cjs"
     verify: node "$HARNESS_PROJECT_DIR/scripts/verify-merged.cjs"
     outputs:
       - { name: app, file: app, dir: true }
+      - { name: merge_remediation, file: remediation.json }
+
+  # -- Self-healing remediation (make the merged app secure + usable) --------
+  # The single app-hardening owner of the Verification phase: it drives the
+  # deterministic security + usability gates against the merged app, FIXES every
+  # finding (unauthenticated mutations, dead controls, missing persona picker,
+  # FSI hardening gaps), and records the lesson — so a defect heals instead of
+  # stalling the build. Its `verify` re-runs the SAME gates: work commits only
+  # once they are green, so a residual dead control or open mutation comes back
+  # as feedback and the node retries (escalating the model). Every downstream
+  # verifier consumes THIS hardened app. Live builds only heal; the mock replays
+  # the already-clean certified stub deterministically.
+  - id: remediate
+    phase: Verification
+    description: "Hardens the merged app to the 'done' bar: drives the security scan and the usability drive, fixes unauthenticated mutations and dead controls, ensures an identity-gated app ships a persona picker, and re-proves them green — self-healing, so a fixable defect never stalls the build. Documents each fix as a lesson."
+    kind: agent
+    model: claude-haiku-4-5
+    escalateModel: claude-sonnet-5
+    maxTurns: 80
+    retries: 2
+    deps: [merge-slices, slice-plan, requirements-synthesis, design-contract]
+    allowedTools: [Read, Write, Edit, Bash, Glob, Grep]
+    prompt: prompts/remediate.md
+    mock: node "$HARNESS_PROJECT_DIR/mocks/remediate.cjs"
+    verify: node "$HARNESS_PROJECT_DIR/scripts/check-remediation.cjs"
+    outputs:
+      - { name: app, file: app, dir: true }
+      - { name: remediation, file: remediation.json }
+      - { name: security_report, file: security_report.json, schema: schemas/security_report.schema.json }
+      - { name: ui_interactivity, file: ui_interactivity.json }
 
   # -- Validate + secure (challenges e + f) ---------------------------------
+  # SELF-HEALING semantic audit: the final app-hardening owner. It audits the
+  # merged app on harness contracts + FSI hardening, FIXES every high finding it
+  # finds, and re-audits to convergence — the audit no longer just reports-and-
+  # blocks, it heals. Pinned to Opus (a semantic authz/correctness review: a
+  # shallow pass finds 3 holes where a thorough one finds 25 — consistent depth =
+  # convergence). Its `verify` re-checks the healed app's audit.json and fails on
+  # any unwaived high, so the envelope's retry loop drives audit→fix→re-audit
+  # until clean. Downstream integration/coverage/governance consume THIS healed app.
   - id: slice-audit
     phase: Verification
-    description: "One read-only audit of the merged app — harness contracts (design fidelity, route shadowing, module bypasses) and FSI hardening (validation, audit rows, human gates, RBAC) — replacing per-slice reviewer subagents."
+    description: "Self-healing semantic audit: audits the merged app (design fidelity, route shadowing, module bypasses; FSI hardening — authz, human gates, real persistence, trustworthy audit, decision integrity), FIXES every high finding, and re-audits to convergence. The audit heals the app rather than stalling the build on a finding; a genuinely-accepted finding needs a named waiver."
     kind: agent
-    model: claude-sonnet-5
-    escalateModel: claude-opus-5
-    maxTurns: 50
-    retries: 2
-    deps: [merge-slices, slice-plan]
-    allowedTools: [Read, Glob, Grep]
+    model: claude-opus-5
+    maxTurns: 80
+    retries: 3
+    deps: [remediate, slice-plan]
+    allowedTools: [Read, Write, Edit, Bash, Glob, Grep]
     prompt: prompts/slice-audit.md
     mock: node "$HARNESS_PROJECT_DIR/mocks/slice-audit.cjs"
+    verify: node "$HARNESS_PROJECT_DIR/scripts/check-audit-local.cjs"
     outputs:
+      - { name: app, file: app, dir: true }
       - { name: audit, file: audit.json, schema: schemas/audit.schema.json }
 
   - id: audit-check
@@ -633,9 +734,9 @@ nodes:
 
   - id: integrate
     phase: Verification
-    description: "Runs the whole app: full test suite, agent evals, and container boot smoke."
+    description: "Runs the whole hardened + audited app: full test suite, agent evals, and container boot smoke."
     kind: verifier
-    deps: [merge-slices]
+    deps: [slice-audit]
     command: node "$HARNESS_PROJECT_DIR/scripts/verify-integrate.cjs"
     outputs:
       - { name: integration_report, file: integration_report.json, schema: schemas/integration_report.schema.json }
@@ -644,26 +745,24 @@ nodes:
     phase: Verification
     description: "Proves design delivery: boots the finished app, visits every screen you approved, verifies its elements exist, and screenshots each one live. An approved screen missing from the app fails the build."
     kind: deterministic
-    deps: [merge-slices, integrate, design-contract, slice-plan]
+    deps: [slice-audit, integrate, design-contract, slice-plan]
     command: node "$HARNESS_PROJECT_DIR/scripts/design-coverage.cjs"
     outputs:
       - { name: design_coverage, file: design_coverage.json, schema: schemas/design_coverage.schema.json }
       - { name: coverage_shots, file: coverage, dir: true }
 
-  - id: security-scan
-    phase: Verification
-    description: "Deterministic security scan — secrets, dynamic code, unsafe patterns. High findings block."
-    kind: verifier
-    deps: [merge-slices]
-    command: node "$HARNESS_PROJECT_DIR/scripts/security-scan.cjs"
-    outputs:
-      - { name: security_report, file: security_report.json, schema: schemas/security_report.schema.json }
+  # NOTE: the security scan and the UI-usability drive that used to live here as
+  # standalone gates are now DRIVEN AND SELF-HEALED inside `remediate` (and
+  # re-proven by its `verify`). remediate emits their reports as artifacts
+  # (security_report.json, ui_interactivity.json), so a dead control or an
+  # unauthenticated mutation is FIXED rather than fatal — while still never
+  # shipping unproven, since remediate commits only once both gates pass.
 
   - id: governance-report
     phase: Verification
-    description: "Generates the evidence pack: tests, evals, security, code audit, and requirement coverage with proof."
+    description: "Generates the evidence pack: tests, evals, security, code audit, requirement coverage, and the functional-validation proof (a real browser drove every screen and control) — all with evidence."
     kind: deterministic
-    deps: [security-scan, integrate, agent-design, traceability, slice-audit, audit-check]
+    deps: [remediate, integrate, agent-design, traceability, slice-audit, audit-check, design-coverage]
     command: node "$HARNESS_PROJECT_DIR/scripts/governance.cjs"
     outputs:
       - { name: governance, file: governance.json, schema: schemas/governance.schema.json }

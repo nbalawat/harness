@@ -62,7 +62,10 @@ def _run_view(run_id, wf):
             if reply is None and n["kind"] != "human":
                 reply = ", ".join(f"{k}: {v}" for k, v in out.items() if k not in ("ok",))[:400]
         step = {"id": nid, "kind": n["kind"], "kind_label": _KIND_LABEL.get(n["kind"], n["kind"]),
-                "label": n.get("label") or nid.replace("_", " ").title(), "state": state, "output": reply}
+                "label": n.get("label") or nid.replace("_", " ").title(), "state": state, "output": reply,
+                # structured agent/step output for a legible REVIEW card (fields +
+                # rationale + confidence); free-text replies stay in `output`.
+                "data": {k: v for k, v in out.items() if k != "ok"} if isinstance(out, dict) and set(out) - {"reply", "ok"} else None}
         if state == "waiting":
             item = approval_flow._find(st["parked"][nid])
             q = (item or {}).get("payload", {}).get("question", "Approve this step?")
@@ -126,7 +129,7 @@ def start_run(req: StartRequest):
 
 @router.get("/runs/{run_id}")
 def get_run(run_id: str):
-    workflow_engine.tick(run_id)  # advance any steps that became ready
+    workflow_engine.advance(run_id)  # advance (async in the live runtime); never block the read
     return _run_view(run_id, _process())
 
 
@@ -141,5 +144,5 @@ def decide(run_id: str, req: Decision):
             approval_flow.approve(approval_id, req.by, req.reason)
         else:
             approval_flow.reject(approval_id, req.by, req.reason or "declined")
-    workflow_engine.tick(run_id)
+    workflow_engine.advance(run_id)
     return _run_view(run_id, wf)

@@ -109,16 +109,17 @@ test("golden run: architecture stays inside the certified catalog and envelope",
 
 test("golden run: design options are comparable; the CHOSEN DESIGN IS the app frontend", () => {
   const { options } = readJson(artifact(golden, "design-assemble", "designs.json"));
-  assert.equal(options.length, 3);
+  assert.equal(options.length, 2); // one enterprise theme, two layout variants
   const screens = JSON.stringify(options[0].screens);
   for (const o of options) assert.equal(JSON.stringify(o.screens), screens);
 
-  // answers.json chose option-2 ("Forest") — its primary color must be live in the app.
+  // answers.json chose option-2 (the top-bar / master-detail layout of the one
+  // enterprise theme) — its primary token must be live in the app.
   const tokens = fs.readFileSync(
     path.join(golden.workspace, "artifacts/merge-slices/app/frontend/tokens.css"),
     "utf8",
   );
-  assert.match(tokens, /#2b8a3e/, "Forest primary token composed into the app");
+  assert.match(tokens, /#2f4a8a/, "enterprise primary token composed into the app");
 
   // Design SANCTITY: not just tokens — the chosen option's full shell ships.
   const appIndex = fs.readFileSync(path.join(golden.workspace, "artifacts/merge-slices/app/frontend/index.html"), "utf8");
@@ -126,8 +127,8 @@ test("golden run: design options are comparable; the CHOSEN DESIGN IS the app fr
     path.join(golden.workspace, "artifacts/design-assemble/designs/option-2/index.html"),
     "utf8",
   );
-  assert.match(appIndex, /masthead/, "Forest's editorial masthead layout survives into the built app");
-  assert.match(chosenPreview, /masthead/, "the marker genuinely comes from the chosen preview");
+  assert.match(appIndex, /appbar/, "option-2's top-bar / master-detail layout survives into the built app");
+  assert.match(chosenPreview, /appbar/, "the marker genuinely comes from the chosen preview");
   for (const id of ["agent-mode", "screen-chat", "messages", "composer", "input", "screen-agents", "agents-list"]) {
     assert.ok(appIndex.includes(`id="${id}"`), `canonical mount point ${id} present in shipped frontend`);
   }
@@ -135,7 +136,7 @@ test("golden run: design options are comparable; the CHOSEN DESIGN IS the app fr
   // Provenance is recorded so any later stage can assert fidelity.
   const provenance = readJson(path.join(golden.workspace, "artifacts/merge-slices/app/design.json"));
   assert.equal(provenance.chosen_option, "option-2");
-  assert.equal(provenance.name, "Forest");
+  assert.equal(provenance.name, "Console — Top Bar Split");
 });
 
 test("golden run: composed app matches the bill of materials and is branded", () => {
@@ -164,7 +165,9 @@ test("golden run: validation + security evidence is real and green", () => {
   assert.equal(integration.evals.status, "pass");
   assert.equal(integration.python_compile, "pass");
 
-  const security = readJson(artifact(golden, "security-scan", "security_report.json"));
+  // The security report is now produced by the self-healing `remediate` step
+  // (the standalone security-scan gate was folded into it in 0.13.0).
+  const security = readJson(artifact(golden, "remediate", "security_report.json"));
   assert.equal(security.high_count, 0);
   assert.ok(security.files_scanned >= 15);
 
@@ -307,7 +310,7 @@ test("design-check: options with different screen sets are rejected", () => {
   const dir = tmpDir("design");
   const designsDir = path.join(dir, "designs");
   const options = [];
-  for (let i = 1; i <= 3; i++) {
+  for (let i = 1; i <= 2; i++) {
     const optDir = path.join(designsDir, `option-${i}`);
     fs.mkdirSync(optDir, { recursive: true });
     fs.writeFileSync(path.join(optDir, "tokens.css"), ":root {}");
@@ -315,7 +318,7 @@ test("design-check: options with different screen sets are rejected", () => {
     options.push({
       id: `option-${i}`,
       name: `Option ${i}`,
-      screens: i === 3 ? ["chat"] : ["chat", "settings"], // option-3 diverges
+      screens: i === 2 ? ["chat"] : ["chat", "settings"], // option-2 diverges
       tokens_file: `designs/option-${i}/tokens.css`,
       preview_file: `designs/option-${i}/index.html`,
     });
@@ -333,7 +336,7 @@ test("design-check: option that is not a buildable shell is rejected", () => {
   const dir = tmpDir("design2");
   const designsDir = path.join(dir, "designs");
   const options = [];
-  for (let i = 1; i <= 3; i++) {
+  for (let i = 1; i <= 2; i++) {
     const optDir = path.join(designsDir, `option-${i}`);
     fs.mkdirSync(optDir, { recursive: true });
     fs.writeFileSync(path.join(optDir, "tokens.css"), ":root {}");
@@ -507,11 +510,11 @@ test("revision: a change request becomes a requirement with provenance and re-de
 test("parallel topology: concurrent design directions, isolated slices, one post-merge audit", () => {
   const def = loadProjectType(PT_DIR);
 
-  // Three CONCURRENT design-option nodes, each committed to a distinct direction.
+  // Two CONCURRENT design-option nodes — one enterprise theme, two layout variants.
   const options = def.nodes.filter((n) => /^design-option-\d$/.test(n.id));
-  assert.equal(options.length, 3, "three genuinely distinct design directions");
+  assert.equal(options.length, 2, "two genuinely distinct layout variants");
   const directions = options.map((o) => o.params.direction);
-  assert.equal(new Set(directions).size, 3, "directions are distinct");
+  assert.equal(new Set(directions).size, 2, "directions are distinct");
   for (const o of options) {
     assert.deepEqual(o.deps, ["screen-inventory", "requirements-synthesis", "intake"], `${o.id} shares the inventory but not siblings`);
   }
@@ -525,15 +528,19 @@ test("parallel topology: concurrent design directions, isolated slices, one post
     assert.ok(!n.allowedTools.includes("Task"), "slice agents build; the audit reviews");
   }
 
-  // One read-only audit of the merged app replaces per-slice reviewer subagents.
+  // One self-healing audit of the merged app replaces per-slice reviewer subagents.
+  // It audits→fixes→re-audits to convergence, so it can WRITE (unlike the old
+  // read-only reviewer), and it audits the hardened app downstream of the merge
+  // (via remediate), not the raw parts.
   const audit = def.nodes.find((n) => n.id === "slice-audit");
   assert.ok(audit, "post-merge audit exists");
-  assert.deepEqual(audit.allowedTools, ["Read", "Glob", "Grep"], "auditor is read-only");
-  assert.ok(audit.deps.includes("merge-slices"), "audits the union, not the parts");
+  assert.ok(audit.allowedTools.includes("Read") && audit.allowedTools.includes("Edit"), "self-healing auditor can read and fix");
+  assert.ok(audit.deps.includes("remediate"), "audits the hardened union, not the parts");
 
-  // The merge itself is deterministic and self-verifying.
+  // The merge is self-verifying: an agent that heals genuine conflicts, gated by
+  // the deterministic verify-merged re-proof.
   const merge = def.nodes.find((n) => n.id === "merge-slices");
-  assert.equal(merge.kind, "deterministic");
+  assert.equal(merge.kind, "agent");
   assert.match(merge.verify, /verify-merged/);
   assert.ok(def.concurrency >= 2, "the engine is allowed to actually run the wave concurrently");
 });
@@ -778,7 +785,10 @@ test("slice screenshots are pairwise DISTINCT — each demonstrates its own incr
 test("a slice plan that leaves an approved screen unassigned is REJECTED", () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "harness-cov-neg-"));
   const plan = readJson(artifact(golden, "slice-plan", "slice_plan.json"));
-  const crippled = { slices: plan.slices.map((s) => ({ ...s, covers: ["screen-chat"] })) }; // history+agents dropped
+  // Only the first slice owns a screen; the rest go backend-only (covers: []).
+  // No double-claim (which the disjoint-ownership guard would catch first) —
+  // this isolates the UNASSIGNED-screen failure (history + agents left uncovered).
+  const crippled = { slices: plan.slices.map((s, i) => ({ ...s, covers: i === 0 ? ["screen-chat"] : [] })) };
   fs.writeFileSync(path.join(dir, "slice_plan.json"), JSON.stringify(crippled));
   fs.writeFileSync(
     path.join(dir, "inputs.json"),

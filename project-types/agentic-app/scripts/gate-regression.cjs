@@ -69,6 +69,22 @@ guarantee("an explicit # public-endpoint marker is allowed (no false block)", ()
   const dir = appDir({ "backend/ext_x.py": '@router.post("/feedback")  # public-endpoint: anonymous by design\ndef fb(b: dict):\n    return save(b)\n' });
   assert(run("security-scan.cjs", dir).status === 0, "a justified public endpoint was blocked");
 });
+guarantee("fail-open identity (fabricating a role when the persona is absent) BLOCKS", () => {
+  const dir = appDir({ "backend/ext_x.py": 'def act(email):\n    actor = identity.find(email) or {"email": email, "role": "Compliance Officer"}\n    return actor\n' });
+  run("security-scan.cjs", dir);
+  const rep = JSON.parse(fs.readFileSync(path.join(dir, "security_report.json"), "utf8"));
+  assert(rep.findings.some((f) => f.rule === "fail-open-identity"), "fail-open identity fabrication not flagged");
+});
+guarantee("a decision that DEFAULTS to approved BLOCKS", () => {
+  const dir = appDir({ "backend/ext_x.py": 'def decide(inputs):\n    decision = inputs.get("decision", "approved")\n    return decision\n' });
+  assert(run("security-scan.cjs", dir).status === 1, "a decision defaulting to approved did not block");
+});
+guarantee("a legitimate non-terminal default (status -> pending) is NOT flagged", () => {
+  const dir = appDir({ "backend/ext_x.py": 'def mk(inputs):\n    status = inputs.get("status", "pending")\n    return status\n' });
+  run("security-scan.cjs", dir);
+  const rep = JSON.parse(fs.readFileSync(path.join(dir, "security_report.json"), "utf8"));
+  assert(!rep.findings.some((f) => f.rule === "defaulted-decision"), "false positive on a benign status default");
+});
 
 // --- check-slice-plan: plan-time classes (cheapest) ------------------------
 function planDir(slices, screens) {

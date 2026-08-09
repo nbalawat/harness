@@ -91,6 +91,115 @@ function merge3(rel, current, base3, theirs, slices) {
   return result.stdout;
 }
 
+/** Split an HTML doc into ordered segments: shell chunks + top-level
+ *  <section id="screen-*"> regions (balanced, so nested panels stay inside
+ *  their screen). Returns [{type:'shell'|'screen', id?, text}] or null if the
+ *  markup is unbalanced (caller falls back to line-merge). */
+function splitScreens(text) {
+  const segs = [];
+  // match a screen <section> with id ANYWHERE in the opening tag (attribute
+  // order varies by design — class-first or id-first are both valid).
+  const open = /<section\b[^>]*\sid="(screen-[A-Za-z0-9_-]+)"/g;
+  let pos = 0, m;
+  while ((m = open.exec(text))) {
+    const start = m.index;
+    const tag = /<section\b|<\/section>/g;
+    tag.lastIndex = start;
+    let depth = 0, t, end = -1;
+    while ((t = tag.exec(text))) {
+      depth += t[0] === "</section>" ? -1 : 1;
+      if (depth === 0) { end = t.index + t[0].length; break; }
+    }
+    if (end < 0) return null;
+    if (start > pos) segs.push({ type: "shell", text: text.slice(pos, start) });
+    segs.push({ type: "screen", id: m[1], text: text.slice(start, end) });
+    pos = end;
+    open.lastIndex = end;
+  }
+  segs.push({ type: "shell", text: text.slice(pos) });
+  return segs;
+}
+
+/** three-way merge of one chunk; returns {ok, text} instead of exiting. */
+function merge3try(current, base3, theirs) {
+  const tmp = fs.mkdtempSync(path.join(require("node:os").tmpdir(), "m3-"));
+  const w = (n, c) => { const p = path.join(tmp, n); fs.writeFileSync(p, c ?? ""); return p; };
+  const r = spawnSync("git", ["merge-file", "-p", "-L", "merged", "-L", "foundation", "-L", "slice", w("cur", current), w("base", base3), w("theirs", theirs)], { encoding: "utf8" });
+  fs.rmSync(tmp, { recursive: true, force: true });
+  return { ok: r.status === 0, text: r.stdout };
+}
+
+/** UNION merge: three-way, but where both sides inserted at the same anchor
+ *  (the classic "each slice added its own <script>/nav item") keep BOTH — the
+ *  correct result for purely ADDITIVE changes. Only used once every change to
+ *  the region is verified additive (base preserved as a subsequence). */
+function unionMerge(current, base3, theirs) {
+  const tmp = fs.mkdtempSync(path.join(require("node:os").tmpdir(), "um-"));
+  const w = (n, c) => { const p = path.join(tmp, n); fs.writeFileSync(p, c ?? ""); return p; };
+  const r = spawnSync("git", ["merge-file", "-p", "-L", "m", "-L", "b", "-L", "s", w("cur", current), w("base", base3), w("theirs", theirs)], { encoding: "utf8" });
+  fs.rmSync(tmp, { recursive: true, force: true });
+  if (r.status === 0) return r.text ?? r.stdout;
+  const out = []; const seen = new Set(); let inBlock = false;
+  for (const l of (r.stdout || "").split("\n")) {
+    if (l.startsWith("<<<<<<<")) { inBlock = true; seen.clear(); continue; }
+    if (l.startsWith("=======")) continue;
+    if (l.startsWith(">>>>>>>")) { inBlock = false; continue; }
+    if (inBlock) { if (seen.has(l)) continue; seen.add(l); }
+    out.push(l);
+  }
+  return out.join("\n");
+}
+
+/** True when `base` is preserved verbatim as a subsequence of `text` — i.e. the
+ *  change only INSERTED lines and removed/altered nothing. */
+function isAdditive(base, text) {
+  const bl = base.split("\n"), tl = text.split("\n");
+  let j = 0;
+  for (const x of bl) { while (j < tl.length && tl[j] !== x) j++; if (j >= tl.length) return false; j++; }
+  return true;
+}
+
+/** Section-aware HTML merge. Parallel slices each own a distinct screen, so
+ *  merge BY REGION: a screen changed by exactly one slice is taken verbatim
+ *  (disjoint screens auto-union even when their edits touch adjacent lines);
+ *  shell chunks and any screen touched by 2+ slices are reconciled with a
+ *  three-way merge, and only a genuine incompatible edit to the SAME region
+ *  fails. Returns merged text, or null to fall back to line-merge. */
+function mergeHtmlBySection(rel, baseText, ordered, slices) {
+  const baseSegs = splitScreens(baseText);
+  if (!baseSegs || !baseSegs.some((s) => s.type === "screen")) return null;
+  const shape = (segs) => segs.map((s) => (s.type === "screen" ? s.id : "#")).join("|");
+  const variants = [];
+  for (const v of ordered) {
+    const segs = splitScreens(v.content.toString());
+    if (!segs || shape(segs) !== shape(baseSegs)) return null; // structure diverged
+    variants.push(segs);
+  }
+  const out = [];
+  for (let i = 0; i < baseSegs.length; i++) {
+    const b = baseSegs[i].text;
+    const changed = [...new Set(variants.filter((vs) => vs[i].text !== b).map((vs) => vs[i].text))];
+    if (changed.length === 0) { out.push(b); continue; }        // untouched
+    if (changed.length === 1) { out.push(changed[0]); continue; } // one owner
+    // 2+ slices changed the same region. Clean three-way merge first.
+    let cur = b, clean = true;
+    for (const t of changed) { const r = merge3try(cur, b, t); if (!r.ok) { clean = false; break; } cur = r.text; }
+    if (!clean) {
+      // Only a same-anchor collision of PURELY ADDITIVE edits (each slice added
+      // its own line, e.g. a <script> tag) is safely auto-resolvable by UNION.
+      // Anything else is a genuine conflict and must fail loudly.
+      if (changed.every((t) => isAdditive(b, t))) {
+        cur = b;
+        for (const t of changed) cur = unionMerge(cur, b, t);
+      } else {
+        conflict(rel, slices, `two slices changed ${baseSegs[i].type === "screen" ? `screen '${baseSegs[i].id}'` : "the shared shell"} incompatibly`);
+      }
+    }
+    out.push(cur);
+  }
+  return out.join("");
+}
+
 const sorted = [...changes.keys()].sort();
 for (const rel of sorted) {
   const variants = changes.get(rel);
@@ -148,6 +257,18 @@ for (const rel of sorted) {
     continue;
   }
 
+  // HTML shell (index.html): parallel slices each own a distinct screen —
+  // merge by SECTION so disjoint screens union even when their edits land on
+  // adjacent lines. Only two slices editing the SAME screen/shell conflict.
+  if (rel.endsWith(".html")) {
+    const html = mergeHtmlBySection(rel, baseText, ordered, slices);
+    if (html !== null) {
+      fs.mkdirSync(path.dirname(dest), { recursive: true });
+      fs.writeFileSync(dest, html);
+      continue;
+    }
+  }
+
   // Line-level three-way merge, folded in slice order.
   let current = baseContent;
   for (const v of variants.sort((a, b) => a.slice - b.slice)) {
@@ -156,6 +277,41 @@ for (const rel of sorted) {
   fs.mkdirSync(path.dirname(dest), { recursive: true });
   fs.writeFileSync(dest, current);
 }
+
+// POST-MERGE SELF-CHECK: the auto-resolved union must be structurally sound
+// before verify-merged (which then PROVES it boots + passes acceptance). Catch
+// a bad merge HERE with a precise message instead of a confusing boot failure.
+const selfCheck = [];
+for (const rel of walk("app")) {
+  if (!/\.(py|js|mjs|ts|html|css|json|md|txt)$/.test(rel)) continue;
+  const txt = fs.readFileSync(path.join("app", rel), "utf8");
+  if (/^(<{7}|={7}|>{7})/m.test(txt)) selfCheck.push(`${rel}: leftover merge conflict markers`);
+}
+const idxRel = "frontend/index.html";
+if (fs.existsSync(path.join("app", idxRel)) && fs.existsSync(path.join(base, idxRel))) {
+  const idx = fs.readFileSync(path.join("app", idxRel), "utf8");
+  const opens = (idx.match(/<section\b/g) || []).length;
+  const closes = (idx.match(/<\/section>/g) || []).length;
+  if (opens !== closes) selfCheck.push(`${idxRel}: unbalanced <section> tags (${opens} open / ${closes} close)`);
+  const baseIdx = fs.readFileSync(path.join(base, idxRel), "utf8");
+  for (const m of baseIdx.matchAll(/<section\b[^>]*\sid="(screen-[A-Za-z0-9_-]+)"/g)) {
+    if (!idx.includes(`id="${m[1]}"`)) selfCheck.push(`${idxRel}: screen '${m[1]}' dropped by the merge`);
+  }
+}
+if (selfCheck.length) {
+  console.error("MERGE SELF-CHECK FAILED (the union is not structurally sound):\n  " + selfCheck.join("\n  "));
+  process.exit(1);
+}
+console.log("merge self-check OK: no conflict markers; index.html sections balanced and every screen present");
+
+// The deterministic union succeeded with zero conflicts — record a clean
+// healing report so the merge node's lessons channel always has an artifact.
+// (On a genuine conflict this script exits BEFORE here, and the merge-healing
+// agent writes remediation.json describing the conflict it resolved.)
+fs.writeFileSync(
+  "remediation.json",
+  JSON.stringify({ step: "merge", healed: false, conflicts: 0, lessons: [] }, null, 2),
+);
 
 console.log(
   merged.length
