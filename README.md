@@ -108,6 +108,39 @@ defect, and every heal is recorded as a durable lesson in the project type's
 `build-expertise.md`, so the failure class stops recurring. The factory gets
 more reliable with every app it builds.
 
+## Engineering model: a graph of bounded loops
+
+The industry is moving "from loops to graphs" — a prompt controls one response,
+a loop controls one agent, a graph orchestrates many. The harness is both, by
+design:
+
+- **The control plane is a graph.** Each project type is a deterministic DAG
+  with typed nodes (gate / agent / deterministic / verifier) and explicit
+  dependencies. A frontier scheduler runs the ready set in parallel (two design
+  options, up to six feature slices) with **no model anywhere in the control
+  plane** — routing, memoization, and merge are pure code. Runs are
+  event-sourced, so resume, replay, and cascade-on-revision come for free.
+- **The nodes are bounded loops.** Every agent node runs inside a retry loop
+  that escalates the model tier (haiku → sonnet → opus) on failure, carries a
+  `feedback.md` forward, and continues from the previous working tree — a
+  bounded, verifier-gated loop, never an open one.
+- **The gates are convergence loops.** merge / remediate / audit apply that same
+  loop to *heal to a fixed point* (0 findings), then stop.
+
+Because a loop's real risk is a stop condition that can't tell *done* from
+*stalled*, the retry envelope has a **doom-loop guard**: if an attempt repeats
+the previous failure signature or leaves the working tree byte-identical (no real
+change), it records `node.loop_detected` and injects a break-the-loop directive
+so the next attempt changes approach instead of burning budget re-treading.
+
+## Runs anywhere
+
+Windows, macOS, and Linux. Node commands are shell-agnostic (env vars are
+pre-expanded rather than left to `sh` vs `cmd.exe`), process cleanup is
+cross-platform (`taskkill /T` on Windows, process-group signal on POSIX), and
+Python/`find`/npm shims are resolved per platform. The only prerequisites are
+Node 20+, Python 3, and [uv](https://docs.astral.sh/uv/).
+
 ## Documentation
 
 Full guides in [docs/](docs/README.md):
