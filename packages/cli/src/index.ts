@@ -267,6 +267,13 @@ async function main(): Promise<void> {
       else console.log(summarize());
       break;
     }
+    case "metrics": {
+      const { positional, flags } = parseFlags(rest);
+      const { metricsCommand } = await import("./metrics.js");
+      const compareWith = flags.compare ? path.resolve(String(flags.compare)) : undefined;
+      code = metricsCommand(path.resolve(positional[0] ?? ".harness-run"), flags.json === true, compareWith);
+      break;
+    }
     case "publish": {
       const { positional, flags } = parseFlags(rest);
       const registryUrl = (flags["registry-url"] as string) ?? process.env.HARNESS_REGISTRY_URL;
@@ -460,11 +467,13 @@ async function main(): Promise<void> {
       return; // keep serving
     }
     default:
-      console.log("usage: harness <run|resume|revise|status|ui|setup|certify|install|list|publish|telemetry|self-update>");
+      console.log("usage: harness <run|resume|revise|status|metrics|ui|setup|certify|install|list|publish|telemetry|self-update>");
       console.log("  harness run <project-type-dir> [--workspace dir] [--answers file] [--mock-agents]");
       console.log("  harness resume <workspace> [--answers file]");
       console.log('  harness revise <workspace> <nodeId> --feedback "what to change" [--resume]');
       console.log("  harness status <workspace>");
+      console.log("  harness metrics <workspace> [--json]   # retries, doom-loops, escalations, convergence, cost");
+      console.log("  harness metrics <a> --compare <b>      # A/B two runs: did a harness change help?");
       console.log("  harness certify <project-type-dir> [--update-golden]");
       console.log("  harness certify-modules [modules-dir] [project-type-dir]");
       console.log("  harness certify-mcp [mcp-dir]");
