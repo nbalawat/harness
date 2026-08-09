@@ -20,6 +20,7 @@ export interface ScenarioReport {
   nodeCount: number;
   digest: string;
   driftedFiles?: string[];
+  heldOut?: boolean;
 }
 
 export interface CertifyReport {
@@ -151,7 +152,7 @@ function makeCtx(workspace: string, projectTypeDir: string, answersFile: string)
 
 export async function certify(
   projectTypeDir: string,
-  opts: { updateGolden?: boolean } = {},
+  opts: { updateGolden?: boolean; updateHeldout?: boolean } = {},
 ): Promise<CertifyReport> {
   const dir = path.resolve(projectTypeDir);
   const def = loadProjectType(dir);
@@ -201,8 +202,17 @@ export async function certify(
     // Artifact digests: deterministic replay must produce identical artifacts.
     const { files, digest } = artifactDigest(workspace);
     report.digest = digest;
+    // Held-out scenarios (fixtures/answers-heldout*.json) are a FROZEN regression
+    // set: never used to tune prompts/expertise, and NOT refreshed by the routine
+    // --update-golden. This is the overfitting guard — you can drift a tuning
+    // golden while iterating, but a held-out drift is a real regression and can
+    // only be re-baselined with the explicit --update-heldout, so the harness
+    // can't silently be optimized to pass its own frozen tests.
+    const isHeldOut = /heldout/i.test(scenario);
+    report.heldOut = isHeldOut || undefined;
     const goldenFile = path.join(goldensDir, scenario.replace(/\.json$/, ".digest.json"));
-    if (opts.updateGolden) {
+    const mayUpdate = isHeldOut ? opts.updateHeldout === true : opts.updateGolden === true;
+    if (mayUpdate) {
       fs.mkdirSync(goldensDir, { recursive: true });
       fs.writeFileSync(goldenFile, JSON.stringify({ digest, files }, null, 2));
     } else if (fs.existsSync(goldenFile)) {
@@ -213,8 +223,14 @@ export async function certify(
           ...Object.keys(golden.files).filter((f) => !(f in files)),
         ];
         report.driftedFiles = drifted.slice(0, 20);
-        problems.push(`scenario '${scenario}' artifact drift vs golden: ${drifted.length} file(s) — ${drifted.slice(0, 5).join(", ")}`);
+        problems.push(
+          isHeldOut
+            ? `HELD-OUT REGRESSION: '${scenario}' drifted from its frozen golden (${drifted.length} file(s): ${drifted.slice(0, 5).join(", ")}). This is the overfitting guard — a change made the factory diverge on a scenario it was never tuned against. Investigate; re-baseline only with --update-heldout if the change is genuinely intended.`
+            : `scenario '${scenario}' artifact drift vs golden: ${drifted.length} file(s) — ${drifted.slice(0, 5).join(", ")}`,
+        );
       }
+    } else if (isHeldOut && opts.updateGolden && !opts.updateHeldout) {
+      problems.push(`held-out scenario '${scenario}' has no golden — record it explicitly with --update-heldout (it is deliberately excluded from --update-golden)`);
     } else {
       problems.push(`scenario '${scenario}' has no golden digest — run with --update-golden to record one`);
     }

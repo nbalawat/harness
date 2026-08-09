@@ -12,6 +12,14 @@
       "digest": "8e5caea3754e657b"
     },
     {
+      "scenario": "answers-heldout.json",
+      "status": "completed",
+      "totalCostUsd": 12.5,
+      "nodeCount": 42,
+      "digest": "c439471af3939450",
+      "heldOut": true
+    },
+    {
       "scenario": "answers-langgraph.json",
       "status": "completed",
       "totalCostUsd": 12.5,
@@ -34,6 +42,6 @@
   "gateRegression": {
     "status": "held"
   },
-  "packageDigest": "9087f2c8b33391495de48bfe2959b9f6a249057f43d14280c300bb36db32697d",
-  "certifiedAt": "2026-08-09T14:46:45.418Z"
+  "packageDigest": "2ade9ed69ac1b11800caf1c66cc9e9cc5ebfd799ec84d8eebd148ed01ca9c25a",
+  "certifiedAt": "2026-08-09T15:01:36.771Z"
 }

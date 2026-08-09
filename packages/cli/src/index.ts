@@ -429,11 +429,11 @@ async function main(): Promise<void> {
     case "certify": {
       const { positional, flags } = parseFlags(rest);
       const { certify } = await import("./certify.js");
-      const report = await certify(positional[0] ?? ".", { updateGolden: flags["update-golden"] === true });
+      const report = await certify(positional[0] ?? ".", { updateGolden: flags["update-golden"] === true, updateHeldout: flags["update-heldout"] === true });
       console.log(`certifying ${report.name}@${report.version}`);
       for (const s of report.scenarios) {
         console.log(
-          `  scenario ${s.scenario.padEnd(24)} ${s.status.padEnd(10)} $${s.totalCostUsd.toFixed(2)} digest ${s.digest || "-"}`,
+          `  scenario ${s.scenario.padEnd(24)} ${(s.heldOut ? "held-out" : s.status).padEnd(10)} $${s.totalCostUsd.toFixed(2)} digest ${s.digest || "-"}`,
         );
       }
       if (report.revisionDrill) {

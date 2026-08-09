@@ -1,0 +1,12 @@
+{
+  "intake": {
+    "project_name": "Grant Review Desk",
+    "problem_statement": "A foundation's program team needs a console to review incoming grant applications and decide whether to fund, decline, or request revisions. Reviewers score each application against the rubric and write a recommendation; a Program Officer gives the final funding decision (reviewers may not both score and decide the same application). Stages: an intake queue lists applications with applicant, requested amount, and status; opening one shows the proposal, budget, and prior-grant history; a reviewer records rubric scores with a written rationale; medium and large requests go to a Program Officer for approval; a terminal decision (funded / declined / revise) is recorded with the deciding user and reason; an activity log reconstructs the history of any application. An AI assistant may summarize a proposal and surface rubric-relevant evidence for the reviewer to accept or change — it never scores or decides. No automated step may set an application to funded; every decision writes an audit entry with the acting user, timestamp, prior and new state, and reason. Reviewers must be able to assume a persona without reading source.",
+    "documents_dir": "none",
+    "supervision": "gates-only",
+    "agent_framework": "standard"
+  },
+  "design-select": { "chosen_option": "option-1" },
+  "design-review": { "approve_design": "yes" },
+  "uat": { "approved": "yes" }
+}

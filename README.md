@@ -102,6 +102,10 @@ reusing the same retry/escalation machinery every agent node uses:
   parity, no defaulted/coerced decisions, trustworthy audit, prompt-injection
   hygiene, …), **fixes every high finding, and re-audits to convergence** — a
   genuinely-accepted finding needs a named human waiver, never a silent pass.
+  The audit's "0 high" is not self-asserted: an **independent deterministic scan
+  must agree** before convergence is accepted (self-verification produces
+  confident-wrong results on repeat, so the generator and the verifier are kept
+  separate).
 
 Two things fall out of this: the strict gates never stall a build on a fixable
 defect, and every heal is recorded as a durable lesson in the project type's
@@ -132,6 +136,26 @@ Because a loop's real risk is a stop condition that can't tell *done* from
 the previous failure signature or leaves the working tree byte-identical (no real
 change), it records `node.loop_detected` and injects a break-the-loop directive
 so the next attempt changes approach instead of burning budget re-treading.
+
+## Measure what you change
+
+Every run is a journaled trajectory, so the factory is inspectable — and a
+factory you can't measure is one you can only guess at.
+
+```sh
+harness metrics my-app              # retries, escalation paths, self-heal cycles,
+                                    # audit rounds, rework %, cost/tokens/time
+harness metrics build-a --compare build-b   # A/B two runs of the same problem:
+                                            # did a harness change actually help?
+```
+
+Because certification is byte-deterministic, that comparison is honest. Two
+guards keep the self-improvement loop from fooling itself: the audit's
+convergence is reported as **fixed vs waived** (a plateau can't masquerade as a
+pass), and a **held-out golden set** (`fixtures/answers-heldout*.json`) is frozen
+— never used to tune prompts or expertise and never refreshed by the routine
+`--update-golden`, so the harness can't be silently optimized to pass its own
+tests. A held-out drift is a real regression.
 
 ## Runs anywhere
 
