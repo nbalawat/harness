@@ -1,5 +1,5 @@
 export { Journal } from "./journal.js";
-export { loadProjectType, loadProjectTypeFile } from "./projectType.js";
+export { loadProjectType, loadProjectTypeFile, expandTemplates } from "./projectType.js";
 export { runLoop, foldState, reopenFailed } from "./scheduler.js";
 export { reviseNode, downstreamClosure } from "./revise.js";
 export { askUserViaWorkspace, expandEnvVars, failureSignature, loadAgentSdk, modelForAttempt, resolveMcpServer } from "./envelope.js";

@@ -70,6 +70,22 @@ export interface InteractionSpec {
 export interface NodeDef {
   id: string;
   kind: NodeKind;
+  /**
+   * Sub-graph templating: expand this node into one copy per value in
+   * [from..to], substituting `${var}` (and `${var-1}` / `${var+1}` arithmetic)
+   * throughout its fields. A bare `${var}` scalar becomes a number; embedded
+   * `slice-${var}` becomes a string. Lets the DAG declare N near-identical nodes
+   * (the parallel feature slices) once instead of copy-pasting them.
+   */
+  repeat?: { var: string; from: number; to: number };
+  /**
+   * Declared fan-in strategy for a node that merges parallel branches (the
+   * slice wave). Naming the reducer makes the merge auditable and explicit
+   * instead of implicit in a script — a typo or an unknown strategy fails at
+   * load. Currently: "union-slices" (deterministic three-way union with
+   * additive-conflict auto-resolution, genuine conflicts healed by an agent).
+   */
+  reducer?: string;
   /** Plain-language explanation of what this step does — shown to users. */
   description?: string;
   /** Display grouping for the pipeline (e.g. Requirements, Design, Build). */

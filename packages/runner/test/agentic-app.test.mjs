@@ -63,8 +63,8 @@ test("golden run: all nodes complete, deploy skipped for local target", async ()
   assert.equal(result.status, "completed");
   assert.deepEqual(
     events(golden, "node.skipped").map((e) => e.nodeId).sort(),
-    ["deploy", "review-slice-1", "review-slice-2", "review-slice-3", "review-slice-4", "review-slice-5", "review-slice-6", "slice-4", "slice-5", "slice-6"],
-    "unused slices + review checkpoints (gates-only mode) + deploy skip",
+    ["deploy", "review-slice-1", "review-slice-2", "review-slice-3", "review-slice-4", "review-slice-5", "review-slice-6", "review-slice-7", "review-slice-8", "slice-4", "slice-5", "slice-6", "slice-7", "slice-8"],
+    "unused slices (plan has 3; pool holds 8) + review checkpoints (gates-only mode) + deploy skip",
   );
   assert.equal(events(golden, "run.completed").length, 1);
 });
@@ -239,7 +239,7 @@ test("cloud-run target: deploy node runs and emits the plan", async () => {
   assert.equal((await runLoop(ctx)).status, "completed");
   const skipped = events(ctx, "node.skipped").map((e) => e.nodeId);
   assert.ok(!skipped.includes("deploy"), "deploy runs for cloud-run target");
-  assert.deepEqual(skipped.sort(), ["review-slice-1", "review-slice-2", "review-slice-3", "review-slice-4", "review-slice-5", "review-slice-6", "slice-4", "slice-5", "slice-6"]);
+  assert.deepEqual(skipped.sort(), ["review-slice-1", "review-slice-2", "review-slice-3", "review-slice-4", "review-slice-5", "review-slice-6", "review-slice-7", "review-slice-8", "slice-4", "slice-5", "slice-6", "slice-7", "slice-8"]);
   assert.ok(fs.existsSync(artifact(ctx, "deploy", "deploy/service.yaml")));
   assert.match(fs.readFileSync(artifact(ctx, "deploy", "deploy/plan.md"), "utf8"), /Cloud Run/);
 });

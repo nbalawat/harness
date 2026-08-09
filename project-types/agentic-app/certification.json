@@ -1,6 +1,6 @@
 {
   "name": "agentic-app",
-  "version": "0.16.0",
+  "version": "0.17.0",
   "ok": true,
   "problems": [],
   "scenarios": [
@@ -8,14 +8,14 @@
       "scenario": "answers-cloudrun.json",
       "status": "completed",
       "totalCostUsd": 12.5,
-      "nodeCount": 42,
+      "nodeCount": 46,
       "digest": "8e5caea3754e657b"
     },
     {
       "scenario": "answers-heldout.json",
       "status": "completed",
       "totalCostUsd": 12.5,
-      "nodeCount": 42,
+      "nodeCount": 46,
       "digest": "c439471af3939450",
       "heldOut": true
     },
@@ -23,14 +23,14 @@
       "scenario": "answers-langgraph.json",
       "status": "completed",
       "totalCostUsd": 12.5,
-      "nodeCount": 42,
+      "nodeCount": 46,
       "digest": "59425c86a0cbffd0"
     },
     {
       "scenario": "answers.json",
       "status": "completed",
       "totalCostUsd": 12.5,
-      "nodeCount": 42,
+      "nodeCount": 46,
       "digest": "a53dc4c4edfddf3e"
     }
   ],
@@ -42,6 +42,6 @@
   "gateRegression": {
     "status": "held"
   },
-  "packageDigest": "2ade9ed69ac1b11800caf1c66cc9e9cc5ebfd799ec84d8eebd148ed01ca9c25a",
-  "certifiedAt": "2026-08-09T15:01:36.771Z"
+  "packageDigest": "1a7725f0735d78b6aa644c0fd765f3cfd2a17ee9b26f10b5a26e558323a82f68",
+  "certifiedAt": "2026-08-09T15:40:25.878Z"
 }

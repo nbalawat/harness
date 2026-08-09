@@ -256,13 +256,28 @@ function buildInputs(
       const abs = path.join(ctx.workspace, rel);
       const entry: { path: string; data?: unknown } = { path: abs };
       if (abs.endsWith(".json") && fs.existsSync(abs) && fs.statSync(abs).isFile()) {
-        entry.data = JSON.parse(fs.readFileSync(abs, "utf8"));
+        const raw = fs.readFileSync(abs, "utf8");
+        if (raw.length > OFFLOAD_BYTES) {
+          // CONTEXT OFFLOADING: a very large artifact is NOT inlined into
+          // inputs.json (which the agent reads whole) — keep the file reference
+          // plus a head preview, so the agent reads only what it needs from the
+          // file on demand instead of flooding its context window. The full
+          // bytes are still hashed for memoization via `.path`, so nothing is
+          // lost. (Threshold is far above every normal artifact, so this never
+          // fires in certification — replay stays byte-identical.)
+          entry.data = { _offloaded: true, bytes: raw.length, preview: raw.slice(0, 2000), note: "large artifact — read the full file at .path" };
+        } else {
+          entry.data = JSON.parse(raw);
+        }
       }
       inputs[name] = entry;
     }
   }
   return inputs;
 }
+
+/** Above this size, a JSON input is referenced-not-inlined (context offloading). */
+const OFFLOAD_BYTES = 256 * 1024;
 
 /**
  * Async so concurrent nodes keep breathing: a synchronous 10-minute verify
@@ -626,7 +641,7 @@ async function runAgent(
     .join("\n");
   const prompt = [
     fs.readFileSync(promptFile, "utf8"),
-    "\nYour inputs are listed in ./inputs.json (absolute paths + parsed data for JSON artifacts).",
+    "\nYour inputs are listed in ./inputs.json (absolute paths + parsed data for JSON artifacts). A very large artifact is OFFLOADED — its entry has `_offloaded: true` and a short preview; read the full file at its `.path` on demand instead of expecting it inline.",
     `The project-type package directory is: ${ctx.projectTypeDir}`,
     "Relative paths appearing inside input data (e.g. a documents_dir answer) resolve against that package directory.",
     declared ? `\nYou MUST produce these files in the current directory:\n${declared}` : "",

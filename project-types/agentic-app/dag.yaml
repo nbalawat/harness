@@ -71,8 +71,16 @@
 # short-circuit; the audit checklist adds revoked-persona-fails-closed and
 # no-boolean-coerced-decision. A genuinely-accepted finding still needs a named
 # waiver — the audit fixes by default, waives by exception.
+# v0.17.0: GRAPH RIGOR. (1) Sub-graph templating: the parallel feature slices and
+# their checkpoints are declared ONCE via a `repeat` construct the loader expands
+# (proven byte-identical to the hand-written blocks). (2) Dynamic materialization:
+# the slice pool is now driven by the plan (a slot activates only if slice_plan
+# declares it, via `when`) and the ceiling lifted from a hard-coded 6 to 8 — the
+# plan decides how many slices materialize. (3) The parallel merge declares a
+# typed `reducer` (union-slices) instead of an implicit strategy. Existing
+# scenarios replay byte-identical (extra slots skip).
 name: agentic-app
-version: 0.16.0
+version: 0.17.0
 description: Builds a working agentic AI application from your problem statement and documents — requirements with provenance, approvable designs, certified modules, parallel feature-slice build with deterministic merge, self-healing security + usability remediation, tests, and governance evidence.
 
 # Frontier concurrency: how many non-gate nodes may execute at once. Three
@@ -105,6 +113,8 @@ cost:
     slice-4: { budget_usd: 30.00 }
     slice-5: { budget_usd: 30.00 }
     slice-6: { budget_usd: 30.00 }
+    slice-7: { budget_usd: 30.00 }
+    slice-8: { budget_usd: 30.00 }
     merge-slices: { budget_usd: 20.00 }
     remediate: { budget_usd: 22.00 }
     slice-audit: { budget_usd: 16.00 }
@@ -438,16 +448,20 @@ nodes:
     outputs:
       - { name: app, file: app, dir: true }
 
-  - id: slice-2
+  # Slices 2..8 are the parallel build wave: ONE template, expanded per slice by
+  # the loader's `repeat` (a slice activates only if slice_plan declares it, via
+  # `when`). slice-1 (the foundation, serial) stays explicit above.
+  - id: "slice-${n}"
     phase: Build
-    description: "Builds feature slice 2 on the foundation, in parallel with its sibling slices, then proves it: its acceptance checks, the foundation's, and the test suite."
+    description: "Builds feature slice ${n} on the foundation, in parallel with its sibling slices, then proves it: its acceptance checks, the foundation's, and the test suite."
     kind: agent
     model: claude-sonnet-5
     escalateModel: claude-opus-5
     maxTurns: 120
     retries: 2
-    params: { slice: 2, parallel: true }
-    when: { artifact: slice_plan, path: "slices.1", exists: true }
+    repeat: { var: n, from: 2, to: 8 }
+    params: { slice: "${n}", parallel: true }
+    when: { artifact: slice_plan, path: "slices.${n-1}", exists: true }
     deps: [slice-1, review-slice-1, slice-plan]
     allowedTools: [Read, Write, Edit, Bash, Glob, Grep, Skill,
                    mcp__app-sandbox__start_app, mcp__app-sandbox__request,
@@ -459,99 +473,7 @@ nodes:
     mock: node "$HARNESS_PROJECT_DIR/mocks/build-slice.cjs"
     verify: node "$HARNESS_PROJECT_DIR/scripts/verify-slice.cjs"
     outputs:
-      - { name: app_2, file: app, dir: true }
-
-  - id: slice-3
-    phase: Build
-    description: "Builds feature slice 3 on the foundation, in parallel with its sibling slices, then proves it: its acceptance checks, the foundation's, and the test suite."
-    kind: agent
-    model: claude-sonnet-5
-    escalateModel: claude-opus-5
-    maxTurns: 120
-    retries: 2
-    params: { slice: 3, parallel: true }
-    when: { artifact: slice_plan, path: "slices.2", exists: true }
-    deps: [slice-1, review-slice-1, slice-plan]
-    allowedTools: [Read, Write, Edit, Bash, Glob, Grep, Skill,
-                   mcp__app-sandbox__start_app, mcp__app-sandbox__request,
-                   mcp__app-sandbox__logs, mcp__app-sandbox__run_tests,
-                   mcp__app-sandbox__stop_app]
-    mcp: [app-sandbox]
-    skills: [app-conventions, workflow-authoring, fsi-hardening]
-    prompt: prompts/build-slice.md
-    mock: node "$HARNESS_PROJECT_DIR/mocks/build-slice.cjs"
-    verify: node "$HARNESS_PROJECT_DIR/scripts/verify-slice.cjs"
-    outputs:
-      - { name: app_3, file: app, dir: true }
-
-  - id: slice-4
-    phase: Build
-    description: "Builds feature slice 4 on the foundation, in parallel with its sibling slices, then proves it: its acceptance checks, the foundation's, and the test suite."
-    kind: agent
-    model: claude-sonnet-5
-    escalateModel: claude-opus-5
-    maxTurns: 120
-    retries: 2
-    params: { slice: 4, parallel: true }
-    when: { artifact: slice_plan, path: "slices.3", exists: true }
-    deps: [slice-1, review-slice-1, slice-plan]
-    allowedTools: [Read, Write, Edit, Bash, Glob, Grep, Skill,
-                   mcp__app-sandbox__start_app, mcp__app-sandbox__request,
-                   mcp__app-sandbox__logs, mcp__app-sandbox__run_tests,
-                   mcp__app-sandbox__stop_app]
-    mcp: [app-sandbox]
-    skills: [app-conventions, workflow-authoring, fsi-hardening]
-    prompt: prompts/build-slice.md
-    mock: node "$HARNESS_PROJECT_DIR/mocks/build-slice.cjs"
-    verify: node "$HARNESS_PROJECT_DIR/scripts/verify-slice.cjs"
-    outputs:
-      - { name: app_4, file: app, dir: true }
-
-  - id: slice-5
-    phase: Build
-    description: "Builds feature slice 5 on the foundation, in parallel with its sibling slices, then proves it: its acceptance checks, the foundation's, and the test suite."
-    kind: agent
-    model: claude-sonnet-5
-    escalateModel: claude-opus-5
-    maxTurns: 120
-    retries: 2
-    params: { slice: 5, parallel: true }
-    when: { artifact: slice_plan, path: "slices.4", exists: true }
-    deps: [slice-1, review-slice-1, slice-plan]
-    allowedTools: [Read, Write, Edit, Bash, Glob, Grep, Skill,
-                   mcp__app-sandbox__start_app, mcp__app-sandbox__request,
-                   mcp__app-sandbox__logs, mcp__app-sandbox__run_tests,
-                   mcp__app-sandbox__stop_app]
-    mcp: [app-sandbox]
-    skills: [app-conventions, workflow-authoring, fsi-hardening]
-    prompt: prompts/build-slice.md
-    mock: node "$HARNESS_PROJECT_DIR/mocks/build-slice.cjs"
-    verify: node "$HARNESS_PROJECT_DIR/scripts/verify-slice.cjs"
-    outputs:
-      - { name: app_5, file: app, dir: true }
-
-  - id: slice-6
-    phase: Build
-    description: "Builds feature slice 6 on the foundation, in parallel with its sibling slices, then proves it: its acceptance checks, the foundation's, and the test suite."
-    kind: agent
-    model: claude-sonnet-5
-    escalateModel: claude-opus-5
-    maxTurns: 120
-    retries: 2
-    params: { slice: 6, parallel: true }
-    when: { artifact: slice_plan, path: "slices.5", exists: true }
-    deps: [slice-1, review-slice-1, slice-plan]
-    allowedTools: [Read, Write, Edit, Bash, Glob, Grep, Skill,
-                   mcp__app-sandbox__start_app, mcp__app-sandbox__request,
-                   mcp__app-sandbox__logs, mcp__app-sandbox__run_tests,
-                   mcp__app-sandbox__stop_app]
-    mcp: [app-sandbox]
-    skills: [app-conventions, workflow-authoring, fsi-hardening]
-    prompt: prompts/build-slice.md
-    mock: node "$HARNESS_PROJECT_DIR/mocks/build-slice.cjs"
-    verify: node "$HARNESS_PROJECT_DIR/scripts/verify-slice.cjs"
-    outputs:
-      - { name: app_6, file: app, dir: true }
+      - { name: "app_${n}", file: app, dir: true }
 
   # -- Slice checkpoints (every-slice supervision) --------------------------
   # `when.all` keeps phantom checkpoints out: a review only exists when its
@@ -571,86 +493,31 @@ nodes:
     outputs:
       - { name: review_slice_1, file: review.json }
 
-  - id: review-slice-2
+  # Slice checkpoints 2..8 — one template (review-slice-1 is explicit above).
+  - id: "review-slice-${n}"
     phase: Build
-    description: "Checkpoint: slice 2 is delivered and verified — you approve it (or request changes) before the merge."
+    description: "Checkpoint: slice ${n} is delivered and verified — you approve it (or request changes) before the merge."
     kind: gate
     window: 90
+    repeat: { var: n, from: 2, to: 8 }
     when:
       all:
         - { artifact: intake, path: supervision, equals: "every-slice" }
-        - { artifact: slice_plan, path: "slices.1", exists: true }
-    deps: [slice-2]
+        - { artifact: slice_plan, path: "slices.${n-1}", exists: true }
+    deps: ["slice-${n}"]
     questions:
-      - { id: verdict, prompt: "Slice 2 is delivered and verified — continue the build?", type: boolean, default: "yes", why: "Your checkpoint. Review its screenshot and evidence first; use Request changes on the slice if you want it revised before continuing." }
+      - { id: verdict, prompt: "Slice ${n} is delivered and verified — continue the build?", type: boolean, default: "yes", why: "Your checkpoint. Review its screenshot and evidence first; use Request changes on the slice if you want it revised before continuing." }
     outputs:
-      - { name: review_slice_2, file: review.json }
-
-  - id: review-slice-3
-    phase: Build
-    description: "Checkpoint: slice 3 is delivered and verified — you approve it (or request changes) before the merge."
-    kind: gate
-    window: 90
-    when:
-      all:
-        - { artifact: intake, path: supervision, equals: "every-slice" }
-        - { artifact: slice_plan, path: "slices.2", exists: true }
-    deps: [slice-3]
-    questions:
-      - { id: verdict, prompt: "Slice 3 is delivered and verified — continue the build?", type: boolean, default: "yes", why: "Your checkpoint. Review its screenshot and evidence first; use Request changes on the slice if you want it revised before continuing." }
-    outputs:
-      - { name: review_slice_3, file: review.json }
-
-  - id: review-slice-4
-    phase: Build
-    description: "Checkpoint: slice 4 is delivered and verified — you approve it (or request changes) before the merge."
-    kind: gate
-    window: 90
-    when:
-      all:
-        - { artifact: intake, path: supervision, equals: "every-slice" }
-        - { artifact: slice_plan, path: "slices.3", exists: true }
-    deps: [slice-4]
-    questions:
-      - { id: verdict, prompt: "Slice 4 is delivered and verified — continue the build?", type: boolean, default: "yes", why: "Your checkpoint. Review its screenshot and evidence first; use Request changes on the slice if you want it revised before continuing." }
-    outputs:
-      - { name: review_slice_4, file: review.json }
-
-  - id: review-slice-5
-    phase: Build
-    description: "Checkpoint: slice 5 is delivered and verified — you approve it (or request changes) before the merge."
-    kind: gate
-    window: 90
-    when:
-      all:
-        - { artifact: intake, path: supervision, equals: "every-slice" }
-        - { artifact: slice_plan, path: "slices.4", exists: true }
-    deps: [slice-5]
-    questions:
-      - { id: verdict, prompt: "Slice 5 is delivered and verified — continue the build?", type: boolean, default: "yes", why: "Your checkpoint. Review its screenshot and evidence first; use Request changes on the slice if you want it revised before continuing." }
-    outputs:
-      - { name: review_slice_5, file: review.json }
-
-  - id: review-slice-6
-    phase: Build
-    description: "Checkpoint: slice 6 is delivered and verified — you approve it (or request changes) before the merge."
-    kind: gate
-    window: 90
-    when:
-      all:
-        - { artifact: intake, path: supervision, equals: "every-slice" }
-        - { artifact: slice_plan, path: "slices.5", exists: true }
-    deps: [slice-6]
-    questions:
-      - { id: verdict, prompt: "Slice 6 is delivered and verified — continue the build?", type: boolean, default: "yes", why: "Your checkpoint. Review its screenshot and evidence first; use Request changes on the slice if you want it revised before continuing." }
-    outputs:
-      - { name: review_slice_6, file: review.json }
+      - { name: "review_slice_${n}", file: review.json }
 
   # -- Deterministic merge of the parallel slice wave -----------------------
   - id: merge-slices
     phase: Build
     description: "Unions the parallel slices into one app — a DETERMINISTIC line-level three-way merge against the foundation (additive conflicts auto-resolved) runs first; on the rare genuine conflict a healing agent resolves ONLY the conflicted hunks (preserving both slices) so the build never stalls, and records the lesson. Then re-proves EVERY slice's acceptance cumulatively."
     kind: agent
+    # The parallel fan-in strategy, declared and load-validated (not implicit):
+    # a deterministic three-way union with additive-conflict auto-resolution.
+    reducer: union-slices
     # Conflict resolution is real reasoning — a weaker model rabbit-holes into
     # byte-level forensics and exhausts its turns. Opus resolves the union
     # directly. (Verified on a live build: haiku/sonnet burned 40 turns
@@ -658,8 +525,8 @@ nodes:
     model: claude-opus-5
     maxTurns: 50
     retries: 2
-    deps: [slice-1, slice-2, slice-3, slice-4, slice-5, slice-6,
-           review-slice-1, review-slice-2, review-slice-3, review-slice-4, review-slice-5, review-slice-6,
+    deps: [slice-1, slice-2, slice-3, slice-4, slice-5, slice-6, slice-7, slice-8,
+           review-slice-1, review-slice-2, review-slice-3, review-slice-4, review-slice-5, review-slice-6, review-slice-7, review-slice-8,
            slice-plan]
     allowedTools: [Read, Write, Edit, Bash, Glob, Grep]
     prompt: prompts/heal-merge.md

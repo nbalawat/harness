@@ -15,9 +15,66 @@ export function loadProjectType(dir: string): ProjectTypeDef {
 /** Load a specific DAG file — used for per-run immutable snapshots. */
 export function loadProjectTypeFile(file: string): ProjectTypeDef {
   const def = parse(fs.readFileSync(file, "utf8")) as ProjectTypeDef;
+  expandTemplates(def);
   validate(def);
   return def;
 }
+
+/**
+ * Expand `repeat` nodes into concrete copies BEFORE validation, so the rest of
+ * the system (scheduler, snapshot, revise) never sees a template — it sees a
+ * plain list of nodes, identical to hand-writing them. A bare `${var}` scalar
+ * becomes a number (so `slice: ${n}` stays an int); an embedded token like
+ * `slice-${n}` string-substitutes; `${n-1}`/`${n+1}` do integer arithmetic.
+ */
+export function expandTemplates(def: ProjectTypeDef): void {
+  if (!Array.isArray(def.nodes)) return;
+  const out: NodeDef[] = [];
+  for (const node of def.nodes) {
+    if (!node.repeat) {
+      out.push(node);
+      continue;
+    }
+    const { var: v, from, to } = node.repeat;
+    if (typeof v !== "string" || typeof from !== "number" || typeof to !== "number") {
+      throw new Error(`dag.yaml: node '${node.id}' has an invalid repeat clause (need {var, from, to})`);
+    }
+    const { repeat: _omit, ...template } = node;
+    void _omit;
+    for (let i = from; i <= to; i++) {
+      out.push(substituteDeep(template, v, i) as NodeDef);
+    }
+  }
+  def.nodes = out;
+}
+
+const TOKEN = /\$\{([A-Za-z][A-Za-z0-9]*)([+-]\d+)?\}/g;
+
+function evalToken(base: number, offset: string | undefined): number {
+  return offset ? base + Number(offset) : base;
+}
+
+function substituteScalar(val: string, name: string, i: number): string | number {
+  // A scalar that is EXACTLY one token → a number (preserves int-typed params).
+  const bare = val.match(/^\$\{([A-Za-z][A-Za-z0-9]*)([+-]\d+)?\}$/);
+  if (bare && bare[1] === name) return evalToken(i, bare[2]);
+  // Otherwise substitute every token inline, leaving unknown vars untouched.
+  return val.replace(TOKEN, (m, v: string, off: string | undefined) => (v === name ? String(evalToken(i, off)) : m));
+}
+
+function substituteDeep(obj: unknown, name: string, i: number): unknown {
+  if (typeof obj === "string") return substituteScalar(obj, name, i);
+  if (Array.isArray(obj)) return obj.map((x) => substituteDeep(x, name, i));
+  if (obj && typeof obj === "object") {
+    const o: Record<string, unknown> = {};
+    for (const [k, val] of Object.entries(obj)) o[k] = substituteDeep(val, name, i);
+    return o;
+  }
+  return obj;
+}
+
+/** Certified fan-in reducers a merge node may declare. */
+const KNOWN_REDUCERS = new Set(["union-slices"]);
 
 function validate(def: ProjectTypeDef): void {
   if (!def.name || !def.version) throw new Error("dag.yaml: name and version are required");
@@ -36,6 +93,11 @@ function validate(def: ProjectTypeDef): void {
     }
     requireKindFields(node);
     validateMcpAttachment(def, node);
+    // A declared fan-in reducer must be a known, certified strategy — an unknown
+    // one is a packaging bug, caught at load rather than at merge time.
+    if (node.reducer && !KNOWN_REDUCERS.has(node.reducer)) {
+      throw new Error(`dag.yaml: node '${node.id}' declares unknown reducer '${node.reducer}' (known: ${[...KNOWN_REDUCERS].join(", ")})`);
+    }
   }
   // Dead MCP config is a packaging bug: every declared instance must be attached.
   for (const name of Object.keys(def.mcp ?? {})) {

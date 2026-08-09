@@ -121,9 +121,17 @@ design:
 - **The control plane is a graph.** Each project type is a deterministic DAG
   with typed nodes (gate / agent / deterministic / verifier) and explicit
   dependencies. A frontier scheduler runs the ready set in parallel (two design
-  options, up to six feature slices) with **no model anywhere in the control
-  plane** — routing, memoization, and merge are pure code. Runs are
-  event-sourced, so resume, replay, and cascade-on-revision come for free.
+  options, the feature slices) with **no model anywhere in the control plane** —
+  routing, memoization, and merge are pure code. Runs are event-sourced, so
+  resume, replay, and cascade-on-revision come for free. The parallel feature
+  slices are declared once with a `repeat` template the loader expands, the pool
+  is **materialized from the plan** (a slot activates only if the plan declares
+  that slice), and the fan-in `merge` declares its **reducer** (`union-slices`)
+  so the merge strategy is explicit and load-validated, not implicit.
+- **Context stays lean.** Agents work file-first — inputs and feedback are read
+  from the working tree on demand, not inlined into the prompt — and a very large
+  artifact is *offloaded* (referenced, not inlined) so it never floods the
+  context window.
 - **The nodes are bounded loops.** Every agent node runs inside a retry loop
   that escalates the model tier (haiku → sonnet → opus) on failure, carries a
   `feedback.md` forward, and continues from the previous working tree — a
