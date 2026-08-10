@@ -1349,9 +1349,9 @@ export function startUiServer(target: string, port: number): Promise<http.Server
           const u = new URL("/v1/runs", process.env.HARNESS_RUN_INDEX_URL);
           if (!ident) u.searchParams.set("all", "1");
           const r = await fetch(u, { headers: ident ? { "x-firm-identity": ident } : {} });
-          const data = (await r.json()) as { runs?: unknown[] };
+          const data = (await r.json()) as { runs?: unknown[]; teams?: string[] };
           res.writeHead(200, { "content-type": "application/json" });
-          res.end(JSON.stringify({ ...base, runs: data.runs ?? [] }));
+          res.end(JSON.stringify({ ...base, runs: data.runs ?? [], teams: data.teams ?? [] }));
         } catch {
           res.writeHead(200, { "content-type": "application/json" });
           res.end(JSON.stringify({ ...base, runs: scanRuns(root, ident ? { identity: ident } : undefined) }));
@@ -1370,7 +1370,7 @@ export function startUiServer(target: string, port: number): Promise<http.Server
         const ident = (req.headers["x-amzn-oidc-identity"] as string) || (req.headers["x-firm-identity"] as string) || process.env.HARNESS_IDENTITY || "";
         const teams = (process.env.HARNESS_TEAMS || "").split(",").map((t) => t.trim()).filter(Boolean);
         const viewer = ident ? { identity: ident, teams } : undefined;
-        res.end(JSON.stringify({ root, runs: scanRuns(root, viewer), selected: workspace, viewer: ident || null, projectTypes: availableProjectTypes() }));
+        res.end(JSON.stringify({ root, runs: scanRuns(root, viewer), selected: workspace, viewer: ident || null, teams, projectTypes: availableProjectTypes() }));
       } else if (url.pathname === "/api/new-run" && req.method === "POST") {
         let body = "";
         req.on("data", (chunk) => (body += chunk));
@@ -1746,6 +1746,14 @@ button.ghost { background:transparent; border:1px solid var(--border); color:var
 .store { max-width:1100px; margin:0 auto; }
 .store .lead { margin:.4rem 0 1.2rem; color:var(--ink2); }
 .storegrid { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:1rem; }
+.filterbar { display:flex; align-items:center; gap:.4rem; flex-wrap:wrap; margin:0 0 1rem; }
+.filterbar .who { font-size:.78rem; color:var(--muted); margin-right:.3rem; }
+.filterbar .fchip { font-size:.8rem; border:1px solid var(--border); background:var(--surface); color:inherit; border-radius:999px; padding:.3rem .8rem; cursor:pointer; }
+.filterbar .fchip:hover { border-color:var(--accent); }
+.filterbar .fchip.on { background:var(--accent); color:var(--accent-ink); border-color:var(--accent); }
+.runcard .scopechip { font-size:.68rem; border-radius:999px; padding:.05rem .5rem; border:1px solid var(--border); color:var(--muted); }
+.runcard .scopechip.mine { border-color:var(--accent); color:var(--accent); }
+.runcard .scopechip.team { border-color:var(--good); color:var(--good); }
 .runcard { background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:1.1rem 1.2rem; cursor:pointer; box-shadow:var(--shadow); font:inherit; color:inherit; text-align:left; }
 .runcard:hover { border-color:var(--accent); }
 .runcard b { font-size:1.02rem; }
@@ -1989,6 +1997,7 @@ button.ghost { background:transparent; border:1px solid var(--border); color:var
   </div>
   <div id="needsYouStrip"></div>
   <div class="galhead" id="galHead" style="display:none"><b>The gallery</b><span class="hint"> — every app built here, with its latest screenshot</span></div>
+  <div id="filterBar" class="filterbar" style="display:none"></div>
   <div class="storegrid" id="storeGrid"></div>
 </section>
 <div id="runview" style="display:none">
@@ -2446,16 +2455,53 @@ function renderStorefront(data) {
   ).join(''));
 
   document.getElementById('galHead').style.display = data.runs.length ? '' : 'none';
-  setHTML('storeGrid', data.runs.map(r => {
+  // Keep the full list + who I am; the filter bar narrows it client-side.
+  window.__allRuns = data.runs;
+  window.__viewer = data.viewer || null;
+  window.__teams = data.teams || [];
+  renderFilterBar();
+  renderGrid();
+}
+
+function renderFilterBar() {
+  const bar = document.getElementById('filterBar');
+  const teams = window.__teams || [];
+  const scoped = window.__viewer || teams.length; // only show when identity is known
+  if (!scoped) { bar.style.display = 'none'; return; }
+  bar.style.display = 'flex';
+  const f = window.__filter || { kind: 'all' };
+  const chip = (label, active, onclick) =>
+    '<button class="fchip' + (active ? ' on' : '') + '" onclick="' + onclick + '">' + esc(label) + '</button>';
+  let html = '';
+  if (window.__viewer) html += '<span class="who">You: ' + esc(window.__viewer) + (teams.length ? ' · on ' + teams.map(esc).join(', ') : ' · no teams') + '</span>';
+  html += chip('All', f.kind === 'all', "setFilter({kind:'all'})");
+  html += chip('Mine', f.kind === 'mine', "setFilter({kind:'mine'})");
+  html += chip('Team projects', f.kind === 'team-all', "setFilter({kind:'team-all'})");
+  for (const t of teams) html += chip('Team: ' + t, f.kind === 'team' && f.team === t, "setFilter({kind:'team',team:'" + t.replace(/'/g, "") + "'})");
+  bar.innerHTML = html;
+}
+
+function setFilter(f) { window.__filter = f; renderFilterBar(); renderGrid(); }
+
+function renderGrid() {
+  const f = window.__filter || { kind: 'all' };
+  let runs = window.__allRuns || [];
+  if (f.kind === 'mine') runs = runs.filter(r => r.scope === 'individual' && (r.mine !== false));
+  else if (f.kind === 'team-all') runs = runs.filter(r => r.scope === 'team');
+  else if (f.kind === 'team') runs = runs.filter(r => r.team === f.team);
+  setHTML('storeGrid', runs.map(r => {
     const pct = r.progress && r.progress.total ? Math.round(100 * r.progress.done / r.progress.total) : 0;
     const shot = r.thumb
       ? '<div class="shotwrap"><img src="' + esc(r.thumb) + '" loading="lazy" alt=""></div>'
       : '<div class="shotwrap"><span class="noshot">' + (r.status === 'running' ? 'building — screenshot coming' : 'no screenshot yet') + '</span></div>';
+    const scopeChip = r.scope === 'team'
+      ? '<span class="scopechip team">Team: ' + esc(r.team) + '</span>'
+      : (r.mine === false ? '' : '<span class="scopechip mine">Mine</span>');
     return '<button class="runcard" onclick="openRun(' + esc(JSON.stringify(r.dir)) + ')">' + shot +
       '<div class="cbody"><b>' + esc(r.appName) + '</b>' +
       (r.prob || r.problem ? '<div class="prob">' + esc(r.problem || '') + '</div>' : '') +
       '<div class="pmeter"><div style="width:' + pct + '%"></div></div>' +
-      '<div class="meta"><span class="chip ' + (r.status === 'completed' ? 'ok' : r.status === 'failed' ? 'bad' : '') + '">' + esc(r.status) + '</span>' +
+      '<div class="meta">' + scopeChip + '<span class="chip ' + (r.status === 'completed' ? 'ok' : r.status === 'failed' ? 'bad' : '') + '">' + esc(r.status) + '</span>' +
       '<span class="chip ' + (r.runMode === 'live' ? 'ok' : '') + '">' + (r.runMode === 'live' ? 'live agents' : 'replay') + '</span>' +
       '<span>$' + Number(r.costUsd).toFixed(2) + '</span><span>' + esc(String(r.updatedAt).slice(0, 10)) + '</span></div></div></button>';
   }).join(''));
