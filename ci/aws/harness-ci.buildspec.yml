@@ -26,7 +26,3 @@ phases:
   post_build:
     commands:
       - echo "harness CI gate passed — tests green + every type/module/MCP re-certified"
-artifacts:
-  files:
-    - dist/**/*
-  name: harness-bundle

@@ -1335,6 +1335,28 @@ export function startUiServer(target: string, port: number): Promise<http.Server
         return;
       }
     }
+    // Hosted, multi-tenant gallery: read runs from the shared run-index (scoped
+    // to the caller by identity/team) instead of scanning the local disk. This is
+    // what makes the UI stateless — any instance serves any user. Falls back to the
+    // local scan on error. Set HARNESS_RUN_INDEX_URL to enable.
+    if (url.pathname === "/api/runs" && process.env.HARNESS_RUN_INDEX_URL) {
+      const ident = (req.headers["x-amzn-oidc-identity"] as string) || (req.headers["x-firm-identity"] as string) || process.env.HARNESS_IDENTITY || "";
+      void (async () => {
+        const base = { root, selected: workspace, viewer: ident || null, projectTypes: availableProjectTypes() };
+        try {
+          const u = new URL("/v1/runs", process.env.HARNESS_RUN_INDEX_URL);
+          if (!ident) u.searchParams.set("all", "1");
+          const r = await fetch(u, { headers: ident ? { "x-firm-identity": ident } : {} });
+          const data = (await r.json()) as { runs?: unknown[] };
+          res.writeHead(200, { "content-type": "application/json" });
+          res.end(JSON.stringify({ ...base, runs: data.runs ?? [] }));
+        } catch {
+          res.writeHead(200, { "content-type": "application/json" });
+          res.end(JSON.stringify({ ...base, runs: scanRuns(root, ident ? { identity: ident } : undefined) }));
+        }
+      })();
+      return;
+    }
     try {
       if (url.pathname === "/") {
         res.writeHead(200, { "content-type": "text/html" });

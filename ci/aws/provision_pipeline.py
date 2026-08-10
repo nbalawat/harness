@@ -118,7 +118,7 @@ def main():
             {"name": "CI_Test_and_Certify", "actions": [{
                 "name": "harness-ci", "actionTypeId": {"category": "Build", "owner": "AWS", "provider": "CodeBuild", "version": "1"},
                 "configuration": {"ProjectName": "harness-ci-cp"},
-                "inputArtifacts": [{"name": "SourceArtifact"}], "outputArtifacts": [{"name": "BuildArtifact"}]}]},
+                "inputArtifacts": [{"name": "SourceArtifact"}], "outputArtifacts": []}]},
             {"name": "Approval", "actions": [{
                 "name": "ReviewBeforeDeploy", "actionTypeId": {"category": "Approval", "owner": "AWS", "provider": "Manual", "version": "1"},
                 "configuration": {}}]},
@@ -132,8 +132,6 @@ def main():
     try:
         cp.create_pipeline(pipeline=pipeline); print("  pipeline harness-pipeline: created")
     except cp.exceptions.PipelineNameInUseException:
-        existing = cp.get_pipeline(name="harness-pipeline")["pipeline"]
-        pipeline["metadata"] = {}
         cp.update_pipeline(pipeline=pipeline); print("  pipeline harness-pipeline: updated")
 
     print("\nWired: Source(S3) -> CI(test+certify) -> Manual Approval -> Deploy(App Runner)")

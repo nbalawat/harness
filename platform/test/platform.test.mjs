@@ -373,3 +373,32 @@ test("registry: private/team/firm sharing is enforced, not a label", async () =>
   assert.equal((await fetch(`${reg}/v1/apps/secret-desk`, { headers: { "x-firm-identity": "outsider@firm.local" } })).status, 403, "private detail is 403 for non-owner");
   assert.equal((await fetch(`${reg}/v1/apps/secret-desk`, { headers: { "x-firm-identity": "boss@firm.local" } })).status, 200, "owner reads their private app");
 });
+
+// ---------------------------------------------------------------------------
+// run-index: the shared, per-user run store that makes the hosted UI stateless
+// ---------------------------------------------------------------------------
+
+test("run-index: runs are scoped to the caller by owner + team", async () => {
+  const ri = await startService("platform/runindex/server.mjs", {
+    PORT: "18099", STORE: tmpDir("ri"), TEAMS_JSON: JSON.stringify({ "alice@firm.local": ["fsi"], "bob@firm.local": ["fsi"], "carol@firm.local": ["risk"] }),
+  });
+  const put = (runId, owner, team) =>
+    fetch(`${ri}/v1/runs`, { method: "POST", headers: { "content-type": "application/json", "x-firm-identity": owner }, body: JSON.stringify({ runId, owner, team, name: runId, status: "completed" }) });
+  await put("a1", "alice@firm.local", "fsi");
+  await put("a2", "alice@firm.local", "fsi");
+  await put("b1", "bob@firm.local", "fsi");
+  await put("c1", "carol@firm.local", "risk");
+
+  const listAs = async (id) => (await (await fetch(`${ri}/v1/runs`, { headers: { "x-firm-identity": id } })).json()).runs.map((r) => r.runId).sort();
+  assert.deepEqual(await listAs("carol@firm.local"), ["c1"], "solo-team user sees only her own run");
+  assert.deepEqual(await listAs("alice@firm.local"), ["a1", "a2", "b1"], "fsi member sees the whole team's runs (a1,a2,b1), not carol's");
+  assert.deepEqual(await listAs("bob@firm.local"), ["a1", "a2", "b1"], "the other fsi member sees the same team shelf");
+  const all = (await (await fetch(`${ri}/v1/runs?all=1`)).json()).runs;
+  assert.equal(all.length, 4, "unscoped (admin/local) view sees everything");
+
+  // A caller cannot write someone else's run.
+  const forge = await fetch(`${ri}/v1/runs`, { method: "POST", headers: { "content-type": "application/json", "x-firm-identity": "bob@firm.local" }, body: JSON.stringify({ runId: "a1", owner: "alice@firm.local", status: "hijacked" }) });
+  assert.equal(forge.status, 403, "cannot upsert a run you do not own");
+  // Private-team run is 403 on direct fetch by an outsider.
+  assert.equal((await fetch(`${ri}/v1/runs/c1`, { headers: { "x-firm-identity": "bob@firm.local" } })).status, 403, "a run outside your team is not readable");
+});
