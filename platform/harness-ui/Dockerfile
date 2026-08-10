@@ -12,7 +12,9 @@ COPY project-types ./project-types
 COPY modules ./modules
 COPY mcp ./mcp
 COPY stage-library ./stage-library
-RUN npm run build && npm cache clean --force
+# Force a clean compile: a stale dist/ or .tsbuildinfo carried in via the build
+# context makes `tsc -b` (incremental) skip changed sources and ship old code.
+RUN rm -rf packages/*/dist packages/*/*.tsbuildinfo && npm run build && npm cache clean --force
 # Hosted defaults: reachable + token-gated. HARNESS_UI_TOKEN is injected at deploy
 # time (never baked into the image). At 100k scale the run root is backed by shared
 # storage (S3/EFS) and the service scales out horizontally behind the LB; see

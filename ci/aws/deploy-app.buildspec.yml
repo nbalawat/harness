@@ -1,0 +1,46 @@
+version: 0.2
+# App delivery pipeline on AWS CodeBuild: build a produced app with the harness
+# (or take a prebuilt artifact) and deploy it to App Runner via the certified
+# aws-apprunner-deploy module. Parameterized by env — one project, many apps.
+#
+# Env (set on the CodeBuild project or per-build override):
+#   APP_NAME    dns-safe service name (e.g. naveen-kycapp-v18)      [required]
+#   PROJECT_TYPE  project-type dir to build (default project-types/agentic-app)
+#   ANSWERS     answers fixture to build from (default the agentic-app fixture)
+#   TARGET      aws-apprunner (default) | aws-ecs
+#   DOMAIN      optional vanity FQDN (e.g. naveen-kycapp-v18.otaras.com)
+#   APP_DIR     if set, deploy this prebuilt app artifact and SKIP the build
+phases:
+  install:
+    runtime-versions:
+      nodejs: 20
+      python: 3.12
+    commands:
+      - curl -LsSf https://astral.sh/uv/install.sh | sh
+      - export PATH="$HOME/.local/bin:$PATH"
+      - pip install --quiet boto3
+      - npx --yes playwright@1.47.0 install chrome --with-deps || echo "chrome best-effort"
+  build:
+    commands:
+      - export PATH="$HOME/.local/bin:$PATH"
+      - : "${APP_NAME:?set APP_NAME}"
+      - PROJECT_TYPE="${PROJECT_TYPE:-project-types/agentic-app}"
+      - ANSWERS="${ANSWERS:-project-types/agentic-app/fixtures/answers.json}"
+      - TARGET="${TARGET:-aws-apprunner}"
+      - npm ci && npm run build
+      - |
+        if [ -z "${APP_DIR:-}" ]; then
+          echo "### building $APP_NAME with the harness ###"
+          node packages/cli/dist/index.js run "$PROJECT_TYPE" --mock-agents --accept-defaults --answers "$ANSWERS" --workspace /tmp/app --owner "ci@firm.local"
+          APP_DIR=$(ls -d /tmp/app/artifacts/*/app | tail -1)
+        fi
+      - echo "### deploying $APP_DIR to $TARGET ###"
+      - |
+        if [ "$TARGET" = "aws-ecs" ]; then
+          APP_DIR="$APP_DIR" APP_NAME="$APP_NAME" DOMAIN="${DOMAIN:-}" bash modules/aws-ecs-deploy/deploy.sh
+        else
+          APP_DIR="$APP_DIR" APP_NAME="$APP_NAME" DOMAIN="${DOMAIN:-}" bash modules/aws-apprunner-deploy/deploy.sh
+        fi
+  post_build:
+    commands:
+      - echo "deployed $APP_NAME — see LIVE_URL above"

@@ -1,0 +1,32 @@
+version: 0.2
+# Harness repo CI on AWS CodeBuild — the same gate as .github/workflows/ci.yml:
+# full test suite + byte-deterministic re-certification of every project type,
+# module, and MCP server. Drift = red. Provision with ci/aws/provision.py.
+phases:
+  install:
+    runtime-versions:
+      nodejs: 20
+      python: 3.12
+    commands:
+      - curl -LsSf https://astral.sh/uv/install.sh | sh
+      - export PATH="$HOME/.local/bin:$PATH"
+      - uv --version
+      # Chrome channel for the UI-interactivity verifier nodes.
+      - npx --yes playwright@1.47.0 install chrome --with-deps || echo "chrome best-effort"
+  build:
+    commands:
+      - export PATH="$HOME/.local/bin:$PATH"
+      - npm ci
+      - npm test
+      - node packages/cli/dist/index.js certify-mcp
+      - node packages/cli/dist/index.js certify-modules
+      - node packages/cli/dist/index.js certify project-types/demo
+      - node packages/cli/dist/index.js certify project-types/agentic-app
+      - npm run bundle
+  post_build:
+    commands:
+      - echo "harness CI gate passed — tests green + every type/module/MCP re-certified"
+artifacts:
+  files:
+    - dist/**/*
+  name: harness-bundle
