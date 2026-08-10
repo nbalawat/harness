@@ -1,0 +1,9 @@
+name: aws-apprunner-deploy
+version: 0.1.0
+description: "Build/deploy/rollback a produced app to AWS App Runner as reviewed scripts — the fast per-app vanity-URL path. Custom domain optional."
+kind: tool
+provides:
+  - "deploy.sh (ECR build+push -> App Runner create/update, prints live URL) and rollback.sh; config via env"
+requires: []
+certify:
+  command: bash -n "$HARNESS_MODULE_DIR/deploy.sh" && bash -n "$HARNESS_MODULE_DIR/rollback.sh" && node "$HARNESS_MODULE_DIR/test/test.mjs"

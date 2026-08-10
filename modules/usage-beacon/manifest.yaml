@@ -1,0 +1,11 @@
+name: usage-beacon
+version: 0.1.0
+description: "Records who uses a deployed app (hashed identity) and reports unique users / DAU-MAU / request volume to the collector — the app-popularity signal. Auto-mounts; silent no-op when unconfigured."
+provides:
+  - "http: request middleware + GET /usage/self; POSTs daily app-usage rollups (hashed users) to HARNESS_COLLECTOR_URL for the popularity metric"
+requires:
+  - nothing beyond the base app (an auth module upstream gives real identities)
+compose:
+  overlay: compose/
+certify:
+  tests: test/

@@ -56,6 +56,8 @@ export interface WhenClause {
   path?: string;
   /** Satisfied when the value strictly equals this. */
   equals?: unknown;
+  /** Satisfied when the value is one of these (e.g. any cloud deploy target). */
+  in?: unknown[];
   /** Satisfied when the value's existence matches (for data-driven fan-out). */
   exists?: boolean;
   /** Conjunction: satisfied only when every sub-clause is satisfied. */

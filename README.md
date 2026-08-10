@@ -173,6 +173,35 @@ cross-platform (`taskkill /T` on Windows, process-group signal on POSIX), and
 Python/`find`/npm shims are resolved per platform. The only prerequisites are
 Node 20+, Python 3, and [uv](https://docs.astral.sh/uv/).
 
+## Host it for the firm (optional)
+
+Local-first stays the default — `npm install`, build and run apps on your laptop
+with no cloud, no account. When you want to host the harness for a whole
+organization, the same certified engine becomes multi-tenant **without changing
+how a build works**:
+
+- **Bring your own Claude key/subscription.** `harness login` registers your key
+  once with the llm-gateway; it forwards *your* credential (billed to you) and
+  meters spend. Keys live in Secrets Manager, never on build machines, never
+  logged. A keyless caller is refused — never charged to someone else.
+- **Build solo or as a team.** Every run is stamped with owner + team; teammates
+  can watch and drive a team-owned build.
+- **Ship to AWS with one command.** `harness deploy <ws> --target aws-apprunner`
+  (or `aws-ecs`) turns a finished local build into a live app — same image, no
+  rebuild — behind a vanity URL like `naveen-kycapp-v17.apps.deloitte.com`. The
+  domain is optional (apps also work at their default AWS URL). Promote it, or
+  abandon it.
+- **Share with enforcement.** Publish `private` / `team` / `firm` — the registry
+  enforces the scope, it isn't a label.
+- **Platform intelligence, zero-config.** Every build feeds who-built-what, cost,
+  tokens, rework, and experience into fleet BI; every deployed app reports who
+  uses it (hashed) so app popularity (unique users, DAU/MAU) is a headline metric.
+
+Proven end-to-end (`scripts/e2e-multiuser-aws.mjs`): BYO keys, 3 users building in
+parallel, seamless local→AWS promotion, enforced sharing, popularity, and BI.
+See [AWS](docs/DEPLOYMENT-AWS.md) / [GCP](docs/DEPLOYMENT-GCP.md) deployment
+architectures.
+
 ## Documentation
 
 Full guides in [docs/](docs/README.md):
@@ -184,6 +213,8 @@ Full guides in [docs/](docs/README.md):
 [reference (CLI/env/glossary/FAQ)](docs/guides/reference.md) ·
 [architecture](docs/DESIGN.md) ·
 [module catalog](docs/MODULES.md) ·
+[AWS deployment](docs/DEPLOYMENT-AWS.md) ·
+[GCP deployment](docs/DEPLOYMENT-GCP.md) ·
 [changelog](docs/CHANGELOG.md)
 
 ## Developing the platform (this repo)

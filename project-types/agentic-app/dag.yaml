@@ -650,7 +650,7 @@ nodes:
     description: "Produces the Cloud Run deploy plan (only when you chose cloud deployment)."
     kind: deterministic
     deps: [uat, architecture]
-    when: { artifact: architecture, path: deploy_target, equals: cloud-run }
+    when: { artifact: architecture, path: deploy_target, in: [cloud-run, aws-apprunner, aws-ecs] }
     command: node "$HARNESS_PROJECT_DIR/scripts/deploy-plan.cjs"
     outputs:
       - { name: deploy_plan, file: deploy, dir: true }

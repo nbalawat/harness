@@ -7,11 +7,21 @@ import * as path from "node:path";
 import { foldState, type RunContext } from "@harness/runner";
 import type { RunResult } from "@harness/spec";
 import { storeRoot } from "./registry.js";
+import { computeMetrics } from "./metrics.js";
+
+function readJson(file: string): Record<string, unknown> | null {
+  try {
+    return JSON.parse(fs.readFileSync(file, "utf8"));
+  } catch {
+    return null;
+  }
+}
 
 export function recordRun(ctx: RunContext, result: RunResult, command: string): void {
   if (process.env.HARNESS_TELEMETRY === "0") return;
   try {
-    const state = foldState(ctx.journal.read());
+    const events = ctx.journal.read();
+    const state = foldState(events);
     const line = {
       ts: new Date().toISOString(),
       command,
@@ -24,6 +34,29 @@ export function recordRun(ctx: RunContext, result: RunResult, command: string): 
     };
     fs.mkdirSync(storeRoot(), { recursive: true });
     fs.appendFileSync(path.join(storeRoot(), "telemetry.jsonl"), JSON.stringify(line) + "\n");
+
+    // Business-intelligence dimensions — who built what, cost, quality, and the
+    // build EXPERIENCE (questions asked, revisions), mined centrally. Derived
+    // from the journal via computeMetrics; never blocks a run.
+    const runCfg = readJson(path.join(ctx.workspace, "run.json")) ?? {};
+    const intake = readJson(path.join(ctx.workspace, "artifacts", "intake", "intake.json"));
+    let bi: Record<string, unknown> = {};
+    try {
+      const m = computeMetrics(ctx.workspace);
+      bi = {
+        reworkPct: m.reworkPct,
+        totalTokens: m.totalTokens,
+        wallMs: m.wallMs,
+        auditRounds: m.auditConvergence?.rounds ?? null,
+        loopDetections: m.loopDetections.length,
+        escalations: m.escalations.length,
+        nodeCount: m.nodeCount,
+      };
+    } catch {
+      /* metrics best-effort */
+    }
+    const identity = (runCfg.owner as string) ?? process.env.HARNESS_IDENTITY ?? `${os.userInfo().username}@firm.local`;
+
     // Fleet event queue: journal-derived rows for the central collector
     // (DF-3). Offline-first — the queue drains on the next sync.
     const fleetEvent = {
@@ -35,7 +68,15 @@ export function recordRun(ctx: RunContext, result: RunResult, command: string): 
       costUsd: line.costUsd,
       mock: line.mock,
       nodeId: result.failedNodeId ?? result.parkedNodeId ?? undefined,
-      identity: process.env.HARNESS_IDENTITY ?? `${os.userInfo().username}@firm.local`,
+      identity,
+      // BI dimensions:
+      owner: identity,
+      team: (runCfg.team as string) ?? null,
+      appName: (intake?.project_name as string) ?? path.basename(ctx.workspace),
+      questionsAnswered: events.filter((e) => e.type === "gate.answered").length,
+      revisions: events.filter((e) => e.type === "node.reopened").length,
+      committed: state.committed.size,
+      ...bi,
     };
     fs.appendFileSync(path.join(storeRoot(), "telemetry-queue.jsonl"), JSON.stringify(fleetEvent) + "\n");
   } catch {

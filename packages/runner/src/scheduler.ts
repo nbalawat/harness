@@ -98,6 +98,7 @@ function whenSatisfied(ctx: RunContext, when: WhenClause, state: RunState): bool
       value = (value as Record<string, unknown>)[seg];
     }
     if (when.exists !== undefined) return (value !== undefined) === when.exists;
+    if (when.in !== undefined) return when.in.includes(value);
     return value === when.equals;
   }
   return false;

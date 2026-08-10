@@ -1,0 +1,9 @@
+name: aws-ecs-deploy
+version: 0.1.0
+description: "Cost-optimal per-app deploy: ECS Fargate on a SHARED ALB (wildcard host-routing, scale-to-zero). Reviewed scripts; custom domain optional."
+kind: tool
+provides:
+  - "deploy.sh (ECR build+push -> Fargate service on a shared ALB) and rollback.sh; config via env"
+requires: []
+certify:
+  command: bash -n "$HARNESS_MODULE_DIR/deploy.sh" && bash -n "$HARNESS_MODULE_DIR/rollback.sh" && node "$HARNESS_MODULE_DIR/test/test.mjs"

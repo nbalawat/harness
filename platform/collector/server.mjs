@@ -27,6 +27,7 @@ const MAX_BODY = 2_000_000;
 
 fs.mkdirSync(STORE, { recursive: true });
 const eventsFile = path.join(STORE, "events.jsonl");
+const usageFile = path.join(STORE, "app-usage.jsonl");
 const PUBSUB_TOPIC = process.env.PUBSUB_TOPIC ?? null; // projects/<p>/topics/<t>
 
 /** Access token from the metadata server (the service's own identity on GCP). */
@@ -144,6 +145,90 @@ function fleet() {
   return { totalEvents: rows.length, distinctUsers: users.size, types };
 }
 
+/**
+ * Business intelligence rollup — who built what, at what cost/quality/experience.
+ * groupBy: owner | team | projectType. Mines the completed-run rows for tokens,
+ * cost, rework %, audit rounds, and the build experience (questions/revisions),
+ * and returns leaderboards. This is the "learn across the platform" feed.
+ */
+function bi(groupBy) {
+  const key = ["owner", "team", "projectType"].includes(groupBy) ? groupBy : "owner";
+  const rows = readAll().filter((e) => e.event === "run.completed");
+  const g = new Map();
+  for (const e of rows) {
+    const k = e[key] ?? "(none)";
+    const a =
+      g.get(k) ??
+      { key: k, builds: 0, apps: new Set(), costUsd: 0, tokens: 0, reworkPctSum: 0, auditRoundsSum: 0, auditRoundsN: 0, loopDetections: 0, questionsSum: 0, revisionsSum: 0, liveBuilds: 0 };
+    a.builds += 1;
+    if (e.appName) a.apps.add(e.appName);
+    a.costUsd += e.costUsd ?? 0;
+    a.tokens += e.totalTokens ?? 0;
+    if (typeof e.reworkPct === "number") a.reworkPctSum += e.reworkPct;
+    if (typeof e.auditRounds === "number") {
+      a.auditRoundsSum += e.auditRounds;
+      a.auditRoundsN += 1;
+    }
+    a.loopDetections += e.loopDetections ?? 0;
+    a.questionsSum += e.questionsAnswered ?? 0;
+    a.revisionsSum += e.revisions ?? 0;
+    if (e.mock === false) a.liveBuilds += 1;
+    g.set(k, a);
+  }
+  const groups = [...g.values()]
+    .map((a) => ({
+      key: a.key,
+      builds: a.builds,
+      distinctApps: a.apps.size,
+      liveBuilds: a.liveBuilds,
+      costUsd: Number(a.costUsd.toFixed(4)),
+      tokens: a.tokens,
+      avgReworkPct: a.builds ? Math.round(a.reworkPctSum / a.builds) : 0,
+      avgAuditRounds: a.auditRoundsN ? Number((a.auditRoundsSum / a.auditRoundsN).toFixed(1)) : null,
+      loopDetections: a.loopDetections,
+      avgQuestionsPerBuild: a.builds ? Number((a.questionsSum / a.builds).toFixed(1)) : 0,
+      revisions: a.revisionsSum,
+    }))
+    .sort((x, y) => y.builds - x.builds);
+  return {
+    groupBy: key,
+    totals: {
+      builds: rows.length,
+      distinctOwners: new Set(rows.map((r) => r.owner ?? r.identity)).size,
+      costUsd: Number(rows.reduce((s, r) => s + (r.costUsd ?? 0), 0).toFixed(4)),
+      tokens: rows.reduce((s, r) => s + (r.totalTokens ?? 0), 0),
+    },
+    groups,
+  };
+}
+
+function usageRowsAll() {
+  if (!fs.existsSync(usageFile)) return [];
+  return fs.readFileSync(usageFile, "utf8").split("\n").filter(Boolean).map((l) => JSON.parse(l));
+}
+
+/** App-usage rollup — WHO USES each deployed app (the popularity metric). */
+function appsUsage() {
+  const rows = usageRowsAll();
+  const g = new Map();
+  const today = new Date().toISOString().slice(0, 10);
+  const monthAgo = new Date(Date.now() - 30 * 864e5).toISOString().slice(0, 10);
+  for (const r of rows) {
+    const a = g.get(r.appId) ?? { appId: r.appId, requests: 0, users: new Set(), dau: new Set(), mau: new Set(), lastSeen: null };
+    a.requests += r.requests ?? 0;
+    for (const u of r.users ?? []) {
+      a.users.add(u);
+      if ((r.day ?? "") >= monthAgo) a.mau.add(u);
+      if ((r.day ?? "") === today) a.dau.add(u);
+    }
+    a.lastSeen = a.lastSeen && a.lastSeen > (r.day ?? "") ? a.lastSeen : r.day ?? a.lastSeen;
+    g.set(r.appId, a);
+  }
+  return [...g.values()]
+    .map((a) => ({ appId: a.appId, requests: a.requests, uniqueUsers: a.users.size, dau: a.dau.size, mau: a.mau.size, lastSeen: a.lastSeen }))
+    .sort((x, y) => y.uniqueUsers - x.uniqueUsers); // most popular first
+}
+
 function json(res, code, body) {
   res.writeHead(code, { "content-type": "application/json" });
   res.end(JSON.stringify(body));
@@ -186,6 +271,37 @@ const server = http.createServer((req, res) => {
   }
 
   if (url.pathname === "/v1/fleet" && req.method === "GET") return json(res, 200, fleet());
+
+  // Business intelligence: cross-platform rollups (adoption, cost, quality,
+  // experience) grouped by owner / team / projectType.
+  if (url.pathname === "/v1/bi" && req.method === "GET") return json(res, 200, bi(url.searchParams.get("groupBy") ?? "owner"));
+
+  // App-usage ingest (from the usage-beacon in deployed apps) — who uses what.
+  if (url.pathname === "/v1/app-usage" && req.method === "POST") {
+    const identity = identityOf(req);
+    if (REQUIRE_IDENTITY && !identity) return json(res, 401, { error: "identity required" });
+    let body = "";
+    req.on("data", (c) => {
+      body += c;
+      if (body.length > MAX_BODY) req.destroy();
+    });
+    req.on("end", () => {
+      let p;
+      try {
+        p = JSON.parse(body);
+      } catch {
+        return json(res, 400, { error: "invalid JSON" });
+      }
+      if (!p.appId || !p.day) return json(res, 400, { error: "missing appId or day" });
+      const row = { appId: String(p.appId), day: String(p.day), requests: Number(p.requests ?? 0), users: Array.isArray(p.users) ? p.users.slice(0, 5000) : [], receivedAt: new Date().toISOString() };
+      fs.appendFileSync(usageFile, JSON.stringify(row) + "\n");
+      return json(res, 200, { ok: true });
+    });
+    return;
+  }
+
+  // App popularity rollup — unique users, DAU/MAU, request volume, most popular first.
+  if (url.pathname === "/v1/apps/usage" && req.method === "GET") return json(res, 200, { apps: appsUsage() });
 
   if (url.pathname === "/v1/events" && req.method === "GET") {
     const since = url.searchParams.get("since");

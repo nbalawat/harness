@@ -1,5 +1,5 @@
 {
-  "digest": "c439471af3939450",
+  "digest": "7da6fef64df05e0b",
   "files": {
     "agent-design/agent_roster.json": "380a8cefb0b12a16",
     "architecture/architecture.json": "ff174e01d9178a19",
@@ -24,11 +24,11 @@
     "design-review/design_review.json": "897c732e58233a0f",
     "design-select/design_choice.json": "d47dd464c6894c4a",
     "gap-questions/gaps.json": "16d50ad675f1d747",
-    "governance-report/governance.json": "14f5640cce7f42a6",
+    "governance-report/governance.json": "5e7cc3f84ce8b531",
     "ingest/corpus/src-1.md": "7a4d0bb4f77e0a64",
     "ingest/corpus_index.json": "1b8debacf477768e",
     "intake/intake.json": "efb1ffd7f58952a8",
-    "integrate/integration_report.json": "f512b99f57e6b540",
+    "integrate/integration_report.json": "c60c7081dd29f54c",
     "merge-slices/app/.dockerignore": "dfa15361b12ec4d5",
     "merge-slices/app/.env.example": "2ca749bbb882619c",
     "merge-slices/app/acceptance_report.json": "e23b28cdb337fb27",

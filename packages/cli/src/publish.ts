@@ -34,10 +34,12 @@ export interface PublishOptions {
   owner?: string;
   team?: string;
   name?: string;
+  /** Sharing scope: private (owner only) | team | firm (default). */
+  visibility?: "private" | "team" | "firm";
 }
 
 export async function publishWorkspace(workspace: string, opts: PublishOptions): Promise<{ ok: boolean; message: string }> {
-  const runConfig = readJsonIf(path.join(workspace, "run.json")) as { projectTypeDir?: string } | null;
+  const runConfig = readJsonIf(path.join(workspace, "run.json")) as { projectTypeDir?: string; owner?: string; team?: string } | null;
   if (!runConfig) return { ok: false, message: `${workspace} is not a run workspace (no run.json)` };
   const journal = new Journal(workspace);
   const events = journal.read();
@@ -91,8 +93,11 @@ export async function publishWorkspace(workspace: string, opts: PublishOptions):
 
   const payload = {
     name: opts.name ?? (intake?.project_name as string | undefined) ?? path.basename(workspace),
-    owner: opts.owner ?? `${os.userInfo().username}@firm.local`,
-    team: opts.team ?? null,
+    // Default owner/team from the run itself (stamped at build time), so publish
+    // inherits who built it and under which team.
+    owner: opts.owner ?? runConfig.owner ?? `${os.userInfo().username}@firm.local`,
+    team: opts.team ?? runConfig.team ?? null,
+    visibility: opts.visibility ?? "firm",
     projectType: def?.name ?? "unknown",
     version: def?.version ?? "unknown",
     summary,

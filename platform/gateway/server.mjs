@@ -4,16 +4,24 @@
 //
 // Sits between every harness install and the model backend (Vertex AI in
 // prod, any Anthropic-compatible endpoint via UPSTREAM_URL). Enforces, in
-// order: identity -> model allow-list -> per-identity daily budget quota ->
-// forward (streaming passthrough) -> meter usage into the usage log.
+// order: identity -> BYO credential resolve -> model allow-list -> per-identity
+// daily budget quota -> forward (streaming passthrough) -> meter usage.
 //
-//   POST /v1/messages           Anthropic Messages API passthrough
+// BYO credentials (the whole point of the hosted model): each user registers
+// their OWN Claude key/subscription once; the gateway forwards THEIR credential
+// upstream so builds bill to their account. Build pods never see the key — only
+// the gateway URL. Keys are write-only over the API and NEVER logged.
+//
+//   POST /v1/keys               register the caller's own key (identity-gated)
+//   POST /v1/messages           Anthropic Messages API passthrough (uses caller's key)
 //   GET  /v1/usage?identity=..  metered spend (reconciles against journals)
 //   GET  /healthz
 //
 // Config (env):
 //   UPSTREAM_URL       model backend base URL (required)
-//   UPSTREAM_API_KEY   forwarded as x-api-key when set (Vertex uses SA auth)
+//   UPSTREAM_API_KEY   fallback credential when a user has none registered (dev only)
+//   KEYS_JSON          {"<identity>":{"apiKey"|"oauthToken":"..."}} seed map (tests/dev)
+//   KEYS_STORE         path for POST /v1/keys registrations (default ./gateway-keys.json, 0600)
 //   MODEL_ALLOWLIST    csv of allowed model prefixes (default: claude-)
 //   QUOTA_USD_DAILY    per-identity daily spend cap (default 50)
 //   USAGE_LOG          JSONL usage log path (BigQuery-bound rows in prod)
@@ -29,10 +37,51 @@ const ALLOWLIST = (process.env.MODEL_ALLOWLIST ?? "claude-").split(",").map((s) 
 const QUOTA_USD_DAILY = Number(process.env.QUOTA_USD_DAILY ?? 50);
 const USAGE_LOG = process.env.USAGE_LOG ?? path.join(process.cwd(), "gateway-usage.jsonl");
 const REQUIRE_IDENTITY = process.env.REQUIRE_IDENTITY !== "0";
+const KEYS_STORE = process.env.KEYS_STORE ?? path.join(process.cwd(), "gateway-keys.json");
 
 if (!UPSTREAM_URL) {
   console.error("UPSTREAM_URL is required");
   process.exit(1);
+}
+
+// --- BYO credential store -------------------------------------------------
+// In-memory map identity -> {apiKey|oauthToken}. Hydrated from KEYS_JSON (seed)
+// and the KEYS_STORE file (registrations). In prod the same file is projected
+// from AWS Secrets Manager (CSI/entrypoint) so raw keys never live in the image.
+const KEYS = new Map();
+function loadKeys() {
+  try {
+    if (process.env.KEYS_JSON) for (const [id, cred] of Object.entries(JSON.parse(process.env.KEYS_JSON))) KEYS.set(id, cred);
+  } catch (e) {
+    console.error(`KEYS_JSON parse error: ${String(e).slice(0, 120)}`); // never print the value
+  }
+  try {
+    if (fs.existsSync(KEYS_STORE)) for (const [id, cred] of Object.entries(JSON.parse(fs.readFileSync(KEYS_STORE, "utf8")))) KEYS.set(id, cred);
+  } catch (e) {
+    console.error(`KEYS_STORE read error: ${String(e).slice(0, 120)}`);
+  }
+}
+loadKeys();
+
+/** A user may register only their OWN credential (identity from the trusted header). */
+function saveKey(identity, cred) {
+  KEYS.set(identity, cred);
+  const all = Object.fromEntries(KEYS);
+  fs.writeFileSync(KEYS_STORE, JSON.stringify(all), { mode: 0o600 }); // 0600: owner-only
+  try {
+    fs.chmodSync(KEYS_STORE, 0o600);
+  } catch {
+    /* best effort on platforms without chmod */
+  }
+}
+
+/** Resolve the forward-auth headers for a caller. Returns null if none registered. */
+function resolveAuthHeaders(identity) {
+  const cred = KEYS.get(identity);
+  if (cred?.apiKey) return { "x-api-key": cred.apiKey };
+  if (cred?.oauthToken) return { authorization: `Bearer ${cred.oauthToken}` };
+  if (UPSTREAM_API_KEY) return { "x-api-key": UPSTREAM_API_KEY }; // dev/shared fallback
+  return null;
 }
 
 // $/MTok planning prices; override with PRICES_JSON='{"claude-sonnet-5":{"in":3,"out":15}}'
@@ -101,6 +150,35 @@ const server = http.createServer(async (req, res) => {
     return json(res, 200, { requests: rows.length, costUsd, quotaUsdDaily: QUOTA_USD_DAILY, rows: rows.slice(-100) });
   }
 
+  // Register the CALLER'S OWN Claude credential. Identity comes from the trusted
+  // SSO/IAP header — a user can never set anyone else's key. The value is
+  // stored write-only (0600) and NEVER echoed or logged.
+  if (url.pathname === "/v1/keys" && req.method === "POST") {
+    const identity = identityOf(req);
+    if (!identity) return json(res, 401, { error: "identity required" });
+    let body = "";
+    req.on("data", (c) => {
+      body += c;
+      if (body.length > 100_000) req.destroy();
+    });
+    req.on("end", () => {
+      let p;
+      try {
+        p = JSON.parse(body);
+      } catch {
+        return json(res, 400, { error: "invalid JSON" });
+      }
+      const apiKey = typeof p.apiKey === "string" && p.apiKey.trim() ? p.apiKey.trim() : null;
+      const oauthToken = typeof p.oauthToken === "string" && p.oauthToken.trim() ? p.oauthToken.trim() : null;
+      if (!apiKey && !oauthToken) return json(res, 400, { error: "provide apiKey or oauthToken" });
+      saveKey(identity, apiKey ? { apiKey } : { oauthToken });
+      // Confirm registration WITHOUT returning the secret (last 4 only).
+      const tail = (apiKey ?? oauthToken).slice(-4);
+      return json(res, 200, { ok: true, identity, credential: apiKey ? "api-key" : "oauth", endsWith: tail });
+    });
+    return;
+  }
+
   if (url.pathname === "/v1/messages" && req.method === "POST") {
     const identity = identityOf(req);
     if (REQUIRE_IDENTITY && !identity) return json(res, 401, { error: "identity required" });
@@ -125,6 +203,13 @@ const server = http.createServer(async (req, res) => {
         });
       }
 
+      // BYO: forward the CALLER'S OWN registered credential. No key on file for
+      // this identity (and no dev fallback) -> 402, never someone else's key.
+      const authHeaders = resolveAuthHeaders(identity);
+      if (!authHeaders) {
+        return json(res, 402, { error: "no Claude credential registered — run `harness login` to add your key" });
+      }
+
       // Forward. Streaming responses pass through byte-for-byte while we scan
       // SSE frames for the usage totals; non-streaming we parse directly.
       let upstream;
@@ -134,7 +219,7 @@ const server = http.createServer(async (req, res) => {
           headers: {
             "content-type": "application/json",
             "anthropic-version": req.headers["anthropic-version"] ?? "2023-06-01",
-            ...(UPSTREAM_API_KEY ? { "x-api-key": UPSTREAM_API_KEY } : {}),
+            ...authHeaders,
           },
           body,
         });

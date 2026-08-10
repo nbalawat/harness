@@ -9,14 +9,14 @@
       "status": "completed",
       "totalCostUsd": 12.5,
       "nodeCount": 46,
-      "digest": "8e5caea3754e657b"
+      "digest": "082aae95666f768d"
     },
     {
       "scenario": "answers-heldout.json",
       "status": "completed",
       "totalCostUsd": 12.5,
       "nodeCount": 46,
-      "digest": "c439471af3939450",
+      "digest": "7da6fef64df05e0b",
       "heldOut": true
     },
     {
@@ -24,14 +24,14 @@
       "status": "completed",
       "totalCostUsd": 12.5,
       "nodeCount": 46,
-      "digest": "59425c86a0cbffd0"
+      "digest": "c591e3103b70bd92"
     },
     {
       "scenario": "answers.json",
       "status": "completed",
       "totalCostUsd": 12.5,
       "nodeCount": 46,
-      "digest": "a53dc4c4edfddf3e"
+      "digest": "7ab45d4c685b7b56"
     }
   ],
   "revisionDrill": {
@@ -42,6 +42,6 @@
   "gateRegression": {
     "status": "held"
   },
-  "packageDigest": "1a7725f0735d78b6aa644c0fd765f3cfd2a17ee9b26f10b5a26e558323a82f68",
-  "certifiedAt": "2026-08-09T15:40:25.878Z"
+  "packageDigest": "9a96e54eb9286edb39d55283b409b343c183722c11ab826d4af1c8d77dbe4b99",
+  "certifiedAt": "2026-08-10T00:56:12.876Z"
 }

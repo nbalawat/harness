@@ -116,6 +116,7 @@ before(async () => {
   gateway = await startService("platform/gateway/server.mjs", {
     PORT: "18093",
     UPSTREAM_URL: "http://127.0.0.1:18092",
+    UPSTREAM_API_KEY: "sk-dev-fallback", // shared dev fallback; BYO path covered separately
     USAGE_LOG: path.join(tmpDir("gw"), "usage.jsonl"),
     QUOTA_USD_DAILY: "2", // tiny: first call allowed at $0 spent; after its $3 the next blocks
     MODEL_ALLOWLIST: "claude-",
@@ -164,6 +165,7 @@ test("gateway: streaming passes through byte-for-byte and still meters usage", a
   gateway = await startService("platform/gateway/server.mjs", {
     PORT: "18094",
     UPSTREAM_URL: "http://127.0.0.1:18092",
+    UPSTREAM_API_KEY: "sk-dev-fallback",
     USAGE_LOG: path.join(tmpDir("gw2"), "usage.jsonl"),
     QUOTA_USD_DAILY: "50",
   });
@@ -177,6 +179,42 @@ test("gateway: streaming passes through byte-for-byte and still meters usage", a
   assert.equal(usage.requests, 1);
   // haiku: 1000 in @ $1/M + 2000 out @ $5/M = 0.001 + 0.01
   assert.equal(usage.costUsd, 0.011, "usage extracted from the SSE frames");
+});
+
+test("gateway: BYO per-user key — no credential -> 402, register -> forwards, secret never echoed", async () => {
+  // A gateway with NO shared fallback: every identity must bring its own key.
+  const byo = await startService("platform/gateway/server.mjs", {
+    PORT: "18096",
+    UPSTREAM_URL: "http://127.0.0.1:18092",
+    KEYS_STORE: path.join(tmpDir("gwkeys"), "keys.json"),
+    USAGE_LOG: path.join(tmpDir("gw3"), "usage.jsonl"),
+    QUOTA_USD_DAILY: "50",
+  });
+  const ask = (headers = {}) =>
+    fetch(`${byo}/v1/messages`, { method: "POST", headers: { ...ID_HEADER, ...headers }, body: JSON.stringify({ model: "claude-sonnet-5", messages: [] }) });
+
+  // No key registered for this identity -> 402 (not someone else's key, not the upstream).
+  const before = upstreamHits;
+  const noKey = await ask();
+  assert.equal(noKey.status, 402);
+  assert.match((await noKey.json()).error, /harness login/);
+  assert.equal(upstreamHits, before, "a keyless caller never reaches the model");
+
+  // Register the caller's own key; the response confirms WITHOUT echoing the secret.
+  const reg = await fetch(`${byo}/v1/keys`, { method: "POST", headers: ID_HEADER, body: JSON.stringify({ apiKey: "sk-user-secret-abcd" }) });
+  assert.equal(reg.status, 200);
+  const regBody = await reg.json();
+  assert.equal(regBody.ok, true);
+  assert.equal(regBody.endsWith, "abcd", "only the last 4 chars are confirmed");
+  assert.ok(!JSON.stringify(regBody).includes("sk-user-secret-abcd"), "the raw key is never returned");
+
+  // Registering requires identity — anonymous cannot set a key.
+  const anonReg = await fetch(`${byo}/v1/keys`, { method: "POST", body: JSON.stringify({ apiKey: "x" }) });
+  assert.equal(anonReg.status, 401);
+
+  // Now the same identity forwards successfully and is metered.
+  const ok = await ask();
+  assert.equal(ok.status, 200);
 });
 
 // ---------------------------------------------------------------------------
@@ -279,4 +317,59 @@ test("a mock run queues fleet events locally and syncs them to the collector", a
   // Explicit sync drains it once the collector is back.
   const sync = spawnSync(process.execPath, [CLI, "telemetry", "--sync"], { encoding: "utf8", cwd: REPO, env });
   assert.match(sync.stdout, /synced 1 event/);
+});
+
+// ---------------------------------------------------------------------------
+// Platform BI (who built what) + app-usage/popularity (who uses what)
+// ---------------------------------------------------------------------------
+
+test("collector: BI rollup by owner/team + app-usage popularity", async () => {
+  const bi = await startService("platform/collector/server.mjs", { PORT: "18097", STORE: tmpDir("bi") });
+  const post = (events) => fetch(`${bi}/v1/events`, { method: "POST", headers: ID_HEADER, body: JSON.stringify({ events }) });
+  const ev = (owner, team, appName, tokens, rework, questions) => ({
+    ts: "2026-08-09T10:00:00Z", event: "run.completed", projectType: "agentic-app", version: "0.17.0",
+    owner, team, appName, costUsd: 20, totalTokens: tokens, reworkPct: rework, auditRounds: 2, loopDetections: 0, questionsAnswered: questions, revisions: 1, mock: false,
+  });
+  await post([ev("alice@firm.local", "fsi", "kyc", 1_000_000, 5, 3), ev("bob@firm.local", "fsi", "triage", 500_000, 0, 2), ev("carol@firm.local", "risk", "watchlist", 800_000, 10, 4)]);
+
+  const byOwner = await (await fetch(`${bi}/v1/bi?groupBy=owner`)).json();
+  assert.equal(byOwner.totals.builds, 3);
+  assert.equal(byOwner.totals.distinctOwners, 3);
+  assert.equal(byOwner.totals.tokens, 2_300_000, "tokens summed across the fleet");
+  const alice = byOwner.groups.find((g) => g.key === "alice@firm.local");
+  assert.equal(alice.avgReworkPct, 5);
+  assert.equal(alice.avgQuestionsPerBuild, 3, "experience (questions/build) is mined");
+
+  const byTeam = await (await fetch(`${bi}/v1/bi?groupBy=team`)).json();
+  const fsi = byTeam.groups.find((g) => g.key === "fsi");
+  assert.equal(fsi.builds, 2, "team rollup aggregates alice+bob");
+
+  // App usage -> popularity
+  await fetch(`${bi}/v1/app-usage`, { method: "POST", headers: ID_HEADER, body: JSON.stringify({ appId: "kyc", day: "2026-08-09", requests: 30, users: ["u_1", "u_2", "u_3"] }) });
+  await fetch(`${bi}/v1/app-usage`, { method: "POST", headers: ID_HEADER, body: JSON.stringify({ appId: "triage", day: "2026-08-09", requests: 5, users: ["u_1"] }) });
+  const usage = await (await fetch(`${bi}/v1/apps/usage`)).json();
+  assert.equal(usage.apps[0].appId, "kyc", "most-used app ranks first");
+  assert.equal(usage.apps[0].uniqueUsers, 3);
+});
+
+test("registry: private/team/firm sharing is enforced, not a label", async () => {
+  const reg = await startService("platform/registry/server.mjs", {
+    PORT: "18098", STORE: tmpDir("reg2"), TEAMS_JSON: JSON.stringify({ "mate@firm.local": ["fsi"], "outsider@firm.local": ["risk"] }),
+  });
+  const evidence = {
+    "acceptance_report.json": Buffer.from(JSON.stringify({ slices: [{ checks: [{ ok: true }] }] })).toString("base64"),
+    "journal-summary.json": Buffer.from(JSON.stringify({ status: "completed" })).toString("base64"),
+  };
+  const publish = (name, owner, team, visibility) =>
+    fetch(`${reg}/v1/publish`, { method: "POST", headers: { "content-type": "application/json", "x-firm-identity": owner }, body: JSON.stringify({ name, projectType: "agentic-app", version: "0.17.0", owner, team, visibility, files: evidence }) });
+  await publish("secret-desk", "boss@firm.local", "fsi", "private");
+  await publish("team-desk", "boss@firm.local", "fsi", "team");
+  await publish("open-desk", "boss@firm.local", "fsi", "firm");
+
+  const listAs = async (id) => (await (await fetch(`${reg}/v1/apps`, { headers: { "x-firm-identity": id } })).json()).apps.map((a) => a.id);
+  assert.deepEqual((await listAs("boss@firm.local")).sort(), ["open-desk", "secret-desk", "team-desk"], "owner sees all their apps");
+  assert.deepEqual((await listAs("mate@firm.local")).sort(), ["open-desk", "team-desk"], "teammate sees team + firm, not private");
+  assert.deepEqual(await listAs("outsider@firm.local"), ["open-desk"], "outsider sees only firm-wide");
+  assert.equal((await fetch(`${reg}/v1/apps/secret-desk`, { headers: { "x-firm-identity": "outsider@firm.local" } })).status, 403, "private detail is 403 for non-owner");
+  assert.equal((await fetch(`${reg}/v1/apps/secret-desk`, { headers: { "x-firm-identity": "boss@firm.local" } })).status, 200, "owner reads their private app");
 });

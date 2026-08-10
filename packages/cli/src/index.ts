@@ -8,6 +8,11 @@ interface RunConfig {
   answersFile?: string;
   mockAgents: boolean;
   acceptDefaults?: boolean;
+  /** Who owns this run — enables multi-tenant + team-scoped discovery. Optional
+   * (local-only users need nothing); defaults to the OS user @firm.local. */
+  owner?: string;
+  /** Team this run is built under, when building as a team (team-scoped). */
+  team?: string;
 }
 
 function parseFlags(args: string[]): { positional: string[]; flags: Record<string, string | boolean> } {
@@ -88,11 +93,14 @@ async function cmdRun(args: string[]): Promise<number> {
     projectTypeDir = path.resolve(positional[0] ?? ".");
   }
   const workspace = path.resolve((flags.workspace as string) ?? ".harness-run");
+  const os = await import("node:os");
   const config: RunConfig = {
     projectTypeDir,
     answersFile: flags.answers ? path.resolve(flags.answers as string) : undefined,
     mockAgents: flags["mock-agents"] === true,
     acceptDefaults: flags["accept-defaults"] === true,
+    owner: (flags.owner as string) ?? process.env.HARNESS_IDENTITY ?? `${os.userInfo().username}@firm.local`,
+    team: (flags.team as string) ?? process.env.HARNESS_TEAM ?? undefined,
   };
 
   fs.mkdirSync(workspace, { recursive: true });
@@ -104,6 +112,8 @@ async function cmdRun(args: string[]): Promise<number> {
     type: "run.created",
     projectType: ctx.def.name,
     projectTypeVersion: ctx.def.version,
+    owner: config.owner,
+    team: config.team,
   });
   console.log(`running ${ctx.def.name}@${ctx.def.version} (${ctx.def.nodes.length} nodes)`);
 
@@ -278,29 +288,40 @@ async function main(): Promise<void> {
       const { positional, flags } = parseFlags(rest);
       const registryUrl = (flags["registry-url"] as string) ?? process.env.HARNESS_REGISTRY_URL;
       if (!positional[0] || !registryUrl) {
-        console.error("usage: harness publish <workspace> --registry-url <url> [--team t] [--owner o] [--name n]");
+        console.error("usage: harness publish <workspace> --registry-url <url> [--team t] [--owner o] [--name n] [--visibility private|team|firm]");
         console.error("       (or set HARNESS_REGISTRY_URL)");
         process.exitCode = 1;
         break;
       }
+      const vis = flags.visibility as string | undefined;
       const { publishWorkspace } = await import("./publish.js");
       const result = await publishWorkspace(path.resolve(positional[0]), {
         registryUrl,
         owner: flags.owner as string | undefined,
         team: flags.team as string | undefined,
         name: flags.name as string | undefined,
+        visibility: vis === "private" || vis === "team" || vis === "firm" ? vis : undefined,
       });
       console.log(result.message);
       if (!result.ok) process.exitCode = 1;
       break;
     }
+    case "login": {
+      // One-time BYO credential registration for the hosted model (optional;
+      // local-only users just use ANTHROPIC_API_KEY).
+      const { flags } = parseFlags(rest);
+      const { login } = await import("./login.js");
+      code = await login(flags);
+      break;
+    }
     case "deploy": {
       // Pattern (b) of the deployment story: build local first, deploy later.
       // Runs the certified type's deploy-plan generator against the finished
-      // app — no rebuild, no revision cascade.
+      // app — no rebuild, no revision cascade. Cloud is OPTIONAL: default target
+      // is "local" (no cloud); pick cloud-run / aws-ecs / aws-apprunner to ship.
       const { positional, flags } = parseFlags(rest);
       if (!positional[0]) {
-        console.error("usage: harness deploy <workspace> [--target cloud-run]");
+        console.error("usage: harness deploy <workspace> [--target local|cloud-run|aws-ecs|aws-apprunner]");
         process.exitCode = 1;
         break;
       }

@@ -24,13 +24,33 @@ const PORT = Number(process.env.PORT ?? 8082);
 const STORE = process.env.STORE ?? path.join(process.cwd(), "registry-store");
 const REQUIRE_IDENTITY = process.env.REQUIRE_IDENTITY !== "0";
 const MAX_BODY = 80_000_000;
+// identity -> [teams]. In prod this is the HR/IdP group sync; here a seed map.
+const TEAMS = process.env.TEAMS_JSON ? JSON.parse(process.env.TEAMS_JSON) : {};
 
 fs.mkdirSync(STORE, { recursive: true });
 
 const REQUIRED_EVIDENCE = ["acceptance_report.json", "journal-summary.json"];
+const VISIBILITIES = new Set(["private", "team", "firm"]);
 
 function identityOf(req) {
   return req.headers["x-goog-authenticated-user-email"] ?? req.headers["x-firm-identity"] ?? null;
+}
+
+function teamsOf(identity) {
+  return new Set(TEAMS[identity] ?? []);
+}
+
+/**
+ * Enforced sharing scope (not just a label): private -> owner only; team ->
+ * owner or a member of the app's team; firm -> any authenticated identity.
+ * Absent visibility defaults to "firm" (backward compatible with prior publishes).
+ */
+function canSee(app, identity, teams) {
+  const vis = app.visibility ?? "firm";
+  if (identity && (app.owner === identity || app.publishedBy === identity)) return true; // owner always
+  if (vis === "firm") return true; // firm-wide; the gallery itself is IAP-gated to employees
+  if (vis === "team") return Boolean(app.team) && teams.has(app.team);
+  return false; // private, and not the owner
 }
 
 function appDir(id) {
@@ -80,8 +100,9 @@ function esc(s) {
   return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
-function galleryPage() {
-  const apps = listApps();
+function galleryPage(identity) {
+  const teams = teamsOf(identity);
+  const apps = listApps().filter((a) => canSee(a, identity, teams)); // team/private hidden from non-members
   const cards = apps
     .map((a) => {
       const shot = a.screenshot ? `<img src="/evidence/${a.id}/${a.versions}/${esc(a.screenshot)}" alt="">` : `<div class="noshot">no screenshot</div>`;
@@ -155,10 +176,12 @@ const server = http.createServer((req, res) => {
       }
       const badges = deriveBadges(files, p.summary);
       const screenshot = Object.keys(files).find((f) => f.endsWith(".png"));
+      const visibility = VISIBILITIES.has(p.visibility) ? p.visibility : "firm";
       const meta = {
         name: p.name,
         owner: p.owner ?? identity ?? "unknown",
         team: p.team ?? null,
+        visibility,
         projectType: p.projectType,
         version: p.version,
         summary: p.summary ?? {},
@@ -178,7 +201,9 @@ const server = http.createServer((req, res) => {
   if (url.pathname === "/v1/apps" && req.method === "GET") {
     const q = (url.searchParams.get("q") ?? "").toLowerCase();
     const team = url.searchParams.get("team");
-    let apps = listApps();
+    const identity = identityOf(req);
+    const teams = teamsOf(identity);
+    let apps = listApps().filter((a) => canSee(a, identity, teams)); // enforce sharing scope
     if (q) apps = apps.filter((a) => JSON.stringify(a).toLowerCase().includes(q));
     if (team) apps = apps.filter((a) => a.team === team);
     return json(res, 200, { apps });
@@ -225,11 +250,21 @@ const server = http.createServer((req, res) => {
       .map(Number)
       .sort((a, b) => a - b)
       .map((v) => ({ publishedVersion: v, ...JSON.parse(fs.readFileSync(path.join(dir, String(v), "meta.json"), "utf8")) }));
-    return json(res, 200, { id: detail[1], latest: versions.at(-1), versions });
+    const latest = versions.at(-1);
+    const identity = identityOf(req);
+    if (!canSee(latest, identity, teamsOf(identity))) return json(res, 403, { error: "not shared with you" });
+    return json(res, 200, { id: detail[1], latest, versions });
   }
 
   const evid = url.pathname.match(/^\/evidence\/([a-z0-9-]+)\/(\d+)\/(.+)$/);
   if (evid && req.method === "GET") {
+    // Evidence inherits the app's sharing scope — a private app's screenshots stay private.
+    const mfile = path.join(appDir(evid[1]), evid[2], "meta.json");
+    if (fs.existsSync(mfile)) {
+      const m = JSON.parse(fs.readFileSync(mfile, "utf8"));
+      const identity = identityOf(req);
+      if (!canSee(m, identity, teamsOf(identity))) return json(res, 403, { error: "not shared with you" });
+    }
     const abs = path.join(appDir(evid[1]), evid[2], evid[3]);
     if (!path.resolve(abs).startsWith(path.resolve(STORE)) || !fs.existsSync(abs)) return json(res, 404, { error: "not found" });
     const type = abs.endsWith(".png") ? "image/png" : abs.endsWith(".json") ? "application/json" : "text/plain";
@@ -240,7 +275,7 @@ const server = http.createServer((req, res) => {
 
   if (url.pathname === "/gallery" || url.pathname === "/") {
     res.writeHead(200, { "content-type": "text/html" });
-    res.end(galleryPage());
+    res.end(galleryPage(identityOf(req)));
     return;
   }
 

@@ -109,7 +109,9 @@
     "deploy_target": {
       "enum": [
         "local",
-        "cloud-run"
+        "cloud-run",
+        "aws-apprunner",
+        "aws-ecs"
       ]
     },
     "module_coverage": {
