@@ -171,6 +171,8 @@ nodes:
         default: "local"
         options:
           - { value: "local", label: "My machine", hint: "Run locally from the dashboard; no cloud stage." }
+          - { value: "aws-apprunner", label: "AWS App Runner", hint: "Ships the app to AWS App Runner at a live HTTPS URL (fast path). Adds a certified deploy stage producing a reviewed plan." }
+          - { value: "aws-ecs", label: "AWS ECS (Fargate, shared ALB)", hint: "Cost-optimal at scale — one shared load balancer, scale-to-zero per app. Adds a certified deploy stage producing a reviewed plan." }
           - { value: "cloud-run", label: "Google Cloud Run", hint: "Adds a certified deploy stage that produces a reviewed deploy plan." }
       - id: supervision
         prompt: "How closely do you want to supervise the build?"
