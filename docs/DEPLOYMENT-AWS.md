@@ -1,9 +1,14 @@
 # AWS Deployment Architecture
 
-Concrete deployment design for hosting the harness on **AWS** for a large firm
-(~60k users), the AWS counterpart to [DEPLOYMENT-GCP.md](DEPLOYMENT-GCP.md). Same
-certified engine; the four planes (distribution, execution, evidence, showcase)
-map to mostly-serverless AWS footprints.
+Concrete deployment design for hosting the harness on **AWS** for a large firm,
+the AWS counterpart to [DEPLOYMENT-GCP.md](DEPLOYMENT-GCP.md) and the AWS
+realization of the phased [ROLLOUT.md](ROLLOUT.md) plan (Phase A→D, 50k→ seats).
+Same certified engine; the four planes ROLLOUT.md defines — distribution,
+execution (Tier 1 laptops / Tier 2 hosted builders), evidence/observability, and
+showcase — map to mostly-serverless AWS footprints here. Team spaces
+(ROLLOUT.md §5) = enforced owner/team scoping in the registry + the dashboard;
+the model choke point (§3, `ANTHROPIC_BASE_URL` → gateway, no personal keys) = the
+BYO gateway; cost/quality attribution (§6) = the BI collector.
 
 **Cloud is optional.** Everything here is opt-in. A user can `npm install` the
 harness and build + run apps **entirely locally** with no AWS, no gateway, no

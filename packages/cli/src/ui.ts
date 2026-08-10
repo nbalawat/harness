@@ -985,7 +985,13 @@ interface AppPreview {
 }
 
 /** Scan a directory for run workspaces — the storefront of built apps. */
-export function scanRuns(root: string): Record<string, unknown>[] {
+/** The viewer whose apps to show. Absent (local single-user) => show everything. */
+export interface Viewer {
+  identity: string;
+  teams?: string[];
+}
+
+export function scanRuns(root: string, viewer?: Viewer): Record<string, unknown>[] {
   const runs: Record<string, unknown>[] = [];
   let entries: fs.Dirent[] = [];
   try {
@@ -993,10 +999,23 @@ export function scanRuns(root: string): Record<string, unknown>[] {
   } catch {
     return runs;
   }
+  const teams = new Set(viewer?.teams ?? []);
   for (const entry of entries) {
     if (!entry.isDirectory()) continue;
     const dir = path.join(root, entry.name);
     if (!fs.existsSync(path.join(dir, "run.json")) || !fs.existsSync(path.join(dir, "journal.jsonl"))) continue;
+    // Multi-tenant scoping: a viewer sees only runs they own or that belong to a
+    // team they're on. No viewer (local) => unfiltered, backward-compatible.
+    let owner: string | undefined;
+    let team: string | undefined;
+    try {
+      const cfg = JSON.parse(fs.readFileSync(path.join(dir, "run.json"), "utf8")) as { owner?: string; team?: string };
+      owner = cfg.owner;
+      team = cfg.team;
+    } catch {
+      /* legacy run.json */
+    }
+    if (viewer && owner && owner !== viewer.identity && !(team && teams.has(team))) continue;
     try {
       const st = buildState(dir) as Record<string, any>;
       // newest slice screenshot = the card thumbnail
@@ -1007,6 +1026,8 @@ export function scanRuns(root: string): Record<string, unknown>[] {
       runs.push({
         dir,
         name: entry.name,
+        owner,
+        team,
         appName: st.appName ?? entry.name,
         projectType: st.projectType,
         status: st.status,
@@ -1320,7 +1341,12 @@ export function startUiServer(target: string, port: number): Promise<http.Server
         res.end(PAGE);
       } else if (url.pathname === "/api/runs") {
         res.writeHead(200, { "content-type": "application/json" });
-        res.end(JSON.stringify({ root, runs: scanRuns(root), selected: workspace, projectTypes: availableProjectTypes() }));
+        // Scope the gallery to the caller when hosted: identity from SSO/IAP
+        // headers (or HARNESS_IDENTITY). No identity (local) => everything.
+        const ident = (req.headers["x-amzn-oidc-identity"] as string) || (req.headers["x-firm-identity"] as string) || process.env.HARNESS_IDENTITY || "";
+        const teams = (process.env.HARNESS_TEAMS || "").split(",").map((t) => t.trim()).filter(Boolean);
+        const viewer = ident ? { identity: ident, teams } : undefined;
+        res.end(JSON.stringify({ root, runs: scanRuns(root, viewer), selected: workspace, viewer: ident || null, projectTypes: availableProjectTypes() }));
       } else if (url.pathname === "/api/new-run" && req.method === "POST") {
         let body = "";
         req.on("data", (chunk) => (body += chunk));
