@@ -123,24 +123,55 @@ function saveKey(ref, cred) {
 }
 
 const asHeaders = (cred) => (cred?.apiKey ? { "x-api-key": cred.apiKey } : cred?.oauthToken ? { authorization: `Bearer ${cred.oauthToken}` } : null);
+const GATEWAY_PUBLIC_URL = process.env.GATEWAY_PUBLIC_URL ?? `http://127.0.0.1:${PORT}`;
 
 /**
- * Resolve the forward-auth credential for a caller, in precedence order:
- *   1. the user's OWN key (bound to their identity), then
- *   2. a POOLED key bound to any team the user belongs to, then
- *   3. the shared dev fallback.
- * So a build uses your key if you have one, else your team's, else none (402).
+ * Resolve the caller's credential in precedence order: their OWN (bound to their
+ * identity), then a POOLED credential bound to any team they belong to.
+ * Works for Anthropic keys AND Amazon Bedrock credentials.
  */
-function resolveAuthHeaders(identity) {
-  if (identity) {
-    const own = asHeaders(getCred(userRef(identity)));
-    if (own) return own;
-    for (const team of teamsOf(identity)) {
-      const pooled = asHeaders(getCred(teamRef(team)));
-      if (pooled) return pooled;
-    }
+function resolveCred(identity) {
+  if (!identity) return null;
+  const own = getCred(userRef(identity));
+  if (own) return own;
+  for (const team of teamsOf(identity)) {
+    const pooled = getCred(teamRef(team));
+    if (pooled) return pooled;
   }
+  return null;
+}
+
+/** Anthropic-passthrough forward headers for /v1/messages (Bedrock builds don't use this). */
+function resolveAuthHeaders(identity) {
+  const h = asHeaders(resolveCred(identity));
+  if (h) return h;
   if (UPSTREAM_API_KEY) return { "x-api-key": UPSTREAM_API_KEY }; // dev/shared fallback
+  return null;
+}
+
+/**
+ * Map a stored credential to the ENGINE ENV a builder must set to talk to Claude.
+ *   - bedrock: run the Agent SDK against Amazon Bedrock directly
+ *     (CLAUDE_CODE_USE_BEDROCK + AWS creds or a Bedrock API key + region + model).
+ *   - anthropic: route through this gateway (the key stays here, off the pod).
+ * Returns null when the caller has no credential.
+ */
+function credToEnv(cred) {
+  if (cred?.provider === "bedrock") {
+    const env = { CLAUDE_CODE_USE_BEDROCK: "1", AWS_REGION: cred.awsRegion || "us-east-1" };
+    if (cred.bearerToken) env.AWS_BEARER_TOKEN_BEDROCK = cred.bearerToken;
+    else {
+      env.AWS_ACCESS_KEY_ID = cred.awsAccessKeyId;
+      env.AWS_SECRET_ACCESS_KEY = cred.awsSecretAccessKey;
+      if (cred.awsSessionToken) env.AWS_SESSION_TOKEN = cred.awsSessionToken;
+    }
+    if (cred.model) env.ANTHROPIC_MODEL = cred.model;
+    return { provider: "bedrock", env };
+  }
+  if (cred?.apiKey || cred?.oauthToken) {
+    // Anthropic API: the pod points at the gateway; the raw key never leaves here.
+    return { provider: "anthropic", env: { ANTHROPIC_BASE_URL: GATEWAY_PUBLIC_URL } };
+  }
   return null;
 }
 
@@ -228,11 +259,36 @@ const server = http.createServer(async (req, res) => {
       } catch {
         return json(res, 400, { error: "invalid JSON" });
       }
-      const apiKey = typeof p.apiKey === "string" && p.apiKey.trim() ? p.apiKey.trim() : null;
-      const oauthToken = typeof p.oauthToken === "string" && p.oauthToken.trim() ? p.oauthToken.trim() : null;
-      if (!apiKey && !oauthToken) return json(res, 400, { error: "provide apiKey or oauthToken" });
-      // Bind the credential to a USER (default) or a GROUP. A team/group key is a
-      // shared pool; you may only register one for a team you belong to.
+      // Build the credential: Anthropic API key/OAuth (default) OR Amazon Bedrock
+      // (an IAM access key + secret, or a Bedrock API key / bearer token).
+      const s = (v) => (typeof v === "string" && v.trim() ? v.trim() : null);
+      let cred, credential, tail;
+      if (p.provider === "bedrock") {
+        const awsRegion = s(p.awsRegion) || "us-east-1";
+        const model = s(p.model) || undefined;
+        const bearer = s(p.bearerToken);
+        const ak = s(p.awsAccessKeyId);
+        const sk = s(p.awsSecretAccessKey);
+        if (bearer) {
+          cred = { provider: "bedrock", bearerToken: bearer, awsRegion, model };
+          credential = "bedrock-api-key";
+          tail = bearer.slice(-4);
+        } else if (ak && sk) {
+          cred = { provider: "bedrock", awsAccessKeyId: ak, awsSecretAccessKey: sk, awsSessionToken: s(p.awsSessionToken) || undefined, awsRegion, model };
+          credential = "bedrock-iam";
+          tail = ak.slice(-4);
+        } else {
+          return json(res, 400, { error: "bedrock: provide bearerToken, or awsAccessKeyId + awsSecretAccessKey" });
+        }
+      } else {
+        const apiKey = s(p.apiKey);
+        const oauthToken = s(p.oauthToken);
+        if (!apiKey && !oauthToken) return json(res, 400, { error: "provide apiKey or oauthToken, or provider:'bedrock'" });
+        cred = apiKey ? { apiKey } : { oauthToken };
+        credential = apiKey ? "api-key" : "oauth";
+        tail = (apiKey ?? oauthToken).slice(-4);
+      }
+      // Bind to a USER (default) or a GROUP. A team pool needs team membership.
       let ref = userRef(identity);
       let boundTo = identity;
       if (p.scope === "team") {
@@ -241,12 +297,21 @@ const server = http.createServer(async (req, res) => {
         ref = teamRef(p.team);
         boundTo = `team:${p.team}`;
       }
-      saveKey(ref, apiKey ? { apiKey } : { oauthToken });
-      // Confirm registration WITHOUT returning the secret (last 4 only).
-      const tail = (apiKey ?? oauthToken).slice(-4);
-      return json(res, 200, { ok: true, boundTo, scope: p.scope === "team" ? "team" : "user", credential: apiKey ? "api-key" : "oauth", endsWith: tail });
+      saveKey(ref, cred);
+      return json(res, 200, { ok: true, boundTo, scope: p.scope === "team" ? "team" : "user", credential, endsWith: tail });
     });
     return;
+  }
+
+  // The env a builder sets to talk to Claude with the caller's credential.
+  // Bedrock -> CLAUDE_CODE_USE_BEDROCK + AWS creds/region/model (talks to Bedrock
+  // directly). Anthropic -> ANTHROPIC_BASE_URL (routes through this gateway).
+  if (url.pathname === "/v1/credential/env" && req.method === "GET") {
+    const identity = identityOf(req);
+    if (REQUIRE_IDENTITY && !identity) return json(res, 401, { error: "identity required" });
+    const mapped = credToEnv(resolveCred(identity));
+    if (!mapped) return json(res, 402, { error: "no Claude credential registered — run `harness login`" });
+    return json(res, 200, mapped);
   }
 
   if (url.pathname === "/v1/messages" && req.method === "POST") {

@@ -70,9 +70,22 @@ function finalState(ws, projectType) {
   };
 }
 
-function launchLocal(runId, ws, projectType, answersFile, owner, team) {
-  const env = { ...process.env, HARNESS_IDENTITY: owner, HARNESS_TEAM: team ?? "", HARNESS_TELEMETRY: "0" };
-  if (GATEWAY_URL) env.ANTHROPIC_BASE_URL = GATEWAY_URL; // real-agent builds go via the gateway
+/** Fetch the caller's Claude engine env from the gateway (Bedrock or Anthropic). */
+async function credEnv(owner) {
+  if (!GATEWAY_URL) return {};
+  try {
+    const r = await fetch(new URL("/v1/credential/env", GATEWAY_URL), { headers: { "x-firm-identity": owner } });
+    if (!r.ok) return {};
+    return (await r.json()).env ?? {};
+  } catch {
+    return {};
+  }
+}
+
+async function launchLocal(runId, ws, projectType, answersFile, owner, team) {
+  // Inject the caller's resolved credential env: Bedrock (CLAUDE_CODE_USE_BEDROCK
+  // + AWS creds/region/model) or Anthropic (ANTHROPIC_BASE_URL -> gateway).
+  const env = { ...process.env, HARNESS_IDENTITY: owner, HARNESS_TEAM: team ?? "", HARNESS_TELEMETRY: "0", ...(await credEnv(owner)) };
   const args = [CLI, "run", projectType, "--mock-agents", "--accept-defaults", "--answers", answersFile, "--workspace", ws, "--owner", owner];
   if (team) args.push("--team", team);
   const child = spawn("node", args, { env, stdio: "ignore" });
@@ -138,7 +151,7 @@ const server = http.createServer((req, res) => {
       if (MODE === "ecs") {
         launchEcs(runId, projectType, Buffer.from(JSON.stringify(p.answers ?? {})).toString("base64"), owner, team);
       } else {
-        launchLocal(runId, ws, projectType, answersFile, owner, team);
+        void launchLocal(runId, ws, projectType, answersFile, owner, team);
       }
       return json(res, 202, { ok: true, runId, mode: MODE });
     });

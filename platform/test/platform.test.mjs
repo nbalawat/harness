@@ -245,6 +245,44 @@ test("gateway: a key can be bound to a USER or a TEAM (group pool), with precede
   assert.equal((await msg("carol@firm.local")).status, 402, "no user or group key -> refused");
 });
 
+test("gateway: Amazon Bedrock credentials (IAM key or Bedrock API key), user or team, -> engine env", async () => {
+  const gw3 = await startService("platform/gateway/server.mjs", {
+    PORT: "18101",
+    UPSTREAM_URL: "http://127.0.0.1:18092",
+    KEYS_STORE: path.join(tmpDir("gwbed"), "keys.json"),
+    USAGE_LOG: path.join(tmpDir("gwbedu"), "usage.jsonl"),
+    TEAMS_JSON: JSON.stringify({ "alice@firm.local": ["fsi"], "bob@firm.local": ["fsi"] }),
+    GATEWAY_PUBLIC_URL: "https://llm.firm",
+  });
+  const j = async (r) => ({ s: r.status, b: await r.json().catch(() => ({})) });
+  const reg = (id, body) => fetch(`${gw3}/v1/keys`, { method: "POST", headers: { "content-type": "application/json", "x-firm-identity": id }, body: JSON.stringify(body) });
+  const env = (id) => fetch(`${gw3}/v1/credential/env`, { headers: { "x-firm-identity": id } });
+
+  // Bedrock via IAM access key + secret + pinned model.
+  const a = await j(await reg("alice@firm.local", { provider: "bedrock", awsAccessKeyId: "AKIA123", awsSecretAccessKey: "secret", awsRegion: "us-east-1", model: "us.anthropic.claude-sonnet-4-6" }));
+  assert.equal(a.b.credential, "bedrock-iam");
+  const ae = (await j(await env("alice@firm.local"))).b;
+  assert.equal(ae.provider, "bedrock");
+  assert.equal(ae.env.CLAUDE_CODE_USE_BEDROCK, "1");
+  assert.equal(ae.env.AWS_ACCESS_KEY_ID, "AKIA123");
+  assert.equal(ae.env.AWS_REGION, "us-east-1");
+  assert.equal(ae.env.ANTHROPIC_MODEL, "us.anthropic.claude-sonnet-4-6");
+
+  // Team-pooled Bedrock via a Bedrock API key (bearer token); a keyless member uses it.
+  await reg("alice@firm.local", { provider: "bedrock", bearerToken: "bedrock-key-xyz", awsRegion: "us-west-2", scope: "team", team: "fsi" });
+  const be = (await j(await env("bob@firm.local"))).b; // bob has no own key
+  assert.equal(be.env.AWS_BEARER_TOKEN_BEDROCK, "bedrock-key-xyz");
+  assert.equal(be.env.AWS_REGION, "us-west-2");
+  assert.ok(!be.env.AWS_ACCESS_KEY_ID, "a bearer-token cred sets no access key");
+
+  // Anthropic credential maps to routing through the gateway, not a raw key.
+  await reg("solo@firm.local", { apiKey: "sk-ant-solo" });
+  const se = (await j(await env("solo@firm.local"))).b;
+  assert.equal(se.provider, "anthropic");
+  assert.equal(se.env.ANTHROPIC_BASE_URL, "https://llm.firm");
+  assert.ok(!JSON.stringify(se).includes("sk-ant-solo"), "the raw Anthropic key never leaves the gateway");
+});
+
 // ---------------------------------------------------------------------------
 // app-registry + gallery, fed by the REAL fsi-kyc-desk workspace via the CLI
 // ---------------------------------------------------------------------------
