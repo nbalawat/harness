@@ -89,25 +89,30 @@ def main():
             print("deploy failed", file=sys.stderr)
             sys.exit(1)
     else:
-        # App Runner CREATE is occasionally flaky — "Failed to deploy your application
-        # image" with a valid single-manifest image and no application logs. Retry once
-        # by delete + recreate; the same image + config then reaches RUNNING.
+        # App Runner CREATE is intermittently flaky — "Failed to deploy your
+        # application image" with a valid single-manifest image and no application
+        # logs; the same image + config reaches RUNNING on a later, spaced-out
+        # attempt. Retry a few times with a delay between (rapid recreate makes it
+        # worse), so the pipeline heals itself rather than failing the deploy.
+        attempts = int(os.environ.get("APPRUNNER_CREATE_ATTEMPTS", "4"))
+        backoff = int(os.environ.get("APPRUNNER_CREATE_BACKOFF", "30"))
         ok = False
-        for attempt in range(2):
+        for attempt in range(attempts):
             arn = ar.create_service(ServiceName=APP_NAME, SourceConfiguration=src,
                                      InstanceConfiguration={"Cpu": CPU, "Memory": MEMORY}, HealthCheckConfiguration=hc)["Service"]["ServiceArn"]
-            print(f"SERVICE_ARN={arn} (attempt {attempt + 1})", flush=True)
+            print(f"SERVICE_ARN={arn} (attempt {attempt + 1}/{attempts})", flush=True)
             if wait_running(arn):
                 ok = True
                 break
-            print("    CREATE_FAILED — deleting and retrying", flush=True)
+            print(f"    CREATE_FAILED — deleting and retrying in {backoff}s", flush=True)
             try:
                 ar.delete_service(ServiceArn=arn)
             except Exception:
                 pass
             wait_gone()
+            time.sleep(backoff)
         if not ok:
-            print("deploy failed after retry", file=sys.stderr)
+            print(f"deploy failed after {attempts} attempts", file=sys.stderr)
             sys.exit(1)
     url = "https://" + ar.describe_service(ServiceArn=arn)["Service"]["ServiceUrl"]
     print(f"LIVE_URL={url}", flush=True)
