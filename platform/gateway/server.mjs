@@ -26,6 +26,7 @@
 //   QUOTA_USD_DAILY    per-identity daily spend cap (default 50)
 //   USAGE_LOG          JSONL usage log path (BigQuery-bound rows in prod)
 //   REQUIRE_IDENTITY   default 1; identity from IAP header or x-firm-identity
+import { spawnSync } from "node:child_process";
 import * as fs from "node:fs";
 import * as http from "node:http";
 import * as path from "node:path";
@@ -45,10 +46,37 @@ if (!UPSTREAM_URL) {
 }
 
 // --- BYO credential store -------------------------------------------------
-// In-memory map identity -> {apiKey|oauthToken}. Hydrated from KEYS_JSON (seed)
-// and the KEYS_STORE file (registrations). In prod the same file is projected
-// from AWS Secrets Manager (CSI/entrypoint) so raw keys never live in the image.
+// In-memory cache identity -> {apiKey|oauthToken}. Backed by AWS Secrets Manager
+// when SECRETS_MANAGER=1 (one secret per identity: <SECRETS_PREFIX><identity>),
+// else a local 0600 file (dev). Raw keys are write-only over the API and NEVER
+// logged. The gateway forwards them upstream; build pods never see them.
+const SECRETS_MANAGER = process.env.SECRETS_MANAGER === "1";
+const SECRETS_PREFIX = process.env.SECRETS_PREFIX ?? "harness/keys/";
+const SECRETS_REGION = process.env.SECRETS_REGION ?? process.env.AWS_REGION ?? "us-east-1";
 const KEYS = new Map();
+
+/** Write a credential to AWS Secrets Manager (create or overwrite). Never logs the value. */
+function smPut(identity, cred) {
+  const name = SECRETS_PREFIX + identity;
+  const val = JSON.stringify(cred);
+  const put = spawnSync("aws", ["secretsmanager", "put-secret-value", "--region", SECRETS_REGION, "--secret-id", name, "--secret-string", val], { encoding: "utf8" });
+  if (put.status !== 0) {
+    // first time: the secret doesn't exist yet -> create it
+    const create = spawnSync("aws", ["secretsmanager", "create-secret", "--region", SECRETS_REGION, "--name", name, "--secret-string", val], { encoding: "utf8" });
+    if (create.status !== 0) throw new Error(`secrets-manager write failed: ${String(create.stderr).slice(0, 160)}`);
+  }
+}
+
+/** Read a credential from AWS Secrets Manager. Returns null if none. */
+function smGet(identity) {
+  const r = spawnSync("aws", ["secretsmanager", "get-secret-value", "--region", SECRETS_REGION, "--secret-id", SECRETS_PREFIX + identity, "--query", "SecretString", "--output", "text"], { encoding: "utf8" });
+  if (r.status !== 0) return null;
+  try {
+    return JSON.parse(r.stdout.trim());
+  } catch {
+    return null;
+  }
+}
 function loadKeys() {
   try {
     if (process.env.KEYS_JSON) for (const [id, cred] of Object.entries(JSON.parse(process.env.KEYS_JSON))) KEYS.set(id, cred);
@@ -66,6 +94,10 @@ loadKeys();
 /** A user may register only their OWN credential (identity from the trusted header). */
 function saveKey(identity, cred) {
   KEYS.set(identity, cred);
+  if (SECRETS_MANAGER) {
+    smPut(identity, cred); // vault-backed: the raw key lives only in Secrets Manager
+    return;
+  }
   const all = Object.fromEntries(KEYS);
   fs.writeFileSync(KEYS_STORE, JSON.stringify(all), { mode: 0o600 }); // 0600: owner-only
   try {
@@ -77,7 +109,11 @@ function saveKey(identity, cred) {
 
 /** Resolve the forward-auth headers for a caller. Returns null if none registered. */
 function resolveAuthHeaders(identity) {
-  const cred = KEYS.get(identity);
+  let cred = KEYS.get(identity);
+  if (!cred && SECRETS_MANAGER && identity) {
+    cred = smGet(identity); // vault lookup on cache miss
+    if (cred) KEYS.set(identity, cred);
+  }
   if (cred?.apiKey) return { "x-api-key": cred.apiKey };
   if (cred?.oauthToken) return { authorization: `Bearer ${cred.oauthToken}` };
   if (UPSTREAM_API_KEY) return { "x-api-key": UPSTREAM_API_KEY }; // dev/shared fallback
