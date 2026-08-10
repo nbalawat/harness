@@ -63,4 +63,23 @@ if (projectDir && fs.existsSync(path.resolve("app"))) {
   }
 }
 
+// ANTI-REWARD-HACKING + COUNTER-METRIC WATCHER: "0 high" can be reached by
+// gaming (deleting the failing test, dropping the auth check that surfaced the
+// finding). Before accepting convergence, verify the heal did not REDUCE any
+// structural anchor vs the pre-heal (merge-slices) app — a heal may only add or
+// hold tests, assertions, routes, and auth-gated routes. No-op on the clean path.
+if (projectDir) {
+  const anchors = spawnSync("node", [path.join(projectDir, "scripts", "check-heal-anchors.cjs")], {
+    cwd: process.cwd(),
+    encoding: "utf8",
+    env: process.env,
+  });
+  if (anchors.status !== 0) {
+    console.error("self-healing audit: convergence REJECTED — a heal gamed its own metric (structural anchor regressed):");
+    process.stderr.write((anchors.stdout || "") + (anchors.stderr || ""));
+    process.exit(1);
+  }
+  process.stdout.write(anchors.stdout || "");
+}
+
 console.log(`self-healing audit converged: ${highs.length} high finding(s), all resolved or waived; ${(audit.findings || []).length} total findings recorded (independent scan agrees).`);

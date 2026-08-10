@@ -284,6 +284,33 @@ async function main(): Promise<void> {
       code = metricsCommand(path.resolve(positional[0] ?? ".harness-run"), flags.json === true, compareWith);
       break;
     }
+    case "self-improve": {
+      // Mine recurring weaknesses across many runs into bounded proposals
+      // (human applies + re-certifies; evaluator stays outside the loop).
+      const { positional, flags } = parseFlags(rest);
+      const { selfImprove } = await import("./selfImprove.js");
+      code = selfImprove(path.resolve(positional[0] ?? "."), {
+        top: flags.top ? Number(flags.top) : undefined,
+        json: flags.json === true,
+      });
+      break;
+    }
+    case "optimize": {
+      // Certification-gated prompt-candidate evaluator (L0). Accepts a candidate
+      // only if it still certifies (held-in + held-out); applies nothing.
+      const { positional, flags } = parseFlags(rest);
+      if (!positional[0]) {
+        console.error("usage: harness optimize <project-type> --node <id> --candidates <dir>");
+        code = 1;
+        break;
+      }
+      const { optimize } = await import("./optimize.js");
+      code = await optimize(positional[0], {
+        node: flags.node as string | undefined,
+        candidates: flags.candidates as string | undefined,
+      });
+      break;
+    }
     case "publish": {
       const { positional, flags } = parseFlags(rest);
       const registryUrl = (flags["registry-url"] as string) ?? process.env.HARNESS_REGISTRY_URL;
