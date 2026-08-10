@@ -217,6 +217,34 @@ test("gateway: BYO per-user key — no credential -> 402, register -> forwards, 
   assert.equal(ok.status, 200);
 });
 
+test("gateway: a key can be bound to a USER or a TEAM (group pool), with precedence + membership authz", async () => {
+  const gw2 = await startService("platform/gateway/server.mjs", {
+    PORT: "18100",
+    UPSTREAM_URL: "http://127.0.0.1:18092",
+    KEYS_STORE: path.join(tmpDir("gwteam"), "keys.json"),
+    USAGE_LOG: path.join(tmpDir("gwteamu"), "usage.jsonl"),
+    QUOTA_USD_DAILY: "1000",
+    TEAMS_JSON: JSON.stringify({ "alice@firm.local": ["fsi"], "bob@firm.local": ["fsi"], "carol@firm.local": ["risk"] }),
+  });
+  const j = async (r) => ({ s: r.status, b: await r.json().catch(() => ({})) });
+  const reg = (id, body) => fetch(`${gw2}/v1/keys`, { method: "POST", headers: { "content-type": "application/json", "x-firm-identity": id }, body: JSON.stringify(body) });
+  const msg = (id) => fetch(`${gw2}/v1/messages`, { method: "POST", headers: { "content-type": "application/json", "x-firm-identity": id }, body: JSON.stringify({ model: "claude-sonnet-5", messages: [] }) });
+
+  // Register a GROUP (team) key for fsi; only a member may do so.
+  const t = await j(await reg("alice@firm.local", { apiKey: "sk-team-fsi", scope: "team", team: "fsi" }));
+  assert.equal(t.s, 200);
+  assert.equal(t.b.boundTo, "team:fsi");
+  assert.equal((await j(await reg("carol@firm.local", { apiKey: "sk-x", scope: "team", team: "fsi" }))).s, 403, "non-member cannot register a team key");
+
+  // A member with NO personal key forwards via the team pool.
+  assert.equal((await msg("bob@firm.local")).status, 200, "team member (no own key) uses the pooled team key");
+  // A member's own key takes precedence over the team pool.
+  await reg("alice@firm.local", { apiKey: "sk-alice-own" });
+  assert.equal((await msg("alice@firm.local")).status, 200, "own key wins");
+  // No user key and no key for the caller's team -> 402.
+  assert.equal((await msg("carol@firm.local")).status, 402, "no user or group key -> refused");
+});
+
 // ---------------------------------------------------------------------------
 // app-registry + gallery, fed by the REAL fsi-kyc-desk workspace via the CLI
 // ---------------------------------------------------------------------------

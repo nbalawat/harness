@@ -53,29 +53,44 @@ if (!UPSTREAM_URL) {
 const SECRETS_MANAGER = process.env.SECRETS_MANAGER === "1";
 const SECRETS_PREFIX = process.env.SECRETS_PREFIX ?? "harness/keys/";
 const SECRETS_REGION = process.env.SECRETS_REGION ?? process.env.AWS_REGION ?? "us-east-1";
-const KEYS = new Map();
+// identity -> [teams], so a build can fall back to its team's pooled key.
+const TEAMS = process.env.TEAMS_JSON ? JSON.parse(process.env.TEAMS_JSON) : {};
+const teamsOf = (identity) => TEAMS[identity] ?? [];
+// A credential is bound to a "ref": a user (the identity) OR a group ("team/<team>").
+const userRef = (identity) => identity;
+const teamRef = (team) => `team/${team}`;
+const KEYS = new Map(); // ref -> {apiKey|oauthToken}
 
 /** Write a credential to AWS Secrets Manager (create or overwrite). Never logs the value. */
-function smPut(identity, cred) {
-  const name = SECRETS_PREFIX + identity;
+function smPut(ref, cred) {
+  const name = SECRETS_PREFIX + ref;
   const val = JSON.stringify(cred);
   const put = spawnSync("aws", ["secretsmanager", "put-secret-value", "--region", SECRETS_REGION, "--secret-id", name, "--secret-string", val], { encoding: "utf8" });
   if (put.status !== 0) {
-    // first time: the secret doesn't exist yet -> create it
     const create = spawnSync("aws", ["secretsmanager", "create-secret", "--region", SECRETS_REGION, "--name", name, "--secret-string", val], { encoding: "utf8" });
     if (create.status !== 0) throw new Error(`secrets-manager write failed: ${String(create.stderr).slice(0, 160)}`);
   }
 }
 
 /** Read a credential from AWS Secrets Manager. Returns null if none. */
-function smGet(identity) {
-  const r = spawnSync("aws", ["secretsmanager", "get-secret-value", "--region", SECRETS_REGION, "--secret-id", SECRETS_PREFIX + identity, "--query", "SecretString", "--output", "text"], { encoding: "utf8" });
+function smGet(ref) {
+  const r = spawnSync("aws", ["secretsmanager", "get-secret-value", "--region", SECRETS_REGION, "--secret-id", SECRETS_PREFIX + ref, "--query", "SecretString", "--output", "text"], { encoding: "utf8" });
   if (r.status !== 0) return null;
   try {
     return JSON.parse(r.stdout.trim());
   } catch {
     return null;
   }
+}
+
+/** Get a credential bound to a ref (user or team), cache-then-vault. */
+function getCred(ref) {
+  let cred = KEYS.get(ref);
+  if (!cred && SECRETS_MANAGER) {
+    cred = smGet(ref);
+    if (cred) KEYS.set(ref, cred);
+  }
+  return cred ?? null;
 }
 function loadKeys() {
   try {
@@ -91,11 +106,11 @@ function loadKeys() {
 }
 loadKeys();
 
-/** A user may register only their OWN credential (identity from the trusted header). */
-function saveKey(identity, cred) {
-  KEYS.set(identity, cred);
+/** Store a credential bound to a ref (a user identity or a "team/<team>" group). */
+function saveKey(ref, cred) {
+  KEYS.set(ref, cred);
   if (SECRETS_MANAGER) {
-    smPut(identity, cred); // vault-backed: the raw key lives only in Secrets Manager
+    smPut(ref, cred); // vault-backed: the raw key lives only in Secrets Manager
     return;
   }
   const all = Object.fromEntries(KEYS);
@@ -107,15 +122,24 @@ function saveKey(identity, cred) {
   }
 }
 
-/** Resolve the forward-auth headers for a caller. Returns null if none registered. */
+const asHeaders = (cred) => (cred?.apiKey ? { "x-api-key": cred.apiKey } : cred?.oauthToken ? { authorization: `Bearer ${cred.oauthToken}` } : null);
+
+/**
+ * Resolve the forward-auth credential for a caller, in precedence order:
+ *   1. the user's OWN key (bound to their identity), then
+ *   2. a POOLED key bound to any team the user belongs to, then
+ *   3. the shared dev fallback.
+ * So a build uses your key if you have one, else your team's, else none (402).
+ */
 function resolveAuthHeaders(identity) {
-  let cred = KEYS.get(identity);
-  if (!cred && SECRETS_MANAGER && identity) {
-    cred = smGet(identity); // vault lookup on cache miss
-    if (cred) KEYS.set(identity, cred);
+  if (identity) {
+    const own = asHeaders(getCred(userRef(identity)));
+    if (own) return own;
+    for (const team of teamsOf(identity)) {
+      const pooled = asHeaders(getCred(teamRef(team)));
+      if (pooled) return pooled;
+    }
   }
-  if (cred?.apiKey) return { "x-api-key": cred.apiKey };
-  if (cred?.oauthToken) return { authorization: `Bearer ${cred.oauthToken}` };
   if (UPSTREAM_API_KEY) return { "x-api-key": UPSTREAM_API_KEY }; // dev/shared fallback
   return null;
 }
@@ -207,10 +231,20 @@ const server = http.createServer(async (req, res) => {
       const apiKey = typeof p.apiKey === "string" && p.apiKey.trim() ? p.apiKey.trim() : null;
       const oauthToken = typeof p.oauthToken === "string" && p.oauthToken.trim() ? p.oauthToken.trim() : null;
       if (!apiKey && !oauthToken) return json(res, 400, { error: "provide apiKey or oauthToken" });
-      saveKey(identity, apiKey ? { apiKey } : { oauthToken });
+      // Bind the credential to a USER (default) or a GROUP. A team/group key is a
+      // shared pool; you may only register one for a team you belong to.
+      let ref = userRef(identity);
+      let boundTo = identity;
+      if (p.scope === "team") {
+        if (!p.team) return json(res, 400, { error: "team required for scope 'team'" });
+        if (!teamsOf(identity).includes(p.team)) return json(res, 403, { error: `not a member of team '${p.team}'` });
+        ref = teamRef(p.team);
+        boundTo = `team:${p.team}`;
+      }
+      saveKey(ref, apiKey ? { apiKey } : { oauthToken });
       // Confirm registration WITHOUT returning the secret (last 4 only).
       const tail = (apiKey ?? oauthToken).slice(-4);
-      return json(res, 200, { ok: true, identity, credential: apiKey ? "api-key" : "oauth", endsWith: tail });
+      return json(res, 200, { ok: true, boundTo, scope: p.scope === "team" ? "team" : "user", credential: apiKey ? "api-key" : "oauth", endsWith: tail });
     });
     return;
   }
