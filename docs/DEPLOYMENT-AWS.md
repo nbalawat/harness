@@ -183,6 +183,41 @@ App Runner is the fast/low-volume adapter. Cost guardrails are wired in: certifi
 per-build budget envelopes, gateway per-identity/team quotas, and daily
 gateway-vs-journal reconciliation.
 
+## 12. Front door (harness UI) at scale — 100k users
+
+The dashboard is how everyone enters the harness, so it must scale to the whole
+firm. The container (`platform/harness-ui/Dockerfile`) binds all interfaces, is
+gated by `HARNESS_UI_TOKEN` (constant-time check) with firm SSO/ALB-OIDC in front,
+and runs on App Runner / ECS / EKS behind the managed load balancer.
+
+Scaling model:
+
+- **Stateless, horizontally scaled.** The UI holds no durable per-user state; it
+  renders from the run store and evidence. App Runner autoscaling (MaxConcurrency ×
+  MaxSize) or an ECS/EKS HPA fans out instances on request volume. The front door
+  is **read-mostly** (browse the gallery, watch a pipeline, read evidence), which
+  scales out cleanly — 100k seats at low single-digit % concurrency is a few
+  thousand in-flight requests, well within a horizontal fleet.
+- **Per-user scoping + shared storage.** At firm scale the "run root" is not a
+  local directory but **shared storage** (run metadata in DynamoDB, artifacts +
+  evidence in S3), and every route is scoped to the caller's identity + teams
+  (the same `x-amzn-oidc-identity` convention the platform services use). `scanRuns`
+  becomes an indexed query, not a filesystem walk — no per-instance state, so any
+  instance can serve any user.
+- **Heavy actions offloaded.** "Start building" enqueues a build on the Tier-2
+  builder fleet (one isolated Fargate task/EKS pod per build — see §"Scale
+  confidence"); the live per-app preview is the app's own deployed service (its
+  own URL), not a child process of the UI. So the UI stays light and stateless
+  even as builds and apps scale independently.
+- **CDN + caching.** Static assets and immutable evidence (screenshots) are served
+  with long cache headers behind CloudFront; only the live run state is dynamic.
+
+**Status:** the container + token gate + configurable bind are implemented and
+deployed to App Runner with autoscaling (MaxConcurrency 200 × MaxSize 25). The
+per-user-scoped, DynamoDB/S3-backed multi-tenant run store is the next build — the
+current hosted instance renders a shared gallery, which is the single-tenant form
+of the same UI.
+
 ## 11. Implementation status
 
 Deployed and verified on AWS (account `613112965612`, `us-east-1`):

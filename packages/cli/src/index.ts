@@ -481,10 +481,11 @@ async function main(): Promise<void> {
       // storefront lists its runs and every certified type shipped with the
       // install. `harness ui <run-dir>` still opens a single run directly.
       const workspace = path.resolve(positional[0] ?? ".");
-      const port = Number(flags.port ?? 4400);
+      const port = Number(flags.port ?? process.env.PORT ?? 4400);
       const { startUiServer } = await import("./ui.js");
       await startUiServer(workspace, port);
-      console.log(`dashboard: http://localhost:${port}  (workspace: ${workspace})`);
+      const host = process.env.HARNESS_UI_HOST || "localhost";
+      console.log(`dashboard: http://${host}:${port}  (workspace: ${workspace})`);
       return; // keep serving
     }
     default:

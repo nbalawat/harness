@@ -7,6 +7,7 @@
  * - Documents panel: curated human-readable outputs (raw files tucked away)
  * - narrated activity; render-only-on-change; zero dependencies; localhost only
  */
+import * as crypto from "node:crypto";
 import * as fs from "node:fs";
 import * as http from "node:http";
 import * as net from "node:net";
@@ -1278,8 +1279,41 @@ export function startUiServer(target: string, port: number): Promise<http.Server
     app.error = "app did not become healthy within 60s";
   }
 
+  // Optional access gate for hosted deployments. When HARNESS_UI_TOKEN is set,
+  // every request must present it (via ?token=, an hui cookie, or a Bearer
+  // header); otherwise a small unlock page is shown. Local runs leave it unset.
+  // In production this sits BEHIND firm SSO (ALB-OIDC) as well — defence in depth.
+  const UI_TOKEN = process.env.HARNESS_UI_TOKEN || "";
+  const tokenOk = (provided: string): boolean => {
+    if (!provided || provided.length !== UI_TOKEN.length) return false;
+    return crypto.timingSafeEqual(Buffer.from(provided), Buffer.from(UI_TOKEN)); // constant-time
+  };
   const server = http.createServer((req, res) => {
     const url = new URL(req.url ?? "/", "http://localhost");
+    if (UI_TOKEN) {
+      if (url.pathname === "/healthz") {
+        res.writeHead(200, { "content-type": "application/json" });
+        res.end('{"ok":true}');
+        return;
+      }
+      const cookie = (req.headers.cookie || "").split(/;\s*/).find((c) => c.startsWith("hui="));
+      const qtok = url.searchParams.get("token") || "";
+      const bearer = (req.headers.authorization || "").replace(/^Bearer\s+/i, "");
+      const provided = qtok || bearer || (cookie ? decodeURIComponent(cookie.slice(4)) : "");
+      if (!tokenOk(provided)) {
+        res.writeHead(401, { "content-type": "text/html" });
+        res.end(
+          `<!doctype html><meta charset=utf-8><title>Harness — sign in</title><body style="font:15px/1.5 system-ui;max-width:420px;margin:12vh auto;padding:0 1rem;color:#111"><h2 style="font-weight:650">Harness</h2><p>Enter your access token to continue.</p><form method=get><input name=token type=password autofocus placeholder="access token" style="width:100%;padding:.6rem;border:1px solid #ccc;border-radius:8px;font-size:1rem"><button style="margin-top:.6rem;padding:.55rem 1rem;border:0;border-radius:8px;background:#2f4a8a;color:#fff;font-size:1rem;cursor:pointer">Enter</button></form></body>`,
+        );
+        return;
+      }
+      if (qtok) {
+        // Valid token in the URL → set a cookie and strip it from the address bar.
+        res.writeHead(302, { "set-cookie": `hui=${encodeURIComponent(UI_TOKEN)}; HttpOnly; Path=/; SameSite=Lax`, location: url.pathname });
+        res.end();
+        return;
+      }
+    }
     try {
       if (url.pathname === "/") {
         res.writeHead(200, { "content-type": "text/html" });
@@ -1551,7 +1585,10 @@ export function startUiServer(target: string, port: number): Promise<http.Server
 
   server.on("close", stopApp);
   return new Promise((resolve) => {
-    server.listen(port, "127.0.0.1", () => resolve(server));
+    // Local tool binds loopback by default (safe). Hosting sets HARNESS_UI_HOST=0.0.0.0
+    // to be reachable behind a load balancer — pair it with HARNESS_UI_TOKEN / SSO.
+    const host = process.env.HARNESS_UI_HOST || "127.0.0.1";
+    server.listen(port, host, () => resolve(server));
   });
 }
 
