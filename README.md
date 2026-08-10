@@ -202,6 +202,12 @@ parallel, seamless local→AWS promotion, enforced sharing, popularity, and BI.
 See [AWS](docs/DEPLOYMENT-AWS.md) / [GCP](docs/DEPLOYMENT-GCP.md) deployment
 architectures.
 
+**CI/CD** at three levels — repo gate (tests + byte-deterministic re-certification),
+engine/catalog release (certify → pack → sign → channel promote), and produced-app
+delivery (build → ECR → App Runner/ECS). Wired on AWS CodePipeline
+(`Source → CI → Approval → Deploy`) via `python3 ci/aws/provision_pipeline.py`, and
+as GitHub Actions (`.github/workflows/ci.yml`). Full detail in [docs/CICD.md](docs/CICD.md).
+
 ## Documentation
 
 Full guides in [docs/](docs/README.md):
@@ -213,6 +219,7 @@ Full guides in [docs/](docs/README.md):
 [reference (CLI/env/glossary/FAQ)](docs/guides/reference.md) ·
 [architecture](docs/DESIGN.md) ·
 [module catalog](docs/MODULES.md) ·
+[CI/CD](docs/CICD.md) ·
 [AWS deployment](docs/DEPLOYMENT-AWS.md) ·
 [GCP deployment](docs/DEPLOYMENT-GCP.md) ·
 [changelog](docs/CHANGELOG.md)
