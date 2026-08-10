@@ -63,27 +63,52 @@ def main():
         "AutoDeploymentsEnabled": False,
         "AuthenticationConfiguration": {"AccessRoleArn": role_arn},
     }
+    def wait_running(arn):
+        for _ in range(80):
+            st = ar.describe_service(ServiceArn=arn)["Service"]["Status"]
+            print(f"    status: {st}", flush=True)
+            if st == "RUNNING":
+                return True
+            if st in ("CREATE_FAILED", "DELETE_FAILED"):
+                return False
+            time.sleep(15)
+        return False
+
+    def wait_gone():
+        for _ in range(24):
+            if not any(s["ServiceName"] == APP_NAME for s in ar.list_services()["ServiceSummaryList"]):
+                return
+            time.sleep(10)
+
+    hc = {"Protocol": "TCP", "Interval": 20, "Timeout": 15, "HealthyThreshold": 1, "UnhealthyThreshold": 10}
     arn = find_service()
     if arn:
         ar.update_service(ServiceArn=arn, SourceConfiguration=src, InstanceConfiguration={"Cpu": CPU, "Memory": MEMORY})
-    else:
-        arn = ar.create_service(
-            ServiceName=APP_NAME,
-            SourceConfiguration=src,
-            InstanceConfiguration={"Cpu": CPU, "Memory": MEMORY},
-            HealthCheckConfiguration={"Protocol": "TCP", "Interval": 20, "Timeout": 15, "HealthyThreshold": 1, "UnhealthyThreshold": 10},
-        )["Service"]["ServiceArn"]
-
-    print(f"SERVICE_ARN={arn}", flush=True)
-    for _ in range(80):
-        st = ar.describe_service(ServiceArn=arn)["Service"]["Status"]
-        print(f"    status: {st}", flush=True)
-        if st == "RUNNING":
-            break
-        if st in ("CREATE_FAILED", "DELETE_FAILED"):
+        print(f"SERVICE_ARN={arn}", flush=True)
+        if not wait_running(arn):
             print("deploy failed", file=sys.stderr)
             sys.exit(1)
-        time.sleep(15)
+    else:
+        # App Runner CREATE is occasionally flaky — "Failed to deploy your application
+        # image" with a valid single-manifest image and no application logs. Retry once
+        # by delete + recreate; the same image + config then reaches RUNNING.
+        ok = False
+        for attempt in range(2):
+            arn = ar.create_service(ServiceName=APP_NAME, SourceConfiguration=src,
+                                     InstanceConfiguration={"Cpu": CPU, "Memory": MEMORY}, HealthCheckConfiguration=hc)["Service"]["ServiceArn"]
+            print(f"SERVICE_ARN={arn} (attempt {attempt + 1})", flush=True)
+            if wait_running(arn):
+                ok = True
+                break
+            print("    CREATE_FAILED — deleting and retrying", flush=True)
+            try:
+                ar.delete_service(ServiceArn=arn)
+            except Exception:
+                pass
+            wait_gone()
+        if not ok:
+            print("deploy failed after retry", file=sys.stderr)
+            sys.exit(1)
     url = "https://" + ar.describe_service(ServiceArn=arn)["Service"]["ServiceUrl"]
     print(f"LIVE_URL={url}", flush=True)
 
