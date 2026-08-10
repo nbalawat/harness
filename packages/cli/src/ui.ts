@@ -1649,7 +1649,7 @@ const PAGE = /* html */ `<!doctype html>
   }
 }
 * { box-sizing:border-box; margin:0; }
-body { font:14px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif; background:var(--page); color:var(--ink); }
+body { font:14px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif; background:var(--page); color:var(--ink); overflow-x:clip; }
 .mono { font-family:ui-monospace,Menlo,monospace; }
 .topbar { position:sticky; top:0; z-index:40; background:var(--page); border-bottom:1px solid var(--grid); }
 .topbar-inner { max-width:1420px; margin:0 auto; padding:.8rem clamp(1rem,4vw,2.5rem); display:flex; align-items:center; gap:.9rem; flex-wrap:wrap; }
@@ -1845,6 +1845,7 @@ button.ghost { background:transparent; border:1px solid var(--border); color:var
 .hero { display:grid; grid-template-columns: 1.4fr 1fr; gap:2rem; align-items:stretch; margin:1.2rem 0 2rem;
   background:linear-gradient(135deg, color-mix(in srgb, var(--accent) 8%, var(--surface)), var(--surface) 55%);
   border:1px solid var(--border); border-radius:18px; padding:2rem 2.2rem; box-shadow:var(--shadow); }
+@media (max-width:760px){ .hero { grid-template-columns:1fr; gap:1.3rem; padding:1.4rem 1.3rem; } .hero-copy h1 { font-size:1.7rem; } }
 .hero-copy h1 { font-size:2.1rem; line-height:1.15; letter-spacing:-.02em; margin-bottom:.7rem; }
 .hero-copy h1 em { color:var(--accent); font-style:normal; }
 .hero-copy p { color:var(--ink2); font-size:1rem; max-width:34rem; line-height:1.55; }
