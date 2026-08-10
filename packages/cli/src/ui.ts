@@ -1028,6 +1028,8 @@ export function scanRuns(root: string, viewer?: Viewer): Record<string, unknown>
         name: entry.name,
         owner,
         team,
+        scope: team ? "team" : "individual",
+        mine: viewer ? owner === viewer.identity : undefined,
         appName: st.appName ?? entry.name,
         projectType: st.projectType,
         status: st.status,

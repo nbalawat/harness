@@ -468,3 +468,35 @@ test("run-index: runs are scoped to the caller by owner + team", async () => {
   // Private-team run is 403 on direct fetch by an outsider.
   assert.equal((await fetch(`${ri}/v1/runs/c1`, { headers: { "x-firm-identity": "bob@firm.local" } })).status, 403, "a run outside your team is not readable");
 });
+
+test("run-index: individual vs team scope, and a user on many teams", async () => {
+  const ri = await startService("platform/runindex/server.mjs", {
+    PORT: "18102",
+    STORE: tmpDir("ri2"),
+    // dev@ is on TWO teams (fsi + risk); alice@ only fsi.
+    TEAMS_JSON: JSON.stringify({ "dev@firm.local": ["fsi", "risk"], "alice@firm.local": ["fsi"] }),
+  });
+  const put = (runId, owner, team) =>
+    fetch(`${ri}/v1/runs`, { method: "POST", headers: { "content-type": "application/json", "x-firm-identity": owner }, body: JSON.stringify({ runId, owner, team, name: runId }) });
+  await put("solo1", "dev@firm.local", null); // individual project (no team)
+  await put("fsi1", "dev@firm.local", "fsi"); // dev's fsi team project
+  await put("fsi2", "alice@firm.local", "fsi"); // alice's fsi team project (dev sees via team)
+  await put("risk1", "dev@firm.local", "risk"); // dev's risk team project
+
+  const get = async (q) => (await (await fetch(`${ri}/v1/runs${q}`, { headers: { "x-firm-identity": "dev@firm.local" } })).json());
+  // Membership is echoed so the UI can show "You're on: fsi, risk".
+  const base = await get("");
+  assert.deepEqual([...base.teams].sort(), ["fsi", "risk"], "a user can be on many teams; membership is a list");
+  // Every run is tagged individual vs team.
+  assert.equal(base.runs.find((r) => r.runId === "solo1").scope, "individual", "no team => individual");
+  assert.equal(base.runs.find((r) => r.runId === "fsi1").scope, "team", "team set => team project");
+  // Filter: just my individual projects.
+  assert.deepEqual((await get("?scope=individual")).runs.map((r) => r.runId), ["solo1"], "scope=individual => only my solo projects");
+  // Filter: all team projects across every team I'm on.
+  assert.deepEqual((await get("?scope=team")).runs.map((r) => r.runId).sort(), ["fsi1", "fsi2", "risk1"], "scope=team => all team projects across my teams");
+  // Filter: one specific team's shelf.
+  assert.deepEqual((await get("?team=fsi")).runs.map((r) => r.runId).sort(), ["fsi1", "fsi2"], "team=fsi => only the fsi shelf");
+  assert.deepEqual((await get("?team=risk")).runs.map((r) => r.runId), ["risk1"], "team=risk => only the risk shelf");
+  // Cannot filter to a team you're not on.
+  assert.deepEqual((await (await fetch(`${ri}/v1/runs?team=fsi`, { headers: { "x-firm-identity": "outsider@firm.local" } })).json()).runs, [], "non-member gets nothing for a team filter");
+});

@@ -94,10 +94,25 @@ const server = http.createServer((req, res) => {
     const identity = identityOf(req);
     const teams = teamsOf(identity);
     const all = url.searchParams.get("all") === "1"; // admin/local unscoped view
+    // Optional filters: scope=individual|team (mine-solo vs any team project),
+    // team=<name> (one specific team's shelf — must be a team you're on).
+    const scope = url.searchParams.get("scope");
+    const teamFilter = url.searchParams.get("team");
     let runs = Object.values(load());
     if (!all) runs = runs.filter((r) => canSee(r, identity, teams));
+    // Tag each run's scope relative to the viewer so the UI can label it.
+    runs = runs.map((r) => ({
+      ...r,
+      scope: r.team ? "team" : "individual",
+      mine: r.owner === identity,
+    }));
+    if (scope === "individual") runs = runs.filter((r) => r.scope === "individual" && r.mine);
+    else if (scope === "team") runs = runs.filter((r) => r.scope === "team");
+    if (teamFilter) runs = runs.filter((r) => r.team === teamFilter && teams.has(teamFilter));
     runs.sort((a, b) => String(b.updatedAt).localeCompare(String(a.updatedAt)));
-    return json(res, 200, { runs, viewer: identity });
+    // Echo who the viewer is and which teams they belong to, so the UI can show
+    // "You're on: fsi, risk" and offer a per-team filter.
+    return json(res, 200, { runs, viewer: identity, teams: [...teams] });
   }
 
   const one = url.pathname.match(/^\/v1\/runs\/([^/]+)$/);
