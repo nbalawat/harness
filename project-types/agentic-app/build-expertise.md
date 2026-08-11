@@ -213,3 +213,15 @@ required reading; the merge and remediation healers load it before fixing.
 When a new failure class is discovered in a real build (a gate that had to
 self-heal), add a rule here (with the failure it prevents) so no one hits it
 twice — that is how the factory gets more reliable every build.
+
+## Live-run tuning: slice-audit convergence budget (2026-08)
+First live (non-mock) run of the full audit loop revealed slice-audit was under-budgeted:
+attempt 1 hit maxTurns:80 mid-audit; attempt 2 spent $15.48 (the whole $16 node budget)
+doing a real pass that the independent security scan then blocked (4 unauthenticated
+mutation endpoints); attempt 3 got $0 and died budget-starved. The independent verifier +
+anti-reward-hacking guard correctly FAILED CLOSED rather than shipping the insecure app —
+the mechanism is right, the budget was too tight for live multi-finding healing.
+Fix: maxTurns 80→150, retries 3→5, slice-audit budget $16→$40, run_budget $150→$200.
+Mock runs converge on attempt 1 at $0, so none of these bind in certification (byte-identical).
+Lesson for authors: budget self-healing nodes for the WORST realistic case (several distinct
+authz findings + re-audit cycles), not the mock's clean first pass.

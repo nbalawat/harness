@@ -93,7 +93,7 @@ cost:
   # observed p95 so legitimate heavy work never stalls a build. The envelope
   # is the real spend control; finished work always commits (never shredded);
   # budgets only block STARTING further attempts.
-  run_budget_usd: 150.00
+  run_budget_usd: 200.00
   nodes:
     ingest: { budget_usd: 6.00 }
     requirements-synthesis: { budget_usd: 9.00 }
@@ -117,7 +117,7 @@ cost:
     slice-8: { budget_usd: 30.00 }
     merge-slices: { budget_usd: 20.00 }
     remediate: { budget_usd: 22.00 }
-    slice-audit: { budget_usd: 16.00 }
+    slice-audit: { budget_usd: 40.00 }
 
 interaction:
   max_questions_per_gate: 6
@@ -581,8 +581,12 @@ nodes:
     description: "Self-healing semantic audit: audits the merged app (design fidelity, route shadowing, module bypasses; FSI hardening — authz, human gates, real persistence, trustworthy audit, decision integrity), FIXES every high finding, and re-audits to convergence. The audit heals the app rather than stalling the build on a finding; a genuinely-accepted finding needs a named waiver."
     kind: agent
     model: claude-opus-5
-    maxTurns: 80
-    retries: 3
+    # Tuned from a live run (2026-08): a real audit of a large app needs room to
+    # finish auditing + heal several distinct authz findings + re-audit within one
+    # attempt (80 turns hit the ceiling mid-work), and enough per-node budget that
+    # a second/third convergence attempt isn't starved after the first ~$16 pass.
+    maxTurns: 150
+    retries: 5
     deps: [remediate, slice-plan]
     allowedTools: [Read, Write, Edit, Bash, Glob, Grep]
     prompt: prompts/slice-audit.md
