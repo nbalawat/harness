@@ -10,6 +10,10 @@ version: 0.2
 #   TARGET      aws-apprunner (default) | aws-ecs
 #   DOMAIN      optional vanity FQDN (e.g. naveen-kycapp-v18.otaras.com)
 #   APP_DIR     if set, deploy this prebuilt app artifact and SKIP the build
+#   AGENT_MODE  mock (default, deterministic, free) | live (real Claude agents)
+# env-parameter-store / secrets-manager (set on the project for AGENT_MODE=live):
+#   CLAUDE_CODE_OAUTH_TOKEN  a Max/Pro subscription token from `claude setup-token`
+#   (or ANTHROPIC_API_KEY)   — injected from Secrets Manager, never in the repo
 phases:
   install:
     runtime-versions:
@@ -20,6 +24,8 @@ phases:
       - export PATH="$HOME/.local/bin:$PATH"
       - pip install --quiet boto3
       - npx --yes playwright@1.47.0 install chrome --with-deps || echo "chrome best-effort"
+      # The harness engine runs the Claude Agent SDK, which needs the `claude` CLI.
+      - npm i -g @anthropic-ai/claude-code || echo "claude cli install best-effort"
   build:
     commands:
       - |
@@ -29,10 +35,23 @@ phases:
         PROJECT_TYPE="${PROJECT_TYPE:-project-types/agentic-app}"
         ANSWERS="${ANSWERS:-project-types/agentic-app/fixtures/answers.json}"
         TARGET="${TARGET:-aws-apprunner}"
+        AGENT_MODE="${AGENT_MODE:-mock}"
         npm ci && npm run build
         if [ -z "${APP_DIR:-}" ]; then
-          echo "### building $APP_NAME with the harness ###"
-          node packages/cli/dist/index.js run "$PROJECT_TYPE" --mock-agents --accept-defaults --answers "$ANSWERS" --workspace /tmp/app --owner "ci@firm.local"
+          # live = real Claude agents (needs a token/key in the env, injected from
+          # Secrets Manager); mock = deterministic + free. Both non-interactive:
+          # every gate is supplied upfront by ANSWERS + --accept-defaults, because
+          # CodeBuild is batch and cannot pause for human input mid-build.
+          if [ "$AGENT_MODE" = "live" ]; then
+            if [ -z "${CLAUDE_CODE_OAUTH_TOKEN:-}${ANTHROPIC_API_KEY:-}" ]; then
+              echo "AGENT_MODE=live but no CLAUDE_CODE_OAUTH_TOKEN / ANTHROPIC_API_KEY in the env (add it via Secrets Manager)"; exit 1
+            fi
+            echo "### building $APP_NAME with the harness — LIVE agents ###"
+            node packages/cli/dist/index.js run "$PROJECT_TYPE" --accept-defaults --answers "$ANSWERS" --workspace /tmp/app --owner "ci@firm.local"
+          else
+            echo "### building $APP_NAME with the harness — mock (deterministic) ###"
+            node packages/cli/dist/index.js run "$PROJECT_TYPE" --mock-agents --accept-defaults --answers "$ANSWERS" --workspace /tmp/app --owner "ci@firm.local"
+          fi
           APP_DIR=$(ls -d /tmp/app/artifacts/*/app | tail -1)
         fi
         echo "### deploying $APP_DIR to $TARGET ###"
