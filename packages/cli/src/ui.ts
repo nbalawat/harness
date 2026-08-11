@@ -1344,7 +1344,7 @@ export function startUiServer(target: string, port: number): Promise<http.Server
     if (url.pathname === "/api/runs" && process.env.HARNESS_RUN_INDEX_URL) {
       const ident = (req.headers["x-amzn-oidc-identity"] as string) || (req.headers["x-firm-identity"] as string) || process.env.HARNESS_IDENTITY || "";
       void (async () => {
-        const base = { root, selected: workspace, viewer: ident || null, projectTypes: availableProjectTypes() };
+        const base = { root, selected: workspace, viewer: ident || null, cloudBuild: Boolean(process.env.HARNESS_BUILDER_CODEBUILD), projectTypes: availableProjectTypes() };
         try {
           const u = new URL("/v1/runs", process.env.HARNESS_RUN_INDEX_URL);
           if (!ident) u.searchParams.set("all", "1");
@@ -1370,7 +1370,50 @@ export function startUiServer(target: string, port: number): Promise<http.Server
         const ident = (req.headers["x-amzn-oidc-identity"] as string) || (req.headers["x-firm-identity"] as string) || process.env.HARNESS_IDENTITY || "";
         const teams = (process.env.HARNESS_TEAMS || "").split(",").map((t) => t.trim()).filter(Boolean);
         const viewer = ident ? { identity: ident, teams } : undefined;
-        res.end(JSON.stringify({ root, runs: scanRuns(root, viewer), selected: workspace, viewer: ident || null, teams, projectTypes: availableProjectTypes() }));
+        res.end(JSON.stringify({ root, runs: scanRuns(root, viewer), selected: workspace, viewer: ident || null, teams, cloudBuild: Boolean(process.env.HARNESS_BUILDER_CODEBUILD), projectTypes: availableProjectTypes() }));
+      } else if (url.pathname === "/api/cloud-build" && req.method === "POST") {
+        // Trigger a build+deploy in AWS via the certified CodeBuild pipeline:
+        // the harness builds the app in-cloud, then the deploy module ships it to
+        // App Runner. Enabled only when HARNESS_BUILDER_CODEBUILD names the project.
+        const project = process.env.HARNESS_BUILDER_CODEBUILD;
+        if (!project) {
+          res.writeHead(400).end(JSON.stringify({ error: "cloud build not configured (set HARNESS_BUILDER_CODEBUILD)" }));
+          return;
+        }
+        let body = "";
+        req.on("data", (c) => (body += c));
+        req.on("end", () => {
+          let p: { name?: string; target?: string; domain?: string };
+          try {
+            p = JSON.parse(body);
+          } catch {
+            res.writeHead(400).end(JSON.stringify({ error: "invalid JSON" }));
+            return;
+          }
+          const name = String(p.name || "");
+          if (!/^[a-z0-9][a-z0-9-]{0,40}$/.test(name)) {
+            res.writeHead(400).end(JSON.stringify({ error: "name must be lowercase letters/digits/hyphens" }));
+            return;
+          }
+          const region = process.env.AWS_REGION || process.env.AWS_DEFAULT_REGION || "us-east-1";
+          const overrides = [
+            `name=APP_NAME,value=${name}`,
+            `name=TARGET,value=${p.target === "aws-ecs" ? "aws-ecs" : "aws-apprunner"}`,
+            `name=AWS_DEFAULT_REGION,value=${region}`,
+          ];
+          if (p.domain) overrides.push(`name=DOMAIN,value=${String(p.domain)}`);
+          // aws CLI is in the hosted image; the App Runner instance role grants StartBuild.
+          const r = spawnSync("aws", ["codebuild", "start-build", "--project-name", project, "--region", region,
+            "--environment-variables-override", ...overrides, "--query", "build.id", "--output", "text"], { encoding: "utf8" });
+          if (r.status !== 0) {
+            res.writeHead(502).end(JSON.stringify({ error: "could not start cloud build: " + String(r.stderr).slice(0, 200) }));
+            return;
+          }
+          const buildId = r.stdout.trim();
+          const console_ = `https://${region}.console.aws.amazon.com/codesuite/codebuild/projects/${project}/build/${encodeURIComponent(buildId)}`;
+          res.writeHead(200, { "content-type": "application/json" });
+          res.end(JSON.stringify({ ok: true, buildId, console: console_, appName: name }));
+        });
       } else if (url.pathname === "/api/new-run" && req.method === "POST") {
         let body = "";
         req.on("data", (chunk) => (body += chunk));
@@ -1991,6 +2034,7 @@ button.ghost { background:transparent; border:1px solid var(--border); color:var
       <input id="newName" placeholder="name-your-app (lowercase, hyphens)">
       <select id="newType"></select>
       <button class="primary big" onclick="startNewApp()">Build my app →</button>
+      <button class="primary big" id="cloudBuildBtn" style="display:none;margin-top:.5rem;background:var(--good)" onclick="cloudBuild()">Build &amp; deploy on AWS →</button>
       <div class="hint" id="newErr" style="min-height:1em"></div>
       <div class="hf-foot">Parks at intake — nothing runs or spends until you answer.</div>
     </div>
@@ -2245,6 +2289,16 @@ async function startNewApp() {
   setText('newErr', '');
   await openRun(data.dir); // lands on Overview with the intake form waiting
 }
+async function cloudBuild() {
+  const name = document.getElementById('newName').value.trim();
+  if (!name) { setText('newErr', 'Name your app first (lowercase, hyphens).'); return; }
+  setText('newErr', 'starting a cloud build — the harness will build and deploy this app on AWS…');
+  const r = await fetch('/api/cloud-build', { method:'POST', body: JSON.stringify({ name, target:'aws-apprunner' }) });
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok) { setText('newErr', d.error || 'could not start cloud build'); return; }
+  setHTML('newErr', 'Building <b>' + name + '</b> on AWS (build ' + (d.buildId||'').slice(0,12) + '…). ' +
+    'It builds in-cloud then deploys to App Runner — <a href="' + d.console + '" target="_blank">watch the build</a>. The live URL prints at the end of the deploy log.');
+}
 async function openRun(dir) {
   currentRun = dir;
   history.replaceState(null, '', location.pathname + '?run=' + encodeURIComponent(dir));
@@ -2437,6 +2491,7 @@ function renderStorefront(data) {
   // hero: project types into the form + real numbers
   setHTML('newType', (data.projectTypes || []).map(p =>
     '<option value="' + esc(p.dir) + '">' + esc(p.name) + '@' + esc(p.version) + '</option>').join(''));
+  document.getElementById('cloudBuildBtn').style.display = data.cloudBuild ? '' : 'none';
   const live = data.runs.filter(r => r.runMode === 'live').length;
   const building = data.runs.filter(r => r.status === 'running').length;
   const spend = data.runs.reduce((a, r) => a + (r.costUsd || 0), 0);

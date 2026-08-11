@@ -4,6 +4,9 @@
 #
 # Build from the repo root:  docker build -f platform/harness-ui/Dockerfile -t harness-ui .
 FROM node:20-bookworm-slim
+# aws CLI: lets the hosted UI trigger a cloud build+deploy (codebuild:StartBuild)
+# when HARNESS_BUILDER_CODEBUILD is set. The App Runner instance role grants it.
+RUN apt-get update && apt-get install -y --no-install-recommends awscli && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 COPY package.json package-lock.json tsconfig.base.json ./
 COPY packages ./packages
