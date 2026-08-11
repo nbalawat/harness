@@ -7,6 +7,17 @@ cp -R "$(node -e 'process.stdout.write(require("./inputs.json").app.path)')" ./a
 ```
 Also read `$HARNESS_PROJECT_DIR/build-expertise.md` — the accumulated fixes for every class below.
 
+## Step 0 — clear the DETERMINISTIC findings first (fast; do this before the semantic pass)
+An independent deterministic scan runs after you, and it must agree you reached 0 high before this step passes. So clear exactly what it flags FIRST — don't re-discover those holes with a slow full-app read. Run it, fix what it names, rescan, repeat until it exits 0. The scan is instant and $0, so this loop is cheap:
+```
+node "$HARNESS_PROJECT_DIR/scripts/security-scan.cjs"   # writes security_report.json; exit 1 while highs remain, prints "[rule] file: detail"
+```
+Read the printed `[rule] file: detail` lines (or `security_report.json` → `findings[]` with `severity=="high"`) and fix the REAL defect for each in `./app`:
+- `unauthenticated-mutation` / `generic-table-write-unguarded` / `opt-out-authz` → add the identity+role check (`require_actor`/`require_role` via `acting_user_email`) to that handler; or, only if it is genuinely public, add an explicit `# public-endpoint: <reason>` marker.
+- `fail-open-identity` → remove the fabricating fallback; resolve via `require_actor` and fail closed.
+- `defaulted-decision` → make the decision explicit; a missing field is a 4xx, never a defaulted approve.
+Never delete a test, drop an assertion, remove a route, or weaken a control to make a finding vanish — an anti-gaming guard checks that too. Re-run the scan after each fix and loop until it prints "security scan passed". THEN do the semantic pass below for the deeper defects the regex can't see.
+
 ## The loop: audit → FIX → re-audit → converge
 1. Audit `./app` exhaustively on the two axes below (the FSI checklist is fixed — run every item on every mutating route, scoped read, and workflow handler; do not vary depth).
 2. For EVERY **high** finding, FIX it in `./app` (guided by build-expertise). Do not weaken a check, delete a control, or mark a real mutation public to dodge a finding — fix the real defect. Preserve every slice's acceptance and keep the backend test suite green (run it).
