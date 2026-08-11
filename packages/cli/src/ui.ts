@@ -2110,6 +2110,7 @@ button.ghost { background:transparent; border:1px solid var(--border); color:var
 </div></div>
 <div class="banner" id="banner"><b>Waiting on you</b><span id="bannerText"></span><button class="primary" onclick="showTab('overview');window.scrollTo({top:0,behavior:'smooth'})">Answer now</button></div>
 <div class="banner remed" id="remBanner"><b id="remBannerTitle">In progress</b><span id="remText"></span></div>
+<div class="banner" id="stopBanner" style="display:none;border-color:var(--crit)"><b id="stopBannerTitle">Stopped</b><span id="stopText"></span><button class="primary" onclick="resumeRun()">Resume from here ▸</button></div>
 <main>
 <section id="storefront" style="display:none" class="store">
   <div class="hero">
@@ -2605,6 +2606,9 @@ function renderStorefront(data) {
   document.getElementById('statusPill').style.display = 'none';
   document.getElementById('modePill').style.display = 'none';
   document.getElementById('banner').style.display = 'none';
+  document.getElementById('stopBanner').style.display = 'none';
+  document.getElementById('stopRunBtn').style.display = 'none';
+  document.getElementById('resumeRunBtn').style.display = 'none';
   setText('title', 'harness');
   setText('miniStats', data.runs.length + ' app' + (data.runs.length === 1 ? '' : 's') + ' built');
 
@@ -2734,6 +2738,21 @@ async function tick() {
       doneN + ' of ' + r.reopened.length + ' steps re-verified, now on <span class="mono">' + esc(r.remaining[0]) + '</span>. ' +
       '<span class="fb">Full story: Pipeline tab → wave ' + r.wave + '.</span>');
   }
+  // Stopped/failed callout: plain-language "what happened + what to do next" so
+  // a run that halted is never a dead end. Names the stopped step, offers a
+  // one-click Resume, and points to raise-budget for a step that ran out.
+  const stopB = document.getElementById('stopBanner');
+  const stopped = (s.status === 'failed' || s.status === 'cancelled') && !s.engineAlive && !s.resuming;
+  stopB.style.display = stopped ? 'flex' : 'none';
+  if (stopped) {
+    const failedNode = (s.nodes.find(n => n.state === 'failed') || {}).id;
+    setText('stopBannerTitle', s.status === 'cancelled' ? 'You stopped this run' : 'This run stopped on a failure');
+    setHTML('stopText',
+      (failedNode ? 'It halted at <span class="mono">' + esc(failedNode) + '</span>. ' : '') +
+      'Everything already built is saved. <b>Resume</b> re-runs the stopped step and keeps going' +
+      (failedNode ? ' — or open <span class="mono">' + esc(failedNode) + '</span> in the Pipeline tab to <b>raise its budget</b> if it ran out and re-run just that step.' : '.'));
+  }
+
   // Overview carries only a DIGEST — one line per wave, newest state visible
   // at a glance; the full story (feedback text + flow through the pipeline)
   // lives in the Pipeline tab's wave lenses, one click away.
