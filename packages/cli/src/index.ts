@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { Journal, foldState, loadProjectType, loadProjectTypeFile, reopenFailed, reviseNode, runLoop, type RunContext } from "@harness/runner";
+import { Journal, foldState, loadProjectType, loadProjectTypeFile, reconcileInterrupted, reopenFailed, reviseNode, runLoop, type RunContext } from "@harness/runner";
 
 interface RunConfig {
   projectTypeDir: string;
@@ -135,6 +135,10 @@ async function cmdResume(args: string[]): Promise<number> {
   if (flags["accept-defaults"] === true) config.acceptDefaults = true;
 
   const ctx = buildContext(workspace, config);
+  // Crash/stop recovery: turn any interrupted (dangling-"running") node into a
+  // clean failure first, so it's reopened and re-run rather than left hanging.
+  const interrupted = reconcileInterrupted(ctx);
+  if (interrupted.length > 0) console.log(`recovering interrupted node(s): ${interrupted.join(", ")}`);
   const reopened = reopenFailed(ctx);
   if (reopened.length > 0) console.log(`reopening failed node(s): ${reopened.join(", ")}`);
   console.log(`resuming ${ctx.def.name}@${ctx.def.version}`);
@@ -174,6 +178,63 @@ async function cmdRevise(args: string[]): Promise<number> {
   return 0;
 }
 
+function cmdCancel(args: string[]): number {
+  const { positional, flags } = parseFlags(args);
+  const workspace = path.resolve(positional[0] ?? ".harness-run");
+  if (!fs.existsSync(workspace)) {
+    console.error(`no such workspace: ${workspace}`);
+    return 1;
+  }
+  // Cooperative stop: the engine polls this sentinel and halts at the next
+  // checkpoint (interrupting an in-flight command/agent node), recording
+  // run.cancelled. --force also SIGTERMs the live engine for an immediate stop.
+  fs.writeFileSync(path.join(workspace, "cancel.requested"), new Date().toISOString());
+  console.log(`stop requested for ${workspace} — the engine will halt and record run.cancelled`);
+  if (flags.force === true) {
+    try {
+      const pid = Number(fs.readFileSync(path.join(workspace, "engine.lock"), "utf8"));
+      if (pid) {
+        process.kill(pid, "SIGTERM");
+        console.log(`sent SIGTERM to engine pid ${pid}`);
+      }
+    } catch {
+      /* no live engine holding the lock */
+    }
+  }
+  console.log(`resume later with: harness resume ${workspace}   (the stopped step re-runs; committed work is kept)`);
+  return 0;
+}
+
+function cmdRaiseBudget(args: string[]): number {
+  const { positional, flags } = parseFlags(args);
+  const workspace = path.resolve(positional[0] ?? ".harness-run");
+  if (flags.run === undefined && (flags.node === undefined || flags.to === undefined)) {
+    console.error("usage: harness raise-budget <workspace> [--run <usd>] [--node <id> --to <usd>]");
+    return 1;
+  }
+  const file = path.join(workspace, "budget-overrides.json");
+  const overrides: { run_budget_usd?: number; nodes?: Record<string, number> } = (() => {
+    try {
+      return JSON.parse(fs.readFileSync(file, "utf8"));
+    } catch {
+      return {};
+    }
+  })();
+  if (flags.run !== undefined) overrides.run_budget_usd = Number(flags.run);
+  if (flags.node !== undefined && flags.to !== undefined) {
+    overrides.nodes = overrides.nodes ?? {};
+    overrides.nodes[String(flags.node)] = Number(flags.to);
+  }
+  fs.writeFileSync(file, JSON.stringify(overrides, null, 2));
+  console.log(`budget override written to ${file}:`);
+  console.log(`  ${JSON.stringify(overrides)}`);
+  console.log(
+    `apply it: harness resume ${workspace}` +
+      (flags.node ? ` (to re-run ONLY that step: harness revise ${workspace} ${flags.node} --feedback "..." --resume)` : ""),
+  );
+  return 0;
+}
+
 function cmdStatus(args: string[]): number {
   const { positional } = parseFlags(args);
   const workspace = path.resolve(positional[0] ?? ".harness-run");
@@ -206,6 +267,13 @@ async function main(): Promise<void> {
       break;
     case "revise":
       code = await cmdRevise(rest);
+      break;
+    case "cancel":
+    case "stop":
+      code = cmdCancel(rest);
+      break;
+    case "raise-budget":
+      code = cmdRaiseBudget(rest);
       break;
     case "install": {
       const { positional, flags } = parseFlags(rest);
@@ -518,8 +586,10 @@ async function main(): Promise<void> {
     default:
       console.log("usage: harness <run|resume|revise|status|metrics|ui|setup|certify|install|list|publish|telemetry|self-update>");
       console.log("  harness run <project-type-dir> [--workspace dir] [--answers file] [--mock-agents]");
-      console.log("  harness resume <workspace> [--answers file]");
+      console.log("  harness resume <workspace> [--answers file]   # recovers interrupted + failed steps, keeps committed work");
       console.log('  harness revise <workspace> <nodeId> --feedback "what to change" [--resume]');
+      console.log("  harness cancel <workspace> [--force]           # stop a running pipeline (records run.cancelled; resume re-runs the stopped step)");
+      console.log("  harness raise-budget <workspace> [--run <usd>] [--node <id> --to <usd>]   # lift a cap a run hit, then resume/revise");
       console.log("  harness status <workspace>");
       console.log("  harness metrics <workspace> [--json]   # retries, doom-loops, escalations, convergence, cost");
       console.log("  harness metrics <a> --compare <b>      # A/B two runs: did a harness change help?");

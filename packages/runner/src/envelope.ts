@@ -79,12 +79,21 @@ export async function executeNode(
   for (let seq = 1; seq <= maxAttempts; seq++) {
     const attempt = priorAttempts + seq;
 
+    // Cooperative stop: a cancel requested mid-node lands here between attempts
+    // (and the in-flight payload was already interrupted via ctx.signal). Fail
+    // closed with a clear reason instead of burning another attempt.
+    if (ctx.signal?.aborted) {
+      ctx.journal.append({ type: "node.failed", nodeId: node.id, reason: "cancelled" });
+      return "failed";
+    }
+
     // Budgets gate the START of work — money already spent is never recovered
     // by discarding finished artifacts, so enforcement happens here, not after
     // a completed attempt. Retries are additionally gated on PROJECTED spend:
     // an attempt costs roughly what the last one did, so a retry that would
-    // sail past the cap fails fast instead of starting.
-    const budget = ctx.def.cost?.nodes?.[node.id]?.budget_usd;
+    // sail past the cap fails fast instead of starting. The cap honors an
+    // operator's raised override (budget-overrides.json) over the certified value.
+    const budget = nodeBudgetFor(ctx, node.id);
     if (budget !== undefined) {
       const spent = cumulativeNodeCost(ctx, node.id);
       const lastCost = seq > 1 || priorAttempts > 0 ? lastAttemptCost(ctx, node.id) : 0;
@@ -299,6 +308,9 @@ function runCommand(ctx: RunContext, command: string, attemptDir: string): Promi
       shell: true,
       cwd: attemptDir,
       env,
+      // A cooperative stop aborts this signal; Node then SIGTERMs the child so a
+      // long-running command node dies promptly instead of running to the end.
+      signal: ctx.signal,
     });
     let stdout = "";
     let stderr = "";
@@ -748,6 +760,19 @@ async function runAgent(
   });
 
   for await (const msg of session) {
+    // Cooperative stop: bail out of the agent turn loop promptly on cancel.
+    // Best-effort interrupt of the SDK session if it exposes one.
+    if (ctx.signal?.aborted) {
+      const s = session as unknown as { interrupt?: () => void };
+      if (typeof s.interrupt === "function") {
+        try {
+          s.interrupt();
+        } catch {
+          /* best effort */
+        }
+      }
+      throw new Error("cancelled by user");
+    }
     if (msg.type === "system" && (msg as { subtype?: string }).subtype === "init") {
       const init = msg as { tools?: unknown; agents?: unknown; model?: unknown; slash_commands?: unknown };
       ctx.journal.append({
@@ -931,6 +956,26 @@ function lastAttemptCost(ctx: RunContext, nodeId: string): number {
     .filter((e) => e.type === "cost.recorded" && e.nodeId === nodeId)
     .map((e) => (e.cost as CostRecord | undefined)?.costUsd ?? 0);
   return costs.at(-1) ?? 0;
+}
+
+/**
+ * A node's effective budget: an operator's raised override
+ * (budget-overrides.json → nodes[<id>]) wins over the certified cap so a run
+ * that hit a node cap can be revised with more headroom without editing the
+ * DAG. Absent override = certified value = invisible to certification.
+ */
+function nodeBudgetFor(ctx: RunContext, nodeId: string): number | undefined {
+  const f = path.join(ctx.workspace, "budget-overrides.json");
+  if (fs.existsSync(f)) {
+    try {
+      const o = JSON.parse(fs.readFileSync(f, "utf8")) as { nodes?: Record<string, number> };
+      const ov = o.nodes?.[nodeId];
+      if (typeof ov === "number") return ov;
+    } catch {
+      /* fall through to the certified value */
+    }
+  }
+  return ctx.def.cost?.nodes?.[nodeId]?.budget_usd;
 }
 
 function cumulativeNodeCost(ctx: RunContext, nodeId: string): number {

@@ -15,7 +15,7 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { spawn, spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import { Journal, downstreamClosure, foldState, loadProjectType, loadProjectTypeFile, reviseNode, type RunContext } from "@harness/runner";
+import { Journal, downstreamClosure, foldState, loadProjectType, loadProjectTypeFile, reconcileInterrupted, reopenFailed, reviseNode, type RunContext } from "@harness/runner";
 import type { GateQuestion, LedgerEvent, NodeDef, ProjectTypeDef } from "@harness/spec";
 
 const IS_WIN = process.platform === "win32";
@@ -249,7 +249,13 @@ export function buildState(workspace: string): Record<string, unknown> {
   }
   const lastLifecycle = [...events]
     .reverse()
-    .find((e) => e.type === "run.completed" || e.type === "run.parked" || e.type === "run.failed");
+    .find(
+      (e) =>
+        e.type === "run.completed" ||
+        e.type === "run.parked" ||
+        e.type === "run.failed" ||
+        e.type === "run.cancelled",
+    );
   const runStatus = engineAlive
     ? "running"
     : lastLifecycle?.type === "run.completed"
@@ -258,7 +264,9 @@ export function buildState(workspace: string): Record<string, unknown> {
         ? "parked"
         : lastLifecycle?.type === "run.failed"
           ? "failed"
-          : "running";
+          : lastLifecycle?.type === "run.cancelled"
+            ? "cancelled"
+            : "running";
   const parkedNodeId =
     runStatus === "parked" && lastLifecycle?.nodeId && !state.committed.has(String(lastLifecycle.nodeId))
       ? String(lastLifecycle.nodeId)
@@ -286,7 +294,13 @@ export function buildState(workspace: string): Record<string, unknown> {
           : n.id === parkedNodeId
             ? "parked"
             : running.has(n.id)
-              ? "started"
+              ? // A node still reading "running" while NO engine holds the lock was
+                // interrupted (a stop, a crash, or an orchestrator budget kill). It
+                // is not live work — surface it as failed so it stops hanging and
+                // can be resumed/revised. A live engine keeps it as "started".
+                engineAlive
+                ? "started"
+                : "failed"
               : "pending",
     cost: costs[n.id] ?? null,
     retries: retries[n.id] ?? 0,
@@ -1668,6 +1682,80 @@ export function startUiServer(target: string, port: number): Promise<http.Server
         stopApp(wsFrom(url));
         res.writeHead(200, { "content-type": "application/json" });
         res.end(JSON.stringify({ ok: true }));
+      } else if (url.pathname === "/api/cancel" && req.method === "POST") {
+        // STOP/KILL: drop the cooperative-cancel sentinel the engine polls, and
+        // SIGTERM the live engine so an in-flight agent stops burning tokens now.
+        const ws = wsFrom(url) ?? workspace!;
+        fs.writeFileSync(path.join(ws, "cancel.requested"), new Date().toISOString());
+        let signalled = false;
+        try {
+          const pid = Number(fs.readFileSync(path.join(ws, "engine.lock"), "utf8"));
+          if (pid) {
+            process.kill(pid, "SIGTERM");
+            signalled = true;
+          }
+        } catch {
+          /* no live engine holding the lock */
+        }
+        res.writeHead(200, { "content-type": "application/json" });
+        res.end(JSON.stringify({ ok: true, signalled }));
+      } else if (url.pathname === "/api/resume" && req.method === "POST") {
+        // RESUME FROM FAILURE: recover interrupted + failed steps, keep committed
+        // work. Only meaningful when no engine is live (else it'd hit the lock).
+        const ws = wsFrom(url) ?? workspace!;
+        const st = buildState(ws) as { status?: string; engineAlive?: boolean };
+        if (st.engineAlive) {
+          res.writeHead(409, { "content-type": "application/json" });
+          res.end(JSON.stringify({ ok: false, error: "a run is already live" }));
+          return;
+        }
+        const ctx = revisionCtx(ws);
+        const interrupted = reconcileInterrupted(ctx);
+        const reopened = reopenFailed(ctx);
+        spawnResume([], ws);
+        res.writeHead(200, { "content-type": "application/json" });
+        res.end(JSON.stringify({ ok: true, resuming: true, interrupted, reopened }));
+      } else if (url.pathname === "/api/raise-budget" && req.method === "POST") {
+        // Lift a cap a run hit (node or run-wide) WITHOUT editing the certified
+        // DAG. Optionally revise+resume the named step so it re-runs alone.
+        let body = "";
+        req.on("data", (chunk) => (body += chunk));
+        req.on("end", () => {
+          const { nodeId, toUsd, runUsd, reviseAndResume } = JSON.parse(body) as {
+            nodeId?: string;
+            toUsd?: number;
+            runUsd?: number;
+            reviseAndResume?: boolean;
+          };
+          const ws = wsFrom(url) ?? workspace!;
+          const file = path.join(ws, "budget-overrides.json");
+          const overrides: { run_budget_usd?: number; nodes?: Record<string, number> } = (() => {
+            try {
+              return JSON.parse(fs.readFileSync(file, "utf8"));
+            } catch {
+              return {};
+            }
+          })();
+          if (typeof runUsd === "number") overrides.run_budget_usd = runUsd;
+          if (nodeId && typeof toUsd === "number") {
+            overrides.nodes = overrides.nodes ?? {};
+            overrides.nodes[nodeId] = toUsd;
+          }
+          fs.writeFileSync(file, JSON.stringify(overrides, null, 2));
+          // Re-run just the raised step: reopen it (resets its per-cycle spend)
+          // and resume — the higher cap now lets it converge. Only when idle.
+          let resuming = false;
+          const st = buildState(ws) as { engineAlive?: boolean };
+          if (reviseAndResume && nodeId && !st.engineAlive) {
+            const ctx = revisionCtx(ws);
+            reconcileInterrupted(ctx);
+            reviseNode(ctx, nodeId, `Budget raised to $${toUsd}. Re-run this step and converge within the new cap.`);
+            spawnResume([], ws);
+            resuming = true;
+          }
+          res.writeHead(200, { "content-type": "application/json" });
+          res.end(JSON.stringify({ ok: true, overrides, resuming }));
+        });
       } else {
         res.writeHead(404).end("not found");
       }
@@ -2009,6 +2097,8 @@ button.ghost { background:transparent; border:1px solid var(--border); color:var
   <a class="brand" onclick="goHome()"><svg class="mark" viewBox="0 0 36 36" aria-hidden="true"><defs><linearGradient id="hgrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#2a78d6"/><stop offset="1" stop-color="#8250df"/></linearGradient></defs><path d="M8 6 V30" stroke="currentColor" stroke-width="5" stroke-linecap="round" fill="none"/><path d="M28 6 V30" stroke="currentColor" stroke-width="5" stroke-linecap="round" fill="none"/><path d="M8 18 H28" stroke="url(#hgrad)" stroke-width="5" stroke-linecap="round" fill="none"/><circle cx="18" cy="18" r="8.6" fill="var(--surface, #fff)"/><circle cx="18" cy="18" r="6.2" fill="url(#hgrad)"/><circle cx="18" cy="18" r="2.2" fill="var(--surface, #fff)" opacity=".92"/></svg><h1 id="title">harness</h1></a>
   <span class="pill" id="statusPill" style="display:none"><span class="dot" id="statusDot"></span><span id="statusText"></span></span>
   <span class="pill" id="modePill" style="display:none"></span>
+  <button class="ghost" id="stopRunBtn" style="display:none;border-color:var(--crit);color:var(--crit)" onclick="stopRun()" title="Stop this run — the current step halts, committed work is kept, and you can resume">■ Stop</button>
+  <button class="primary" id="resumeRunBtn" style="display:none" onclick="resumeRun()" title="Resume from where it stopped — re-runs the failed/stopped step, keeps everything already built">Resume ▸</button>
   <span class="mini" id="miniStats"></span>
   <nav class="tabs" id="tabs" style="display:none">
     <button data-tab="overview" class="active">Overview</button>
@@ -2136,7 +2226,7 @@ button.ghost { background:transparent; border:1px solid var(--border); color:var
   </div>
 </div>
 <script>
-const STATUS_COLOR = { completed:'var(--good)', running:'var(--accent)', parked:'var(--warn)', failed:'var(--crit)', stopped:'var(--muted)', starting:'var(--warn)' };
+const STATUS_COLOR = { completed:'var(--good)', running:'var(--accent)', parked:'var(--warn)', failed:'var(--crit)', cancelled:'var(--muted)', stopped:'var(--muted)', starting:'var(--warn)' };
 const STATE_ICON = { committed:'✓', failed:'✕', parked:'⏸', started:'●', skipped:'↷', pending:'○' };
 const REM_SRC_ICON = { 'merge conflict': '⛙', 'security scan': '🛡', 'code audit': '🔍', 'live verification': '⚡', 'user review': '👤', 'review feedback': '💬' };
 let waveSel = 'all'; // pipeline sub-view: 'all' or a wave number
@@ -2393,6 +2483,11 @@ async function refreshDrawer() {
     '<h3>Attempts</h3>' + attempts +
     (d.prompt ? '<details style="margin-top:.6rem"><summary class="hint" style="cursor:pointer">Prompt used for this step</summary><pre style="background:var(--page);border:1px solid var(--grid);border-radius:8px;padding:.7rem .9rem;font:11.5px/1.5 ui-monospace,Menlo,monospace;white-space:pre-wrap;margin-top:.4rem">' + esc(d.prompt) + '</pre></details>' : '') +
     (tr ? '<h3>What the agent did</h3>' + tr : '') +
+    (listNode && listNode.state === 'failed'
+      ? '<h3>This step failed — recover it</h3>' +
+        '<div class="hint" style="margin-bottom:.4rem">If it ran out of budget, raise its cap and re-run just this step (the rest of the pipeline is untouched). Otherwise Resume from the header retries it.</div>' +
+        '<button class="primary" style="background:var(--warn)" onclick="raiseBudgetUI()">Raise budget &amp; re-run this step</button>'
+      : '') +
     (listNode && ['committed','failed','skipped'].includes(listNode.state)
       ? '<h3>Request changes</h3>' +
         '<textarea id="reviseText" rows="3" style="width:100%;box-sizing:border-box;border:1px solid var(--grid);border-radius:8px;padding:.5rem .7rem;font:inherit;background:var(--page);color:inherit" placeholder="What should be different about this step’s output?"></textarea>' +
@@ -2400,6 +2495,31 @@ async function refreshDrawer() {
         '<div class="hint" style="margin-top:.35rem">Everything downstream re-runs; steps whose inputs are unchanged re-use their previous result automatically.</div>'
       : '')
   );
+}
+
+async function stopRun() {
+  if (!confirm('Stop this run?\\n\\nThe step in flight halts now (no more tokens spent). Everything already built is kept — you can Resume to pick up from the stopped step.')) return;
+  setText('statusText', 'stopping…');
+  await fetch('/api/cancel' + q(), { method:'POST' });
+  setTimeout(tick, 800);
+}
+
+async function resumeRun() {
+  setText('statusText', 'resuming…');
+  const r = await (await fetch('/api/resume' + q(), { method:'POST' })).json();
+  if (!r || !r.ok) { alert((r && r.error) || 'cannot resume right now'); tick(); return; }
+  setTimeout(tick, 800);
+}
+
+async function raiseBudgetUI() {
+  if (!openNode) return;
+  const raw = prompt('New budget for step "' + openNode + '" (USD). The step re-runs alone under the higher cap; the rest of the pipeline is untouched.', '');
+  if (raw === null) return;
+  const toUsd = Number(raw);
+  if (!(toUsd > 0)) { alert('Enter a dollar amount greater than 0.'); return; }
+  const r = await (await fetch('/api/raise-budget' + q(), { method:'POST', body: JSON.stringify({ nodeId: openNode, toUsd, reviseAndResume: true }) })).json();
+  if (!r || !r.ok) { alert('could not raise the budget'); return; }
+  closeDrawer(); showTab('overview'); setText('statusText', r.resuming ? 'resuming…' : 'budget raised'); setTimeout(tick, 800);
 }
 
 async function reviseNodeUI() {
@@ -2575,6 +2695,11 @@ async function tick() {
   setText('title', s.appName ? s.appName : s.projectType);
   setText('statusText', s.resuming ? 'resuming…' : s.status);
   document.getElementById('statusDot').style.background = STATUS_COLOR[s.resuming ? 'running' : s.status] || 'var(--muted)';
+  // Stop is offered while an engine is live; Resume once it has stopped on a
+  // failure or cancellation (parked runs resume by answering their gate).
+  const live = s.engineAlive || s.status === 'running';
+  document.getElementById('stopRunBtn').style.display = (live && !s.resuming) ? '' : 'none';
+  document.getElementById('resumeRunBtn').style.display = (!live && !s.resuming && (s.status === 'failed' || s.status === 'cancelled')) ? '' : 'none';
   const modePill = document.getElementById('modePill');
   modePill.style.display = '';
   modePill.className = 'pill ' + (s.runMode === 'live' ? 'live' : 'replay');

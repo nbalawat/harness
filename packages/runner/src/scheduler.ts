@@ -72,6 +72,85 @@ export function reopenFailed(ctx: RunContext): string[] {
   return failed;
 }
 
+/**
+ * Interrupted nodes: a `node.running` with no following terminal event
+ * (committed / failed / skipped / parked / reopened). This can only happen
+ * across a process death — a node was mid-flight when the engine was killed
+ * (crash, SIGKILL, a hard stop, an orchestrator budget kill on a cloud build).
+ * The live engine always writes a terminal for every node it dispatches, so on
+ * a clean run this set is empty.
+ */
+export function interruptedNodes(events: LedgerEvent[]): string[] {
+  const last = new Map<string, "running" | "terminal">();
+  for (const e of events) {
+    if (!e.nodeId) continue;
+    if (e.type === "node.running") last.set(e.nodeId, "running");
+    else if (
+      e.type === "node.committed" ||
+      e.type === "node.failed" ||
+      e.type === "node.skipped" ||
+      e.type === "node.parked" ||
+      e.type === "node.reopened"
+    ) {
+      last.set(e.nodeId, "terminal");
+    }
+  }
+  return [...last].filter(([, s]) => s === "running").map(([id]) => id);
+}
+
+/**
+ * Reconcile a workspace whose previous engine died mid-node: give every
+ * interrupted node a terminal `node.failed` so its status stops reading
+ * "running" forever and it becomes reopenable (a resume can retry it). We only
+ * call this while holding the engine lock, so any dangling "running" is
+ * genuinely from a dead process, never a live sibling. No-op on a clean run.
+ */
+export function reconcileInterrupted(ctx: RunContext): string[] {
+  const ids = interruptedNodes(ctx.journal.read());
+  for (const nodeId of ids) {
+    ctx.journal.append({ type: "node.failed", nodeId, reason: "interrupted" });
+  }
+  return ids;
+}
+
+/**
+ * Runtime budget overrides (`budget-overrides.json` in the workspace) let an
+ * operator raise a cap that a run hit — per node or run-wide — WITHOUT editing
+ * the certified DAG. Absent file = certified values, so this is invisible to
+ * certification. Shape: `{ run_budget_usd?: number, nodes?: { <id>: number } }`.
+ */
+function budgetOverrides(ctx: RunContext): { run_budget_usd?: number; nodes?: Record<string, number> } {
+  const f = path.join(ctx.workspace, "budget-overrides.json");
+  if (!fs.existsSync(f)) return {};
+  try {
+    return JSON.parse(fs.readFileSync(f, "utf8"));
+  } catch {
+    return {};
+  }
+}
+
+/** The run budget after any operator override; undefined if neither is set. */
+export function effectiveRunBudget(ctx: RunContext): number | undefined {
+  const o = budgetOverrides(ctx);
+  return typeof o.run_budget_usd === "number" ? o.run_budget_usd : ctx.def.cost?.run_budget_usd;
+}
+
+/** A node's budget after any operator override; undefined if neither is set. */
+export function effectiveNodeBudget(ctx: RunContext, nodeId: string): number | undefined {
+  const o = budgetOverrides(ctx);
+  const ov = o.nodes?.[nodeId];
+  return typeof ov === "number" ? ov : ctx.def.cost?.nodes?.[nodeId]?.budget_usd;
+}
+
+/** A user has requested a cooperative stop of this run. */
+export function cancelRequested(ctx: RunContext): boolean {
+  return fs.existsSync(path.join(ctx.workspace, "cancel.requested"));
+}
+
+function clearCancel(ctx: RunContext): void {
+  fs.rmSync(path.join(ctx.workspace, "cancel.requested"), { force: true });
+}
+
 /** A dependency is satisfied when its node committed or was conditionally skipped. */
 function satisfied(state: RunState, id: string): boolean {
   return state.committed.has(id) || state.skipped.has(id);
@@ -149,8 +228,43 @@ export async function runLoop(ctx: RunContext): Promise<RunResult> {
   }
 }
 
+/** Fail every interrupted node, drop the sentinel, record run.cancelled. */
+function finishCancelled(ctx: RunContext): RunResult {
+  clearCancel(ctx);
+  reconcileInterrupted(ctx);
+  ctx.journal.append({ type: "run.cancelled" });
+  return { status: "cancelled" };
+}
+
 async function runLoopLocked(ctx: RunContext): Promise<RunResult> {
+  // Crash recovery: a prior engine may have died mid-node. Give any interrupted
+  // node a terminal failure so it stops reading "running" and is reopenable.
+  // No-op on a clean run (nothing dangling).
+  reconcileInterrupted(ctx);
+
+  // Cooperative cancel: while we drive, expose an AbortSignal that in-flight
+  // command/agent nodes honor, and poll for the `cancel.requested` sentinel so
+  // a stop takes effect within a node, not only between rounds. Both are
+  // dormant unless a stop is actually requested — invisible to a normal run.
+  const ac = new AbortController();
+  ctx.signal = ac.signal;
+  const cancelPoll = setInterval(() => {
+    if (cancelRequested(ctx)) ac.abort();
+  }, 400);
+  if (typeof cancelPoll.unref === "function") cancelPoll.unref();
+  try {
+    return await driveFrontier(ctx, ac);
+  } finally {
+    clearInterval(cancelPoll);
+    ctx.signal = undefined;
+  }
+}
+
+async function driveFrontier(ctx: RunContext, ac: AbortController): Promise<RunResult> {
   for (;;) {
+    // Stop requested before dispatching the next round — the clean checkpoint.
+    if (ac.signal.aborted || cancelRequested(ctx)) return finishCancelled(ctx);
+
     const state = foldState(ctx.journal.read());
 
     if (ctx.def.nodes.every((n) => satisfied(state, n.id))) {
@@ -183,8 +297,8 @@ async function runLoopLocked(ctx: RunContext): Promise<RunResult> {
     if (runnable.length === 0) continue; // skips changed the frontier — recompute
 
     // Run-budget gate: once cumulative spend reaches the certified run
-    // budget, no further round is dispatched.
-    const runBudget = ctx.def.cost?.run_budget_usd;
+    // budget (or an operator's raised override), no further round is dispatched.
+    const runBudget = effectiveRunBudget(ctx);
     if (runBudget !== undefined) {
       const spent = foldState(ctx.journal.read()).totalCostUsd;
       if (spent >= runBudget) {
@@ -223,6 +337,10 @@ async function runLoopLocked(ctx: RunContext): Promise<RunResult> {
       outcomes.push({ node: gate, outcome: await executeNode(ctx, gate, state) });
     }
     await Promise.all(pool);
+
+    // A stop that landed mid-round: nodes interrupted by the abort report
+    // "failed", but the run's verdict is a cancellation, not a build failure.
+    if (ac.signal.aborted || cancelRequested(ctx)) return finishCancelled(ctx);
 
     const failed = outcomes.find((o) => o.outcome === "failed");
     if (failed) {

@@ -572,6 +572,98 @@ test("remediation waves: robust across a MESSY span (multiple terminals + recove
   assert.equal(s.remediation[0].remaining.length, 0);
 });
 
+// ---------------------------------------------------------------------------
+// Pipeline control: interrupted-node display, cancel, resume, raise-budget
+// ---------------------------------------------------------------------------
+
+test("ui: a node stuck 'running' with no live engine shows failed (interrupted), not hanging", () => {
+  const ws = tmpDir("interrupted");
+  fs.writeFileSync(path.join(ws, "run.json"), JSON.stringify({ projectTypeDir: DEMO_DIR, mockAgents: true }));
+  const ev = (o) => JSON.stringify(o);
+  fs.writeFileSync(path.join(ws, "journal.jsonl"), [
+    ev({ type: "run.created" }),
+    ev({ type: "node.committed", nodeId: "intake", artifacts: {} }),
+    ev({ type: "node.running", nodeId: "plan", attempt: 1 }), // engine died here — no terminal
+  ].join("\n") + "\n");
+
+  // No live engine holding the lock -> the dangling node must not read "running".
+  const s = buildState(ws);
+  assert.equal(s.engineAlive, false);
+  assert.equal(s.nodes.find((n) => n.id === "plan").state, "failed", "interrupted node surfaced as failed, not hanging at 'started'");
+
+  // A live engine (lock = this process) keeps it legitimately "started".
+  fs.writeFileSync(path.join(ws, "engine.lock"), String(process.pid));
+  assert.equal(buildState(ws).nodes.find((n) => n.id === "plan").state, "started", "a live engine keeps its node running");
+});
+
+test("ui: run.cancelled surfaces as a 'cancelled' status", () => {
+  const ws = tmpDir("cancelled");
+  fs.writeFileSync(path.join(ws, "run.json"), JSON.stringify({ projectTypeDir: DEMO_DIR, mockAgents: true }));
+  const ev = (o) => JSON.stringify(o);
+  fs.writeFileSync(path.join(ws, "journal.jsonl"), [
+    ev({ type: "run.created" }),
+    ev({ type: "node.committed", nodeId: "intake", artifacts: {} }),
+    ev({ type: "run.cancelled" }),
+  ].join("\n") + "\n");
+  assert.equal(buildState(ws).status, "cancelled");
+});
+
+test("ui: /api/cancel drops the stop sentinel the engine polls", async () => {
+  const workspace = tmpDir("cancel-route");
+  const run = runCli(["run", DEMO_DIR, "--workspace", workspace, "--answers", path.join(DEMO_DIR, "fixtures/answers.json"), "--mock-agents"]);
+  assert.equal(run.status, 0, run.stderr);
+  await withServer(workspace, async (base) => {
+    const r = await (await fetch(`${base}/api/cancel`, { method: "POST" })).json();
+    assert.equal(r.ok, true);
+    assert.ok(fs.existsSync(path.join(workspace, "cancel.requested")), "cancel sentinel written for the engine to observe");
+  });
+});
+
+test("ui: /api/raise-budget writes an override without touching the certified DAG", async () => {
+  const workspace = tmpDir("raise-route");
+  const run = runCli(["run", DEMO_DIR, "--workspace", workspace, "--answers", path.join(DEMO_DIR, "fixtures/answers.json"), "--mock-agents"]);
+  assert.equal(run.status, 0, run.stderr);
+  await withServer(workspace, async (base) => {
+    // No reviseAndResume -> pure override write, no child process spawned.
+    const r = await (await fetch(`${base}/api/raise-budget`, {
+      method: "POST",
+      body: JSON.stringify({ nodeId: "plan", toUsd: 25, runUsd: 300 }),
+    })).json();
+    assert.equal(r.ok, true);
+    const overrides = JSON.parse(fs.readFileSync(path.join(workspace, "budget-overrides.json"), "utf8"));
+    assert.equal(overrides.run_budget_usd, 300);
+    assert.equal(overrides.nodes.plan, 25);
+  });
+});
+
+test("ui: /api/resume recovers an interrupted run to completion via the route", async () => {
+  const workspace = tmpDir("resume-route");
+  const run = runCli(["run", DEMO_DIR, "--workspace", workspace, "--answers", path.join(DEMO_DIR, "fixtures/answers.json"), "--mock-agents"]);
+  assert.equal(run.status, 0, run.stderr);
+  // Model a stop/crash during 'render': reopen it, then inject a dangling
+  // running with no terminal (so it reads interrupted).
+  fs.appendFileSync(
+    path.join(workspace, "journal.jsonl"),
+    [JSON.stringify({ type: "node.reopened", nodeId: "render" }), JSON.stringify({ type: "node.running", nodeId: "render", attempt: 9 })].join("\n") + "\n",
+  );
+  await withServer(workspace, async (base) => {
+    // Before: render hangs at 'started' with no live engine -> shown failed.
+    let s = await (await fetch(`${base}/api/state`)).json();
+    assert.equal(s.nodes.find((n) => n.id === "render").state, "failed");
+
+    const r = await (await fetch(`${base}/api/resume`, { method: "POST" })).json();
+    assert.equal(r.ok, true);
+    assert.ok(r.interrupted.includes("render") || r.reopened.includes("render"), "render recovered by resume");
+
+    for (let i = 0; i < 60; i++) {
+      await new Promise((res) => setTimeout(res, 250));
+      s = await (await fetch(`${base}/api/state`)).json();
+      if (s.status === "completed" && !s.resuming) break;
+    }
+    assert.equal(s.status, "completed", "the interrupted run resumed to completion");
+  });
+});
+
 test("no phantom 'in progress': a COMPLETED run shows zero active waves (regression)", () => {
   // The exact brittleness: after boundary-fold, a failed historical wave has
   // remaining>0 forever. 'Active' must mean the LATEST wave with the run still

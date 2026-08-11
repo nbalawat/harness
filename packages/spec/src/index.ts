@@ -227,6 +227,7 @@ export interface LedgerEvent {
     | "run.completed"
     | "run.parked"
     | "run.failed"
+    | "run.cancelled"
     | "node.running"
     | "node.attempt_failed"
     | "node.loop_detected"
@@ -251,7 +252,7 @@ export interface LedgerEvent {
 }
 
 export interface RunResult {
-  status: "completed" | "parked" | "failed";
+  status: "completed" | "parked" | "failed" | "cancelled";
   failedNodeId?: string;
   parkedNodeId?: string;
 }

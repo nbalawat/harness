@@ -20,4 +20,12 @@ export interface RunContext {
    * to confirm or edit — in the terminal or the dashboard gate form.
    */
   acceptDefaults?: boolean;
+  /**
+   * Cooperative-cancel signal. Set by the scheduler while a run is driving so
+   * an in-flight command/agent node can be interrupted when the user requests a
+   * stop (a `cancel.requested` sentinel appears in the workspace). Absent on
+   * direct executeNode calls and on any run with no stop requested — so it is a
+   * no-op on the golden path.
+   */
+  signal?: AbortSignal;
 }

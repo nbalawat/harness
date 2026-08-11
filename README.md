@@ -43,6 +43,30 @@ harness status my-app
 harness revise my-app slice-2 --feedback "..." --resume
 ```
 
+### Steering a run: stop, resume, raise a budget
+
+A build is never a black box you can only wait out. Every control below has a
+button in the dashboard and a CLI form; committed work is always kept.
+
+```sh
+harness cancel my-app                       # stop a running pipeline now (frees the tokens)
+harness resume my-app                       # pick up from the failed/stopped step — keeps everything built
+harness raise-budget my-app --node slice-audit --to 60   # lift a cap a step hit...
+harness revise my-app slice-audit --feedback "converge within the new cap" --resume  # ...and re-run just that step
+harness raise-budget my-app --run 300       # or lift the whole-run budget, then: harness resume my-app
+```
+
+- **Stop** halts the in-flight step immediately (cooperative cancel + the agent
+  session is interrupted), records `run.cancelled`, and leaves a clean, resumable
+  state — no more tokens burned on feedback you already know is wrong.
+- **Resume** recovers both *failed* and *interrupted* steps (a step left hanging
+  by a crash or a hard stop no longer reads "running" forever — it fails cleanly
+  and re-runs). Upstream steps whose inputs are unchanged are reused, not re-paid.
+- **Raise-budget** lifts a per-node or whole-run cap a run hit *without editing
+  the certified project type* (an operator override, invisible to certification).
+  Pair it with `revise <node> --resume` to re-run **only** that step under the new
+  cap instead of rebuilding the pipeline.
+
 ## What a build gives you
 
 The `agentic-app` project type is a 42-node certified pipeline:
